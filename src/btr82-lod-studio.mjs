@@ -7,6 +7,8 @@ import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 
 export const BTR82_ID='6226acae68424d99bf03882b245ff7c5';
 export const BTR82_URL='./assets/vehicle-candidates/tanqueta/btr82-original.glb';
+const BTR82_ASSET_DIR='./assets/vehicle-candidates/tanqueta/';
+const BTR82_EXPECTED_TRIANGLES=Object.freeze({75:16109,50:10745,25:5371});
 const MAX_BYTES=64*1024*1024,KEY='source:'+BTR82_ID;
 let dbPending=null;
 function db(){
@@ -47,6 +49,21 @@ async function repoSource(){
   if(r.ok)return await r.blob();
  }catch{}
  return null;
+}
+// Approved files published with the original. Load them instead of running
+// Meshopt again and accidentally getting three different approximations.
+async function repoPrecomputedLod(percent){
+ const path=BTR82_ASSET_DIR+'btr82-'+percent+'pct.glb';
+ try{
+  const response=await fetch(path,{cache:'no-store'});
+  if(!response.ok)return null;
+  const blob=await response.blob();
+  await verify(blob);
+  return blob;
+ }catch(error){
+  console.warn('No s’ha pogut descarregar el BTR-82 '+percent+'% de GitHub',error);
+  return null;
+ }
 }
 async function verify(blob){
  if(!blob||blob.size<20||blob.size>MAX_BYTES)throw Error('Cal un GLB complet de fins a 64 MiB');
@@ -150,13 +167,13 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
  async function load(token,uploaded=null){
   const run=++revision;
   resetButtons();
-  const blob=uploaded||cached||await readSource()||await repoSource();
+  const blob=uploaded||await repoSource()||cached||await readSource();
   if(!valid(token,run))return;
   if(!blob){
    for(let i=1;i<slots.length;i++){
     const slot=slots[i],pct=Math.round(BTR82_RATIOS[i-1]*100);
     slot.bold.textContent='BTR-82 · '+pct+'%';setReference(slot,'esperant GLB');
-    slot.status.textContent=i===1?'Importa aquí el GLB original per generar els quatre nivells.':
+    slot.status.textContent=i===1?'El model original no està disponible. Pots importar-lo per generar els tres nivells.':
      'Pots importar directament el GLB reduït d’aquest nivell.';
    }
    await showOfficial(token);
@@ -181,19 +198,43 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
    setModel(slot,gltf.scene,false,gltf.animations);
    slot.status.textContent=metrics(slot.model)+' · '+initialMeshes+' malles originals';
    linkDownload(slot,1,blob);
-   notice.textContent='Original: '+initial.toLocaleString('ca')+' triangles, '+initialMeshes+' malles. Generant 75%, 50% i 25%…';
+   notice.textContent='Original: '+initial.toLocaleString('ca')+' triangles, '+initialMeshes+' malles. Carregant les tres versions publicades 75%, 50% i 25%…';
    let previous=initial;
    for(let i=2;i<slots.length;i++){
     if(!valid(token,run))return;
     const s=slots[i],ratio=BTR82_RATIOS[i-1],pct=Math.round(ratio*100);
     s.bold.textContent='BTR-82 · '+pct+'%';
     setReference(s,'objectiu '+pct+'%');
-    s.status.textContent='Calculant la simplificació del '+pct+'%…';
+    s.status.textContent='Carregant el GLB definitiu del '+pct+'%…';
+    if(!uploaded){
+     const approvedBlob=await repoPrecomputedLod(pct);
+     if(!valid(token,run))return;
+     if(approvedBlob){
+      try{
+       const approvedGltf=await loadUploadedGlb(await normalizeBtr82Glb(approvedBlob));
+       if(!valid(token,run))return;
+       const approvedTris=countTriangles(approvedGltf.scene);
+       const approvedMeshes=countBtrMeshes(approvedGltf.scene);
+       if(approvedTris!==BTR82_EXPECTED_TRIANGLES[pct]||approvedMeshes!==18)
+        throw new Error('Geometria inesperada: '+approvedTris+' triangles, '+approvedMeshes+' malles');
+       setModel(s,approvedGltf.scene,false,approvedGltf.animations);
+       s.status.textContent=metrics(s.model)+' · '+approvedTris.toLocaleString('ca')+
+        ' triangles / '+approvedMeshes+' malles · GLB aprovat al servidor';
+       setReference(s,'model original SIpriv · '+pct+'% · carregat de GitHub');
+       linkRawDownload(s,approvedBlob,'btr82-'+pct+'pct.glb');
+       previous=approvedTris;
+       continue;
+      }catch(error){
+       console.error('GLB aprovat BTR-82 invàlid; provam simplificació en navegador',pct,error);
+      }
+     }
+    }
+    s.status.textContent='El GLB precomputat no està disponible; simplificant el '+pct+'%…';
     await new Promise(resolve=>requestAnimationFrame(resolve));
     const result=await buildBtr82Lod(original,ratio,{isCurrent:()=>valid(token,run)});
     if(!result||!valid(token,run))return;
     const actual=countTriangles(result),meshCount=countBtrMeshes(result);
-    if(actual>=initial*.7||meshCount>=initialMeshes){
+    if(actual>=initial*.97||meshCount>=initialMeshes){
      s.status.textContent='Error: reducció inefectiva ('+actual+' triangles, '+meshCount+' malles).';
      console.error('BTR-82: la reducció ha retornat massa geometria',{pct,actual,meshCount});
      continue; // Don't display the source again and claim it's 5%!
@@ -206,7 +247,7 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
     previous=Math.min(previous,actual);
     linkDownload(s,i,blob);
    }
-   if(valid(token,run))notice.textContent='Reduccions conservadores 75%, 50% i 25% generades amb meshoptimizer. Cada targeta indica triangles i malles reals. Els GLB ja reduïts importats NO es tornen a simplificar.';
+   if(valid(token,run))notice.textContent='BTR-82 original i versions 75%, 50% i 25% carregades automàticament. Els panells indiquen triangles i malles reals. També pots importar GLB manuals.';
   }catch(e){
    if(valid(token,run)){
     slots[1].status.textContent='Error amb el BTR-82 original: '+String(e?.message||e);

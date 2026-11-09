@@ -29,6 +29,28 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Publicar GLB BTR-82 ja validats (una sola vegada)
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[btr82-publish]') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="assets/vehicle-candidates/tanqueta/.btr82-viewer-transfer.tar.xz"
+          echo "a7315b97c92ee37e441a417fbb0b7a8dfea1f384067e4d45a07962dcf464e9ab  $archive" | sha256sum -c -
+          expected="$(printf '%s\n' btr82-original-compatible.glb btr82-75pct.glb btr82-50pct.glb btr82-25pct.glb | sort)"
+          actual="$(tar -tJf "$archive" | sort)"
+          test "$actual" = "$expected"
+          tar -xJf "$archive" -C assets/vehicle-candidates/tanqueta
+          mv assets/vehicle-candidates/tanqueta/btr82-original-compatible.glb assets/vehicle-candidates/tanqueta/btr82-original.glb
+          node tests/btr82-published-assets.cjs
+          rm "$archive"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A assets/vehicle-candidates/tanqueta
+          if ! git diff --cached --quiet; then
+            git commit -m "assets: publish original BTR-82 and 75/50/25 GLB candidates"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
       - name: Arxivar els models CC0 provisionals (única execució sol·licitada)
         if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[vehicles-download]') }}
         run: |

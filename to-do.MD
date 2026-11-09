@@ -1,3 +1,9 @@
+**P1 · 2026-11-09 · autopublicació dels quatre GLB BTR-82 al visor:**
+- [x] Transferència del model original i tres variants 75%, 50% i 25% a un arxiu comprimit GitHub mitjançant Git Data API, sense accions manuals.
+- [x] Workflow `[btr82-publish]` valida el SHA i els quatre GLB, els publica al camí de candidats i elimina l'arxiu temporal.
+- [x] La pàgina de candidats carrega automàticament 100/75/50/25% del servidor, amb triangles/meshes reals i enllaç per descarregar cadascun, conservant la importació manual només com a reserva.
+- [ ] Verificar el desplegament públic a `hunter.paradoxa.cat` i validar visualment les textures/escala; cap canvi encara a la tanqueta del joc.
+
 **2026-11-09 · Impacte directe bazuca/míssils (v0.6.201):**
 - [x] Regla compartida: bazuca, míssil d'helicòpter i coet naval fan 10 PV quan impacten directament un vehicle (incloses tanquetes enemigues de l'HQ).
 - [x] La víctima directa queda exclosa del dany expansiu del mateix projectil, sense duplicació; la resta de soldats, vehicles i estructures reben el dany expansiu habitual.

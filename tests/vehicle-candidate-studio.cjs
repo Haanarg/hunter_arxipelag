@@ -37,7 +37,7 @@ for(const id of ['tanc','tanqueta']){
   &&r.triangles>1000),'Les fonts han de ser reals i amb llicència visible');
  for(const oldName of ['main-battle-tank','light-tank','self-propelled-gun','tracked-apc','wheeled-apc','armoured-car'])
   assert(!refs.some(r=>r.title.toLowerCase().includes(oldName)),'No conservar candidats genèrics');
- assert(!fs.existsSync(path.join(root,'assets/vehicle-candidates',id)),'Queden binaris rebutjats: '+id);
+ if(id==='tanc')assert(!fs.existsSync(path.join(root,'assets/vehicle-candidates',id)),'Queden antics GLB genèrics del tanc');
 }
 assert(studio.includes("entry.provider==='sketchfab'")&&studio.includes("frame.src='https://sketchfab.com/models/'"),
  'El preview ha de mostrar els models reals amb el visor oficial Sketchfab');
@@ -76,11 +76,13 @@ assert(routing.includes('Object.freeze([75,50,25])'),
  'El classificador només ha d’admetre les reduccions 75/50/25 com a candidates');
 assert(!routing.includes('Object.freeze([5,4,3,2])'),
  'S’han d’eliminar del catàleg actiu els nivells que no són reconeixibles');
+assert(btrCode.includes('repoPrecomputedLod(')&&btrCode.includes('BTR82_EXPECTED_TRIANGLES'),
+ 'El visor ha de carregar automàticament els tres GLB precomputats del repositori');
 assert(btrCode.includes('classifyBtr82Upload(')&&btrCode.includes('restoreSourceMaterials('),
  'El GLB complet i els LOD importats s’han de distingir, amb textures originals restaurades');
 assert(btrCode.includes('const run=++revision')&&btrCode.includes('async function importLod('),
  'La importació de cada LOD ha de ser independent dels altres panells');
-assert(btrCode.includes('actual>=initial*.7'),
+assert(btrCode.includes('actual>=initial*.97'),
  'El visor ha de detectar reduccions fallides, sense etiquetar la font com si fos un LOD');
 for(const id of ['heli','heli_combat'])assert(!(id in manifest.models),'Helicòpter descartat encara al manifest: '+id);
 assert.equal(manifest.retiredHelicopterCandidates,6);

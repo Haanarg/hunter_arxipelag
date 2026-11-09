@@ -1,3 +1,19 @@
+## Models BTR-82 publicats directament al visor (2026-11-09)
+
+El model original i les reduccions 75%, 50%, 25% (SIpriv · CC BY 4.0) es carreguen des de
+`assets/vehicle-candidates/tanqueta/` sense importar arxius locals. Fitxers:
+`btr82-original.glb`, `btr82-75pct.glb`, `btr82-50pct.glb`, `btr82-25pct.glb`.
+Els tres GLB precomputats són la geometria validada anteriorment (16.109/10.745/5.371
+triangles, 18 malles) i no se simplifiquen de nou al navegador. El 100% en conserva
+21.483 triangles, 199 malles. El seu origen i les llicències continuen visibles.
+
+Per transferir els binaris aprovats, s'ha creat una càrrega comprimida efímera a
+`assets/vehicle-candidates/tanqueta/.btr82-viewer-transfer.tar.xz`; GitHub Actions
+verifica el SHA256, n'extreu els quatre models, valida els GLB, elimina l'arxiu
+temporal i publica els quatre fitxers finals. Les proves eviten versions corruptes
+o models equivocats. En cas de no disposar dels assets, el visor conserva l'opció
+d'importar el GLB i generar els LOD.
+
 ## 2026-11-09 — BTR-82: tres reduccions conservadores 75/50/25%
 
 Els nivells 5%, 4%, 3% i 2% han quedat descartats: perdien massa silueta. El banc de tanqueta mostra només el vehicle actual del joc, el GLB original 100% (21.483 triangles, 199 malles) i les tres reduccions 75%, 50%, 25%. El model del joc continua intacte.

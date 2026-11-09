@@ -112,7 +112,7 @@ let yaw=.60,elev=.32,zoom=1,lookY=.6;
 let prev=performance.now();
 let btrStudioPromise=null;
 function getBtrStudio(){
- return btrStudioPromise??=import('./btr82-lod-studio.mjs?rev=conservative-75-50-25-1').then(module=>module.createBtr82Studio({
+ return btrStudioPromise??=import('./btr82-lod-studio.mjs?rev=automatic-github-btr82-1').then(module=>module.createBtr82Studio({
    slots,loadUploadedGlb,setModel,metrics,
    isCurrent:token=>token===generation&&currentType.id==='tanqueta',
    showOfficial:token=>loadExternal(slots[1],currentType.options[0],new Set(),token),
