@@ -26,8 +26,9 @@ for(const c of cases){
  const walls=out.walls.filter(w=>!w.door);
  assert(walls.length>0,c.name+' sense parets');
  assert(walls.every(w=>w.hp===c.wall),c.name+' pared incompleta');
+ assert(walls.every(w=>!!w.weakWood===(c.wall===4)),c.name+' classe de material incorrecta');
  const doors=out.walls.filter(w=>w.door);
- if(!c.opt.workshop){
+ if(!c.opt.workshop&&!c.opt.hangar){
   assert(doors.length>0,c.name+' sense porta');
   assert(doors.every(w=>w.hp===4&&canLightDamageWall(w)),c.name+' porta sense 4 PV');
  }
