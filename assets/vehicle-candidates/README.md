@@ -1,3 +1,5 @@
+**Publicació dels GLB:** els fitxers nous es validen amb SHA256 abans que GitHub Actions en substitueixi els candidats anteriors. El comparador mostra els percentatges respecte de la nova base de 5.371 triangles.
+
 ## Segona generació BTR-82 a partir de l'antiga variant 25% — 9 novembre 2026
 
 La nova **referència 100%** és l'antic `btr82-25pct.glb`, que té
