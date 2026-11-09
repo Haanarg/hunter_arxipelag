@@ -1,3 +1,21 @@
+## Estat actual verificat — els quatre GLB estan al repositori
+
+**PUBLICATS a GitHub el 9 de novembre de 2026.** El workflow
+`Hunter - comprovacions bàsiques i runtime` (run 42693159067) va
+extreure i verificar els quatre GLB, eliminar el comprimit de traspàs i
+publicar-los a `assets/vehicle-candidates/tanqueta/`. El mateix workflow
+va superar les proves del model (SHA256, 11 textures PNG, triangles i
+malles exactes) i `npm test`. L’original i els tres LOD es carreguen
+automàticament al visor, sense `Importa GLB` i sense re-simplificar.
+
+Models publicats: `btr82-original.glb` (21.483 triangles/199 malles),
+`btr82-75pct.glb` (16.109/18), `btr82-50pct.glb` (10.745/18) i
+`btr82-25pct.glb` (5.371/18). SIpriv, CC BY 4.0. Encara queda la
+comprovació visual al domini públic del joc, però els fitxers binaris són
+presents i validats al repositori.
+
+---
+
 ## Models BTR-82 publicats directament al visor (2026-11-09)
 
 El model original i les reduccions 75%, 50%, 25% (SIpriv · CC BY 4.0) es carreguen des de

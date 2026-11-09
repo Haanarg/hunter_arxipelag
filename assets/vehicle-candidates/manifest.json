@@ -230,7 +230,7 @@
     ]
   },
   "lastCurated": "2026-11-08",
-  "curationNotes": "Substituïts els quatre LOD extrems 5/4/3/2% per tres conservadors 75/50/25%. Fitxers offline VTK DecimatePro: 16.109/10.745/5.371 triangles i 18 malles. GLB validats amb UV, colors i silueta sense desbordaments en coordenades. Els GLB encara no són al repositori; cal importar-los al visor, o pujar-los a la carpeta de candidats.",
+  "curationNotes": "GLB BTR-82 publicats i validats en main: font original 21.483 triangles/199 malles i LOD 75%=16.109, 50%=10.745, 25%=5.371 triangles/18 malles, 11 PNG per GLB. La pàgina de candidats descarrega els quatre directament. SIpriv CC BY 4.0.",
   "selectedForLod": {
     "tanqueta": {
       "modelId": "6226acae68424d99bf03882b245ff7c5",
@@ -239,7 +239,7 @@
       "license": "CC BY 4.0",
       "source": "https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5",
       "sourceGlb": "tanqueta/btr82-original.glb",
-      "present": false,
+      "present": true,
       "ratioLevels": [
         1,
         0.75,
@@ -247,7 +247,7 @@
         0.25
       ],
       "engine": "Three.js r186 SimplifyModifier/meshoptimizer, grouped by material and role (8 wheels, turret, hull)",
-      "status": "source_glb_available_in_chat_not_repo",
+      "status": "published_in_repo",
       "sourceTriangles": 21483,
       "sourceMeshes": 199,
       "expectedMergedGroups": 18,
@@ -273,7 +273,14 @@
           "bytes": 446292,
           "algorithm": "VTK DecimatePro, original PNG palette/alpha preserved"
         }
-      ]
+      ],
+      "publishedLods": {
+        "25": "tanqueta/btr82-25pct.glb",
+        "50": "tanqueta/btr82-50pct.glb",
+        "75": "tanqueta/btr82-75pct.glb"
+      },
+      "publishedSourceSize": 1592172,
+      "publishedTotalBytes": 4083136
     }
   }
 }

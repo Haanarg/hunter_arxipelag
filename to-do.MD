@@ -2,7 +2,8 @@
 - [x] Transferència del model original i tres variants 75%, 50% i 25% a un arxiu comprimit GitHub mitjançant Git Data API, sense accions manuals.
 - [x] Workflow `[btr82-publish]` valida el SHA i els quatre GLB, els publica al camí de candidats i elimina l'arxiu temporal.
 - [x] La pàgina de candidats carrega automàticament 100/75/50/25% del servidor, amb triangles/meshes reals i enllaç per descarregar cadascun, conservant la importació manual només com a reserva.
-- [ ] Verificar el desplegament públic a `hunter.paradoxa.cat` i validar visualment les textures/escala; cap canvi encara a la tanqueta del joc.
+- [x] Quatre GLB publicats i verificats per GitHub Actions (run 42693159067): 21.483/16.109/10.745/5.371 triangles, 199/18/18/18 malles, 11 PNG per model.
+- [ ] Comprovar visualment les textures i escala des del domini públic `hunter.paradoxa.cat`; no s’ha canviat la tanqueta del joc.
 
 **2026-11-09 · Impacte directe bazuca/míssils (v0.6.201):**
 - [x] Regla compartida: bazuca, míssil d'helicòpter i coet naval fan 10 PV quan impacten directament un vehicle (incloses tanquetes enemigues de l'HQ).
