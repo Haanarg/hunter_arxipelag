@@ -35,7 +35,7 @@ export function configureOpenWorld(generated){
    if(valid)return {x,z,angle,h:.86};
   }throw Error('No s’ha trobat una costa navegable per a '+layout.id);
  }
- const lootItems={munició:['bullets',12],granades:['grenades',1],farmaciola:['medkits',1],cisalla:['cutters',1],fusell_assalt:['assault',1],bazooka:['bazooka',3],explosius:['c4',1],disfressa:['disguise',1],franctirador:['sniper',1]};
+ const lootItems={munició:['bullets',12],granades:['grenades',1],farmaciola:['medkits',1],cisalla:['cutters',1],fusell_assalt:['assault',1],bazooka:['bazooka',1],explosius:['c4',1],disfressa:['disguise',1],franctirador:['sniper',1]};
  function add(type,preferred){
   const layout=chooseCompoundLayout(type,random),q=layout.waterfront||type==='port'?coastSite(layout):landSite(layout,preferred),plan=planCompound(layout,q,{random,rawHeightAt:raw}),id='world-'+compounds.length;
   plan.instanceId=id;geometry.levels.push(plan.level);
@@ -158,7 +158,7 @@ export function configureOpenWorld(generated){
  doors:geometry.walls.flatMap((w,wallIndex)=>w.door&&!w.alwaysOpen?[{id:w.id,wallIndex,cx:w.cx,cz:w.cz,floor:w.y0+1}]:[])});
  record.checkpoint.players.forEach((p,i)=>Object.assign(p,points[i],{hp:combatBalance.player,swimming:false,fall:null}));
  // Equipment remains personal; base supplies/vehicles come from the approved layout.
- record.inventories=meta.members.map(m=>({actorId:m.id,bullets:48,grenades:2,disguise:1,medkits:1,assault:1,sniper:0,sniperAmmo:0,bazooka:0,c4:0,cutters:1,weapon:'pistol',disguised:false}));
+ record.inventories=meta.members.map(m=>({actorId:m.id,bullets:48,grenades:2,disguise:1,medkits:1,assault:1,sniper:0,sniperAmmo:0,bazooka:0,bazookaAmmo:0,c4:0,cutters:1,weapon:'pistol',disguised:false}));
  geometry.vegetation={version:1,randomState:random.getState(),spawn:{x:points[0].x,z:points[0].z},compounds:compounds.map(c=>({x:c.x,z:c.z,r:c.r}))};
  generated.geometry=geometry;return generated;
 }
