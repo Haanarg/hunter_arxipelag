@@ -122,10 +122,10 @@ export function shellColliders(x,z,fy,w,d,h,opt={},random){
           {...box,z0:z+s.lz-WOODEN_DOOR_THICKNESS/2,z1:z+s.lz+WOODEN_DOOR_THICKNESS/2}:
           {...box,x0:x+s.lx-WOODEN_DOOR_THICKNESS/2,x1:x+s.lx+WOODEN_DOOR_THICKNESS/2}):box;
       walls.push({...slab,y0:fy-1,y1:fy+dh,hp:WOODEN_DOOR_HP,woodenDoor:wooden,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,nx:normal[0],nz:normal[1],doorWidth:plan.dw,doorHeight:dh});
-      if(plan.wallH-dh>.05)walls.push({...box,y0:fy+dh,y1:fy+plan.wallH,hp:plan.wallHp,door:false,open:false,playerBlock:false,rammable:false});
+      if(plan.wallH-dh>.05)walls.push({...box,y0:fy+dh,y1:fy+plan.wallH,hp:plan.wallHp,weakWood:!!(opt.weakWalls||opt.civilianHut),door:false,open:false,playerBlock:false,rammable:false});
     }else{
       const layout=s.windows?windowLayout(s.sx,s.sz,plan.wallH):null;
-      walls.push({...box,y0:fy+s.level-(s.level?0:1),y1:fy+s.level+(s.hangarPost?Math.max(3.1,h*.3):plan.wallH),hp:plan.wallHp,door:false,open:false,windows:!!s.windows,upperFloorWindow:!!s.windows&&s.level>0,...(layout?{windowPanes:layout.centers.map(c=>({axis:layout.alongX?'z':'x',x:x+s.lx+(layout.alongX?c:0),z:z+s.lz+(layout.alongX?0:c),y0:fy+s.level+layout.bottom+.09,y1:fy+s.level+layout.bottom+layout.height-.09,width:layout.width-.18}))}:{}),...(s.hangarPost?{}:{supportSide:s.supportSide,supportWeight:s.supportWeight})});
+      walls.push({...box,y0:fy+s.level-(s.level?0:1),y1:fy+s.level+(s.hangarPost?Math.max(3.1,h*.3):plan.wallH),hp:plan.wallHp,weakWood:!!(opt.weakWalls||opt.civilianHut),door:false,open:false,windows:!!s.windows,upperFloorWindow:!!s.windows&&s.level>0,...(layout?{windowPanes:layout.centers.map(c=>({axis:layout.alongX?'z':'x',x:x+s.lx+(layout.alongX?c:0),z:z+s.lz+(layout.alongX?0:c),y0:fy+s.level+layout.bottom+.09,y1:fy+s.level+layout.bottom+layout.height-.09,width:layout.width-.18}))}:{}),...(s.hangarPost?{}:{supportSide:s.supportSide,supportWeight:s.supportWeight})});
     }
     segmentWalls.push(Array.from({length:walls.length-start},(_,i)=>start+i));
   }
