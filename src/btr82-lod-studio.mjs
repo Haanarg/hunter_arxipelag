@@ -1,8 +1,7 @@
 // BTR-82 (SIpriv, CC BY 4.0): five source views, four REAL reductions.
 // This module runs only in the existing 3D candidate studio, never in game.
-import {SimplifyModifier} from 'three/addons/modifiers/SimplifyModifier.js';
+import {BTR82_RATIOS,BTR82_GOAL,buildBtr82Lod,countBtrTriangles,countBtrMeshes,normalizeBtr82Glb} from './btr82-aggressive-simplification.mjs';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
-export const BTR82_RATIOS=Object.freeze([1,.75,.50,.25,.10]);
 export const BTR82_ID='6226acae68424d99bf03882b245ff7c5';
 export const BTR82_URL='./assets/vehicle-candidates/tanqueta/btr82-original.glb';
 const MAX_BYTES=64*1024*1024,KEY='source:'+BTR82_ID;
@@ -50,11 +49,7 @@ async function verify(blob){
    header.getUint32(8,true)!==blob.size)throw Error('Capçalera GLB 2.0 o longitud incorrecta');
  return blob;
 }
-function countTriangles(root){
- let n=0;root.traverse(o=>{if(o.isMesh&&o.geometry)n+=
-  (o.geometry.getIndex()?.count??o.geometry.getAttribute('position')?.count??0)/3});
- return Math.round(n);
-}
+const countTriangles=countBtrTriangles;
 function download(blob,name){
  const url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download=name;document.body.append(a);a.click();a.remove();
@@ -64,31 +59,6 @@ function setReference(slot,text){
  slot.source.href='https://sketchfab.com/3d-models/low-poly-btr-82-'+BTR82_ID;
  slot.source.hidden=false;
  slot.sub.textContent='SIpriv · CC BY 4.0 · '+text;
-}
-async function simplify(source,ratio,isValid){
- const root=source.clone(true),modifier=new SimplifyModifier();
- let modified=0,skipped=0;const meshes=[];
- root.traverse(x=>{if(x.isMesh)meshes.push(x)});
- for(const mesh of meshes){
-  if(!isValid())return null;
-  const geo=mesh.geometry,pos=geo?.getAttribute('position');
-  if(!pos)continue;
-  const triangles=(geo.getIndex()?.count??pos.count)/3;
-  if(mesh.isSkinnedMesh||Array.isArray(mesh.material)||geo.groups?.length>1||
-    Object.values(geo.morphAttributes||{}).some(a=>a?.length)||triangles<12){
-   skipped++;continue;
-  }
-  try{
-   // Vendored Three.js r186 SimplifyModifier uses meshoptimizer, preserving
-   // normals, UVs, material and mesh hierarchy whenever it can.
-   const output=await modifier.modify(geo,Math.round(pos.count*(1-ratio)));
-   const newTris=(output.getIndex()?.count??output.getAttribute('position')?.count??0)/3;
-   if(newTris>0&&newTris<triangles){
-    output.userData.candidateSimplified=true;mesh.geometry=output;modified++;
-   }else{output.dispose();skipped++}
-  }catch(e){console.warn('BTR-82 primitive kept intact',mesh.name,e);skipped++}
- }
- return {root,modified,skipped};
 }
 export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurrent,showOfficial,notice}){
  let cached=null;
@@ -126,14 +96,18 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
      'Disponible quan s’importi el GLB original.';
    }
    await showOfficial(token);
-   if(live(token))notice.textContent='Low Poly BTR 82 seleccionat. Importa el GLB per generar quatre reduccions reals: 75, 50, 25 i 10%.';
+   if(live(token))notice.textContent='Low Poly BTR 82 seleccionat. Importa el GLB per calcular els quatre nivells del 5%, 4%, 3% i 2% del total original, agrupant les malles per material.';
    return;
   }
   try{
    await verify(blob);
-   const gltf=await loadUploadedGlb(blob);
+   // Sketchfab authored this model with required SpecularGlossiness,
+   // which is unsupported by Three.js r186 until translated to PBR.
+   const compatible=await normalizeBtr82Glb(blob);
+   const gltf=await loadUploadedGlb(compatible);
    if(!live(token))return;
-   const original=gltf.scene.clone(true),initial=countTriangles(original);
+   const original=gltf.scene.clone(true),initial=countTriangles(original),
+     initialMeshes=countBtrMeshes(original);
    if(!initial)throw Error('GLB sense geometria triangulada');
    cached=blob;
    if(uploaded)await saveSource(blob);
@@ -141,9 +115,9 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
    const slot=slots[1];
    slot.bold.textContent='BTR-82 · 100%';setReference(slot,initial.toLocaleString('ca')+' triangles originals');
    setModel(slot,gltf.scene,false,gltf.animations);
-   slot.status.textContent=metrics(slot.model)+' · GLB original';
+   slot.status.textContent=metrics(slot.model)+' · '+initialMeshes+' malles originals';
    linkDownload(slot,1,blob);
-   notice.textContent='GLB carregat. Generant quatre reduccions amb el meshoptimizer del joc…';
+   notice.textContent='GLB carregat: '+initial.toLocaleString('ca')+' triangles i '+initialMeshes+' malles. Fusionant peces compatibles i generant quatre variants del 5% cap avall amb meshoptimizer…';
    for(let i=2;i<slots.length;i++){
     if(!live(token))return;
     const s=slots[i],ratio=BTR82_RATIOS[i-1],pct=Math.round(ratio*100);
@@ -151,14 +125,14 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
     setReference(s,'objectiu '+pct+'%');
     s.status.textContent='Simplificant '+pct+'%…';
     await new Promise(resolve=>requestAnimationFrame(resolve));
-    const result=await simplify(original,ratio,()=>live(token));
+    const result=await buildBtr82Lod(original,ratio,{isCurrent:()=>live(token)});
     if(!result||!live(token))return;
-    setModel(s,result.root,false,gltf.animations);
-    const actual=countTriangles(result.root);
-    s.status.textContent=metrics(s.model)+' · '+(actual/initial*100).toFixed(1)+'% real · '+result.modified+' malles';
+    setModel(s,result,false,[]);
+    const actual=countTriangles(result),meshCount=countBtrMeshes(result);
+    s.status.textContent=metrics(s.model)+' · '+(actual/initial*100).toFixed(1)+'% real · '+meshCount+' malles (abans '+initialMeshes+')'+(actual<=BTR82_GOAL?' · ≤3.000 △':' · sobre 3.000 △');
     linkDownload(s,i,blob);
    }
-   if(live(token))notice.textContent='BTR-82: original + quatre reduccions acabades (75, 50, 25, 10%). Les càmeres comparteixen orientació i escala; encara no s’ha integrat al joc.';
+   if(live(token))notice.textContent='BTR-82: original + quatre variants 5%, 4%, 3% i 2% generades. Les malles s’agrupen per material i pivots de torreta/rodes. Les xifres reals són a cada panell; no s’ha integrat al joc.';
   }catch(e){
    if(live(token)){
     slots[1].status.textContent='Error BTR-82: '+String(e?.message||e);
