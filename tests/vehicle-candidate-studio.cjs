@@ -76,6 +76,8 @@ assert(routing.includes('Object.freeze([75,50,25])'),
  'El classificador només ha d’admetre les reduccions 75/50/25 com a candidates');
 assert(!routing.includes('Object.freeze([5,4,3,2])'),
  'S’han d’eliminar del catàleg actiu els nivells que no són reconeixibles');
+assert(btrCode.includes("BTR82_LIVE_ASSET_VERSION='matte-uv-repair-v1'")&&btrCode.includes('pct.glb?rev='),
+ 'Cal invalidar la memòria cau dels GLB antics després de corregir els materials');
 assert(btrCode.includes('repoPrecomputedLod(')&&btrCode.includes('BTR82_EXPECTED_TRIANGLES'),
  'El visor ha de carregar automàticament els tres GLB precomputats del repositori');
 assert(btrCode.includes('classifyBtr82Upload(')&&btrCode.includes('restoreSourceMaterials('),

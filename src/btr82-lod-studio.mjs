@@ -9,6 +9,7 @@ export const BTR82_ID='6226acae68424d99bf03882b245ff7c5';
 export const BTR82_URL='./assets/vehicle-candidates/tanqueta/btr82-original.glb';
 const BTR82_ASSET_DIR='./assets/vehicle-candidates/tanqueta/';
 const BTR82_EXPECTED_TRIANGLES=Object.freeze({75:16109,50:10745,25:5371});
+const BTR82_LIVE_ASSET_VERSION='matte-uv-repair-v1';
 const MAX_BYTES=64*1024*1024,KEY='source:'+BTR82_ID;
 let dbPending=null;
 function db(){
@@ -53,7 +54,7 @@ async function repoSource(){
 // Approved files published with the original. Load them instead of running
 // Meshopt again and accidentally getting three different approximations.
 async function repoPrecomputedLod(percent){
- const path=BTR82_ASSET_DIR+'btr82-'+percent+'pct.glb';
+ const path=BTR82_ASSET_DIR+'btr82-'+percent+'pct.glb?rev='+BTR82_LIVE_ASSET_VERSION;
  try{
   const response=await fetch(path,{cache:'no-store'});
   if(!response.ok)return null;
