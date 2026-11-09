@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {planBuildingShell,shellColliders,WOODEN_DOOR_HP,
- REINFORCED_STRUCTURE_HP,WOODEN_STRUCTURE_HP} from '../src/building-shell.mjs';
+ REINFORCED_STRUCTURE_HP,WOODEN_STRUCTURE_HP,BUNKER_DOOR_HP,BUNKER_STRUCTURE_HP} from '../src/building-shell.mjs';
 import {canLightDamageWall,canLightDamageRoof,wallBlastDamage,roofBlastDamage} from '../src/combat-rules.mjs';
 import {traceArena} from '../server/coop-combat.mjs';
 
@@ -10,12 +10,14 @@ const cases=[
  {name:'militar normal',opt:{},wall:10,roof:10},
  {name:'taller',opt:{workshop:true},wall:10,roof:10},
  {name:'hangar',opt:{hangar:true,doorWidth:30,openDoor:true},wall:10,roof:10},
- {name:'búnquer',opt:{bunker:true,lockedDoor:true},wall:10,roof:10},
+ {name:'búnquer',opt:{bunker:true,lockedDoor:true},wall:30,roof:30},
  {name:'barracó de fusta',opt:{weakWalls:true},wall:4,roof:4},
  {name:'cabana de fusta',opt:{civilianHut:true},wall:4,roof:4},
  {name:'doble planta',opt:{floors:2},wall:10,roof:10}
 ];
 assert.equal(WOODEN_DOOR_HP,4);
+assert.equal(BUNKER_DOOR_HP,20);
+assert.equal(BUNKER_STRUCTURE_HP,30);
 assert.equal(REINFORCED_STRUCTURE_HP,10);
 assert.equal(WOODEN_STRUCTURE_HP,4);
 for(const c of cases){
@@ -30,9 +32,11 @@ for(const c of cases){
  const doors=out.walls.filter(w=>w.door);
  if(!c.opt.workshop&&!c.opt.hangar){
   assert(doors.length>0,c.name+' sense porta');
-  assert(doors.every(w=>w.hp===4&&canLightDamageWall(w)),c.name+' porta sense 4 PV');
+  assert(doors.every(w=>c.opt.bunker
+    ?w.hp===20&&w.bunkerGate&&!canLightDamageWall(w)
+    :w.hp===4&&canLightDamageWall(w)),c.name+' porta incorrecta');
  }
- const armor=c.wall===10;
+ const armor=c.wall>=10;
  assert(walls.every(w=>canLightDamageWall({...w,weakWood:!armor})===!armor),
   c.name+' regles arma lleugera');
  assert.equal(canLightDamageRoof({rhp:c.roof,weakWood:!armor}),!armor,
@@ -43,13 +47,14 @@ const reinforced={hp:10,door:false,weakWood:false},
  door={hp:4,door:true,woodenDoor:false};
 assert.equal(canLightDamageWall(reinforced),false);
 assert.equal(canLightDamageWall(wood),true);
-assert.equal(canLightDamageWall(door),true); // Fins i tot les portes metàl·liques.
+assert.equal(canLightDamageWall(door),true); // Excepte la porta blindada del búnquer.
+assert.equal(canLightDamageWall({hp:20,door:true,bunkerGate:true}),false);
 assert.equal(canLightDamageWall({hp:Infinity,door:true}),false);
 assert.equal(canLightDamageRoof({rhp:10,wood:false,weakWood:false}),false);
 assert.equal(canLightDamageRoof({rhp:4,weakWood:true}),true);
 assert.equal(canLightDamageRoof({rhp:4,civilianHut:true}),true);
 assert.equal(canLightDamageRoof({rhp:10,wood:true}),true);
-assert.equal(roofBlastDamage({kind:'enemy_bunker',rhp:10,rb:false,x:0,z:0,w:20},0,0,15,10),10);
+assert.equal(roofBlastDamage({kind:'enemy_bunker',rhp:30,rb:false,x:0,z:0,w:20},0,0,15,10),10);
 assert.equal(wallBlastDamage({hp:10,open:false,x0:0,x1:1,z0:0,z1:1,y1:8},.5,0,.5,8,10),10);
 
 // La trajectòria del Worker ha de conservar l'índex del sostre impactat,
@@ -68,4 +73,8 @@ assert(game.includes("if(shotClass==='light'&&!window.HUNTER_SHARED_COMBAT.canLi
 const server=readFileSync(new URL('../server/coop-mission.mjs',import.meta.url),'utf8');
 assert(server.includes('canLightDamageWall(w)')&&server.includes('canLightDamageRoof(building)'));
 assert(game.includes('y0:fy-1,y1:fy+sh,hp:10,m,door:false'));
+assert(game.includes('BUNKER_STRUCTURE_HP'));
+assert(game.includes('BUNKER_DOOR_HP'));
+const adapter=readFileSync(new URL('../src/world-adapter.mjs',import.meta.url),'utf8');
+assert(adapter.includes('bunkerGate:!!w.bunkerGate'));
 console.log('PV estructures: 10 parets/sostres/pilars; 4 portes/fusta; bales només als febles; SOLO+COOP.');
