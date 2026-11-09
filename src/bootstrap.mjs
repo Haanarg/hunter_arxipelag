@@ -1,22 +1,22 @@
-import * as gameState from './game-state-core.mjs?v=0.6.198';
+import * as gameState from './game-state-core.mjs?v=0.6.199';
 window.HUNTER_GAME_STATE=gameState;
-import * as gameIntel from './game-intel-core.mjs?v=0.6.198';
+import * as gameIntel from './game-intel-core.mjs?v=0.6.199';
 window.HUNTER_GAME_INTEL=gameIntel;
-import * as playerInput from './player-input-core.mjs?v=0.6.198';
+import * as playerInput from './player-input-core.mjs?v=0.6.199';
 window.HUNTER_PLAYER_INPUT=playerInput;
-import * as gameCatalog from './game-catalog-core.mjs?v=0.6.198';
+import * as gameCatalog from './game-catalog-core.mjs?v=0.6.199';
 window.HUNTER_GAME_CATALOG=gameCatalog;
-import * as startLifecycle from './start-lifecycle-core.mjs?v=0.6.198';
+import * as startLifecycle from './start-lifecycle-core.mjs?v=0.6.199';
 window.HUNTER_START_LIFECYCLE=startLifecycle;
-import * as frameTick from './frame-tick-core.mjs?v=0.6.198';
+import * as frameTick from './frame-tick-core.mjs?v=0.6.199';
 window.HUNTER_FRAME_TICK=frameTick;
-import * as frameDiagnostics from './frame-diagnostics-core.mjs?v=0.6.198';
+import * as frameDiagnostics from './frame-diagnostics-core.mjs?v=0.6.199';
 window.HUNTER_FRAME_DIAGNOSTICS=frameDiagnostics;
-import * as spatialGrid from './spatial-grid-core.mjs?v=0.6.198';
+import * as spatialGrid from './spatial-grid-core.mjs?v=0.6.199';
 window.HUNTER_SPATIAL_GRID=spatialGrid;
-import {createArcadeBlastFX} from './arcade-blast-fx.mjs?v=0.6.198';
+import {createArcadeBlastFX} from './arcade-blast-fx.mjs?v=0.6.199';
 window.HUNTER_CREATE_ARCADE_BLAST_FX=createArcadeBlastFX;
-import {createNativePrediction} from './native-coop-prediction.mjs?local=0.6.198';
+import {createNativePrediction} from './native-coop-prediction.mjs?local=0.6.199';
 import {createNativeCoopInterpolation} from './native-coop-interpolation.mjs?smooth=14';
 import {createNativeCoopProjectileVisual} from './native-coop-projectile-visual.mjs?shots=4';
 import {createNativeCoopGrenadeVisual} from './native-coop-grenade-visual.mjs?ballistic=1';
@@ -24,17 +24,17 @@ window.HUNTER_CREATE_NATIVE_PREDICTION=createNativePrediction;
 window.HUNTER_CREATE_NATIVE_INTERPOLATION=createNativeCoopInterpolation;
 window.HUNTER_CREATE_NATIVE_COOP_PROJECTILE_VISUAL=createNativeCoopProjectileVisual;
 window.HUNTER_CREATE_NATIVE_COOP_GRENADE_VISUAL=createNativeCoopGrenadeVisual;
-import {SHARED_SHARKS} from './shark-motion-core.mjs?v=0.6.198';
+import {SHARED_SHARKS} from './shark-motion-core.mjs?v=0.6.199';
 window.HUNTER_SHARED_SHARKS=SHARED_SHARKS;
 import * as enemyPerception from './enemy-perception-core.mjs';
 window.HUNTER_ENEMY_PERCEPTION=enemyPerception;
-import * as enemyCarSteering from './enemy-car-steering.mjs?v=0.6.198';
+import * as enemyCarSteering from './enemy-car-steering.mjs?v=0.6.199';
 window.HUNTER_ENEMY_CAR_STEERING=enemyCarSteering;
-import * as enemyRequisition from './enemy-vehicle-requisition.mjs?v=0.6.198';
+import * as enemyRequisition from './enemy-vehicle-requisition.mjs?v=0.6.199';
 window.HUNTER_ENEMY_REQUISITION=enemyRequisition;
-import {createNativeCoopConnection} from './native-coop-connection.mjs?v=0.6.198&net=2';
+import {createNativeCoopConnection} from './native-coop-connection.mjs?v=0.6.199&net=2';
 window.HUNTER_NATIVE_COOP_TRANSPORT=createNativeCoopConnection;
-import * as debrisCore from './debris-core.mjs?v=0.6.198';
+import * as debrisCore from './debris-core.mjs?v=0.6.199';
 window.HUNTER_DEBRIS_CORE=debrisCore;
 import * as vehicleEnvironment from './vehicle-environment-core.mjs';
 window.HUNTER_VEHICLE_ENVIRONMENT=vehicleEnvironment;
@@ -42,13 +42,13 @@ import * as fenceVisual from './fence-visual-core.mjs';
 window.HUNTER_FENCE_VISUAL=fenceVisual;
 import * as vegetationLayout from './vegetation-layout.mjs';
 window.HUNTER_VEGETATION_LAYOUT=vegetationLayout;
-import * as towerModel from './tower-model.mjs?v=0.6.198';
+import * as towerModel from './tower-model.mjs?v=0.6.199';
 window.HUNTER_TOWER_MODEL=towerModel;
-import * as weapons from './weapon-catalog.mjs?v=0.6.198&rifleCone80=1';
+import * as weapons from './weapon-catalog.mjs?v=0.6.199&rifleCone80=1';
 window.HUNTER_SHARED_WEAPONS=weapons;
 import * as sharedBatching from './player-batching-core.mjs';
 window.HUNTER_SHARED_BATCHING=sharedBatching;
-import * as vehicleModels from './vehicle-model-core.mjs?v=0.6.198';
+import * as vehicleModels from './vehicle-model-core.mjs?v=0.6.199';
 window.HUNTER_SHARED_VEHICLE_MODELS=vehicleModels;
 import * as sharedAccuracy from './enemy-accuracy-core.mjs';
 window.HUNTER_SHARED_ACCURACY=sharedAccuracy;
@@ -56,57 +56,57 @@ import * as projectileModel from './projectile-model.mjs';
 window.HUNTER_PROJECTILE_MODEL=projectileModel;
 import * as sharedProjectiles from './projectile-core.mjs';
 window.HUNTER_SHARED_PROJECTILES=sharedProjectiles;
-import * as sharedAiming from './aiming-core.mjs?v=0.6.198&rifleCone80=1';
+import * as sharedAiming from './aiming-core.mjs?v=0.6.199&rifleCone80=1';
 window.HUNTER_SHARED_AIMING=sharedAiming;
 import * as sharedModels from './player-model-core.mjs';
 window.HUNTER_SHARED_MODELS=sharedModels;
-import * as occupantDamage from './vehicle-occupant-damage-core.mjs?v=0.6.198';
+import * as occupantDamage from './vehicle-occupant-damage-core.mjs?v=0.6.199';
 window.HUNTER_VEHICLE_OCCUPANT_DAMAGE=occupantDamage;
-import * as sharedCombat from './combat-rules.mjs?v=0.6.198&visual=6&friendlyCover=1';
-import * as sharedVehicles from './vehicle-dynamics-core.mjs?v=0.6.198';
+import * as sharedCombat from './combat-rules.mjs?v=0.6.199&visual=6&friendlyCover=1';
+import * as sharedVehicles from './vehicle-dynamics-core.mjs?v=0.6.199';
 import * as ferryDeck from './ferry-deck-core.mjs';
 window.HUNTER_FERRY_DECK=ferryDeck;
 window.HUNTER_SHARED_COMBAT=sharedCombat;window.HUNTER_SHARED_VEHICLES=sharedVehicles;
-import * as buildingShell from './building-shell.mjs?v=0.6.198';
+import * as buildingShell from './building-shell.mjs?v=0.6.199';
 window.HUNTER_BUILDING_SHELL=buildingShell;
-import * as compoundPlanning from './compound-planning.mjs?v=0.6.198';
+import * as compoundPlanning from './compound-planning.mjs?v=0.6.199';
 window.HUNTER_COMPOUND_PLANNING=compoundPlanning;
-import * as worldGeneration from './world-generation-core.mjs?v=0.6.198&visual=6';
-import * as canonicalWater from './canonical-water.mjs?v=0.6.198';
+import * as worldGeneration from './world-generation-core.mjs?v=0.6.199&visual=6';
+import * as canonicalWater from './canonical-water.mjs?v=0.6.199';
 window.HUNTER_WORLD_GENERATION=worldGeneration;window.HUNTER_CANONICAL_WATER=canonicalWater;
-import * as walkSurfaces from './walk-surfaces.mjs?v=0.6.198';
+import * as walkSurfaces from './walk-surfaces.mjs?v=0.6.199';
 window.HUNTER_WALK_SURFACES=walkSurfaces;
-import * as worldPhysics from './world-physics.mjs?v=0.6.198';
-import * as worldAdapter from './world-adapter.mjs?v=0.6.198';
+import * as worldPhysics from './world-physics.mjs?v=0.6.199';
+import * as worldAdapter from './world-adapter.mjs?v=0.6.199';
 window.HUNTER_WORLD_PHYSICS=worldPhysics;window.HUNTER_WORLD_ADAPTER=worldAdapter;
-import {createCoopConnection} from './coop-connection.mjs?v=0.6.198';
+import {createCoopConnection} from './coop-connection.mjs?v=0.6.199';
 window.HUNTER_COOP_CONNECTION=createCoopConnection;
-import * as playerSimulation from './player-simulation.mjs?v=0.6.198';
+import * as playerSimulation from './player-simulation.mjs?v=0.6.199';
 window.HUNTER_PLAYER_SIMULATION=playerSimulation;
-import * as operationJournal from './operation-journal.mjs?v=0.6.198';
+import * as operationJournal from './operation-journal.mjs?v=0.6.199';
 window.HUNTER_JOURNAL=operationJournal;
-import {accountConfig} from './account-config.mjs?v=0.6.198';
-import {configuredAccounts,createAccountService} from './account-client.mjs?v=0.6.198';
-import * as cloudFactory from './operation-cloud.mjs?v=0.6.198';
+import {accountConfig} from './account-config.mjs?v=0.6.199';
+import {configuredAccounts,createAccountService} from './account-client.mjs?v=0.6.199';
+import * as cloudFactory from './operation-cloud.mjs?v=0.6.199';
 window.HUNTER_CLOUD_FACTORY=cloudFactory;
 try{window.HUNTER_ACCOUNT_SERVICE=await configuredAccounts(accountConfig,{notify:()=>window.HUNTER_AUTH_CHANGED?.()});}
 catch(_){window.HUNTER_ACCOUNT_SERVICE=createAccountService();console.warn('Els comptes no estan disponibles; el desament local continua actiu.');}
-import * as operationFiles from './operation-files.mjs?v=0.6.198';
+import * as operationFiles from './operation-files.mjs?v=0.6.199';
 window.HUNTER_SAVE_FILES=operationFiles;
-import * as operationSaves from './operation-save.mjs?v=0.6.198';
+import * as operationSaves from './operation-save.mjs?v=0.6.199';
 window.HUNTER_SAVES=operationSaves;
-import * as compoundPaths from './compound-paths.mjs?v=0.6.198';
+import * as compoundPaths from './compound-paths.mjs?v=0.6.199';
 window.HUNTER_COMPOUND_PATHS=compoundPaths;
-import {runtimeLayouts,chooseCompoundLayout} from './compound-runtime-layouts.mjs?v=0.6.198';
-import * as compoundArchitecture from './compound-architecture.mjs?v=0.6.198';
+import {runtimeLayouts,chooseCompoundLayout} from './compound-runtime-layouts.mjs?v=0.6.199';
+import * as compoundArchitecture from './compound-architecture.mjs?v=0.6.199';
 window.HUNTER_RUNTIME_LAYOUTS=runtimeLayouts;window.HUNTER_CHOOSE_COMPOUND=chooseCompoundLayout;window.HUNTER_COMPOUND_ARCHITECTURE=compoundArchitecture;
 import {createCompoundStructures} from './compound-structures.mjs';
 window.HUNTER_COMPOUND_STRUCTURES=createCompoundStructures;
 import {runtimeScripts} from './runtime-scripts.mjs';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.198&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.199&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
-import {GAME_VERSION} from './version.mjs?v=0.6.198';
+import {GAME_VERSION} from './version.mjs?v=0.6.199';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
 window.HUNTER_CIVIL_C1A=createCivilianCarModel;
@@ -158,7 +158,7 @@ try {
   // Si les dades no es poden preparar, mantenim la geometria clàssica
   // de reserva per no impedir l'inici de la partida.
   try {
-    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.6.198');
+    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.6.199');
     window.HUNTER_HUMVEE_D31=await prepareHumveeD31Runtime(THREE,{vehicleScale:1.3});
     console.info('Humvee D3.1 procedural B · 175% carregat al joc',
       window.HUNTER_HUMVEE_D31.dimensions);
@@ -169,7 +169,7 @@ try {
   // Huey natiu +10% i dos seients de cabina: les geometries i la textura
   // es preparen una sola vegada i es comparteixen entre totes les instàncies.
   try {
-    const {prepareHueyDuaneRuntime}=await import('./huey-duane-runtime.mjs?v=0.6.198');
+    const {prepareHueyDuaneRuntime}=await import('./huey-duane-runtime.mjs?v=0.6.199');
     window.HUNTER_HUEY_DUANE=await prepareHueyDuaneRuntime(THREE);
     console.info('Huey Three.js, portes obertes, +10% i dos seients · carregat',
       window.HUNTER_HUEY_DUANE.dimensions);
@@ -180,7 +180,7 @@ try {
   // Apache natiu: les dades APG2 són dins el mòdul JavaScript; reconstrueix
   // les tres rodes rodones i amplia el model 50% sense carregar cap GLB.
   try {
-    const {prepareApacheAraonRuntime}=await import('./apache-araon-runtime.mjs?v=0.6.198');
+    const {prepareApacheAraonRuntime}=await import('./apache-araon-runtime.mjs?v=0.6.199');
     window.HUNTER_APACHE_ARAON=await prepareApacheAraonRuntime(THREE);
     console.info('Apache Three.js +50% amb tres rodes circulars, sàlvia mat i rotors negres',
       window.HUNTER_APACHE_ARAON.dimensions);
