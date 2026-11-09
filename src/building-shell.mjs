@@ -3,7 +3,9 @@ import {segmentAabbT} from './combat-rules.mjs';
 // Normal building doors are taller than wide. Bunker/hangar openings have
 // their own explicit geometry and must not inherit these dimensions.
 export const STANDARD_BUILDING_DOOR=Object.freeze({width:2.4,height:3.8});
-export const WOODEN_DOOR_HP=5;
+export const WOODEN_DOOR_HP=4;
+export const REINFORCED_STRUCTURE_HP=10;
+export const WOODEN_STRUCTURE_HP=4;
 export const WOODEN_DOOR_THICKNESS=.16; // centrat dins la llinda
 // A single calculation for both jambs; matches the door collider and visual
 // aperture exactly, including doors on the shorter side of a building.
@@ -80,10 +82,10 @@ export function wallShotHit(from,to,wall){
 export function planBuildingShell(w,d,h,opt={},random){
   if(![w,d,h].every(v=>Number.isFinite(v)&&v>0)||typeof random!=='function')throw new RangeError('Invalid building shell');
   const t=.8,dw=opt.doorWidth||STANDARD_BUILDING_DOOR.width,ds=opt.doorSide==null?Math.floor(random()*4):opt.doorSide,
-    wallH=opt.floors===2?h/2:h,wallHp=opt.civilianHut||opt.weakWalls?4:12,
-    // La fusta feble d'un barracó militar té la mateixa coberta de 8 PV
-    // que una cabana civil de pescadors: una granada de 10 PV la trenca.
-    roofHp=opt.civilianHut||opt.weakWalls?8:opt.hangar?10:16,segments=[],assemblies=[];
+    wallH=opt.floors===2?h/2:h,wallHp=opt.civilianHut||opt.weakWalls?WOODEN_STRUCTURE_HP:REINFORCED_STRUCTURE_HP,
+    // Parets i sostres de fusta: 4 PV i vulnerables a armes lleugeres.
+    // Altres parets, teulades i pilars: 10 PV, només armes pesades/vehicles.
+    roofHp=opt.civilianHut||opt.weakWalls?WOODEN_STRUCTURE_HP:REINFORCED_STRUCTURE_HP,segments=[],assemblies=[];
   if(!Number.isFinite(dw)||dw<=0||!Number.isInteger(ds)||ds<0||ds>3)throw new RangeError('Invalid building doorway');
   const seg=(lx,lz,sx,sz,door=false,windows=false,supportSide=null,supportWeight=0,level=0)=>{
     const index=segments.length;segments.push({lx,lz,sx,sz,door:!!door,windows,supportSide,supportWeight,level});return index;
@@ -119,11 +121,11 @@ export function shellColliders(x,z,fy,w,d,h,opt={},random){
         slab=wooden?(plan.ds<2?
           {...box,z0:z+s.lz-WOODEN_DOOR_THICKNESS/2,z1:z+s.lz+WOODEN_DOOR_THICKNESS/2}:
           {...box,x0:x+s.lx-WOODEN_DOOR_THICKNESS/2,x1:x+s.lx+WOODEN_DOOR_THICKNESS/2}):box;
-      walls.push({...slab,y0:fy-1,y1:fy+dh,hp:wooden?WOODEN_DOOR_HP:10,woodenDoor:wooden,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,nx:normal[0],nz:normal[1],doorWidth:plan.dw,doorHeight:dh});
+      walls.push({...slab,y0:fy-1,y1:fy+dh,hp:WOODEN_DOOR_HP,woodenDoor:wooden,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,nx:normal[0],nz:normal[1],doorWidth:plan.dw,doorHeight:dh});
       if(plan.wallH-dh>.05)walls.push({...box,y0:fy+dh,y1:fy+plan.wallH,hp:plan.wallHp,door:false,open:false,playerBlock:false,rammable:false});
     }else{
       const layout=s.windows?windowLayout(s.sx,s.sz,plan.wallH):null;
-      walls.push({...box,y0:fy+s.level-(s.level?0:1),y1:fy+s.level+(s.hangarPost?Math.max(3.1,h*.3):plan.wallH),hp:s.hangarPost?16:plan.wallHp,door:false,open:false,windows:!!s.windows,upperFloorWindow:!!s.windows&&s.level>0,...(layout?{windowPanes:layout.centers.map(c=>({axis:layout.alongX?'z':'x',x:x+s.lx+(layout.alongX?c:0),z:z+s.lz+(layout.alongX?0:c),y0:fy+s.level+layout.bottom+.09,y1:fy+s.level+layout.bottom+layout.height-.09,width:layout.width-.18}))}:{}),...(s.hangarPost?{}:{supportSide:s.supportSide,supportWeight:s.supportWeight})});
+      walls.push({...box,y0:fy+s.level-(s.level?0:1),y1:fy+s.level+(s.hangarPost?Math.max(3.1,h*.3):plan.wallH),hp:plan.wallHp,door:false,open:false,windows:!!s.windows,upperFloorWindow:!!s.windows&&s.level>0,...(layout?{windowPanes:layout.centers.map(c=>({axis:layout.alongX?'z':'x',x:x+s.lx+(layout.alongX?c:0),z:z+s.lz+(layout.alongX?0:c),y0:fy+s.level+layout.bottom+.09,y1:fy+s.level+layout.bottom+layout.height-.09,width:layout.width-.18}))}:{}),...(s.hangarPost?{}:{supportSide:s.supportSide,supportWeight:s.supportWeight})});
     }
     segmentWalls.push(Array.from({length:walls.length-start},(_,i)=>start+i));
   }
