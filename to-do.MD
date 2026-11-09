@@ -1,3 +1,11 @@
+**2026-11-09 · Caixes de munició i comptadors (v0.6.202):**
+- [x] Cada caixa de munició afegeix **16 bales** per pistola/fusell d'assalt, **5 cartutxos** de franctirador i **3 coets** de bazuca (SOLO/COOP).
+- [x] Possessió del bazuca independent dels coets, incloent recuperació de partides antigues i autoritat del servidor.
+- [x] Tres tipus de munició amb icona i xifra a l'inventari; cap comptador de munició sota les icones d'armes.
+- [x] Comptador integrat al botó tàctil de disparar, granada en vehicle i míssils d'helicòpter.
+- [x] Regressió `tests/ammo-pickup-hud.mjs` integrada a `test:basic`.
+- [ ] Provar visualment comptadors de totes les armes, tant en pantalla tàctil com en ordinador i als dos modes.
+
 **P1 · 2026-11-09 · segona iteració de la tanqueta BTR-82:**
 - [x] L'antiga variant 25% (5.371 triangles, 18 malles) és la nova referència 100%, amb materials militars mats.
 - [x] Nous LOD 75%=4.025, 50%=2.684, 25%=1.338 triangles. Totes quatre versions mantenen 18 malles.
