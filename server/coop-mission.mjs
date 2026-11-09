@@ -5,7 +5,7 @@ import {createCoopTerrain} from './coop-terrain.mjs';
 import {createStaticWorldAdapter} from '../src/world-adapter.mjs';
 import {createCanonicalWater} from '../src/canonical-water.mjs';
 import {createPlayerSimulation,validatePlayerInput,damageHealth} from '../src/player-simulation.mjs';
-import {combatBalance,explosionDamage,closestFenceBlastPoint,wallBlastDamage,roofBlastDamage,countDestroyedSupport} from '../src/combat-rules.mjs';
+import {combatBalance,explosionDamage,closestFenceBlastPoint,wallBlastDamage,roofBlastDamage,countDestroyedSupport,canLightDamageWall,canLightDamageRoof} from '../src/combat-rules.mjs';
 import {firstSupplyContact} from './coop-inventory.mjs';
 import {createRelayVehicles,vehicleClear} from './coop-vehicles.mjs';
 import {ferryLocal,ferryWorld,ferrySurfaceY,ferryPedestrianAt} from '../src/ferry-deck-core.mjs';
@@ -111,13 +111,23 @@ export function restoreRelayMission(record,geometry){
   }
   function damageWall(index,damage){
     const w=physical.walls[index],radioPanel=meta.optional?.radio?.some(r=>r.colliderIndex===index);
-    if(!w||!(w.woodenDoor||w.weakWood||radioPanel||w.civicFurniture==='bench')||w.open||removedWalls.has(index)||!(damage>0))return false;
+    if(!w||!(canLightDamageWall(w)||radioPanel)||w.open||removedWalls.has(index)||!(damage>0))return false;
     w.hp=Math.max(0,Math.ceil(w.hp)-Math.ceil(damage));wallHealth.set(index,w.hp);
     if(w.civicFurniture)for(const [i,part] of physical.walls.entries())
       if(part!==w&&part.civicGroup===w.civicGroup&&part.civicFurniture===w.civicFurniture){
         part.hp=w.hp;wallHealth.set(i,w.hp);
       }
     if(w.hp===0){destroyWall(index);world=buildWorld();}
+    return true;
+  }
+  // Una bala lleugera pot trencar les cobertes dels barracons de fusta,
+  // però no afecta els sostres reforçats de 10 PV.
+  function damageRoof(index,damage){
+    const building=physical.buildings[index];
+    if(!building||!canLightDamageRoof(building)||building.rb||!(damage>0))return false;
+    building.rhp=Math.max(0,Math.ceil(building.rhp)-Math.ceil(damage));
+    roofHealth.set(index,building.rhp);
+    if(building.rhp===0){collapseRoof(index);world=buildWorld();}
     return true;
   }
   function ramWall(wall,impact=null){
@@ -297,7 +307,7 @@ export function restoreRelayMission(record,geometry){
   const combat=createRelayCombat({openEnemyDoor:enemyOpenDoor,
     onEnemyAlert:(unit,actor,tick,targets)=>optionals.warn(unit,actor,tick,targets),
     civilianTargets:()=>optionals.civilians(),damageCivilian:(id,dmg,tick)=>optionals.damage(id,dmg,tick),
-    meta,record:record.combat,vehicles,waterSurface:(x,z,time)=>water.surfaceAt(x,z,time),cutWire,blastWire,blastStructures,damagePalm,blastPalms,breakWindow,damageWall,windowAvailable:(index,paneIndex)=>!brokenWindows.has(index+':'+paneIndex),
+    meta,record:record.combat,vehicles,waterSurface:(x,z,time)=>water.surfaceAt(x,z,time),cutWire,blastWire,blastStructures,damagePalm,blastPalms,breakWindow,damageWall,damageRoof,windowAvailable:(index,paneIndex)=>!brokenWindows.has(index+':'+paneIndex),
     canAttack:()=>true,inventory,players:()=>sim.snapshot().players,
     visiblePlayers:()=>cheats.invisible?[]:sim.snapshot().players,
     damagePlayer:(id,amount)=>cheats.immune?false:
