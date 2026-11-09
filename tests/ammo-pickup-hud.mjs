@@ -10,6 +10,7 @@ const markup=read('../index.html');
 const coop=read('../server/coop-mission.mjs');
 const native=read('../src/coop-world-runtime.js');
 const saves=read('../src/operation-runtime.js');
+const generation=read('../src/world-generation.js');
 
 // Les tres reserves són independents. Pistola i fusell d'assalt
 // continuen consumint exactament la mateixa reserva de bales.
@@ -42,6 +43,9 @@ assert(native.includes('bazookaAmmo=bag.bazookaAmmo??0'));
 // mostra tres icones amb xifres i amaga els números de les armes.
 assert(solo.includes("fire-ammo-count"));
 assert(solo.includes("bazookaEquipped?bazookaAmmo:sniperEquipped?sniperAmmo:ammo"));
+assert(solo.includes('passenger=!!mountedRow')&&solo.includes('personalWeapon=!cv||passenger'));
+assert(generation.includes('sniperAmmo=0;bazookaAmmo=0;setSniperScope(false)'));
+
 assert(ui.includes('class="inv-ammo-grid"'));
 assert(ui.includes("'Cartutxos de franctirador'"));
 assert(ui.includes("'Coets de bazuca'"));
