@@ -130,7 +130,7 @@ export function closestFenceBlastPoint(w,x,y,z){
 // Les parets/sostres reforçats (10 PV) només cedeixen a explosions
 // pesades i embestides. Les excepcions dels vidres es resolen a part.
 export function canLightDamageWall(w){
- if(!w||w.hp===Infinity||w.indestructible)return false;
+ if(!w||w.hp===Infinity||w.indestructible||w.bunkerGate||w.owner?.kind==='enemy_bunker')return false;
  return !!(w.door||w.woodenDoor||w.weakWood||
    w.owner?.weakWood||w.owner?.civilianHut||
    w.civicFurniture==='bench');
