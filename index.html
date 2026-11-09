@@ -100,6 +100,17 @@ body.player-swimming #joystick .joy-run-zone .swim-label{display:inline}
 </style><style>button{cursor:pointer}#gamepanel{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0009;color:white;z-index:20;padding:20px}#gamepanel .card{position:relative;background:#24364b;padding:24px;border-radius:10px;max-width:600px;max-height:85vh;overflow:auto}.panel-close{position:absolute;top:8px;right:10px;width:38px;height:38px;padding:0!important;margin:0!important;border:0!important;background:transparent!important;font:700 30px/38px system-ui;color:#fff;opacity:.82}.panel-close:hover{opacity:1;background:#ffffff12!important}#gamepanel button{padding:10px;margin:4px;color:white;background:#0004;border:1px solid white;border-radius:6px}#gamepanel canvas{width:100%;max-width:440px;height:auto}.controls{display:grid;grid-template-columns:110px 1fr;gap:8px}.p b{cursor:pointer}#joystick{cursor:grab}.p b.held{background:#fff6}#mainFireButton svg,#mainActionButton svg{width:39px;height:39px;display:block;pointer-events:none}.p b.heli-control,.p b.heli-combat-control,.p b.heli-bomb-control,.p b.sniper-control,.p b.vehicle-grenade-control{display:none}.p.heli-active b.heli-control{display:flex}.p.heli-combat-active b.heli-combat-control{display:flex;position:absolute;right:66px;bottom:66px}
 .p.heli-bomb-active b.heli-bomb-control{display:flex;position:absolute;right:66px;bottom:66px}
 .p.vehicle-grenade-active b.vehicle-grenade-control{display:flex;position:absolute;right:66px;bottom:66px;border-color:#efb87b;background:#4f4031dd}
+.p #mainFireButton{position:relative}
+.p #mainFireButton .fire-ammo-count{position:absolute;right:-7px;top:-7px;min-width:20px;height:20px;
+ padding:2px 4px;box-sizing:content-box;display:flex;align-items:center;justify-content:center;
+ background:#233e32;color:#fff7d9;border:1px solid #e5d5a4;border-radius:13px;
+ font:800 13px/1 ui-monospace,monospace;box-shadow:0 2px 5px #0008;pointer-events:none}
+.p #mainFireButton .fire-ammo-count[hidden]{display:none}
+.p b.heli-combat-control,.p b.vehicle-grenade-control{position:relative}
+.p b.heli-combat-control::after,.p b.vehicle-grenade-control::after{
+ content:attr(data-count);position:absolute;right:-8px;top:-7px;min-width:18px;height:19px;
+ padding:2px 4px;line-height:19px;text-align:center;border-radius:12px;
+ background:#243c2e;color:#fff;border:1px solid #f8e5bc;font:700 12px/19px system-ui;pointer-events:none}
 .p b.heli-bomb-control{position:relative;font-size:29px;border-color:#ebd1a0;background:#413c2ce0}
 .p b.heli-bomb-control[data-count="0"]{opacity:.58;border-color:#a3a3a3;background:#242424c9}
 .p b.heli-bomb-control::after{content:attr(data-count);position:absolute;right:-8px;top:-7px;min-width:17px;height:17px;padding:2px 4px;line-height:17px;border-radius:11px;background:#243c2e;color:#fff;border:1px solid #f8e5bc;font:700 12px system-ui;pointer-events:none}
@@ -155,6 +166,14 @@ body.sniper-scoped #joystick{cursor:crosshair}
 #gamepanel .card.inventory-card{width:min(940px,92vw);max-width:940px;background:#1f2930;padding:18px}
 .inv-wrap{display:grid;grid-template-columns:minmax(280px,1.25fr) minmax(220px,.75fr);gap:18px}
 .inv-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:12px}.inv-health{margin:0 0 16px;padding:12px 14px;border:1px solid #556b67;border-radius:9px;background:#142323}.inv-health-line{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:16px;margin-bottom:9px}.inv-healed{color:#b6f5bb;font-size:14px}.inv-health-track{height:10px;border-radius:6px;background:#59312c;overflow:hidden}.inv-health-fill{height:100%;background:#91d092;transition:width .22s ease}
+.inv-ammo{margin:0 0 16px;padding:12px 14px;border:1px solid #65736a;border-radius:10px;background:#15231f}
+.inv-ammo h3{margin:0 0 10px;color:#e9d5a9;font:800 13px/1.1 system-ui;letter-spacing:.09em;text-transform:uppercase}
+.inv-ammo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.inv-ammo-type{min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 5px;border:1px solid #52665c;border-radius:9px;background:#0b181bd9;text-align:center}
+.inv-ammo-symbol{height:43px;display:flex;align-items:center;justify-content:center}
+.inv-ammo-symbol svg{display:block;width:38px;height:38px}
+.inv-ammo-number{font:800 23px/1.2 ui-monospace,monospace;color:#fff0c3;font-variant-numeric:tabular-nums}
+.inv-ammo-name{font:600 11px/1.25 system-ui;color:#c8d6d1}
 .inv-grid{display:grid;grid-template-columns:repeat(5,minmax(54px,1fr));gap:9px}
 .inv-slot{aspect-ratio:1;border:1px solid #7f8c92;background:#10171bcc;border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;font-size:30px;cursor:pointer}
 .inv-slot.selected{outline:2px solid #f0c86a;background:#28343a}
@@ -162,7 +181,7 @@ body.sniper-scoped #joystick{cursor:crosshair}
 .inv-detail{background:#12191ddd;border:1px solid #58656a;border-radius:10px;padding:18px;min-height:310px;display:flex;flex-direction:column}
 .inv-icon{font-size:74px;line-height:1;text-align:center;margin:8px 0 20px}
 .inv-detail h3{font-size:22px;margin:0 0 8px}.inv-detail p{line-height:1.45;opacity:.9}
-.inv-slot svg{width:42px;height:42px;display:block}.inv-icon svg{width:86px;height:86px;display:block;margin:auto}@media(max-width:700px){#gamepanel .card.inventory-card{width:min(96vw,620px);padding:12px}.inv-wrap{grid-template-columns:1fr}.inv-grid{grid-template-columns:repeat(4,minmax(48px,1fr))}.inv-detail{min-height:180px}.inv-icon{font-size:52px;margin:4px 0 10px}}/* Pausa compacta: lectura ràpida i botons separats del resum de controls. */
+.inv-slot svg{width:42px;height:42px;display:block}.inv-icon svg{width:86px;height:86px;display:block;margin:auto}@media(max-width:700px){#gamepanel .card.inventory-card{width:min(96vw,620px);padding:12px}.inv-wrap{grid-template-columns:1fr}.inv-grid{grid-template-columns:repeat(4,minmax(48px,1fr))} .inv-detail{min-height:180px}.inv-icon{font-size:52px;margin:4px 0 10px}.inv-ammo{padding:9px}.inv-ammo-type{padding:6px 2px}.inv-ammo-name{font-size:10px}.inv-ammo-number{font-size:21px}}/* Pausa compacta: lectura ràpida i botons separats del resum de controls. */
 /* Temporitzador de C4: visor LED frontal de la mateixa bomba,
    controls independents per a desenes i unitats, aptes per a mòbil. */
 .bomb-timer-config{display:flex;flex-direction:column;align-items:center;gap:12px;max-width:100%}
