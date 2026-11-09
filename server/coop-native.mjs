@@ -70,6 +70,6 @@ export function generateNativeMission(room,payload,fingerprint){
   ...(payload.sharks?{sharks:payload.sharks}:{}),
   ...(payload.intel?{intel:payload.intel}:{}),
   doors:geometry.walls.flatMap((w,wallIndex)=>w.door&&!w.alwaysOpen&&!w.locked?[{id:w.id,wallIndex,cx:(w.x0+w.x1)/2,cz:(w.z0+w.z1)/2,floor:w.y0+1}]:[])};
- const inventories=meta.members.map(m=>({actorId:m.id,bullets:16,grenades:0,disguise:0,medkits:0,assault:0,sniper:0,sniperAmmo:0,bazooka:0,c4:0,cutters:0,weapon:'pistol',disguised:false}));
+ const inventories=meta.members.map(m=>({actorId:m.id,bullets:16,grenades:0,disguise:0,medkits:0,assault:0,sniper:0,sniperAmmo:0,bazooka:0,bazookaAmmo:0,c4:0,cutters:0,weapon:'pistol',disguised:false}));
  return {geometry,record:{meta,inventories,phase:'relay',hold:0,status:'paused',checkpoint:{protocol:1,epoch:id,tick:0,players:meta.members.map((m,i)=>({id:m.id,...(i?second:spawn),hp:25,acknowledged:0,fall:null,swimming:false}))},nextAlarm:Date.now()+100}};
 }
