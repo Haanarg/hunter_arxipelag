@@ -36,7 +36,7 @@ jobs:
           set -euo pipefail
           archive="assets/vehicle-candidates/tanqueta/.btr82-base25-transfer.tar.xz"
           echo "db3fb471f8cbfb9dcd4a248619a22de2cb30c66dd5d2a9c95290848b672b71b8  $archive" | sha256sum -c -
-          expected="$(printf '%s\\n' btr82-base-100.glb btr82-base-75.glb btr82-base-50.glb btr82-base-25.glb | sort)"
+          expected="$(printf '%s\n' btr82-base-100.glb btr82-base-75.glb btr82-base-50.glb btr82-base-25.glb | sort)"
           actual="$(tar -tJf "$archive" | sort)"
           test "$actual" = "$expected"
           tar -xJf "$archive" -C assets/vehicle-candidates/tanqueta
