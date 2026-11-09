@@ -1,3 +1,17 @@
+## Reduccions agressives BTR-82 — 2026-11-09
+
+El model original **Low Poly BTR 82**, de **SIpriv** (Sketchfab, **CC BY 4.0**), s'ha rebut de l'usuari. Mida: **1.592.644 bytes**, **21.483 triangles i 199 malles**.
+
+La pestanya Tanqueta compara el model jugable amb l'original 100% i quatre versions ultralleugeres **5%, 4%, 3% i 2%**. En comptes de reduir 199 peces aïllades, s'agrupen per material i rol (casc/torreta/vuit rodes). El GLB original queda en **18 grups** de dibuix, preservant els pivots de la torreta i de les vuit rodes. El motor executa el `SimplifyModifier` (Three.js r186/meshoptimizer); per topologies molt discontínues, utilitza `MeshoptSimplifier.simplifySloppy` i reindexa les UV, les normals i les altres dades dels vèrtexs. El percentatge és un **objectiu**, no una garantia exacta: la web indica triangles i malles reals.
+
+Versions precomputades **fora del navegador** amb VTK Quadric Decimation, per comparació (no confondre amb el resultat Meshopt del motor): **5% = 1.077 △ / 18 malles**, **4% = 875 △ / 18**, **3% = 654 △ / 18**, **2% = 448 △ / 18**. Incloses al ZIP generat en aquesta conversa; no estan pujades al repositori.
+
+**Fitxer de producció pendent:** el binari del BTR-82 original no es pot publicar directament amb el connector GitHub textual. La web intenta carregar `assets/vehicle-candidates/tanqueta/btr82-original.glb`; si no hi és, s'ha d'importar una sola vegada al visor, que el conserva a IndexedDB.
+
+El GLB original conté l'extensió requerida `KHR_materials_pbrSpecularGlossiness`, no admesa pel GLTFLoader de Three.js r186. L'importador la converteix en PBR metallic-roughness abans de crear els quatre LOD, mantenint geometria, textures i animacions del fitxer original.
+
+No s'ha canviat el model jugable; cal revisar silueta, rodes, torreta, normals, UV i rendiment (SOLO/COOP) abans de decidir un LOD.
+
 ## BTR-82 seleccionat i reduccions (2026-11-09)
 
 L'únic candidat de tanqueta és **Low Poly BTR 82** de **SIpriv** (CC BY 4.0). Les dues opcions Stryker de bunny i M1128 de LM3D s'han retirat del catàleg i del manifest; mai no s'havien descarregat els seus GLB.

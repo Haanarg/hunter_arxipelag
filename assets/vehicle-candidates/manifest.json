@@ -223,14 +223,14 @@
         "triangles": 21500,
         "license": "CC BY 4.0",
         "url": "https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5",
-        "note": "Model seleccionat per a quatre reduccions reals 75/50/25/10 a Three.js amb meshoptimizer. Cal importar GLB original o posar-lo a la carpeta de candidats.",
+        "note": "BTR-82 de SIpriv seleccionat. Reduccions 5/4/3/2% a Three.js meshoptimizer amb fusió de 199 malles originals, pivots separats per rodes i torreta. GLB a conversa però encara no pujat a GitHub.",
         "provider": "sketchfab",
         "slot": 1
       }
     ]
   },
   "lastCurated": "2026-11-08",
-  "curationNotes": "BTR-82 de SIpriv seleccionat; altres 8x8 eliminats. Quatre reduccions reals es poden generar al navegador en importar el GLB original. Sense binaris BTR publicats.",
+  "curationNotes": "GLB original recuperat en aquesta conversa: 1.592.644 bytes, 21.483 triangles, 199 malles. Versions offline VTK 5/4/3/2%=1.077/875/654/448 triangles i 18 malles; Meshopt del navegador pot donar valors diferents.",
   "selectedForLod": {
     "tanqueta": {
       "modelId": "6226acae68424d99bf03882b245ff7c5",
@@ -242,13 +242,43 @@
       "present": false,
       "ratioLevels": [
         1,
-        0.75,
-        0.5,
-        0.25,
-        0.1
+        0.05,
+        0.04,
+        0.03,
+        0.02
       ],
-      "engine": "Three.js r186 SimplifyModifier / meshoptimizer",
-      "status": "awaiting_source_glb"
+      "engine": "Three.js r186 SimplifyModifier + meshoptimizer sloppy fallback + merged geometry by material/role",
+      "status": "source_glb_available_in_chat_not_repo",
+      "goalTriangles": 3000,
+      "sourceTriangles": 21483,
+      "sourceMeshes": 199,
+      "expectedMergedGroups": 18,
+      "offlineVariantStats": [
+        {
+          "percent": 5,
+          "triangles": 1077,
+          "meshes": 18,
+          "algorithm": "VTK Quadric Decimation; reference only"
+        },
+        {
+          "percent": 4,
+          "triangles": 875,
+          "meshes": 18,
+          "algorithm": "VTK Quadric Decimation; reference only"
+        },
+        {
+          "percent": 3,
+          "triangles": 654,
+          "meshes": 18,
+          "algorithm": "VTK Quadric Decimation; reference only"
+        },
+        {
+          "percent": 2,
+          "triangles": 448,
+          "meshes": 18,
+          "algorithm": "VTK Quadric Decimation; reference only"
+        }
+      ]
     }
   }
 }

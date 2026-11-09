@@ -1,8 +1,9 @@
 **P1 · 2026-11-09 · tanqueta Low Poly BTR 82 i quatre reduccions al banc:**
 - [x] El BTR-82 de SIpriv (CC BY 4.0) queda com l'únic candidat de tanqueta; eliminats Stryker i M1128 del catàleg i del manifest.
-- [x] Comparació del vehicle actual amb BTR-82 original 100% i quatre reduccions 75/50/25/10% calculades amb `SimplifyModifier` / meshoptimizer del Three.js r186 del joc.
+- [x] Comparació del vehicle actual amb BTR-82 original 100% i quatre reduccions 5/4/3/2% calculades amb `SimplifyModifier` / meshoptimizer i fusió de peces per material, preservant pivots de les vuit rodes i la torreta.
 - [x] Importació de GLB, persistència en IndexedDB, exportació individual dels quatre LOD i visor original de Sketchfab mentre manca el binari.
-- [ ] **GLB original no disponible en aquest torn**: importar-lo al banc o publicar `assets/vehicle-candidates/tanqueta/btr82-original.glb` (CC BY 4.0, SIpriv). Sense aquest fitxer no es poden calcular ni pujar els quatre GLB de veritat.
+- [x] GLB original recuperat a la conversa: 1.592.644 bytes, 21.483 triangles i 199 malles (SIpriv, CC BY 4.0). Variants offline VTK 5/4/3/2% (1.077/875/654/448 triangles, 18 malles) exportades com a ZIP.
+- [ ] Per habilitar la càrrega automàtica a la web, encara cal pujar el GLB original a `assets/vehicle-candidates/tanqueta/btr82-original.glb`; el connector GitHub no permet transferir directament el binari del contenidor. Es pot importar al visor amb IndexedDB sense pujar-lo.
 - [ ] Verificar les UV, les 8 rodes, el perfil de la torreta i el rendiment real; després triar un LOD i integrar-lo en SOLO/COOP.
 
 **2026-11-09 · búnquer blindat (v0.6.200):**

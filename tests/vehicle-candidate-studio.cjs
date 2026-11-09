@@ -44,13 +44,25 @@ assert(studio.includes("entry.provider==='sketchfab'")&&studio.includes("frame.s
 assert(studio.includes('slot.sourceFrame.remove()'),'El visor anterior s’ha de destruir quan es canvia de categoria');
 assert(html.includes('M1A1 Abrams')&&html.includes('Low Poly BTR 82'),
  'Cal explicar el BTR-82 seleccionat al preview');
-assert.deepEqual(manifest.selectedForLod?.tanqueta?.ratioLevels,[1,.75,.5,.25,.1]);
+assert.deepEqual(manifest.selectedForLod?.tanqueta?.ratioLevels,[1,.05,.04,.03,.02]);
+assert.equal(manifest.selectedForLod.tanqueta.sourceTriangles,21483);
+assert.equal(manifest.selectedForLod.tanqueta.sourceMeshes,199);
+assert.equal(manifest.selectedForLod.tanqueta.goalTriangles,3000);
 assert.equal(manifest.externalModels.tanqueta[0]?.modelId,'6226acae68424d99bf03882b245ff7c5');
 assert(!catalog.includes('fe28759be4914e4a9ea52d73aa503a4e'),'Stryker de bunny encara al catàleg');
 assert(!catalog.includes('3a813f5520974d21b3b3bba52e04a7d9'),'M1128 Stryker encara al catàleg');
 const btrCode=read('src/btr82-lod-studio.mjs');
-assert(btrCode.includes('new SimplifyModifier()')&&btrCode.includes('modifier.modify('),
- 'Els quatre LOD han de ser calculats amb el simplificador meshoptimizer real');
+const aggressive=read('src/btr82-aggressive-simplification.mjs');
+assert(aggressive.includes('new SimplifyModifier()')&&aggressive.includes('modifier.modify('),
+ 'El LOD ha d’usar Three.js r186 i meshoptimizer');
+assert(aggressive.includes('simplifySloppy(')&&aggressive.includes('mergeGeometries('),
+ 'Cal fusionar malles i aplicar reducció agressiva');
+assert(aggressive.includes('wheel:')&&aggressive.includes('bone27_180'),
+ 'Cal mantenir vuit rodes i torreta separades');
+assert(aggressive.includes('KHR_materials_pbrSpecularGlossiness'),
+ 'Cal adaptar els materials antics del BTR-82');
+assert(btrCode.includes('buildBtr82Lod(')&&btrCode.includes('normalizeBtr82Glb('),
+ 'El visor ha de carregar i reduir la geometria del model original');
 assert(btrCode.includes('new GLTFExporter()')&&btrCode.includes('saveSource('),
  'Cal poder exportar GLB i recordar l’original al navegador');
 assert(studio.includes("const btrStudy=config.id==='tanqueta'")&&
@@ -74,6 +86,6 @@ for(const old of ['helicopters-lod-proves.html','apache-variants-proves.html',
  'assets/vehicle-candidates/helicopter-lods/manifest.json',
  'assets/vehicle-candidates/helicopter-lods/apache-hybrid-manifest.json'])
  assert(!fs.existsSync(path.join(root,old)),'Cal retirar el candidat obsolet: '+old);
-for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/streetfighter-25-geometry.mjs'])
+for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/btr82-aggressive-simplification.mjs','src/streetfighter-25-geometry.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
-console.log('Banc de models: 14 GLB CC0 locals; 3 Abrams i BTR-82 amb quatre reduccions generables; antics Stryker descartats.');
+console.log('Banc de models: BTR-82 original amb 4 reduccions agressives 5/4/3/2%, 18 grups de malla; 3 Abrams; cap Stryker.');
