@@ -30,7 +30,7 @@ export function buildBaseShells(basePlan,world,random,{special=false}={}){
     }
     for(const a of ownedStairs){[a.x,a.z]=point(a.x,a.z);[a.nx,a.nz]=[a.nx*c-a.nz*s,a.nx*s+a.nz*c];}
     if(s)[b.w,b.d]=[b.d,b.w];
-    b.kind=spec.bunker?'enemy_bunker':spec.hangar?'hangar':basePlan.id;b.hangar=!!spec.hangar;b.wood=!!spec.wood;
+    b.kind=spec.bunker?'enemy_bunker':spec.hangar?'hangar':basePlan.id;b.hangar=!!spec.hangar;b.wood=!!spec.wood;b.weakWood=!!spec.wood;b.civilianHut=!!spec.wood;
     b.id=(basePlan.instanceId||'base')+'/'+basePlan.layoutId+'/'+spec.id;
     ownedWalls.forEach((w,i)=>{w.id=b.id+'/wall/'+i;w.buildingId=b.id;if(w.assemblyIndices)w.assemblyIds=w.assemblyIndices.map(j=>b.id+'/wall/'+j);});
     ownedStairs.forEach((a,i)=>{a.id=b.id+'/stair/'+i;a.buildingId=b.id;});
