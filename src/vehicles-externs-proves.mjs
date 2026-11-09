@@ -93,7 +93,7 @@ for(let i=0;i<6;i++){
    try{
      if(currentType.id==='tanqueta'){
        const studio=await getBtrStudio();
-       if(current===generation)await studio.importGlb(file,current);
+       if(current===generation)await studio.importGlb(file,current,slots.indexOf(slot));
        return;
      }
      const gltf=await loadUploadedGlb(file);
@@ -112,7 +112,7 @@ let yaw=.60,elev=.32,zoom=1,lookY=.6;
 let prev=performance.now();
 let btrStudioPromise=null;
 function getBtrStudio(){
- return btrStudioPromise??=import('./btr82-lod-studio.mjs').then(module=>module.createBtr82Studio({
+ return btrStudioPromise??=import('./btr82-lod-studio.mjs?rev=direct-lod-import-2').then(module=>module.createBtr82Studio({
    slots,loadUploadedGlb,setModel,metrics,
    isCurrent:token=>token===generation&&currentType.id==='tanqueta',
    showOfficial:token=>loadExternal(slots[1],currentType.options[0],new Set(),token),
@@ -298,6 +298,10 @@ async function choose(config){
    slot.ground.material.roughness=marine?.43:1;
    slot.ground.material.needsUpdate=true;
    slot.status.textContent='Carregant…';slot.bold.textContent=slots.indexOf(slot)?'Alternativa '+slots.indexOf(slot):'Actual · '+config.name;
+   const isSource=slots.indexOf(slot)===1;
+   const fileLabel=slot.upload.parentNode;
+   if(fileLabel&&fileLabel.tagName==='LABEL')fileLabel.firstChild.textContent=btrStudy?
+     (isSource?'Importa original 100%':'Importa GLB d’aquest LOD'):'Importa GLB';
    slot.sub.textContent=slots.indexOf(slot)?'Preparant candidat…':'Model real del joc';
    slot.source.hidden=true;
  }
