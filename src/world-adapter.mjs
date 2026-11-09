@@ -21,7 +21,7 @@ function normalizeBuilding(b){
   // locals del barracó girat per calcular el dany a la teulada igual que
   // al joc individual; abans es perdien en serialitzar l'edifici.
   return {...out,angle:number(b.angle??0),rb:!!b.rb,rhp:number(b.rhp??1),hangar:!!b.hangar,
-    weakWood:!!b.weakWood,localW:number(b.localW??b.w),localD:number(b.localD??b.d),
+    weakWood:!!b.weakWood,wood:!!b.wood,civilianHut:!!b.civilianHut,localW:number(b.localW??b.w),localD:number(b.localD??b.d),
     roof:{scale:{x:number(b.roof?.scale?.x||1),z:number(b.roof?.scale?.z||1)}},upperFloor:!!b.upperFloor,
     ...(b.upperFloor?{storey:number(b.storey),interiorStair:normalizeStair(b.interiorStair)}:{})};
 }
@@ -42,7 +42,7 @@ export function normalizeWorldGeometry(source){
   return {...(vegetation?{vegetation}:{}),format:2,...normalizeSurfaces(source),generatorVersion:source.generatorVersion,seed:source.seed,mapScale:source.mapScale,
     islands:rows(source.islands,1000).map(i=>{const row=pick(i,['x','z','r','peakX','peakZ']);if(row.r<=0)throw new RangeError('Invalid island');return row;}),
     levels:rows(source.levels,10000).map(i=>{const row=pick(i,['x','z','hw','hd','y','c','s','blend']);if(row.hw<0||row.hd<0||row.blend<=0)throw new RangeError('Invalid level');return row;}),
-    walls:rows(source.walls,100000).map(w=>{const row=pick(w,['x0','x1','z0','z1','y0','y1']);if(row.x0>row.x1||row.z0>row.z1||row.y0>row.y1)throw new RangeError('Invalid wall');return {...row,open:!!w.open,playerBlock:w.playerBlock!==false,towerLegOwner:!!w.towerLegOwner,woodenDoor:!!w.woodenDoor,hp:Number.isFinite(w.hp)?w.hp:12,door:!!w.door,windows:!!w.windows,upperFloorWindow:!!w.upperFloorWindow,...(Array.isArray(w.windowPanes)?{windowPanes:w.windowPanes.map(p=>{if(!['x','z'].includes(p.axis))throw new RangeError('Invalid window axis');return {axis:p.axis,...pick(p,['x','z','width','y0','y1'])};})}:{})};}),
+    walls:rows(source.walls,100000).map(w=>{const row=pick(w,['x0','x1','z0','z1','y0','y1']);if(row.x0>row.x1||row.z0>row.z1||row.y0>row.y1)throw new RangeError('Invalid wall');return {...row,open:!!w.open,playerBlock:w.playerBlock!==false,towerLegOwner:!!w.towerLegOwner,woodenDoor:!!w.woodenDoor,hp:Number.isFinite(w.hp)?w.hp:10,weakWood:!!w.weakWood,door:!!w.door,windows:!!w.windows,upperFloorWindow:!!w.upperFloorWindow,...(Array.isArray(w.windowPanes)?{windowPanes:w.windowPanes.map(p=>{if(!['x','z'].includes(p.axis))throw new RangeError('Invalid window axis');return {axis:p.axis,...pick(p,['x','z','width','y0','y1'])};})}:{})};}),
     trees:rows(source.trees,200000).map(t=>{const row=pick(t,['x','z','r']);if(row.r<0)throw new RangeError('Invalid tree');return {...row,p:!!t.p,rock:!!t.rock,...(t.p?pick(t,['y','s','yaw']):{}),...(t.rock?pick(t,['topY','bottomY']):{})};})};
 }
 export function createStaticWorldAdapter(source){
