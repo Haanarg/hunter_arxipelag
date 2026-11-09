@@ -66,9 +66,15 @@ assert(btrCode.includes('buildBtr82Lod(')&&btrCode.includes('normalizeBtr82Glb('
 assert(btrCode.includes('new GLTFExporter()')&&btrCode.includes('saveSource('),
  'Cal poder exportar GLB i recordar l’original al navegador');
 assert(studio.includes("const btrStudy=config.id==='tanqueta'")&&
- studio.includes("await studio.load(token)")&&studio.includes("studio.importGlb(file,current)"),
+ studio.includes("await studio.load(token)")&&studio.includes("studio.importGlb(file,current,slots.indexOf(slot))"),
  'Cal poder importar BTR-82 i generar reduccions dins la mateixa pàgina');
 assert(html.includes('#grid.btr-study'),'Sis panells de comparació a la pàgina');
+assert(btrCode.includes('classifyBtr82Upload(')&&btrCode.includes('restoreSourceMaterials('),
+ 'El GLB complet i els LOD importats s’han de distingir, amb textures originals restaurades');
+assert(btrCode.includes('const run=++revision')&&btrCode.includes('async function importLod('),
+ 'La importació de cada LOD ha de ser independent dels altres panells');
+assert(btrCode.includes('actual>=initial*.7'),
+ 'El visor ha de detectar reduccions fallides, sense etiquetar la font com si fos un LOD');
 for(const id of ['heli','heli_combat'])assert(!(id in manifest.models),'Helicòpter descartat encara al manifest: '+id);
 assert.equal(manifest.retiredHelicopterCandidates,6);
 assert(!catalog.includes('755d8518a06e41b19752c1b54c0da588'),'El Huey aprovat ja no ha de figurar entre els candidats');

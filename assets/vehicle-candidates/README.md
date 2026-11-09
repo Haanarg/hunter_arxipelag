@@ -1,3 +1,14 @@
+## Correcció d'importació i textures — 2026-11-09
+
+L'usuari va detectar dos errors reals: els quatre nivells semblaven duplicar el 100% i els GLB externs del ZIP anterior no es veien.
+
+1. **Paleta original perduda.** Els GLB reduïts offline del primer ZIP tenien 11 textures PNG amb valors de paleta reinterpretats com RGB (0..16) i alfa 0..1, per sota del tall de 0,05: els models quedaven invisibles. S'han regenerat quatre GLB amb les onze textures PNG originals i la seva paleta/transparència. El nou paquet (distribuït en aquesta conversa, no allotjat a GitHub) inclou també l'original adaptat a PBR de Three.js.
+2. **Importació de variants.** Abans, tots els GLB importats es tractaven com a originals i es re-simplificaven. Ara s'identifiquen per recompte de triangles, malles i nom (5pct/4pct/3pct/2pct): els GLB ja reduïts es mostren directament al panell adequat, sense tocar els altres. El 100% activa la generació automàtica dels quatre LOD.
+3. **Compatibilitat dels GLB antics.** Quan l'original és present al navegador, els LOD recuperen els seus materials i textures per nom; sense l'original, els quatre GLB vells específics reben colors sòlids de reserva en lloc de quedar invisibles. Es recomana substituir-los pels GLB corregits.
+4. **Diagnòstic.** Cap reducció amb més del 70% dels triangles d'origen o sense fusió de malles es pot mostrar com si hagués arribat al 5/4/3/2%; es mostra un error. Els recomptes reals són visibles. Una prova addicional executa el simplificador real contra un model sintètic de 199 malles i verifica que els LOD siguin progressivament menors.
+
+No s'han alterat els models de la partida. Les quatre variants offline corregides tenen 1.077/875/654/448 triangles i 18 malles cadascuna.
+
 ## Reduccions agressives BTR-82 — 2026-11-09
 
 El model original **Low Poly BTR 82**, de **SIpriv** (Sketchfab, **CC BY 4.0**), s'ha rebut de l'usuari. Mida: **1.592.644 bytes**, **21.483 triangles i 199 malles**.

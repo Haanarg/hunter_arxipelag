@@ -1,3 +1,10 @@
+**P1 · 2026-11-09 · correcció importació i reducció del BTR-82:**
+- [x] Corregida la pèrdua de paleta de les onze textures als quatre GLB offline (alfa 1/255 causava invisibilitat); generat un ZIP nou amb 4 LOD visibles i l'original compatible.
+- [x] La importació del GLB original 100% inicia els quatre LOD; els GLB reduïts s'importen sense resimplificar-los al panell corresponent (5/4/3/2%), conservant els altres nivells.
+- [x] Materials de les variants restaurats des de l'original del navegador; colors provisionals per als GLB antics sense origen.
+- [x] Verificació de recompte real i prova de geometria Three.js/meshoptimizer de 199 malles.
+- [ ] Comprovar al navegador la visibilitat de les quatre variants amb textures, l'orientació, el nombre de triangles i l'exportació de GLB.
+
 **P1 · 2026-11-09 · tanqueta Low Poly BTR 82 i quatre reduccions al banc:**
 - [x] El BTR-82 de SIpriv (CC BY 4.0) queda com l'únic candidat de tanqueta; eliminats Stryker i M1128 del catàleg i del manifest.
 - [x] Comparació del vehicle actual amb BTR-82 original 100% i quatre reduccions 5/4/3/2% calculades amb `SimplifyModifier` / meshoptimizer i fusió de peces per material, preservant pivots de les vuit rodes i la torreta.
