@@ -106,7 +106,7 @@ function captureNativeCoopWorld(){
  geometry.buildings.forEach((b,i)=>{b.id=B[i].saveId;});geometry.stairs.forEach((s,i)=>{s.buildingId=stairs[i].owner?.saveId;});
  const all=[...new Set([...TG.values()].flat())];geometry.trees=[...PL,...all.filter(t=>!t.p)].map(t=>({x:t.x,z:t.z,r:t.r,p:!!t.p,rock:!!t.rock,...(t.p?{y:t.y,s:t.s,yaw:t.yaw}:{}),...(t.rock?{topY:t.topY,bottomY:t.bottomY}:{})}));
  const point=v=>({x:v.x,y:v.y??v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),z:v.z});
- const itemMap={arma:['bullets',16],granada:['grenades',5],disf:['disguise',1],med:['medkits',1],fusell_assalt:['assault',1],franctirador:['sniper',1],bazooka:['bazooka',3],cisalla:['cutters',1],expl:['c4',1],paracaigudes:['parachute',1],mapa:['mapa',1],mapa_heli:['mapa_heli',1],mapa_tanc:['mapa_tanc',1]};
+ const itemMap={arma:['bullets',16],granada:['grenades',5],disf:['disguise',1],med:['medkits',1],fusell_assalt:['assault',1],franctirador:['sniper',1],bazooka:['bazooka',1],cisalla:['cutters',1],expl:['c4',1],paracaigudes:['parachute',1],mapa:['mapa',1],mapa_heli:['mapa_heli',1],mapa_tanc:['mapa_tanc',1]};
  const payload={requestedSeed:requestedSeed>>>0,geometry,spawn:{...P},vehicles:V.map(v=>({id:v.saveId,t:v.t,...point(v),hd:v.hd,v:0,life:v.life??VT[v.t].life,rockets:v.rockets})),
   targets:E.map(e=>({id:e.saveId,t:e.t,...point(e),hp:e.hp,
   ...(e.t==='patrulla_marina'?{
@@ -314,7 +314,7 @@ function updateNativeCoopFrame(dt){
  ib=buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<b.fy+b.h)||null;
  // Inventari, vida i recomptes autoritatius són immutables entre snapshots.
  const bag=projecting?state.inventories.find(i=>i.actorId===s.self):null;
- if(bag&&bag!==s.appliedBag){s.appliedBag=bag;if(grenadeEquipped&&!bag.grenades){cancelGrenadeCharge();grenadeEquipped=false;}ammo=bag.bullets;sniperAmmo=bag.sniperAmmo;inv={};for(const [key,id] of Object.entries({grenades:'granada',disguise:'disf',medkits:'med',assault:'fusell_assalt',sniper:'franctirador',bazooka:'bazooka',cutters:'cisalla',c4:'expl',parachute:'paracaigudes'}))if(bag[key])inv[id]=bag[key];bazookaEquipped=!grenadeEquipped&&bag.weapon==='bazooka';sniperEquipped=!grenadeEquipped&&bag.weapon==='sniper';assaultRifleEquipped=!grenadeEquipped&&bag.weapon==='assault';cisallaEquipped=!grenadeEquipped&&bag.weapon==='cutters';knifeEquipped=!grenadeEquipped&&bag.weapon==='knife';if(disg!==bag.disguised)setDis(bag.disguised);}
+ if(bag&&bag!==s.appliedBag){s.appliedBag=bag;if(grenadeEquipped&&!bag.grenades){cancelGrenadeCharge();grenadeEquipped=false;}ammo=bag.bullets;sniperAmmo=bag.sniperAmmo;bazookaAmmo=bag.bazookaAmmo??0;inv={};for(const [key,id] of Object.entries({grenades:'granada',disguise:'disf',medkits:'med',assault:'fusell_assalt',sniper:'franctirador',bazooka:'bazooka',cutters:'cisalla',c4:'expl',parachute:'paracaigudes'}))if(bag[key])inv[id]=bag[key];bazookaEquipped=!grenadeEquipped&&bag.weapon==='bazooka';sniperEquipped=!grenadeEquipped&&bag.weapon==='sniper';assaultRifleEquipped=!grenadeEquipped&&bag.weapon==='assault';cisallaEquipped=!grenadeEquipped&&bag.weapon==='cutters';knifeEquipped=!grenadeEquipped&&bag.weapon==='knife';if(disg!==bag.disguised)setDis(bag.disguised);}
  if(projecting){
    // Els deltes conserven la mateixa referència per a les entitats intactes.
    // No copiam centenars de vehicles quan només se n'ha mogut un.
