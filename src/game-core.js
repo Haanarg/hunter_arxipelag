@@ -398,7 +398,7 @@ function buildingCandidates(x,z,r=0){
 }
 const {ICON,IT}=window.HUNTER_GAME_CATALOG.createItemCatalog();
 // combat i enemics
-let E=[],Pj=[],bombs=[],grenades=[],DEAD=[],hp=window.HUNTER_COMBAT_BALANCE.player,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,assaultRifleEquipped=false,knifeEquipped=false,sniperAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null,playerCrouched=false;
+let E=[],Pj=[],bombs=[],grenades=[],DEAD=[],hp=window.HUNTER_COMBAT_BALANCE.player,ammo=0,disg=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,assaultRifleEquipped=false,knifeEquipped=false,sniperAmmo=0,bazookaAmmo=0,scopeActive=false,scopePitch=0,scopeYaw=0,over=0,fcd=0,kills=0,intelMarks=[],hqMapKnown=false,playerEject=null,playerFall=null,playerCrouched=false;
 // Ojiva compartida per tots els projectils pesats. Eix longitudinal -Z:
 // culata cilíndrica a +Z i punta cònica a -Z, com els canons del joc.
 // Geometria única reutilitzada, sense crear malles noves per cada tir.
@@ -2394,9 +2394,9 @@ const weaponPickerAvailable=()=>!!started&&document.body.classList.contains('gam
 function syncWeaponPicker(){const visible=weaponPickerAvailable();const display=visible?'block':'none';if(pickerToggle.style.display!==display)pickerToggle.style.display=display;if(!visible&&pickerOpen){pickerOpen=false;drawWeaponPicker()}}
 pickerToggle.onclick=()=>{if(!weaponPickerAvailable())return;pickerOpen=!pickerOpen;drawWeaponPicker()};
 function drawWeaponPicker(){const visible=pickerOpen&&weaponPickerAvailable(),weapons=visible?quickWeapons():[];
-const signature=visible?JSON.stringify([selectedWeapon(),ammo,sniperAmmo,weapons.map(k=>[k,inv[k]])]):'hidden';
+const signature=visible?JSON.stringify([selectedWeapon(),ammo,sniperAmmo,bazookaAmmo,weapons.map(k=>[k,inv[k]])]):'hidden';
 if(signature===pickerSignature)return;pickerSignature=signature;
-picker.style.display=visible?'flex':'none';picker.replaceChildren();if(!visible)return;const names={pistola:'🔫 Pistola',ganivet:'🔪 Ganivet',fusell_assalt:'🔫 Fusell d’assalt',franctirador:'🔭 Rifle',bazooka:'🚀 Bazooka',granada:'💣 Granades',cisalla:'✂ Cisalla'};quickWeapons().forEach((k,i)=>{const b=document.createElement('button');b.textContent=(i+1)+' · '+names[k]+' · '+(k==='pistola'||k==='fusell_assalt'?ammo:k==='franctirador'?sniperAmmo:k==='ganivet'?'∞':inv[k]);b.style.cssText='padding:8px;color:white;background:'+(selectedWeapon()===k?'#356c51':'#364a52');b.onclick=()=>{selectWeapon(k);pickerOpen=false;drawWeaponPicker()};picker.appendChild(b)})}
+picker.style.display=visible?'flex':'none';picker.replaceChildren();if(!visible)return;const names={pistola:'🔫 Pistola',ganivet:'🔪 Ganivet',fusell_assalt:'🔫 Fusell d’assalt',franctirador:'🔭 Rifle',bazooka:'🚀 Bazooka',granada:'💣 Granades',cisalla:'✂ Cisalla'};quickWeapons().forEach((k,i)=>{const b=document.createElement('button');b.textContent=(i+1)+' · '+names[k]+' · '+(k==='pistola'||k==='fusell_assalt'?ammo:k==='franctirador'?sniperAmmo:k==='bazooka'?bazookaAmmo:k==='ganivet'?'∞':inv[k]);b.style.cssText='padding:8px;color:white;background:'+(selectedWeapon()===k?'#356c51':'#364a52');b.onclick=()=>{selectWeapon(k);pickerOpen=false;drawWeaponPicker()};picker.appendChild(b)})}
 const act=c=>{if(generationPromise)return;if(ui?.isBombTimerOpen?.()){
   // No es pot tancar el programador ni detonar saltant-se la confirmació.
   if(c==='Escape'||c==='KeyP'||c==='KeyI'){panel('inventory');return}
@@ -2684,8 +2684,9 @@ const cheats={items:false,invisible:false,immune:false,fly:false};
 let cheatFlightY=null;
 function grantAllWeapons(){
   ammo=Math.max(ammo,999);
-  for(const key of ['med','bazooka','granada','cisalla','expl','franctirador','fusell_assalt','paracaigudes','disf'])inv[key]=Math.max(inv[key]||0,999);
-  sniperAmmo=Math.max(sniperAmmo,999);
+  for(const key of ['med','granada','cisalla','expl','paracaigudes','disf'])inv[key]=Math.max(inv[key]||0,999);
+  for(const key of ['bazooka','franctirador','fusell_assalt'])inv[key]=1;
+  sniperAmmo=Math.max(sniperAmmo,999);bazookaAmmo=Math.max(bazookaAmmo,999);
   hqMapKnown=true;hqIntelStage=MAP_SCALE===2?4:3;
   for(const v of V)if(v.rockets!=null)v.rockets=Math.max(v.rockets,999);
 }
@@ -2752,7 +2753,7 @@ function executePlayerUseItem(id){
     if(cisallaEquipped){knifeEquipped=false;bazookaEquipped=false;grenadeEquipped=false;sniperEquipped=false;assaultRifleEquipped=false;setSniperScope(false)}
     resume();msg=cisallaEquipped?'Cisalla equipada · Acosta’t a una tanca i prem Talla / F.':'Cisalla desada.';msgT=2;return true
   }
-  if(id==='bazooka'){if(cv||swimming){msg='Has d’anar a peu per equipar el bazooka.';msgT=2;return false}cancelGrenadeCharge();bazookaEquipped=!bazookaEquipped;if(bazookaEquipped){knifeEquipped=false;grenadeEquipped=false;cisallaEquipped=false;sniperEquipped=false;assaultRifleEquipped=false;setSniperScope(false)}resume();msg=bazookaEquipped?'Bazooka equipat: '+inv.bazooka+' coets disponibles.':'Bazooka desequipat.';msgT=2;return true}
+  if(id==='bazooka'){if(cv||swimming){msg='Has d’anar a peu per equipar el bazooka.';msgT=2;return false}cancelGrenadeCharge();bazookaEquipped=!bazookaEquipped;if(bazookaEquipped){knifeEquipped=false;grenadeEquipped=false;cisallaEquipped=false;sniperEquipped=false;assaultRifleEquipped=false;setSniperScope(false)}resume();msg=bazookaEquipped?'Bazooka equipat: '+bazookaAmmo+' coets disponibles.':'Bazooka desequipat.';msgT=2;return true}
   if(id==='granada'){if(cv||swimming){msg='Has d’anar a peu per equipar les granades.';msgT=2;return false}cancelGrenadeCharge();grenadeEquipped=!grenadeEquipped;if(grenadeEquipped){knifeEquipped=false;bazookaEquipped=false;cisallaEquipped=false;sniperEquipped=false;assaultRifleEquipped=false;setSniperScope(false)}resume();msg=grenadeEquipped?'Granades equipades: '+inv.granada+'.':'Granades desequipades.';msgT=2;return true}
   if(id==='fusell_assalt'){
     if(cv||swimming||playerFall||playerEject){msg='El fusell d’assalt només es pot equipar a peu.';msgT=2;return false}
@@ -2875,7 +2876,7 @@ const ui=window.HUNTER_UI.create({
   resumeButton:document.getElementById('resumeButton'),
   minimap,
   getState:({nearVehicle=cv?null:nearV()}={})=>({
-    coop:nativeCoopSession?.state?{health:nativeCoopSession.state.players.find(p=>p.id!==nativeCoopSession.self)?.hp,status:nativeCoopSession.state.status,host:nativeCoopSession.room?.host===nativeCoopSession.self}:null,autosave:operationAutosave?.state(),started:!!started,hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,scopeActive,
+    coop:nativeCoopSession?.state?{health:nativeCoopSession.state.players.find(p=>p.id!==nativeCoopSession.self)?.hp,status:nativeCoopSession.state.status,host:nativeCoopSession.room?.host===nativeCoopSession.self}:null,autosave:operationAutosave?.state(),started:!!started,hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,bazookaAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle,optionalAction:!cv&&nearestPlayerDoor()?{kind:'door',label:playerDoorLabel(nearestPlayerDoor()),icon:window.HUNTER_ACTION_ICONS.door}:getOptionalAction(),messageTime:msgT,message:msg,
     waypoint,worldSize:S,seed,mapScale:MAP_SCALE,hqIntel:window.HUNTER_GAME_INTEL.hqIntelStatus({mapScale:MAP_SCALE,stage:hqIntelStage,confirmed:hqMapKnown,sites:hqIntelSites,sectors:hqIntelSectors,discarded:hqIntelDiscarded}),palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,muted,cheats:nativeCoopSession?.state?.cheats||{...cheats},stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
   }),
@@ -3725,6 +3726,12 @@ if(scopeNow){
 }
 function updatePlayerHUD(dt){
 uiTick+=dt;if(uiTick>.12){uiTick=0;const nv=cv?null:nearV();const contextButtons=document.getElementById('contextButtons');if(contextButtons){contextButtons.classList.toggle('heli-active',(!cv&&cheats.fly)||(!!cv&&VT[cv.t]?.m==='a'));contextButtons.classList.toggle('heli-combat-active',cv?.t==='heli_combat');contextButtons.classList.toggle('heli-bomb-active',cv?.t==='heli');contextButtons.classList.toggle('vehicle-grenade-active',!!cv&&cv.t!=='heli_combat'&&cv.t!=='heli');const grenadeVehicleButton=document.getElementById('vehicleGrenadeButton');if(grenadeVehicleButton){const count=inv.granada||0;grenadeVehicleButton.dataset.count=String(count);grenadeVehicleButton.title=count?'Llançar granada des del vehicle · B ('+count+' restants)':'No tens granades · B';grenadeVehicleButton.setAttribute('aria-label',grenadeVehicleButton.title)}contextButtons.classList.toggle('sniper-active',!!sniperEquipped&&!!inv.franctirador&&!cv)}
+const heliMissileButton=document.querySelector('.heli-combat-control[data-k="KeyG"]');
+if(heliMissileButton){const count=cv?.t==='heli_combat'?Math.max(0,cv.rockets||0):0;
+  heliMissileButton.dataset.count=String(count);
+  heliMissileButton.title='Disparar míssil · G ('+count+' restants)';
+  heliMissileButton.setAttribute('aria-label',heliMissileButton.title);
+}
 const heliBombButton=document.getElementById('heliBombButton');
 if(heliBombButton){
   const count=inv.expl||0,available=count>0;
@@ -3745,11 +3752,23 @@ if(fireButton){
         weapon=cutters?'cisalla':grenade?'granada':knife?'ganivet':'normal';
   if(fireButton.dataset.weapon!==weapon){
     fireButton.dataset.weapon=weapon;
-    fireButton.innerHTML=cutters?ICON.cisalla:grenade?ICON.granada:knife?ICON.ganivet:'🎯';
-    const action=cutters?'Talla filferrada':grenade?'Llançar granada':knife?'Atacar amb ganivet':'Dispar';
-    fireButton.setAttribute('aria-label',action);
-    fireButton.title=heliGrenade?'Llançar granada de l’inventari':grenade?'Mantén premut per arribar més lluny':action;
+    fireButton.innerHTML=(cutters?ICON.cisalla:grenade?ICON.granada:knife?ICON.ganivet:'🎯')+
+      '<span class="fire-ammo-count" aria-hidden="true"></span>';
   }
+  const ammoLeft=cv?(heliGrenade?(inv.granada||0):'∞'):
+    grenade?(inv.granada||0):cutters||knife?null:
+      bazookaEquipped?bazookaAmmo:sniperEquipped?sniperAmmo:ammo;
+  const badge=fireButton.querySelector('.fire-ammo-count');
+  if(badge){
+    badge.hidden=ammoLeft===null;
+    const label=ammoLeft===null?'':String(ammoLeft);
+    if(badge.textContent!==label)badge.textContent=label;
+  }
+  const action=cutters?'Talla filferrada':grenade?'Llançar granada':knife?'Atacar amb ganivet':'Dispar';
+  const title=(heliGrenade?'Llançar granada de l’inventari':grenade?'Mantén premut per arribar més lluny':action)+
+    (ammoLeft===null?'':' · '+ammoLeft+' restants');
+  if(fireButton.title!==title){fireButton.title=title;fireButton.setAttribute('aria-label',title)}
+  
 }
 updateActionButton(nv);if(pickerOpen)drawWeaponPicker();
 mini();ui.renderHUD({nearVehicle:nv});}}
@@ -3961,15 +3980,16 @@ if(worldVisualTick<=0){
 updateDoors(dt);
 items.forEach(it=>{const dx=it.x-P.x,dz=it.z-P.z;if(dx*dx+dz*dz<ITEM_ANIM2){it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25}});
 if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-it.z;if(dx*dx+dz*dz<4.84&&Math.abs(P.y-it.y)<3){let mapMessage=null;
-  if(it.t==='arma')ammo+=16;
+  if(it.t==='arma'){ammo+=16;sniperAmmo+=5;bazookaAmmo+=3;}
   else if(it.t==='mapa'||it.t==='mapa_heli'||it.t==='mapa_tanc'){
     mapMessage=revealMapPickup(it.t,false,MAP_SCALE===2?mapSector(it.x,it.z):null);
     mini(); // la informació apareix de seguida, sense entrar a cap menú
   }
   else if(it.t==='franctirador'){inv.franctirador=1;sniperAmmo+=6}
-  else inv[it.t]=(inv[it.t]||0)+(it.t==='granada'?5:it.t==='bazooka'?3:1);
+  else if(it.t==='bazooka'){inv.bazooka=1;bazookaAmmo+=3}
+  else inv[it.t]=(inv[it.t]||0)+(it.t==='granada'?5:1);
   world.remove(it.o);items.splice(k,1);requestOperationAutosave('equipment');recordOperationMetric('pickups');
-  msg=mapMessage||'Has trobat: '+IT[it.t].n+(it.t==='granada'?' ×5':it.t==='bazooka'?' ×3':it.t==='franctirador'?' +6 cartutxos':'');
+  msg=mapMessage||'Has trobat: '+IT[it.t].n+(it.t==='arma'?' · +16 bales, +5 rifle, +3 coets':it.t==='granada'?' ×5':it.t==='bazooka'?' +3 coets':it.t==='franctirador'?' +6 cartutxos':'');
   msgT=3;snd('pick')}}
 msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
 // Strafe independent: gir visual de la cintura i les cames, no de P.hd.
