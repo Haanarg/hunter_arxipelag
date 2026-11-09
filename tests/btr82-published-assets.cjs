@@ -1,4 +1,5 @@
 // Strict validation of the archived original and four BTR-82 25%-base GLBs.
+// Generated candidates must always be inspected against the new 5,371-triangle baseline.
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const dir=path.resolve(__dirname,'../assets/vehicle-candidates/tanqueta');
 const cases=[
