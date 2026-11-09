@@ -17,7 +17,7 @@ export const CATALOG=[
    P('transport-collection-hd','Touring SUV')]},
 
  {id:'tanqueta',name:'Tanqueta · BTR-82',kind:'terra',
-   note:'Model triat: Low Poly BTR 82 de SIpriv (CC BY 4.0). Aquesta pàgina genera quatre reduccions reals: 75%, 50%, 25% i 10%, a més del GLB original 100%. Encara no s'ha incorporat al joc.',
+   note:'Model triat: Low Poly BTR 82 de SIpriv (CC BY 4.0). Aquesta pàgina genera quatre reduccions reals: 75%, 50%, 25% i 10%, a més del GLB original 100%. Encara no està incorporat al joc.',
    options:[
     S('6226acae68424d99bf03882b245ff7c5','https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5','Low poly BTR 82','SIpriv',21500,'CC BY 4.0','Vuit rodes i torreta. Model seleccionat per generar quatre LOD amb meshoptimizer a partir del GLB original.')]},
  {id:'tanc',name:'Tanc · estil M1A1 Abrams',kind:'terra',
