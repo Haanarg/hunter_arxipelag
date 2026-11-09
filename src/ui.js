@@ -44,8 +44,8 @@ window.HUNTER_UI=Object.freeze({
   },
   create({hud,panel,title,body,resumeButton,minimap,getState,actions}){
     function renderHUD(context){
-      const s=getState(context),state=s.vehicle?s.vehicleTypes[s.vehicle.t].n:s.swimming?'Nedant':s.crouching?'Ajupit':s.inside?'Interior':'A peu',veh=s.vehicle,vehInfo=veh?'<br>🛡️ '+Math.max(0,veh.life??0)+'/'+(veh.maxLife??0)+(veh.t==='llanxa_coets'?' · 🚀 ∞':veh.rockets!=null?' · 🚀 '+veh.rockets:veh.t!=='heli_combat'?' · 💣 '+(s.inventory.granada||0)+' granades · B':''):'',weaponInfo=s.bazookaEquipped&&!veh?' · 🚀 Bazooka '+(s.inventory.bazooka||0)+' coets':s.grenadeEquipped&&!veh?' · 💣 Granades '+(s.inventory.granada||0):s.cisallaEquipped&&!veh?' · ✂ Cisalla':s.sniperEquipped&&!veh?' · 🔭 Rifle '+s.sniperAmmo+' cartutxos'+(s.scopeActive?' · Mira x8':''):'';
-      const html=`<b>HUNTER · ARXIPÈLAG</b><br>❤️ ${s.hp>0?Math.max(1,Math.ceil(s.hp)):0} · 🎯 ${s.ammo} · ☠ ${s.kills}<br>${state}${s.coop?'<br>✚ Company: '+Math.max(0,s.coop.health||0)+' PV · '+(s.coop.status==='running'?'Connectats':'Pausa de sala'):''}${s.disguised?' · 🎭 Disfressat':''}${weaponInfo}${vehInfo}${s.optionalAction?'<br>E · '+s.optionalAction.label:s.nearVehicle&&!s.vehicle?'<br>Acció: puja a '+s.vehicleTypes[s.nearVehicle.t].n:''}${s.messageTime>0?'<br>'+s.message:''}${s.waypoint?'<br>Destinació: '+Math.round(Math.hypot(s.waypoint.x-s.player.x,s.waypoint.z-s.player.z))+' m':''}<br><span style="opacity:.72">Llavor ${s.seed>>>0} · X ${s.player.x|0} · Z ${s.player.z|0}</span>`;
+      const s=getState(context),state=s.vehicle?s.vehicleTypes[s.vehicle.t].n:s.swimming?'Nedant':s.crouching?'Ajupit':s.inside?'Interior':'A peu',veh=s.vehicle,vehInfo=veh?'<br>🛡️ '+Math.max(0,veh.life??0)+'/'+(veh.maxLife??0):'',weaponInfo=s.bazookaEquipped&&!veh?' · 🚀 Bazooka':s.grenadeEquipped&&!veh?' · 💣 Granades':s.cisallaEquipped&&!veh?' · ✂ Cisalla':s.sniperEquipped&&!veh?' · 🔭 Rifle'+(s.scopeActive?' · Mira x8':''):'';
+      const html=`<b>HUNTER · ARXIPÈLAG</b><br>❤️ ${s.hp>0?Math.max(1,Math.ceil(s.hp)):0} · ☠ ${s.kills}<br>${state}${s.coop?'<br>✚ Company: '+Math.max(0,s.coop.health||0)+' PV · '+(s.coop.status==='running'?'Connectats':'Pausa de sala'):''}${s.disguised?' · 🎭 Disfressat':''}${weaponInfo}${vehInfo}${s.optionalAction?'<br>E · '+s.optionalAction.label:s.nearVehicle&&!s.vehicle?'<br>Acció: puja a '+s.vehicleTypes[s.nearVehicle.t].n:''}${s.messageTime>0?'<br>'+s.message:''}${s.waypoint?'<br>Destinació: '+Math.round(Math.hypot(s.waypoint.x-s.player.x,s.waypoint.z-s.player.z))+' m':''}<br><span style="opacity:.72">Llavor ${s.seed>>>0} · X ${s.player.x|0} · Z ${s.player.z|0}</span>`;
       if(hud.innerHTML!==html)hud.innerHTML=html;
       if(currentMode==='cheats'&&s.coop){
         for(const [id,key] of [['cheatItems','items'],['cheatInvisible','invisible'],
@@ -86,12 +86,17 @@ window.HUNTER_UI=Object.freeze({
             '<div class="inv-health-line"><b>❤️ Vida '+life+' / '+maxHealth+'</b>'+
             (healed>0?'<strong class="inv-healed">+'+healed+' vida</strong>':'')+'</div>'+
             '<div class="inv-health-track"><div class="inv-health-fill" style="width:'+(life/maxHealth*100)+'%"></div></div></div>'+
+            '<section class="inv-ammo" aria-label="Reserves de munició"><h3>Munició</h3><div class="inv-ammo-grid">'+
+            [['arma','Bales · pistola i fusell',st.ammo],['franctirador','Cartutxos de franctirador',st.sniperAmmo],['bazooka','Coets de bazuca',st.bazookaAmmo]].map(([key,name,count])=>
+              '<div class="inv-ammo-type" title="'+name+'"><span class="inv-ammo-symbol">'+st.itemTypes[key].icon+'</span>'+
+              '<span class="inv-ammo-number">'+Math.max(0,count||0)+'</span><span class="inv-ammo-name">'+name+'</span></div>'
+            ).join('')+'</div></section>'+
             '<div class="inv-wrap"><section><div class="inv-grid" id="invGrid"></div></section><aside class="inv-detail" id="invDetail"></aside></div>';
           const grid=document.getElementById('invGrid'),detail=document.getElementById('invDetail');
           const slots=Math.max(15,Math.ceil(Math.max(1,items.length)/5)*5);
           for(let i=0;i<slots;i++){
             const id=items[i],el=document.createElement('button');el.className='inv-slot'+(id===selected?' selected':'');
-            if(id){const d=st.itemTypes[id];el.innerHTML='<span>'+d.icon+'</span><span class="inv-count">×'+st.inventory[id]+'</span>';el.title=d.n;el.onclick=()=>{selected=id;if(d.usable){const before=getState().hp,changed=actions.useItem(id);if(changed){renderHUD();if(id!=='expl'&&id!=='granada'&&id!=='bazooka'&&id!=='franctirador'&&id!=='mapa'&&id!=='mapa_heli'&&id!=='mapa_tanc')renderInventory(Math.max(0,Math.round(getState().hp-before)))}}else renderInventory()}}
+            if(id){const d=st.itemTypes[id];el.innerHTML='<span>'+d.icon+'</span>'+(['bazooka','franctirador','fusell_assalt','arma'].includes(id)?'':'<span class="inv-count">×'+st.inventory[id]+'</span>');el.title=d.n;el.onclick=()=>{selected=id;if(d.usable){const before=getState().hp,changed=actions.useItem(id);if(changed){renderHUD();if(id!=='expl'&&id!=='granada'&&id!=='bazooka'&&id!=='franctirador'&&id!=='mapa'&&id!=='mapa_heli'&&id!=='mapa_tanc')renderInventory(Math.max(0,Math.round(getState().hp-before)))}}else renderInventory()}}
             else{el.disabled=true;el.setAttribute('aria-hidden','true')}
             grid.appendChild(el)
           }
