@@ -219,7 +219,7 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
         throw new Error('Geometria inesperada: '+approvedTris+' triangles, '+approvedMeshes+' malles');
        setModel(s,approvedGltf.scene,false,approvedGltf.animations);
        s.status.textContent=metrics(s.model)+' · '+approvedTris.toLocaleString('ca')+
-        ' triangles / '+approvedMeshes+' malles · GLB aprovat al servidor';
+        ' triangles / '+approvedMeshes+' malles · acabat mat sense artefactes UV';
        setReference(s,'model original SIpriv · '+pct+'% · carregat de GitHub');
        linkRawDownload(s,approvedBlob,'btr82-'+pct+'pct.glb');
        previous=approvedTris;

@@ -230,7 +230,7 @@
     ]
   },
   "lastCurated": "2026-11-08",
-  "curationNotes": "GLB BTR-82 publicats i validats en main: font original 21.483 triangles/199 malles i LOD 75%=16.109, 50%=10.745, 25%=5.371 triangles/18 malles, 11 PNG per GLB. La pàgina de candidats descarrega els quatre directament. SIpriv CC BY 4.0.",
+  "curationNotes": "Screenshot 2026-11-09: textures corruptes per UV interpolades del VTK DecimatePro. Mantinguts els mateixos 16.109/10.745/5.371 triangles i 18 malles, però els tres GLB de LOD utilitzen 10 materials PBR mats oliva i rodes negres, sense cap atles UV, amb formes comprovades mitjançant renderitzat VTK. El model original 100% conserva 11 PNG i no s’ha modificat.",
   "selectedForLod": {
     "tanqueta": {
       "modelId": "6226acae68424d99bf03882b245ff7c5",
@@ -256,22 +256,22 @@
           "percent": 75,
           "triangles": 16109,
           "meshes": 18,
-          "bytes": 1182664,
-          "algorithm": "VTK DecimatePro, original PNG palette/alpha preserved"
+          "bytes": 1164540,
+          "algorithm": "VTK DecimatePro geometry, opaque matte military palette replacing broken UV atlas; 10 materials"
         },
         {
           "percent": 50,
           "triangles": 10745,
           "meshes": 18,
-          "bytes": 862008,
-          "algorithm": "VTK DecimatePro, original PNG palette/alpha preserved"
+          "bytes": 843888,
+          "algorithm": "VTK DecimatePro geometry, opaque matte military palette replacing broken UV atlas; 10 materials"
         },
         {
           "percent": 25,
           "triangles": 5371,
           "meshes": 18,
-          "bytes": 446292,
-          "algorithm": "VTK DecimatePro, original PNG palette/alpha preserved"
+          "bytes": 428172,
+          "algorithm": "VTK DecimatePro geometry, opaque matte military palette replacing broken UV atlas; 10 materials"
         }
       ],
       "publishedLods": {
@@ -280,7 +280,10 @@
         "75": "tanqueta/btr82-75pct.glb"
       },
       "publishedSourceSize": 1592172,
-      "publishedTotalBytes": 4083136
+      "publishedTotalBytes": 4028772,
+      "appearance": "matte-olive-no-uv-atlas",
+      "sourceAppearance": "original 11 PNG textures preserved",
+      "materialRepair": "BTR-82-matte-UV-repair-v1"
     }
   }
 }

@@ -4,9 +4,9 @@ const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypt
 const dir=path.resolve(__dirname,'../assets/vehicle-candidates/tanqueta');
 const cases=[
  ['btr82-original.glb',1592172,21483,199,'575fd57e125edfb9c6b1d539ed6eadb44468f9bf3c709a48c135f876db664679'],
- ['btr82-75pct.glb',1182664,16109,18,'ba0d4fc38c0cc34c7460cfe32c47d3ee1a51bee3037c285160d6f39a2d290bac'],
- ['btr82-50pct.glb',862008,10745,18,'0aff5936eb9408c0a2bb58611c5fb62211144ffc5c17e1c5eb3ca0feef86e4d2'],
- ['btr82-25pct.glb',446292,5371,18,'b37fc29c3b7719c21547c2668d0b5231c8a23bb951e70ae5406e0f9c555a0dab']
+ ['btr82-75pct.glb',1164540,16109,18,'a1e2b6342bb813afd2bba23cd4b27cb1badcd9d5ede01e3665daa44a4eef380b'],
+ ['btr82-50pct.glb',843888,10745,18,'f3c8db5e24ecf568a597d9383cb7885ccf6821a56c37c4a8293a3f8e68d257b5'],
+ ['btr82-25pct.glb',428172,5371,18,'5d26d5af11a575d085411308e2cb8e695f6d6346d505798661cde88165d4be7d']
 ];
 const actual=fs.readdirSync(dir).filter(n=>n.endsWith('.glb')).sort();
 assert.deepEqual(actual,cases.map(x=>x[0]).sort(),'Només s’han de publicar els GLB aprovats');
@@ -21,9 +21,28 @@ for(const [name,size,tris,meshes,sha] of cases){
  assert.equal(json.meshes.length,meshes,'Nombre de malles inesperat '+name);
  const total=json.meshes.reduce((n,m)=>n+m.primitives.reduce((s,p)=>s+json.accessors[p.indices].count/3,0),0);
  assert.equal(total,tris,'Nombre de triangles incorrecte '+name);
- assert.equal(json.images?.length,11,'Falten les textures del BTR-82 a '+name);
- assert(json.materials?.length>=10,'Falten els materials del BTR-82 a '+name);
- console.log('OK '+name+': '+total+' triangles, '+meshes+' malles, 11 textures PNG');
+ assert.equal(json.materials?.length,10,'Materials incomplets de '+name);
+ if(name==='btr82-original.glb'){
+  assert.equal(json.images?.length,11,'L’original ha de conservar les 11 textures PNG');
+  assert(json.materials.every(m=>m.pbrMetallicRoughness?.baseColorTexture),
+   'L’original NO es pot modificar ni perdre les textures');
+ }else{
+  assert.equal(json.images?.length||0,0,'Cap atlas UV defectuós al LOD '+name);
+  assert.equal(json.textures?.length||0,0,'No deixar textures pendents al LOD '+name);
+  assert(json.asset.generator?.includes('BTR-82-matte-UV-repair-v1'),
+   'El GLB ha de tenir la reparació validada de materials');
+  for(const mat of json.materials){
+   assert.equal(mat.pbrMetallicRoughness?.baseColorTexture,undefined,
+    'Les UV errònies no s’han de fer servir al LOD '+name);
+   assert(!mat.alphaMode||mat.alphaMode==='OPAQUE',
+    'S’han de treure les màscares alfa que invisibilitzen el casc');
+   assert.equal(mat.pbrMetallicRoughness?.baseColorFactor?.[3],1);
+   assert(mat.pbrMetallicRoughness?.roughnessFactor>=.9,
+    'Materials mats obligatoris per als LOD');
+  }
+ }
+ console.log('OK '+name+': '+total+' triangles, '+meshes+' malles, '+
+  (name==='btr82-original.glb'?'11 textures originals':'10 materials militars mats, sense artefactes UV'));
 }
 const manifest=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../assets/vehicle-candidates/manifest.json'),'utf8'));
 assert.deepEqual(manifest.selectedForLod.tanqueta.ratioLevels,[1,.75,.5,.25]);

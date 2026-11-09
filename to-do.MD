@@ -1,3 +1,10 @@
+**P1 · 2026-11-09 · BTR-82: corregir artefactes de colors i peces invisibles:**
+- [x] Diagnòstic de captura Chrome Android: malles reduïdes amb UV interpolades erròniament sobre atlas amb transparències i colors vius; rodes/casc deformats visualment.
+- [x] Reconstrucció dels tres GLB 75/50/25 amb 10 materials militars mats i opacs, sense textures PNG ni alfa mask als LOD; model font 100% i les seves onze imatges intactes.
+- [x] Reproduïble a `tools/repair-btr82-materials.cjs`, sense canviar la geometria (16.109/10.745/5.371 triangles, 18 malles).
+- [x] Verificació de renderització amb VTK fora de WebGL (casc, rodes i torreta recognoscibles) i comprovacions de materials, hashes, malles i triangles.
+- [ ] Confirmació visual en Chrome Android després del desplegament de Pages; el model de la tanqueta jugable segueix sense canvis.
+
 **P1 · 2026-11-09 · autopublicació dels quatre GLB BTR-82 al visor:**
 - [x] Transferència del model original i tres variants 75%, 50% i 25% a un arxiu comprimit GitHub mitjançant Git Data API, sense accions manuals.
 - [x] Workflow `[btr82-publish]` valida el SHA i els quatre GLB, els publica al camí de candidats i elimina l'arxiu temporal.
