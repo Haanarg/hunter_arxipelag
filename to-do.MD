@@ -1,3 +1,10 @@
+**P1 · 2026-11-09 · resistència uniforme dels edificis (v0.6.199):**
+- [x] Parets i sostres ordinaris i militars: **10 PV** per segment/coberta; pilars frontals i laterals de l'hangar **10 PV**, també murs interiors del búnquer. Dany d'armes lleugeres bloquejat, sense reducció parcial de PV; explosions pesades i embestides de vehicles poden destruir les estructures.
+- [x] Barracons i cabanes de fusta: parets i sostres **4 PV** i vulnerables a armes lleugeres; totes les portes de les edificacions **4 PV**, independentment del material (inclosa la porta del búnquer).
+- [x] Mateixes regles a SOLO i Worker COOP: etiquetes de fusta conservades en serialitzar, impacte directe als sostres de fusta i explosions pesades sobre sostres reforçats; s'ha retirat l'excepció prèvia de sostre invulnerable del búnquer.
+- [x] Regressió `tests/structure-durability.mjs` incorporada a la bateria bàsica: PV, tipus d'arma i col·lisió de projectils al sostre en COOP.
+- [ ] Validació en partida real, especialment la porta del búnquer i la destrucció de sostres de fusta en mode individual i cooperatiu.
+
 **P1 · 2026-11-08 · recerca i substitució dels candidats tanc/M1A1 i tanqueta/NZLAV:**
 - [x] Retirats sis models genèrics rebutjats (tres per vehicle), inclosos els fitxers GLB, manifests i les opcions del catàleg.
 - [x] Localitzades tres fonts Sketchfab amb llicència verificada per tipus; tanc: M1A1/M1 de Quasar, Scril i Artem Goyko; tanqueta: Stryker 8×8 de bunny, M1128 de LM3D i BTR 82 de SIpriv com a alternativa menys fidel.
