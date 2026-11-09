@@ -18,7 +18,7 @@ import {createWorldRandom} from '../src/world-generation-core.mjs';
 import {launchProjectile,projectileStep,SMALL_ARMS_PROJECTILE_SPEED} from '../src/projectile-core.mjs';
 import {createAimSelector,weaponTargetPriority,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,SMALL_ARMS_RANGE} from '../src/aiming-core.mjs';
 import {damageHealth} from '../src/player-simulation.mjs';
-import {runoverDamage,runoverSweepHit,VEHICLE_DESTRUCTION,beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,towerExplosionAim,segmentAabbT,segmentSphereT,inView,ballisticStep,friendlyVehicleBlocksLine} from '../src/combat-rules.mjs';
+import {runoverDamage,runoverSweepHit,VEHICLE_DESTRUCTION,beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,directRocketHitDamage,towerExplosionAim,segmentAabbT,segmentSphereT,inView,ballisticStep,friendlyVehicleBlocksLine} from '../src/combat-rules.mjs';
 // Índex immutable per posició: les portes poden obrir-se i destruir-se,
 // però els seus volums no canvien de cel·la. Els índexs de les parets continuen
 // essent els originals per als vidres i els efectes sincronitzats.
@@ -480,7 +480,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     while(queue.length){
       const blast=queue.shift(),center=blast.at,hits=[],protectedPlayers=new Set(players().filter(p=>vehicles.mounted(p.id)).map(p=>p.id));
       const visible=aim=>traceArena(center,aim,geometry(),world()).fraction>=1;
-      for(const t of targets)if(t.hp>0){
+      for(const t of targets)if(t.hp>0&&t!==blast.directHit?.target){
         const aim=t.t==='torre'?towerExplosionAim(t,center):
           {x:t.x,y:t.y+1.5,z:t.z},
           d=Math.hypot(aim.x-center.x,aim.y-center.y,aim.z-center.z),
@@ -509,12 +509,19 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       }
       // Snapshot candidates before destruction, so a chain cannot mutate iteration.
       for(const v of [...vehicles.live()]){
+        if(v===blast.directHit?.target)continue;
         const damage=explosionDamage(blast.damage,vehicles.blastDistance(v,center),blast.radius);
         if(damage&&visible({x:v.x,y:v.y+1,z:v.z}))damageVehicle(v,damage,'heavy',tick,queue);
       }
       blastWire(center,blast.damage,blast.radius);
       blastStructures(center,blast.damage,blast.radius);
       blastPalms(center,blast.damage,blast.radius);
+      // Casc impactat: 10 PV exactes; la resta rep l'ona normal.
+      if(blast.directHit){
+        const {kind,target,damage}=blast.directHit;
+        if(kind==='enemy'&&target.hp>0){target.hp=damageHealth(target.hp,damage);hits.push(target.id);}
+        else if(kind==='vehicle'&&!target.destroyed)damageVehicle(target,damage,'heavy',tick,queue);
+      }
       alarm(center,blast.actorId,tick,'explosion');effect('explosion',tick,{actorId:blast.actorId,at:center,radius:blast.radius,
         weapon:blast.weapon==='c4'?'c4':blast.projectile?'projectile':'grenade',
         ...(blast.projectile&&blast.direction?{direction:blast.direction}:{}),hits});
@@ -722,8 +729,12 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
       }
       const result=flight.finish();p.life=flight.life;Object.assign(p,result.point);
       for(const pane of trace.windowCrossings)if(pane.t<=flight.fraction+1e-6&&breakWindow(pane.wallIndex,pane.index)){effect('glass',tick,{actorId:p.actorId,at:pane.point,wallIndex:pane.wallIndex,paneIndex:pane.index});}
-      if(result.hit){if(p.splash){if(result.kind!=='expire')explode({at:{...result.point},damage:p.dmg,radius:p.splash,actorId:p.actorId,
-          projectile:true,direction:{x:p.vx,y:p.vy,z:p.vz},ownerOnly:!p.enemy},tick);projectiles.splice(i,1);continue;}
+      if(result.hit){if(p.splash){
+          const directDamage=directRocketHitDamage(p.weapon,result.kind,result.target);
+          if(result.kind!=='expire')explode({at:{...result.point},damage:p.dmg,radius:p.splash,actorId:p.actorId,
+            projectile:true,direction:{x:p.vx,y:p.vy,z:p.vz},ownerOnly:!p.enemy,
+            ...(directDamage?{directHit:{kind:result.kind,target:result.target,damage:directDamage}}:{})},tick);
+          projectiles.splice(i,1);continue;}
         let applied=true;
         if(result.kind==='marine-glass'){
           const boat=result.target.boat;
