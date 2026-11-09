@@ -6,7 +6,7 @@ export const weaponCatalog=Object.freeze(Object.fromEntries(Object.entries({
  pistol:{name:'Pistola',ammo:'bullets',speed:130,damage:combatBalance.weapons.pistol,range:SMALL_ARMS_RANGE.pistol,cone:SMALL_ARMS_AIM_CONE,vertical:SMALL_ARMS_AIM_VERTICAL,cooldown:.44,life:2.2},
  assault:{name:'Fusell d’assalt',item:'assault',ammo:'bullets',speed:130,damage:combatBalance.weapons.rifle,range:SMALL_ARMS_RANGE.assault,cone:RIFLE_AIM_CONE,vertical:SMALL_ARMS_AIM_VERTICAL,cooldown:.34,life:2.2},
  sniper:{name:'Franctirador',item:'sniper',ammo:'sniperAmmo',speed:470,damage:combatBalance.weapons.sniper,range:2000,cone:RIFLE_AIM_CONE,vertical:Math.PI/2,cooldown:1.05,life:4.4},
- bazooka:{name:'Bazuca',ammo:'bazooka',speed:72*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.bazooka,splash:18,range:200,cone:Math.SQRT1_2,vertical:Math.PI/4,cooldown:1.05,life:3.8},
+ bazooka:{name:'Bazuca',ammo:'bazookaAmmo',speed:72*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.bazooka,splash:18,range:200,cone:Math.SQRT1_2,vertical:Math.PI/4,cooldown:1.05,life:3.8},
  knife:{name:'Ganivet',damage:combatBalance.weapons.knife,cooldown:.52},
  cutters:{name:'Cisalla',item:'cutters',cooldown:.52},
  grenade:{name:'Granada',ammo:'grenades',damage:combatBalance.weapons.grenade,splash:16,cooldown:.7},
@@ -19,7 +19,7 @@ export const weaponCatalog=Object.freeze(Object.fromEntries(Object.entries({
 }).map(([key,value])=>[key,Object.freeze(value)])));
 export const personalWeapons=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters','c4']);
 export const combatCommands=Object.freeze([...personalWeapons,'grenade','secondary']);
-export const inventoryCaps=Object.freeze({parachute:1,bullets:120,grenades:8,disguise:1,medkits:3,assault:1,sniper:1,sniperAmmo:40,bazooka:12,c4:8,cutters:1});
+export const inventoryCaps=Object.freeze({parachute:1,bullets:120,grenades:8,disguise:1,medkits:3,assault:1,sniper:1,sniperAmmo:40,bazooka:1,bazookaAmmo:12,c4:8,cutters:1});
 export const openRiderTypes=Object.freeze(['bici','moto','moto_aquatica','barca_rems','windsurf','llanxa']);
 export const mountedWeapons=Object.freeze({...Object.fromEntries(openRiderTypes.map(t=>[t,'pistol'])),tanc:'tank',tanqueta:'tankette',heli_combat:'attackCannon',llanxa_coets:'boatRocket'});
 export function grenadeLaunch(power=0,origin,heading){
