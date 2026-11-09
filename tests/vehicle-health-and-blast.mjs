@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {combatBalance} from '../src/combat-rules.mjs';
+import {combatBalance,directRocketHitDamage,explosionDamage,vehicleDamage} from '../src/combat-rules.mjs';
 import {vehicleDynamics} from '../src/vehicle-dynamics-core.mjs';
 import {createArcadeBlastFX,arcadeBlastProfile} from '../src/arcade-blast-fx.mjs';
 import * as THREE from '../vendor/three-r186.module.mjs';
@@ -11,6 +11,29 @@ for(const [type,old] of Object.entries(base)){
  assert.equal(vehicleDynamics.types[type].life,old*2,type+' servidor/joc');
 }
 assert.equal(Object.keys(combatBalance.vehicles).length,Object.keys(base).length);
+const enemyTankette={t:'tanqueta',hp:20};
+for(const weapon of ['bazooka','heliMissile','boatRocket']){
+ assert.equal(directRocketHitDamage(weapon,'enemy',enemyTankette),10,weapon+' a tanqueta HQ');
+ assert.equal(directRocketHitDamage(weapon,'vehicle',{t:'tanqueta',life:20}),10,weapon+' a tanqueta neutral');
+ assert.equal(directRocketHitDamage(weapon,'enemy',{t:'soldat',hp:4}),0,'soldat: només expansió');
+ assert.equal(directRocketHitDamage(weapon,'wall',{hp:10}),0,'paret: només expansió');
+}
+for(const weapon of ['tank','grenade','c4','rifle'])assert.equal(
+ directRocketHitDamage(weapon,'enemy',enemyTankette),0,weapon+' no és bazuca/míssil');
+assert.equal(directRocketHitDamage('bazooka','enemy',{t:'tanqueta',destroyed:true}),0);
+const hit=directRocketHitDamage('bazooka','enemy',enemyTankette);
+assert.equal(enemyTankette.hp-hit,10);
+assert.equal(enemyTankette.hp-hit-hit,0,'dos coets directes destrueixen tanqueta HQ de 20 PV');
+assert.equal(vehicleDamage({t:'tanqueta',life:20},10,1,'heavy',20).life,10);
+assert.equal(vehicleDamage({t:'tanqueta',life:10},10,1,'heavy',20).life,0);
+assert(explosionDamage(10,4.5,18)<10,'l\u2019ona a 4,5 m és menor que l\u2019impacte directe');
+const soloCombat=(await import('node:fs')).readFileSync(new URL('../src/combat.js',import.meta.url),'utf8');
+const coopCombat=(await import('node:fs')).readFileSync(new URL('../server/coop-combat.mjs',import.meta.url),'utf8');
+assert(soloCombat.includes("u===directHit?.target")&&soloCombat.includes("v===directHit?.target"));
+assert(soloCombat.includes("directRocketHitDamage(")&&soloCombat.includes("damageVehicle(directHit.target,directHit.damage"));
+assert(coopCombat.includes("t!==blast.directHit?.target")&&coopCombat.includes("v===blast.directHit?.target"));
+assert(coopCombat.includes("directRocketHitDamage(p.weapon,result.kind,result.target)"));
+
 assert.equal(arcadeBlastProfile('c4').scale,2.55);
 assert.equal(arcadeBlastProfile('projectile').scale,1.5);
 const scene=new THREE.Scene(),fx=createArcadeBlastFX(THREE,scene);
