@@ -77,7 +77,7 @@ function captureOperation(name){
   snapshot.world.entities.explosives=bombs.map((b,i)=>({id:'explosives:planted:'+i,kind:'bomb',...operationScalars(b),transform:operationTransform(b.o)}));
   snapshot.participants.local={accountId:null,state:{...operationScalars(P).state,
     vehicleSeat:cv?{vehicleId:cv.saveId,seat:0}:null,hp,ammo,inventory:operationClone(inv),
-    disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,knifeEquipped,sniperAmmo,
+    disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,knifeEquipped,sniperAmmo,bazookaAmmo,
     crouched:playerCrouched,swimming,cooldown:fcd,flightY:cheatFlightY,cheats:{...cheats},
     view:{position:cam.position.toArray(),quaternion:cam.quaternion.toArray(),zoom}},stats:{kills}};
   snapshot.stats={kills};
@@ -221,6 +221,9 @@ function applyOperationSnapshot(snapshot){
   if(cv&&!V.includes(cv))throw new Error('El vehicle del jugador ja no existeix.');
   bazookaEquipped=p.bazookaEquipped;grenadeEquipped=p.grenadeEquipped;cisallaEquipped=p.cisallaEquipped;
   sniperEquipped=p.sniperEquipped;knifeEquipped=p.knifeEquipped;sniperAmmo=p.sniperAmmo;
+  // Desaments antics: inv.bazooka era la reserva de coets; ara només indica la possessió.
+  bazookaAmmo=Number.isInteger(p.bazookaAmmo)?p.bazookaAmmo:Math.max(0,inv.bazooka||0);
+  if(!Number.isInteger(p.bazookaAmmo)&&inv.bazooka>0)inv.bazooka=1;
   playerCrouched=p.crouched;swimming=p.swimming;fcd=p.cooldown;cheatFlightY=p.flightY;setDis(p.disguised);Object.assign(cheats,p.cheats);
   elapsed=snapshot.world.time;DIF=r.difficulty;R.setState(r.rng);water.update(elapsed);
   hqMapKnown=r.hqMapKnown;hqIntelStage=r.hqIntelStage;hqDiscardIndex=r.hqDiscardIndex;
