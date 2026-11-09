@@ -24,7 +24,7 @@ assert.equal(inventoryCaps.bazookaAmmo,12);
 assert(solo.includes("if(it.t==='arma'){ammo+=16;sniperAmmo+=5;bazookaAmmo+=3;}"));
 assert(solo.includes("else if(it.t==='bazooka'){inv.bazooka=1;bazookaAmmo+=3}"));
 assert(solo.includes('bazookaAmmo,scopeActive,'));
-assert(fire.includes('bazookaEquipped&&inv.bazooka&&bazookaAmmo>0'));
+assert(fire.includes("bazookaEquipped){if(!inv.bazooka||bazookaAmmo<=0)"));
 assert(fire.includes('bazookaAmmo--;'));
 assert(!fire.includes('delete inv.bazooka;bazookaEquipped=false'));
 
