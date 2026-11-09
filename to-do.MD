@@ -1,3 +1,9 @@
+**2026-11-09 · Impacte directe bazuca/míssils (v0.6.201):**
+- [x] Regla compartida: bazuca, míssil d'helicòpter i coet naval fan 10 PV quan impacten directament un vehicle (incloses tanquetes enemigues de l'HQ).
+- [x] La víctima directa queda exclosa del dany expansiu del mateix projectil, sense duplicació; la resta de soldats, vehicles i estructures reben el dany expansiu habitual.
+- [x] Aplicat a SOLO i COOP; prova de regressió a `tests/vehicle-health-and-blast.mjs`.
+- [ ] Prova manual de 2 impactes directes contra tanqueta HQ en partida individual i cooperativa.
+
 **P1 · 2026-11-09 · BTR-82: recuperar el detall reconeixible amb 75/50/25%:**
 - [x] Tres nous GLB reconstruïts des de l'original amb VTK DecimatePro, textures originals intactes i 18 malles: 16.109/10.745/5.371 triangles.
 - [x] Substituïts els nivells extrems 5/4/3/2% del banc actiu pels tres nivells 75/50/25%. Es manté el 100% com a referència.
