@@ -50,7 +50,7 @@ const makeOriginal=vehicleModels.createFactory(THREE,{
  truck:createTruckModel,batching:playerBatching
 });
 const slots=[];
-for(let i=0;i<6;i++){
+for(let i=0;i<5;i++){
  const outer=document.createElement('article');outer.className='panel';
  const label=document.createElement('div');label.className='label';
  const bold=document.createElement('strong');bold.textContent=i?'Alternativa '+i:'Model actual del joc';
@@ -112,7 +112,7 @@ let yaw=.60,elev=.32,zoom=1,lookY=.6;
 let prev=performance.now();
 let btrStudioPromise=null;
 function getBtrStudio(){
- return btrStudioPromise??=import('./btr82-lod-studio.mjs?rev=direct-lod-import-2').then(module=>module.createBtr82Studio({
+ return btrStudioPromise??=import('./btr82-lod-studio.mjs?rev=conservative-75-50-25-1').then(module=>module.createBtr82Studio({
    slots,loadUploadedGlb,setModel,metrics,
    isCurrent:token=>token===generation&&currentType.id==='tanqueta',
    showOfficial:token=>loadExternal(slots[1],currentType.options[0],new Set(),token),
@@ -420,7 +420,7 @@ const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.textContent=config.name;
- const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'4 reduccions LOD':config.id==='ferry'?'2–3 alternatives':'3 alternatives');
+ const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3 reduccions LOD':config.id==='ferry'?'2–3 alternatives':'3 alternatives');
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }

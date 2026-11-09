@@ -1,4 +1,4 @@
-// BTR-82 ultralleuger: mateixa Three.js r186 / meshoptimizer que el motor.
+// BTR-82 LOD conservador: mateixa Three.js r186 / meshoptimizer que el motor.
 // Original Sketchfab: 199 malles, 21.483 triangles. Concentram primer
 // geometries del mateix material, respectant 8 rodes i torreta independents.
 import * as THREE from '../vendor/three-r186.module.mjs';
@@ -6,8 +6,7 @@ import {SimplifyModifier} from 'three/addons/modifiers/SimplifyModifier.js';
 import {MeshoptSimplifier} from 'three/addons/libs/meshopt_simplifier.module.js';
 import {mergeGeometries,mergeVertices} from 'three/addons/utils/BufferGeometryUtils.js';
 
-export const BTR82_RATIOS=Object.freeze([1,.05,.04,.03,.02]);
-export const BTR82_GOAL=3000;
+export const BTR82_RATIOS=Object.freeze([1,.75,.50,.25]);
 const WHEEL_NODES=new Set(['Object_428','Object_431','Object_434','Object_436',
   'Object_439','Object_441','Object_444','Object_446']);
 
@@ -72,8 +71,8 @@ async function simplifyBucket(geometry,ratio,minTriangles,modifier){
  }catch(e){console.warn('BTR-82: simplificació regular fallida',{base,target},e)}
  let actual=output?(output.getIndex()?.count??output.getAttribute('position')?.count??0)/3:base;
  if(actual<=Math.ceil(target*1.15)&&actual>0)return output;
- // Many disconnected Blockbench cuboids cannot be reduced by edge collapse
- // at 2-5%. Meshoptimizer's sloppy mode is the explicit aggressive fallback.
+ // Malles Blockbench desconnectades poden bloquejar la simplificació normal.
+ // Meshoptimizer sloppy és la reserva quan el resultat no és suficient.
  await MeshoptSimplifier.ready;
  const indexed=geometry.getIndex()?geometry:mergeVertices(geometry);
  const indices=indexed.getIndex();
@@ -168,7 +167,7 @@ export async function buildBtr82Lod(original,ratio,{isCurrent=()=>true}={}){
    parent.add(model);kept++;
   }
   result.userData.btr82Lod={ratio,sourceMeshes,mergedMeshes:kept,
-   triangles:countBtrTriangles(result),goal:BTR82_GOAL};
+   triangles:countBtrTriangles(result),targetTriangles:Math.round(countBtrTriangles(original)*ratio)};
   return result;
  }catch(e){
   for(const resource of resources)resource.dispose();

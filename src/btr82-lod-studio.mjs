@@ -1,6 +1,6 @@
-// BTR-82 SIpriv (CC BY 4.0): source + four independently rendered LODs.
+// BTR-82 SIpriv (CC BY 4.0): original + three independent LODs (75%, 50%, 25%).
 // Importing a 5/4/3/2% GLB NEVER re-simplifies that GLB as a new original.
-import {BTR82_RATIOS,BTR82_GOAL,buildBtr82Lod,countBtrTriangles,countBtrMeshes,normalizeBtr82Glb}
+import {BTR82_RATIOS,buildBtr82Lod,countBtrTriangles,countBtrMeshes,normalizeBtr82Glb}
  from './btr82-aggressive-simplification.mjs';
 import {classifyBtr82Upload} from './btr82-upload-policy.mjs';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
@@ -160,7 +160,7 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
      'Pots importar directament el GLB reduït d’aquest nivell.';
    }
    await showOfficial(token);
-   if(valid(token,run))notice.textContent='BTR-82: importa l’original 100% per calcular 5/4/3/2%, o importa directament els GLB reduïts a les seves targetes.';
+   if(valid(token,run))notice.textContent='BTR-82: importa l’original 100% per generar 75%, 50% i 25%, o importa directament els tres GLB ja reduïts al panell corresponent.';
    return;
   }
   try{
@@ -181,7 +181,7 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
    setModel(slot,gltf.scene,false,gltf.animations);
    slot.status.textContent=metrics(slot.model)+' · '+initialMeshes+' malles originals';
    linkDownload(slot,1,blob);
-   notice.textContent='Original: '+initial.toLocaleString('ca')+' triangles, '+initialMeshes+' malles. Generant 5%, 4%, 3% i 2%…';
+   notice.textContent='Original: '+initial.toLocaleString('ca')+' triangles, '+initialMeshes+' malles. Generant 75%, 50% i 25%…';
    let previous=initial;
    for(let i=2;i<slots.length;i++){
     if(!valid(token,run))return;
@@ -201,12 +201,12 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
     setModel(s,result,false,[]);
     s.status.textContent=metrics(s.model)+' · '+(actual/initial*100).toFixed(1)+
      '% real · '+meshCount+' malles (abans '+initialMeshes+')'+
-     (actual<=BTR82_GOAL?' · ≤3.000 △':' · >3.000 △')+
+     ' · objectiu '+Math.round(initial*ratio).toLocaleString('ca')+' △'+
      (actual>=previous?' · atenció: no millora el nivell anterior':'');
     previous=Math.min(previous,actual);
     linkDownload(s,i,blob);
    }
-   if(valid(token,run))notice.textContent='Reduccions generades amb meshoptimizer. Cada targeta mostra triangles i malles reals; els GLB reduïts importats NO es tornen a simplificar.';
+   if(valid(token,run))notice.textContent='Reduccions conservadores 75%, 50% i 25% generades amb meshoptimizer. Cada targeta indica triangles i malles reals. Els GLB ja reduïts importats NO es tornen a simplificar.';
   }catch(e){
    if(valid(token,run)){
     slots[1].status.textContent='Error amb el BTR-82 original: '+String(e?.message||e);
@@ -244,6 +244,10 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
     if(!isCurrent(token))return;
     const triangles=countTriangles(gltf.scene),meshes=countBtrMeshes(gltf.scene);
     const policy=classifyBtr82Upload({name:file.name,triangles,meshes,targetSlot:slotIndex});
+    if(policy.kind==='obsolete'){
+     notice.textContent='Aquest GLB del '+policy.percent+'% pertany a les reduccions descartades. Importa l’original 100% o una de les versions noves: 75%, 50% i 25%.';
+     return;
+    }
     if(policy.kind==='source'){
      cached=null;
      await load(token,file);
