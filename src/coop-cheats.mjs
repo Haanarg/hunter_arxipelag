@@ -10,7 +10,7 @@ export function grantCoopCheatItems(bag,vehicles=[]){
  // Mantenir el nombre per davall de la capacitat de pickups
  // del mode natiu (1.000.000), incloses les municions de vehicles.
  for(const key of ['bullets','grenades','medkits','disguise','assault',
-  'sniper','sniperAmmo','bazooka','c4','cutters','parachute'])
+  'sniper','sniperAmmo','bazooka','bazookaAmmo','c4','cutters','parachute'])
   bag[key]=Math.max(9999,Number.isFinite(bag[key])?bag[key]:0);
  for(const vehicle of vehicles)
   if(vehicle&&Number.isFinite(vehicle.rockets))
