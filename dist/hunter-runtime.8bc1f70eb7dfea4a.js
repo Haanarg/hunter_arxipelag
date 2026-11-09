@@ -7582,13 +7582,13 @@ function presentExplosion(x,y,z,r,source=null){
   }:kind);
  }catch(error){disableArcadeBlastVisual(error)}
 }
-function boom(x,y,z,r,dmg,own,source=null,visualWeapon=null){
+function boom(x,y,z,r,dmg,own,source=null,visualWeapon=null,directHit=null){
  presentExplosion(x,y,z,r,visualWeapon?{weapon:visualWeapon}:source);
  // El casc protegeix el pilot mentre encara és dins. Si el vehicle
  // esclata dins aquest càlcul, no el feim rebre també un impacte directe.
  const pilotedAtStart=!!cv;
  for(const u of [...enemyCandidatesAt(x,z,r+vehicleRadius('llanxa')*.62+4)]){
-  if(u.hp<=0||u.destroyed)continue;
+  if(u.hp<=0||u.destroyed||u===directHit?.target)continue;
   const marine=u.t==='patrulla_marina',
     towerAim=u.t==='torre'?window.HUNTER_SHARED_COMBAT.towerExplosionAim(
       u,{x,y,z},u.o.position.y):null,
@@ -7623,7 +7623,7 @@ function boom(x,y,z,r,dmg,own,source=null,visualWeapon=null){
  }
  PL.forEach(t=>{if(!t.alive)return;const dealt=explosionDamage(dmg,Math.hypot(t.x-x,t.z-z),r);if(dealt&&!blastOccluded(x,y,z,t.x,t.y+2,t.z))dmgP(t,dealt)});
  for(const v of [...vehicleCandidatesAt(x,z,r+12,true)]){
-  if(v.destroyed)continue;
+  if(v.destroyed||v===directHit?.target)continue;
   const dealt=explosionDamage(dmg,explosionDistanceToVehicleHull(v,x,y,z),r);
   if(dealt&&!blastOccluded(x,y,z,v.x,(v.o?.position?.y??0)+1,v.z))damageVehicle(v,dealt,1,'heavy',source||{x,y,z,own});
  }
@@ -7681,6 +7681,13 @@ function boom(x,y,z,r,dmg,own,source=null,visualWeapon=null){
   const dealt=window.HUNTER_SHARED_COMBAT.roofBlastDamage(b,x,z,r,dmg);
   if(dealt){b.rhp-=dealt;if(b.rhp<=0)roofBreak(b)}
  }
+ // Dany directe separat del radi; evita duplicar el dany al casc.
+ if(directHit){
+   if(directHit.kind==='enemy'&&directHit.target.hp>0)
+     hurtE(directHit.target,directHit.damage,source);
+   else if(directHit.kind==='vehicle'&&!directHit.target.destroyed)
+     damageVehicle(directHit.target,directHit.damage,1,'heavy',source);
+ }
 }
 // Punt just fora de la porta dreta del Huey 3B. Les dimensions locals
 // corresponen a l'obertura real (x=1,36; z=-0,76..1,76).
@@ -7737,11 +7744,11 @@ function melee(){
 }
 function secondaryWeapon(){if(playerEject||playerFall)return false;if(nativeCoopSession)return nativeCoopSession.channel?.combat('secondary');
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
-  if(cv.t==='heli_combat'){if(cheats.items)cv.rockets=Math.max(cv.rockets||0,999);if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,COMBAT_BALANCE.weapons.heliMissile,10,'p',mS,2.4);Pj[Pj.length-1].life=3.3;msg='Míssils: '+cv.rockets;msgT=1;return true}
+  if(cv.t==='heli_combat'){if(cheats.items)cv.rockets=Math.max(cv.rockets||0,999);if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,COMBAT_BALANCE.weapons.heliMissile,10,'p',mS,2.4);Pj[Pj.length-1].life=3.3;Pj[Pj.length-1].weapon='heliMissile';msg='Míssils: '+cv.rockets;msgT=1;return true}
   if(cv.t==='llanxa_coets'){/* Munició infinita. */fcd=.9;
     const shot=combatBoatRocketAim(cv),d=shot.direction;
     shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],68,COMBAT_BALANCE.weapons.boatRocket,11,'p',mS,2.6);
-    msg='Coets: ∞';msgT=1;return true}
+    Pj[Pj.length-1].weapon='boatRocket';msg='Coets: ∞';msgT=1;return true}
   return false
 }
 // Un toc deixa caure la granada a prop; 1,4 s de pressió assoleixen
@@ -8798,7 +8805,12 @@ function updPj(dt){
       const b=kind==='building'?target:kind==='wall'?target?.owner:null;
       if(b?.civilianHut)demolishCivilianHut(b);
     }
-    if(p.spl)boom(p.x,p.y,p.z,p.spl,p.dmg,p.own,p);
+    if(p.spl){
+      const directDamage=window.HUNTER_SHARED_COMBAT.directRocketHitDamage(
+        p.weapon||(p.own==='e'&&p.dmg===COMBAT_BALANCE.weapons.bazooka&&p.spl===8?'bazooka':null),kind,target);
+      boom(p.x,p.y,p.z,p.spl,p.dmg,p.own,p,null,
+        directDamage?{kind,target,damage:directDamage}:null);
+    }
     world.remove(p.o);Pj.splice(i,1)
   }
 }
