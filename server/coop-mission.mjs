@@ -223,9 +223,12 @@ export function restoreRelayMission(record,geometry){
   const capacities=meta.mode==='native'?Object.fromEntries(Object.keys(inventoryCaps).map(k=>[k,1000000])):inventoryCaps;
   // Compatibilitat amb sales/desaments previs: bazooka abans era el nombre
   // de coets, i ara és la possessió de l'arma (0/1).
-  for(const bag of inventory.values())if(!Number.isFinite(bag.bazookaAmmo)){
-    bag.bazookaAmmo=Math.max(0,bag.bazooka||0);
-    bag.bazooka=bag.bazookaAmmo>0?1:0;
+  for(const bag of inventory.values()){
+    const saved=record.inventories?.find(row=>row.actorId===bag.actorId);
+    if(saved&&!Number.isFinite(saved.bazookaAmmo)){
+      bag.bazookaAmmo=Math.max(0,saved.bazooka||0);
+      bag.bazooka=bag.bazookaAmmo>0?1:0;
+    }
   }
 
   const supplies=()=>[...meta.supplies.filter(s=>!claimed.has(s.id)),...loose.values()].map(s=>({...s}));
