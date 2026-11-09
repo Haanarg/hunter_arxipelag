@@ -153,7 +153,7 @@ export function roofBlastDamage(b,x,z,r,dmg){
  if(b.rhp<=0||b.rb||b.indestructible)return 0;
  if(b.weakWood){
   // Projecció al rectangle del sostre, fins i tot si el barracó està
-  // girat 90°. Una granada a qualsevol extrem pot destruir-ne els 8 PV.
+  // girat 90°. Una granada a qualsevol extrem pot destruir-ne els 4 PV.
   const angle=b.angle||0,c=Math.cos(angle),s=Math.sin(angle),dx=x-b.x,dz=z-b.z,
         lx=dx*c+dz*s,lz=-dx*s+dz*c,
         halfW=(b.localW||b.w)/2,halfD=(b.localD||b.d)/2,
