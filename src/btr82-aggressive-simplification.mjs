@@ -62,19 +62,26 @@ async function simplifyBucket(geometry,ratio,minTriangles,modifier){
  const base=(geometry.getIndex()?.count ?? geometry.getAttribute('position').count)/3;
  const target=Math.max(Math.min(base,minTriangles),Math.ceil(base*ratio));
  if(target>=base)return geometry;
+ // IMPORTANT: SimplifyModifier welds non-indexed meshes before simplifying.
+ // Compute the amount to remove from that SAME welded vertex count. Using
+ // raw triangle-corner vertices here used to request >100% reduction.
+ const indexed=geometry.getIndex()?geometry:mergeVertices(geometry);
  // The vendored SimplifyModifier preserves normal and UV metric first.
  let output;
  try{
-  const attr=geometry.getAttribute('position');
-  const n=Math.max(1,Math.round(attr.count*(1-target/base)));
-  output=await modifier.modify(geometry,n);
+  const attr=indexed.getAttribute('position');
+  const n=Math.max(0,Math.round(attr.count*(1-target/base)));
+  output=await modifier.modify(indexed,n);
  }catch(e){console.warn('BTR-82: simplificació regular fallida',{base,target},e)}
  let actual=output?(output.getIndex()?.count??output.getAttribute('position')?.count??0)/3:base;
- if(actual<=Math.ceil(target*1.15)&&actual>0)return output;
+ if(actual>=Math.floor(target*.65)&&actual<=Math.ceil(target*1.15)&&actual>0)
+  return output;
+ // Keep a recognisable shape: a decimator must not collapse to a few
+ // triangles and call that a conservative 75% or 50% model.
+ if(output&&actual<target*.65){output.dispose();output=null;actual=base}
  // Malles Blockbench desconnectades poden bloquejar la simplificació normal.
  // Meshoptimizer sloppy és la reserva quan el resultat no és suficient.
  await MeshoptSimplifier.ready;
- const indexed=geometry.getIndex()?geometry:mergeVertices(geometry);
  const indices=indexed.getIndex();
  if(!indices){return output||geometry}
  try{
@@ -82,7 +89,7 @@ async function simplifyBucket(geometry,ratio,minTriangles,modifier){
    positionOnlyIndices(indexed),3,null,Math.max(3,Math.floor(target)*3),1);
   const optimized=compact(indexed,result[0]);
   const got=optimized.getIndex().count/3;
-  if(got>0&&(got<actual||!output)){
+  if(got>=Math.floor(target*.65)&&got>0&&(got<actual||!output)){
    if(output)output.dispose();
    return optimized;
   }
