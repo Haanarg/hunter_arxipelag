@@ -14589,7 +14589,7 @@ function captureOperation(name){
   snapshot.world.entities.explosives=bombs.map((b,i)=>({id:'explosives:planted:'+i,kind:'bomb',...operationScalars(b),transform:operationTransform(b.o)}));
   snapshot.participants.local={accountId:null,state:{...operationScalars(P).state,
     vehicleSeat:cv?{vehicleId:cv.saveId,seat:0}:null,hp,ammo,inventory:operationClone(inv),
-    disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,knifeEquipped,sniperAmmo,
+    disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,knifeEquipped,sniperAmmo,bazookaAmmo,
     crouched:playerCrouched,swimming,cooldown:fcd,flightY:cheatFlightY,cheats:{...cheats},
     view:{position:cam.position.toArray(),quaternion:cam.quaternion.toArray(),zoom}},stats:{kills}};
   snapshot.stats={kills};
@@ -14733,6 +14733,9 @@ function applyOperationSnapshot(snapshot){
   if(cv&&!V.includes(cv))throw new Error('El vehicle del jugador ja no existeix.');
   bazookaEquipped=p.bazookaEquipped;grenadeEquipped=p.grenadeEquipped;cisallaEquipped=p.cisallaEquipped;
   sniperEquipped=p.sniperEquipped;knifeEquipped=p.knifeEquipped;sniperAmmo=p.sniperAmmo;
+  // Desaments antics: inv.bazooka era la reserva de coets; ara només indica la possessió.
+  bazookaAmmo=Number.isInteger(p.bazookaAmmo)?p.bazookaAmmo:Math.max(0,inv.bazooka||0);
+  if(!Number.isInteger(p.bazookaAmmo)&&inv.bazooka>0)inv.bazooka=1;
   playerCrouched=p.crouched;swimming=p.swimming;fcd=p.cooldown;cheatFlightY=p.flightY;setDis(p.disguised);Object.assign(cheats,p.cheats);
   elapsed=snapshot.world.time;DIF=r.difficulty;R.setState(r.rng);water.update(elapsed);
   hqMapKnown=r.hqMapKnown;hqIntelStage=r.hqIntelStage;hqDiscardIndex=r.hqDiscardIndex;
@@ -15319,7 +15322,7 @@ function captureNativeCoopWorld(){
  geometry.buildings.forEach((b,i)=>{b.id=B[i].saveId;});geometry.stairs.forEach((s,i)=>{s.buildingId=stairs[i].owner?.saveId;});
  const all=[...new Set([...TG.values()].flat())];geometry.trees=[...PL,...all.filter(t=>!t.p)].map(t=>({x:t.x,z:t.z,r:t.r,p:!!t.p,rock:!!t.rock,...(t.p?{y:t.y,s:t.s,yaw:t.yaw}:{}),...(t.rock?{topY:t.topY,bottomY:t.bottomY}:{})}));
  const point=v=>({x:v.x,y:v.y??v.o?.position?.y??Math.max(0,hAt(v.x,v.z)),z:v.z});
- const itemMap={arma:['bullets',16],granada:['grenades',5],disf:['disguise',1],med:['medkits',1],fusell_assalt:['assault',1],franctirador:['sniper',1],bazooka:['bazooka',3],cisalla:['cutters',1],expl:['c4',1],paracaigudes:['parachute',1],mapa:['mapa',1],mapa_heli:['mapa_heli',1],mapa_tanc:['mapa_tanc',1]};
+ const itemMap={arma:['bullets',16],granada:['grenades',5],disf:['disguise',1],med:['medkits',1],fusell_assalt:['assault',1],franctirador:['sniper',1],bazooka:['bazooka',1],cisalla:['cutters',1],expl:['c4',1],paracaigudes:['parachute',1],mapa:['mapa',1],mapa_heli:['mapa_heli',1],mapa_tanc:['mapa_tanc',1]};
  const payload={requestedSeed:requestedSeed>>>0,geometry,spawn:{...P},vehicles:V.map(v=>({id:v.saveId,t:v.t,...point(v),hd:v.hd,v:0,life:v.life??VT[v.t].life,rockets:v.rockets})),
   targets:E.map(e=>({id:e.saveId,t:e.t,...point(e),hp:e.hp,
   ...(e.t==='patrulla_marina'?{
@@ -15527,7 +15530,7 @@ function updateNativeCoopFrame(dt){
  ib=buildingCandidates(P.x,P.z).find(b=>Math.abs(P.x-b.x)<b.w/2&&Math.abs(P.z-b.z)<b.d/2&&P.y<b.fy+b.h)||null;
  // Inventari, vida i recomptes autoritatius són immutables entre snapshots.
  const bag=projecting?state.inventories.find(i=>i.actorId===s.self):null;
- if(bag&&bag!==s.appliedBag){s.appliedBag=bag;if(grenadeEquipped&&!bag.grenades){cancelGrenadeCharge();grenadeEquipped=false;}ammo=bag.bullets;sniperAmmo=bag.sniperAmmo;inv={};for(const [key,id] of Object.entries({grenades:'granada',disguise:'disf',medkits:'med',assault:'fusell_assalt',sniper:'franctirador',bazooka:'bazooka',cutters:'cisalla',c4:'expl',parachute:'paracaigudes'}))if(bag[key])inv[id]=bag[key];bazookaEquipped=!grenadeEquipped&&bag.weapon==='bazooka';sniperEquipped=!grenadeEquipped&&bag.weapon==='sniper';assaultRifleEquipped=!grenadeEquipped&&bag.weapon==='assault';cisallaEquipped=!grenadeEquipped&&bag.weapon==='cutters';knifeEquipped=!grenadeEquipped&&bag.weapon==='knife';if(disg!==bag.disguised)setDis(bag.disguised);}
+ if(bag&&bag!==s.appliedBag){s.appliedBag=bag;if(grenadeEquipped&&!bag.grenades){cancelGrenadeCharge();grenadeEquipped=false;}ammo=bag.bullets;sniperAmmo=bag.sniperAmmo;bazookaAmmo=bag.bazookaAmmo??0;inv={};for(const [key,id] of Object.entries({grenades:'granada',disguise:'disf',medkits:'med',assault:'fusell_assalt',sniper:'franctirador',bazooka:'bazooka',cutters:'cisalla',c4:'expl',parachute:'paracaigudes'}))if(bag[key])inv[id]=bag[key];bazookaEquipped=!grenadeEquipped&&bag.weapon==='bazooka';sniperEquipped=!grenadeEquipped&&bag.weapon==='sniper';assaultRifleEquipped=!grenadeEquipped&&bag.weapon==='assault';cisallaEquipped=!grenadeEquipped&&bag.weapon==='cutters';knifeEquipped=!grenadeEquipped&&bag.weapon==='knife';if(disg!==bag.disguised)setDis(bag.disguised);}
  if(projecting){
    // Els deltes conserven la mateixa referència per a les entitats intactes.
    // No copiam centenars de vehicles quan només se n'ha mogut un.
