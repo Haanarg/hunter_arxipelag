@@ -7114,10 +7114,11 @@ function projectileImpactImmune(kind,target,p){
   const light=!p.spl;
   if(kind==='wall')return target.civicFurniture
     ?target.civicFurniture==='well'&&light
-    :target.woodenDoor?false:target.towerLegOwner
-    ?light||target.towerLegOwner.hp===Infinity
-    :light&&isMilitaryWall(target)&&!target.weakWood||target.hp===Infinity;
-  if(kind==='building')return light&&isMilitaryBuilding(target)||target.rhp===Infinity;
+    :target.towerLegOwner
+      ?light||target.towerLegOwner.hp===Infinity
+      :target.hp===Infinity||light&&!window.HUNTER_SHARED_COMBAT.canLightDamageWall(target);
+  if(kind==='building')return target.rhp===Infinity||
+    light&&!window.HUNTER_SHARED_COMBAT.canLightDamageRoof(target);
   if(kind==='enemy')return target.hp===Infinity||light&&
     (target.t==='torre'||p.shotClass==='light'&&isArmoredVehicleType(target.t));
   if(kind==='vehicle')return target.life===Infinity||light&&isArmoredVehicleType(target.t)||cheats.immune&&target===cv;
@@ -7670,13 +7671,13 @@ function boom(x,y,z,r,dmg,own,source=null,visualWeapon=null){
   if(w.civicFurniture){
    const old=civicBlasts.get(w.civicGroup);
    if(!old||dealt>old.dealt)civicBlasts.set(w.civicGroup,{w,dealt});
-  }else dmgW(w,dealt);
+  }else dmgW(w,dealt,'heavy');
  }
  // Evita multiplicar el dany de la mateixa explosió pels dotze trams.
  for(const {w,dealt} of civicBlasts.values())dmgW(w,dealt,'heavy');
  for(const b of buildingCandidates(x,z,r)){
   // El sostre estructural del búnquer roman intacte encara que es destrueixin murs.
-  if(b.kind==='enemy_bunker'||b.rhp<=0)continue;
+  if(b.rhp<=0||b.rhp===Infinity)continue;
   const dealt=window.HUNTER_SHARED_COMBAT.roofBlastDamage(b,x,z,r,dmg);
   if(dealt){b.rhp-=dealt;if(b.rhp<=0)roofBreak(b)}
  }
@@ -8718,8 +8719,8 @@ function updPj(dt){
       const solid=kind==='wall'||kind==='building'||kind==='vehicle'||kind==='enemy';
       if(ineffective)spawnBulletImpact('ricochet',p.x,p.y,p.z,p);
       else if(solid&&!(kind==='enemy'&&(target.t==='soldat'||target.t==='general')))spawnBulletImpact('spark',p.x,p.y,p.z,p);
-      if(kind==='wall'){if(!isMilitaryWall(target)||target.woodenDoor||target.weakWood)dmgW(target,p.dmg,p.shotClass||'light')}
-      else if(kind==='building'){if(!isMilitaryBuilding(target)){target.rhp-=p.dmg;if(target.rhp<=0)roofBreak(target)}}
+      if(kind==='wall'){if(!ineffective)dmgW(target,p.dmg,'light')}
+      else if(kind==='building'){if(!ineffective){target.rhp-=p.dmg;if(target.rhp<=0)roofBreak(target)}}
       else if(kind==='tree'&&target?.p)dmgP(target,p.dmg);
       else if(kind==='enemy'){
         if(target.t==='torre'){
@@ -12551,7 +12552,7 @@ function* buildApprovedCompoundSteps(layout,q,{path,pier,prop,vehicles,rocketAss
         cx:x,cz:z+rearZ+rearThickness/2,owner:b
       });
       // The arched roof reaches the ground: its lower sides must be solid too.
-      for(const sign of[-1,1]){const lx=x+sign*(spec.w/2-.4),side=seedSearchMode?new THREE.Object3D():buildingVisual.addWall(b.o,{lx:lx-x,lz:0,sx:.8,sz:spec.d,height:1,material:b.wm});Wl.push({x0:lx-.4,x1:lx+.4,z0:z-spec.d/2,z1:z+spec.d/2,y0:b.fy-1,y1:b.fy+3,hp:16,m:side,rammable:true,hangarSide:true,door:false,open:false,cx:lx,cz:z,owner:b})}
+      for(const sign of[-1,1]){const lx=x+sign*(spec.w/2-.4),side=seedSearchMode?new THREE.Object3D():buildingVisual.addWall(b.o,{lx:lx-x,lz:0,sx:.8,sz:spec.d,height:1,material:b.wm});Wl.push({x0:lx-.4,x1:lx+.4,z0:z-spec.d/2,z1:z+spec.d/2,y0:b.fy-1,y1:b.fy+3,hp:10,m:side,rammable:true,hangarSide:true,door:false,open:false,cx:lx,cz:z,owner:b})}
     }
     if(layout.friendly&&!seedSearchMode){
       if(spec.id==='barracks')for(const xx of[-5,5])for(const zz of[-6,0]){bx(b.o,2.5,.65,4,0x4c5b43,xx,.6,zz,'paint');bx(b.o,2.2,.25,3.5,0x939978,xx,1.05,zz,'paint')}
@@ -17243,6 +17244,7 @@ function dmgW(w,d,shotClass='heavy'){
   return;
  }
  if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}
+ if(shotClass==='light'&&!window.HUNTER_SHARED_COMBAT.canLightDamageWall(w))return;
  const amount=wholeDamage(d);
  if(!amount||!Number.isFinite(w.hp)||w.hp<=0)return;
  if(w.owner?.civilianHut&&amount>=COMBAT_BALANCE.weapons.bazooka){
