@@ -239,7 +239,7 @@
       "license": "CC BY 4.0",
       "source": "https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5",
       "sourceGlb": "tanqueta/btr82-base-100.glb",
-      "present": false,
+      "present": true,
       "ratioLevels": [
         1,
         0.75,
@@ -247,7 +247,7 @@
         0.25
       ],
       "engine": "Three.js r186 SimplifyModifier/meshoptimizer, grouped by material and role (8 wheels, turret, hull)",
-      "status": "pending_25base_publication",
+      "status": "published_in_repo_second_generation",
       "sourceTriangles": 5371,
       "sourceMeshes": 18,
       "expectedMergedGroups": 18,

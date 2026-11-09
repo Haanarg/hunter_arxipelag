@@ -3,7 +3,8 @@
 - [x] Nous LOD 75%=4.025, 50%=2.684, 25%=1.338 triangles. Totes quatre versions mantenen 18 malles.
 - [x] Per al nou 25%, vuit rodes octogonals de 48 triangles cadascuna, evitant triangles desfigurats; mateix xassís, torreta i colors mats.
 - [x] GLB comprovats com a glTF 2.0 amb trimesh i renderitzats de costat i des de dalt; materials i dimensions dins rang.
-- [ ] Validar visualment a Chrome Android un cop publicats els quatre GLB al banc de candidats; la tanqueta jugable continua sense canvis.
+- [x] Els quatre GLB de segona generació estan publicats i verificats per GitHub Actions (run 42704094186).
+- [ ] Validar visualment a Chrome Android el nou 100% i els tres LOD; la tanqueta jugable continua sense canvis.
 
 **P1 · 2026-11-09 · BTR-82: corregir artefactes de colors i peces invisibles:**
 - [x] Diagnòstic de captura Chrome Android: malles reduïdes amb UV interpolades erròniament sobre atlas amb transparències i colors vius; rodes/casc deformats visualment.

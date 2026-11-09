@@ -1,3 +1,5 @@
+**Publicació verificada:** GitHub Actions run 42704094186 superat. El directori de candidats conté els quatre GLB nous i l'original complet arxivat; els tres GLB intermedis anteriors han estat eliminats. Totes les variants noves s'han verificat amb SHA256, recompte de triangles, 18 malles i 10 materials mats sense atles UV.
+
 **Publicació dels GLB:** els fitxers nous es validen amb SHA256 abans que GitHub Actions en substitueixi els candidats anteriors. El comparador mostra els percentatges respecte de la nova base de 5.371 triangles.
 
 ## Segona generació BTR-82 a partir de l'antiga variant 25% — 9 novembre 2026
