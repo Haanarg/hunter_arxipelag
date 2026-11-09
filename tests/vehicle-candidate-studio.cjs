@@ -69,6 +69,13 @@ assert(studio.includes("const btrStudy=config.id==='tanqueta'")&&
  studio.includes("await studio.load(token)")&&studio.includes("studio.importGlb(file,current,slots.indexOf(slot))"),
  'Cal poder importar BTR-82 i generar reduccions dins la mateixa pàgina');
 assert(html.includes('#grid.btr-study'),'Cinc panells de comparació a la pàgina');
+assert(studio.includes('for(let i=0;i<5;i++){'),
+ 'BTR-82: model jugable + original + tres nivells; no han de quedar sis panells');
+const routing=read('src/btr82-upload-policy.mjs');
+assert(routing.includes('Object.freeze([75,50,25])'),
+ 'El classificador només ha d’admetre les reduccions 75/50/25 com a candidates');
+assert(!routing.includes('Object.freeze([5,4,3,2])'),
+ 'S’han d’eliminar del catàleg actiu els nivells que no són reconeixibles');
 assert(btrCode.includes('classifyBtr82Upload(')&&btrCode.includes('restoreSourceMaterials('),
  'El GLB complet i els LOD importats s’han de distingir, amb textures originals restaurades');
 assert(btrCode.includes('const run=++revision')&&btrCode.includes('async function importLod('),
