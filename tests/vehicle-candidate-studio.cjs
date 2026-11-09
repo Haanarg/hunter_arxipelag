@@ -44,10 +44,10 @@ assert(studio.includes("entry.provider==='sketchfab'")&&studio.includes("frame.s
 assert(studio.includes('slot.sourceFrame.remove()'),'El visor anterior s’ha de destruir quan es canvia de categoria');
 assert(html.includes('M1A1 Abrams')&&html.includes('Low Poly BTR 82'),
  'Cal explicar el BTR-82 seleccionat al preview');
-assert.deepEqual(manifest.selectedForLod?.tanqueta?.ratioLevels,[1,.05,.04,.03,.02]);
+assert.deepEqual(manifest.selectedForLod?.tanqueta?.ratioLevels,[1,.75,.50,.25]);
 assert.equal(manifest.selectedForLod.tanqueta.sourceTriangles,21483);
 assert.equal(manifest.selectedForLod.tanqueta.sourceMeshes,199);
-assert.equal(manifest.selectedForLod.tanqueta.goalTriangles,3000);
+assert.deepEqual(manifest.selectedForLod.tanqueta.offlineVariantStats.map(x=>x.triangles),[16109,10745,5371]);
 assert.equal(manifest.externalModels.tanqueta[0]?.modelId,'6226acae68424d99bf03882b245ff7c5');
 assert(!catalog.includes('fe28759be4914e4a9ea52d73aa503a4e'),'Stryker de bunny encara al catàleg');
 assert(!catalog.includes('3a813f5520974d21b3b3bba52e04a7d9'),'M1128 Stryker encara al catàleg');
@@ -68,7 +68,7 @@ assert(btrCode.includes('new GLTFExporter()')&&btrCode.includes('saveSource('),
 assert(studio.includes("const btrStudy=config.id==='tanqueta'")&&
  studio.includes("await studio.load(token)")&&studio.includes("studio.importGlb(file,current,slots.indexOf(slot))"),
  'Cal poder importar BTR-82 i generar reduccions dins la mateixa pàgina');
-assert(html.includes('#grid.btr-study'),'Sis panells de comparació a la pàgina');
+assert(html.includes('#grid.btr-study'),'Cinc panells de comparació a la pàgina');
 assert(btrCode.includes('classifyBtr82Upload(')&&btrCode.includes('restoreSourceMaterials('),
  'El GLB complet i els LOD importats s’han de distingir, amb textures originals restaurades');
 assert(btrCode.includes('const run=++revision')&&btrCode.includes('async function importLod('),
@@ -94,4 +94,4 @@ for(const old of ['helicopters-lod-proves.html','apache-variants-proves.html',
  assert(!fs.existsSync(path.join(root,old)),'Cal retirar el candidat obsolet: '+old);
 for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/btr82-aggressive-simplification.mjs','src/streetfighter-25-geometry.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
-console.log('Banc de models: BTR-82 original amb 4 reduccions agressives 5/4/3/2%, 18 grups de malla; 3 Abrams; cap Stryker.');
+console.log('Banc de models: BTR-82 original amb 3 reduccions conservadores 75/50/25%, 18 grups de malla; 3 Abrams; cap Stryker.');
