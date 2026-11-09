@@ -1129,6 +1129,7 @@ function dmgW(w,d,shotClass='heavy'){
   return;
  }
  if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}
+ if(shotClass==='light'&&!window.HUNTER_SHARED_COMBAT.canLightDamageWall(w))return;
  const amount=wholeDamage(d);
  if(!amount||!Number.isFinite(w.hp)||w.hp<=0)return;
  if(w.owner?.civilianHut&&amount>=COMBAT_BALANCE.weapons.bazooka){
