@@ -4,6 +4,8 @@ import {segmentAabbT} from './combat-rules.mjs';
 // their own explicit geometry and must not inherit these dimensions.
 export const STANDARD_BUILDING_DOOR=Object.freeze({width:2.4,height:3.8});
 export const WOODEN_DOOR_HP=4;
+export const BUNKER_DOOR_HP=20;
+export const BUNKER_STRUCTURE_HP=30;
 export const REINFORCED_STRUCTURE_HP=10;
 export const WOODEN_STRUCTURE_HP=4;
 export const WOODEN_DOOR_THICKNESS=.16; // centrat dins la llinda
@@ -82,10 +84,10 @@ export function wallShotHit(from,to,wall){
 export function planBuildingShell(w,d,h,opt={},random){
   if(![w,d,h].every(v=>Number.isFinite(v)&&v>0)||typeof random!=='function')throw new RangeError('Invalid building shell');
   const t=.8,dw=opt.doorWidth||STANDARD_BUILDING_DOOR.width,ds=opt.doorSide==null?Math.floor(random()*4):opt.doorSide,
-    wallH=opt.floors===2?h/2:h,wallHp=opt.civilianHut||opt.weakWalls?WOODEN_STRUCTURE_HP:REINFORCED_STRUCTURE_HP,
+    wallH=opt.floors===2?h/2:h,wallHp=opt.bunker?BUNKER_STRUCTURE_HP:opt.civilianHut||opt.weakWalls?WOODEN_STRUCTURE_HP:REINFORCED_STRUCTURE_HP,
     // Parets i sostres de fusta: 4 PV i vulnerables a armes lleugeres.
     // Altres parets, teulades i pilars: 10 PV, només armes pesades/vehicles.
-    roofHp=opt.civilianHut||opt.weakWalls?WOODEN_STRUCTURE_HP:REINFORCED_STRUCTURE_HP,segments=[],assemblies=[];
+    roofHp=opt.bunker?BUNKER_STRUCTURE_HP:opt.civilianHut||opt.weakWalls?WOODEN_STRUCTURE_HP:REINFORCED_STRUCTURE_HP,segments=[],assemblies=[];
   if(!Number.isFinite(dw)||dw<=0||!Number.isInteger(ds)||ds<0||ds>3)throw new RangeError('Invalid building doorway');
   const seg=(lx,lz,sx,sz,door=false,windows=false,supportSide=null,supportWeight=0,level=0)=>{
     const index=segments.length;segments.push({lx,lz,sx,sz,door:!!door,windows,supportSide,supportWeight,level});return index;
@@ -121,7 +123,7 @@ export function shellColliders(x,z,fy,w,d,h,opt={},random){
         slab=wooden?(plan.ds<2?
           {...box,z0:z+s.lz-WOODEN_DOOR_THICKNESS/2,z1:z+s.lz+WOODEN_DOOR_THICKNESS/2}:
           {...box,x0:x+s.lx-WOODEN_DOOR_THICKNESS/2,x1:x+s.lx+WOODEN_DOOR_THICKNESS/2}):box;
-      walls.push({...slab,y0:fy-1,y1:fy+dh,hp:WOODEN_DOOR_HP,woodenDoor:wooden,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,nx:normal[0],nz:normal[1],doorWidth:plan.dw,doorHeight:dh});
+      walls.push({...slab,y0:fy-1,y1:fy+dh,hp:opt.bunker?BUNKER_DOOR_HP:WOODEN_DOOR_HP,bunkerGate:!!opt.bunker,woodenDoor:wooden,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,nx:normal[0],nz:normal[1],doorWidth:plan.dw,doorHeight:dh});
       if(plan.wallH-dh>.05)walls.push({...box,y0:fy+dh,y1:fy+plan.wallH,hp:plan.wallHp,weakWood:!!(opt.weakWalls||opt.civilianHut),door:false,open:false,playerBlock:false,rammable:false});
     }else{
       const layout=s.windows?windowLayout(s.sx,s.sz,plan.wallH):null;
