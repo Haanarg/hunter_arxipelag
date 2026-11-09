@@ -50,7 +50,7 @@ const makeOriginal=vehicleModels.createFactory(THREE,{
  truck:createTruckModel,batching:playerBatching
 });
 const slots=[];
-for(let i=0;i<4;i++){
+for(let i=0;i<6;i++){
  const outer=document.createElement('article');outer.className='panel';
  const label=document.createElement('div');label.className='label';
  const bold=document.createElement('strong');bold.textContent=i?'Alternativa '+i:'Model actual del joc';
@@ -61,9 +61,10 @@ for(let i=0;i<4;i++){
  const status=document.createElement('span');status.className='status';status.textContent='Preparant…';
  const actions=document.createElement('div');actions.className='actions';
  const source=document.createElement('a');source.textContent='Font / llicència';source.href='#';source.target='_blank';source.rel='noopener noreferrer';source.hidden=!i;
+ const downloadBtr=document.createElement('button');downloadBtr.type='button';downloadBtr.textContent='Desa GLB';downloadBtr.hidden=true;
  const fileLabel=document.createElement('label');fileLabel.textContent='Importa GLB';
  const upload=document.createElement('input');upload.type='file';upload.accept='.glb,model/gltf-binary';
- fileLabel.append(upload);if(i)actions.append(source,fileLabel);
+ fileLabel.append(upload);if(i)actions.append(source,fileLabel,downloadBtr);
  meta.append(status,actions);outer.append(label,viewport,meta);grid.append(outer);
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x354b4c);
  scene.add(new THREE.HemisphereLight(0xddeefa,0x566152,2.15));
@@ -83,13 +84,18 @@ for(let i=0;i<4;i++){
  const head=new THREE.Mesh(new THREE.SphereGeometry(.18,10,8),material(0xf0c7a2));
  head.position.y=1.73;head.castShadow=true;person.add(head);scene.add(person);
  const camera=new THREE.PerspectiveCamera(36,1,.05,1300);
- const slot={outer,viewport,scene,camera,ground,lines,person,status,source,bold,sub,upload,model:null,mixer:null,kind:null,sourceFrame:null};
+ const slot={outer,viewport,scene,camera,ground,lines,person,status,source,bold,sub,upload,downloadBtr,model:null,mixer:null,kind:null,sourceFrame:null};
  slots.push(slot);
  upload.addEventListener('change',async()=>{
    const file=upload.files?.[0];if(!file)return;
    const current=generation;
    status.textContent='Important '+file.name+'…';
    try{
+     if(currentType.id==='tanqueta'){
+       const studio=await getBtrStudio();
+       if(current===generation)await studio.importGlb(file,current);
+       return;
+     }
      const gltf=await loadUploadedGlb(file);
      if(current!==generation)return;
      setModel(slot,gltf.scene,false,gltf.animations);
@@ -98,11 +104,21 @@ for(let i=0;i<4;i++){
      slot.source.hidden=true;
      status.textContent=metrics(slot.model)+' · importat localment';
    }catch(e){status.textContent='Error GLB: '+(e?.message||String(e));}
+   finally{upload.value='';}
  });
 }
 let currentType=CATALOG[0],generation=0,originalDims=new THREE.Vector3(3,2,5);
 let yaw=.60,elev=.32,zoom=1,lookY=.6;
 let prev=performance.now();
+let btrStudioPromise=null;
+function getBtrStudio(){
+ return btrStudioPromise??=import('./btr82-lod-studio.mjs').then(module=>module.createBtr82Studio({
+   slots,loadUploadedGlb,setModel,metrics,
+   isCurrent:token=>token===generation&&currentType.id==='tanqueta',
+   showOfficial:token=>loadExternal(slots[1],currentType.options[0],new Set(),token),
+   notice:warning
+ }));
+}
 const packCache=new Map(),searchCache=new Map();
 let savedManifest=null;
 const canonical=(x)=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
@@ -155,6 +171,7 @@ function metrics(root){
    ' materials · '+d.x.toFixed(1)+' × '+d.y.toFixed(1)+' × '+d.z.toFixed(1)+' m';
 }
 function dropPrevious(slot){
+ if(slot.downloadBtr){slot.downloadBtr.hidden=true;slot.downloadBtr.onclick=null;}
  if(slot.sourceFrame){slot.sourceFrame.remove();slot.sourceFrame=null;slot.viewport.classList.remove('has-embed')}
  if(slot.model){
    const freed=new Set();
@@ -271,7 +288,10 @@ async function choose(config){
  for(const b of list.querySelectorAll('button'))b.classList.toggle('active',b.dataset.type===config.id);
  const marine=config.kind==='mar';
  grid.classList.remove('featured');
+ const btrStudy=config.id==='tanqueta';
+ grid.classList.toggle('btr-study',btrStudy);
  for(const slot of slots){
+   slot.outer.hidden=!btrStudy&&slots.indexOf(slot)>3;
    dropPrevious(slot);
    slot.kind=config.kind;
    slot.ground.material.color.setHex(marine?0x285f65:config.kind==='aire'?0x6a7b67:0x69735e);
@@ -293,11 +313,16 @@ async function choose(config){
    slots[0].status.textContent='Error en el model original: '+e.message;
    originalDims.set(3,3,6);
  }
- for(let k=1;k<4;k++)slots[k].person.position.x=originalDims.x*.62+1.0;
+ for(let k=1;k<slots.length;k++)slots[k].person.position.x=originalDims.x*.62+1.0;
  lookY=Math.min(6,Math.max(.55,originalDims.y*.38));
  zoom=1;updateCamera();
- const used=new Set();
- await Promise.all(config.options.map((entry,i)=>loadExternal(slots[i+1],entry,used,token)));
+ if(btrStudy){
+   const studio=await getBtrStudio();
+   if(token===generation)await studio.load(token);
+ }else{
+   const used=new Set();
+   await Promise.all(config.options.map((entry,i)=>loadExternal(slots[i+1],entry,used,token)));
+ }
 }
 function updateCamera(){
  const size=Math.max(originalDims.x,originalDims.z,originalDims.y*.85,3);
@@ -336,6 +361,7 @@ function draw(now){
  renderer.setScissorTest(true);
  const windowWidth=innerWidth,windowHeight=innerHeight;
  for(const slot of slots){
+   if(slot.outer.hidden||slot.sourceFrame)continue;
    const r=slot.viewport.getBoundingClientRect();
    const left=Math.round(r.left),bottom=Math.round(windowHeight-r.bottom);
    const width=Math.max(1,Math.round(r.width)),height=Math.max(1,Math.round(r.height));
@@ -390,7 +416,7 @@ const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.textContent=config.name;
- const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='ferry'?'2–3 alternatives':'3 alternatives');
+ const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'4 reduccions LOD':config.id==='ferry'?'2–3 alternatives':'3 alternatives');
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }

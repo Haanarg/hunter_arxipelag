@@ -16,12 +16,10 @@ export const CATALOG=[
    P('transport-collection-hd','Executive sedan'),
    P('transport-collection-hd','Touring SUV')]},
 
- {id:'tanqueta',name:'Tanqueta · estil NZLAV 8×8',kind:'terra',
-   note:'Referència visual: LAV III / NZLAV amb quatre rodes per costat i torreta de 25 mm. Són aproximacions, no NZLAV exactes. Els visors Sketchfab no són GLB instal·lats; per provar-los a Three.js cal importar el fitxer amb llicència.',
+ {id:'tanqueta',name:'Tanqueta · BTR-82',kind:'terra',
+   note:'Model triat: Low Poly BTR 82 de SIpriv (CC BY 4.0). Aquesta pàgina genera quatre reduccions reals: 75%, 50%, 25% i 10%, a més del GLB original 100%. Encara no s'ha incorporat al joc.',
    options:[
-    S('fe28759be4914e4a9ea52d73aa503a4e','https://sketchfab.com/3d-models/stryker-fe28759be4914e4a9ea52d73aa503a4e','Stryker 8×8','bunny',137900,'CC BY-SA 4.0','Model propi declarat per l\'autor. Casc occidental 8×8 semblant al NZLAV; torreta diferent, requereix simplificació i adaptació.'),
-    S('3a813f5520974d21b3b3bba52e04a7d9','https://sketchfab.com/3d-models/m1128-stryker-8x8-3a813f5520974d21b3b3bba52e04a7d9','M1128 Stryker 8×8','LM3D',231700,'CC BY 4.0','Xassís occidental 8×8, però torreta i canó massa grans per un NZLAV; model pesant que exigeix LOD.'),
-    S('6226acae68424d99bf03882b245ff7c5','https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5','Low poly BTR 82','SIpriv',21500,'CC BY 4.0','Model propi de Blockbench amb vuit rodes i torreta; no és un NZLAV, es manté com a alternativa menys fidel.')]},
+    S('6226acae68424d99bf03882b245ff7c5','https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5','Low poly BTR 82','SIpriv',21500,'CC BY 4.0','Vuit rodes i torreta. Model seleccionat per generar quatre LOD amb meshoptimizer a partir del GLB original.')]},
  {id:'tanc',name:'Tanc · estil M1A1 Abrams',kind:'terra',
    note:'Substituïts els tres GLB genèrics per candidats M1A1/M1 amb llicència Creative Commons identificada. Cal verificar les peces mòbils i adaptar els models abans d’usar-los al joc.',
    options:[
