@@ -3745,17 +3745,20 @@ if(heliBombButton){
 }
 const fireButton=document.getElementById('mainFireButton');
 if(fireButton){
-  const heliGrenade=cv?.t==='heli',
-        grenade=heliGrenade||!cv&&grenadeEquipped&&(inv.granada||0)>0,
-        cutters=!cv&&cisallaEquipped&&(inv.cisalla||0)>0,
-        knife=!cv&&(knifeEquipped||!grenade&&!cutters&&!bazookaEquipped&&!sniperEquipped&&!assaultRifleEquipped&&ammo<=0),
+  const mountedRow=cv&&nativeCoopSession?.appliedVehicleRows?.get(cv.saveId),
+        passenger=!!mountedRow&&mountedRow.seats?.[0]!==nativeCoopSession.self,
+        personalWeapon=!cv||passenger,
+        heliGrenade=cv?.t==='heli'&&!passenger,
+        grenade=heliGrenade||personalWeapon&&grenadeEquipped&&(inv.granada||0)>0,
+        cutters=personalWeapon&&cisallaEquipped&&(inv.cisalla||0)>0,
+        knife=personalWeapon&&(knifeEquipped||!grenade&&!cutters&&!bazookaEquipped&&!sniperEquipped&&!assaultRifleEquipped&&ammo<=0),
         weapon=cutters?'cisalla':grenade?'granada':knife?'ganivet':'normal';
   if(fireButton.dataset.weapon!==weapon){
     fireButton.dataset.weapon=weapon;
     fireButton.innerHTML=(cutters?ICON.cisalla:grenade?ICON.granada:knife?ICON.ganivet:'🎯')+
       '<span class="fire-ammo-count" aria-hidden="true"></span>';
   }
-  const ammoLeft=cv?(heliGrenade?(inv.granada||0):'∞'):
+  const ammoLeft=!personalWeapon?(heliGrenade?(inv.granada||0):'∞'):
     grenade?(inv.granada||0):cutters||knife?null:
       bazookaEquipped?bazookaAmmo:sniperEquipped?sniperAmmo:ammo;
   const badge=fireButton.querySelector('.fire-ammo-count');
