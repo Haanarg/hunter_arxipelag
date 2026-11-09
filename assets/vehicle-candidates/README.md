@@ -1,3 +1,23 @@
+## 2026-11-09 — BTR-82: tres reduccions conservadores 75/50/25%
+
+Els nivells 5%, 4%, 3% i 2% han quedat descartats: perdien massa silueta. El banc de tanqueta mostra només el vehicle actual del joc, el GLB original 100% (21.483 triangles, 199 malles) i les tres reduccions 75%, 50%, 25%. El model del joc continua intacte.
+
+Les tres variants descarregables en el ZIP de la conversa s'han reconstruït amb VTK DecimatePro (offline), preservant els 11 PNG originals amb paleta i transparència, les vuit rodes i la torreta i fusionant les peces compatibles en 18 malles. S'ha validat la càrrega glTF, la integritat de les UV i els límits geomètrics per evitar deformacions.
+
+| Detall | Triangles offline | Malles |
+|---|---:|---:|
+| 100% | 21.483 | 199 |
+| 75% | 16.109 | 18 |
+| 50% | 10.745 | 18 |
+| 25% | 5.371 | 18 |
+
+El banc genera els mateixos percentatges amb SimplifyModifier/meshoptimizer de Three.js r186, que pot donar xifres diferents; cada targeta mostra els triangles i malles reals. També es poden importar els GLB precomputats directament al panell corresponent sense resimplificar-los. El sistema reconeix els noms btr82-75pct.glb, btr82-50pct.glb i btr82-25pct.glb i rebutja els GLB antics de 5/4/3/2%.
+
+**Llicència:** Low Poly BTR 82 de SIpriv, CC BY 4.0 — https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5
+
+**Pendent:** els nous GLB s'han lliurat en un ZIP de la conversa; no s'han publicat els binaris a GitHub. La web permet importar-los i guarda el model original en aquest navegador. Encara cal triar el nivell final i validar-lo al joc en SOLO/COOP.
+
+---
 ## Correcció d'importació i textures — 2026-11-09
 
 L'usuari va detectar dos errors reals: els quatre nivells semblaven duplicar el 100% i els GLB externs del ZIP anterior no es veien.

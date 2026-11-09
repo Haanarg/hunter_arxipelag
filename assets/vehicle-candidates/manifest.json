@@ -223,14 +223,14 @@
         "triangles": 21500,
         "license": "CC BY 4.0",
         "url": "https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5",
-        "note": "BTR-82 de SIpriv seleccionat. Reduccions 5/4/3/2% a Three.js meshoptimizer amb fusió de 199 malles originals, pivots separats per rodes i torreta. GLB a conversa però encara no pujat a GitHub.",
+        "note": "BTR-82 SIpriv escollit. Comparativa amb 75/50/25% del GLB original de 21.483 triangles; 18 malles i PNG originals. El preview genera variants amb Three.js/meshoptimizer o importa GLB precomputats directament.",
         "provider": "sketchfab",
         "slot": 1
       }
     ]
   },
   "lastCurated": "2026-11-08",
-  "curationNotes": "GLB original recuperat en aquesta conversa: 1.592.644 bytes, 21.483 triangles, 199 malles. Versions offline VTK 5/4/3/2%=1.077/875/654/448 triangles i 18 malles; Meshopt del navegador pot donar valors diferents.",
+  "curationNotes": "Substituïts els quatre LOD extrems 5/4/3/2% per tres conservadors 75/50/25%. Fitxers offline VTK DecimatePro: 16.109/10.745/5.371 triangles i 18 malles. GLB validats amb UV, colors i silueta sense desbordaments en coordenades. Els GLB encara no són al repositori; cal importar-los al visor, o pujar-los a la carpeta de candidats.",
   "selectedForLod": {
     "tanqueta": {
       "modelId": "6226acae68424d99bf03882b245ff7c5",
@@ -242,41 +242,36 @@
       "present": false,
       "ratioLevels": [
         1,
-        0.05,
-        0.04,
-        0.03,
-        0.02
+        0.75,
+        0.5,
+        0.25
       ],
-      "engine": "Three.js r186 SimplifyModifier + meshoptimizer sloppy fallback + merged geometry by material/role",
+      "engine": "Three.js r186 SimplifyModifier/meshoptimizer, grouped by material and role (8 wheels, turret, hull)",
       "status": "source_glb_available_in_chat_not_repo",
-      "goalTriangles": 3000,
       "sourceTriangles": 21483,
       "sourceMeshes": 199,
       "expectedMergedGroups": 18,
       "offlineVariantStats": [
         {
-          "percent": 5,
-          "triangles": 1077,
+          "percent": 75,
+          "triangles": 16109,
           "meshes": 18,
-          "algorithm": "VTK Quadric Decimation; reference only"
+          "bytes": 1182664,
+          "algorithm": "VTK DecimatePro, original PNG palette/alpha preserved"
         },
         {
-          "percent": 4,
-          "triangles": 875,
+          "percent": 50,
+          "triangles": 10745,
           "meshes": 18,
-          "algorithm": "VTK Quadric Decimation; reference only"
+          "bytes": 862008,
+          "algorithm": "VTK DecimatePro, original PNG palette/alpha preserved"
         },
         {
-          "percent": 3,
-          "triangles": 654,
+          "percent": 25,
+          "triangles": 5371,
           "meshes": 18,
-          "algorithm": "VTK Quadric Decimation; reference only"
-        },
-        {
-          "percent": 2,
-          "triangles": 448,
-          "meshes": 18,
-          "algorithm": "VTK Quadric Decimation; reference only"
+          "bytes": 446292,
+          "algorithm": "VTK DecimatePro, original PNG palette/alpha preserved"
         }
       ]
     }

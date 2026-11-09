@@ -1,3 +1,11 @@
+**P1 · 2026-11-09 · BTR-82: recuperar el detall reconeixible amb 75/50/25%:**
+- [x] Tres nous GLB reconstruïts des de l'original amb VTK DecimatePro, textures originals intactes i 18 malles: 16.109/10.745/5.371 triangles.
+- [x] Substituïts els nivells extrems 5/4/3/2% del banc actiu pels tres nivells 75/50/25%. Es manté el 100% com a referència.
+- [x] Classificador actualitzat perquè el 75% i el 50% no es tractin com a originals, ni els antics GLB es mostrin com a nous candidats.
+- [x] GLB offline verificats: transparències PNG, UV, recompte de triangles, dimensions i vuit rodes independents.
+- [ ] Comprovar la silueta i el rendiment WebGL dels tres LOD amb el GLB importat i triar-ne un per integrar-lo; el model jugable no ha canviat.
+- [ ] Publicar els binaris al repositori quan es disposi d'un mitjà de càrrega de GLB; ara es poden importar directament a la web.
+
 **P1 · 2026-11-09 · correcció importació i reducció del BTR-82:**
 - [x] Corregida la pèrdua de paleta de les onze textures als quatre GLB offline (alfa 1/255 causava invisibilitat); generat un ZIP nou amb 4 LOD visibles i l'original compatible.
 - [x] La importació del GLB original 100% inicia els quatre LOD; els GLB reduïts s'importen sense resimplificar-los al panell corresponent (5/4/3/2%), conservant els altres nivells.
