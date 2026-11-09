@@ -69,7 +69,7 @@ async function simplifyBucket(geometry,ratio,minTriangles,modifier){
   const attr=geometry.getAttribute('position');
   const n=Math.max(1,Math.round(attr.count*(1-target/base)));
   output=await modifier.modify(geometry,n);
- }catch(e){console.warn('BTR-82: simplificació regular fallida',e)}
+ }catch(e){console.warn('BTR-82: simplificació regular fallida', {base,target,indexCount:geometry.getIndex()?.count,vertexCount:geometry.getAttribute('position')?.count},e)}
  let actual=output?(output.getIndex()?.count??output.getAttribute('position')?.count??0)/3:base;
  if(actual<=Math.ceil(target*1.15)&&actual>0)return output;
  // Many disconnected Blockbench cuboids cannot be reduced by edge collapse
@@ -88,7 +88,7 @@ async function simplifyBucket(geometry,ratio,minTriangles,modifier){
    return optimized;
   }
   optimized.dispose();
- }catch(e){console.warn('BTR-82: reducció agressiva fallida',e)}
+ }catch(e){console.warn('BTR-82: reducció agressiva fallida',{base,target,indexCount:indices?.count,indexArrayLength:indices?.array?.length,vertexCount:indexed.getAttribute('position')?.count},e)}
  return output||geometry;
 }
 function compatibleGeometry(mesh){
