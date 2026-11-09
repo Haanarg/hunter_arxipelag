@@ -59,31 +59,31 @@ function targetBox(t){
  return {x0:t.x-.8,x1:t.x+.8,z0:t.z-.8,z1:t.z+.8,y0:t.y,y1:t.y+3};
 }
 export function traceArena(from,to,geometry,world,{ignoreBarbed=false,collectWindows=false,ignoreVegetation=false,wallCandidates=null}={}){
-  let fraction=1,hit=false,wallIndex=null,tree=null;const windowCrossings=[];
+  let fraction=1,hit=false,wallIndex=null,roofIndex=null,tree=null;const windowCrossings=[];
   // Descart ràpid de geometria fora del tram. Imprescindible per la
   // cadència alta de la tanqueta, sense perdre cap intersecció exacta.
   const minX=Math.min(from.x,to.x),maxX=Math.max(from.x,to.x),minY=Math.min(from.y,to.y),maxY=Math.max(from.y,to.y),minZ=Math.min(from.z,to.z),maxZ=Math.max(from.z,to.z);
   for(const index of wallCandidates??geometry.walls.keys()){const w=geometry.walls[index];if(!w.open&&!(ignoreBarbed&&w.barbed)&&towerParapetBlocksShot(w,from)&&w.x1>=minX&&w.x0<=maxX&&w.z1>=minZ&&w.z0<=maxZ&&w.y1>=minY&&w.y0<=maxY){
     const crossing=windowCrossing(from,to,w);
     if(crossing){if(collectWindows)windowCrossings.push({wallIndex:index,...crossing});continue;}
-    const t=wallShotHit(from,to,w);if(t!==null&&t<=fraction){fraction=t;hit=true;wallIndex=index;}
+    const t=wallShotHit(from,to,w);if(t!==null&&t<=fraction){fraction=t;hit=true;wallIndex=index;roofIndex=null;}
   }}
   // The base shells use axis-aligned world footprints, including rotated variants.
-  for(const b of geometry.buildings||[]){
+  for(const [buildingIndex,b] of (geometry.buildings||[]).entries()){
     if(b.x+b.w/2<minX||b.x-b.w/2>maxX||b.z+b.d/2<minZ||b.z-b.d/2>maxZ||b.fy>maxY||b.fy+b.h<minY)continue;
-    if(!b.rb&&b.rhp>0){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.h-.12,y1:b.fy+b.h+.12});if(t!==null&&t<=fraction){fraction=t;hit=true;wallIndex=null;}}
-    if(b.upperFloor&&!b.rb){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.storey-.12,y1:b.fy+b.storey+.12});if(t!==null&&t<=fraction){fraction=t;hit=true;wallIndex=null;}}
+    if(!b.rb&&b.rhp>0){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.h-.12,y1:b.fy+b.h+.12});if(t!==null&&t<=fraction){fraction=t;hit=true;wallIndex=null;roofIndex=buildingIndex;}}
+    if(b.upperFloor&&!b.rb){const t=segmentBox(from,to,{x0:b.x-b.w/2,x1:b.x+b.w/2,z0:b.z-b.d/2,z1:b.z+b.d/2,y0:b.fy+b.storey-.12,y1:b.fy+b.storey+.12});if(t!==null&&t<=fraction){fraction=t;hit=true;wallIndex=null;roofIndex=null;}}
   }
   const length=Math.hypot(to.x-from.x,to.y-from.y,to.z-from.z),steps=Math.max(1,Math.ceil(length/.2));
-  for(let i=0;i<=steps;i++){const t=i/steps;if(t>fraction)break;const p=at(from,to,t);if(p.y<(world.locomotionAt?.(p.x,p.z,p.y)?.basement?world.locomotionAt(p.x,p.z,p.y).floor:world.heightAt(p.x,p.z))){fraction=t;hit=true;wallIndex=null;break;}}
+  for(let i=0;i<=steps;i++){const t=i/steps;if(t>fraction)break;const p=at(from,to,t);if(p.y<(world.locomotionAt?.(p.x,p.z,p.y)?.basement?world.locomotionAt(p.x,p.z,p.y).floor:world.heightAt(p.x,p.z))){fraction=t;hit=true;wallIndex=null;roofIndex=null;break;}}
   // Reuse solo vegetation footprints and height limits through the indexed world.
   // Sample at least as densely as solo projectiles (1.15 m); the terrain pass
   // already uses .2 m steps, which also catches narrow trunks along fast shots.
   if(!ignoreVegetation&&world.vegetationAt)for(let i=0;i<=steps;i++){
     const t=i/steps;if(t>=fraction)break;const p=at(from,to,t);
-    const candidate=world.vegetationAt(p.x,p.y,p.z);if(candidate){fraction=t;hit=true;wallIndex=null;tree=candidate;break;}
+    const candidate=world.vegetationAt(p.x,p.y,p.z);if(candidate){fraction=t;hit=true;wallIndex=null;roofIndex=null;tree=candidate;break;}
   }
-  return {fraction,point:at(from,to,fraction),hit,wallIndex,tree,windowCrossings};
+  return {fraction,point:at(from,to,fraction),hit,wallIndex,roofIndex,tree,windowCrossings};
 }
 // Heading follows the simulation: zero faces -Z. Close awareness still requires LOS.
 export function guardInView(guard,player){
@@ -91,7 +91,7 @@ export function guardInView(guard,player){
   return d<=2||inView(guard.heading||0,dx,0,dz,Infinity,{sightHalfAngle:Math.PI/3+1e-10,sightVerticalAngle:Math.PI/2});
 }
 const facePoint=(guard,p)=>Math.atan2(-(p.x-guard.x),-(p.z-guard.z));
-export function createRelayCombat({meta,record={},inventory,players,visiblePlayers=players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{},blastStructures=()=>{},damagePalm=()=>false,blastPalms=()=>{},breakWindow=()=>false,damageWall=()=>false,windowAvailable=()=>true,waterSurface=()=>0,openEnemyDoor=()=>false,onEnemyAlert=()=>{},civilianTargets=()=>[],damageCivilian=()=>false}){
+export function createRelayCombat({meta,record={},inventory,players,visiblePlayers=players,canAttack=()=>true,damagePlayer=()=>{},geometry,world,active,vehicles={live:()=>[],mounted:()=>null},cutWire=()=>false,blastWire=()=>{},blastStructures=()=>{},damagePalm=()=>false,blastPalms=()=>{},breakWindow=()=>false,damageWall=()=>false,damageRoof=()=>false,windowAvailable=()=>true,waterSurface=()=>0,openEnemyDoor=()=>false,onEnemyAlert=()=>{},civilianTargets=()=>[],damageCivilian=()=>false}){
   const targets=structuredClone(record.targets||meta.targets||[]),grenades=structuredClone(record.grenades||[]),effects=structuredClone(record.effects||[]),results=structuredClone(record.results||[]),cooldowns=new Map(record.cooldowns||[]);
   const clearedTowerParapets=new Set();const bursts=structuredClone(record.bursts||[]),projectiles=structuredClone(record.projectiles||[]);let sequence=record.sequence||0;
   const random=createWorldRandom(record.randomState??(((meta.seed||0)^0x7269666c)>>>0)),roll=(a,b)=>a+random()*(b-a);
@@ -765,7 +765,11 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
             // La metralla lleugera no destrueix el blindatge hostil.
           }else result.target.hp=damageHealth(result.target.hp,p.dmg);
         }else if(result.kind==='player')applied=damagePlayer(result.target.id,p.dmg)!==false;
-        else if(result.kind==='civilian')applied=damageCivilian(result.target.id,p.dmg,tick)>0;else if(result.kind==='world'&&trace.tree?.p)applied=damagePalm(trace.tree,p.dmg);else if(result.kind==='world'&&trace.wallIndex!=null&&Math.hypot(result.point.x-trace.point.x,result.point.y-trace.point.y,result.point.z-trace.point.z)<.01)applied=damageWall(trace.wallIndex,p.dmg);
+        else if(result.kind==='civilian')applied=damageCivilian(result.target.id,p.dmg,tick)>0;else if(result.kind==='world'&&trace.tree?.p)applied=damagePalm(trace.tree,p.dmg);else if(result.kind==='world'&&
+          Math.hypot(result.point.x-trace.point.x,result.point.y-trace.point.y,result.point.z-trace.point.z)<.01){
+          if(trace.wallIndex!=null)applied=damageWall(trace.wallIndex,p.dmg);
+          else if(trace.roofIndex!=null)applied=damageRoof(trace.roofIndex,p.dmg);
+        }
         if(result.kind!=='expire'&&!['marine-crew','marine-glass'].includes(result.kind))effect('impact',tick,{actorId:p.actorId,at:{...result.point},hit:applied&&['enemy','player','vehicle'].includes(result.kind)?result.target.id:
           applied&&result.kind==='vehicle-occupant'?result.target.target?.id:null});projectiles.splice(i,1);
       }
