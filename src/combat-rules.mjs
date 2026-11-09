@@ -125,6 +125,20 @@ export function closestFenceBlastPoint(w,x,y,z){
   return{x:nx,y:ny,z:nz,distance:Math.hypot(nx-x,ny-y,nz-z)};
 }
 
+// Armor de les estructures, compartit per SOLO i Worker COOP.
+// Només les portes i la fusta feble reben dany d'armes lleugeres.
+// Les parets/sostres reforçats (10 PV) només cedeixen a explosions
+// pesades i embestides. Les excepcions dels vidres es resolen a part.
+export function canLightDamageWall(w){
+ if(!w||w.hp===Infinity||w.indestructible)return false;
+ return !!(w.door||w.woodenDoor||w.weakWood||
+   w.owner?.weakWood||w.owner?.civilianHut||
+   w.civicFurniture==='bench');
+}
+export function canLightDamageRoof(b){
+ return !!b&&b.rhp!==Infinity&&!b.indestructible&&
+   !!(b.weakWood||b.wood||b.civilianHut);
+}
 // Structural blast rules from the individual game, shared with the server.
 export function wallBlastDamage(w,x,y,z,r,dmg){
  if(w.indestructible||w.open||w.hp<=0||!Number.isFinite(w.hp)||y>=w.y1+3)return 0;
@@ -136,7 +150,7 @@ export function wallBlastDamage(w,x,y,z,r,dmg){
  return explosionDamage(dmg,Math.hypot(wx-x,wz-z),r);
 }
 export function roofBlastDamage(b,x,z,r,dmg){
- if(b.kind==='enemy_bunker'||b.rhp<=0||b.rb)return 0;
+ if(b.rhp<=0||b.rb||b.indestructible)return 0;
  if(b.weakWood){
   // Projecció al rectangle del sostre, fins i tot si el barracó està
   // girat 90°. Una granada a qualsevol extrem pot destruir-ne els 8 PV.
