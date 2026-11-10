@@ -106,6 +106,9 @@ assert(painted.includes('pointToTrack')&&painted.includes('boundaryEdges')&&pain
 assert(painted.includes('cap component independent prou petit')&&painted.includes('c.faces.length>14'));
 assert(btr.includes('applyBtr82PaintAnnotations(previous)'));
 assert(btr.includes('painted.unresolved.length')&&btr.includes('painted.bridges'));
+assert(painted.includes('id:105')&&painted.includes('id:106'),'Dues noves traçades per tapar forats');
+assert(painted.includes('removeNewPaintedUpperDetails(scene)'),'Eliminació dels petits detalls de dalt');
+assert(painted.includes('upperRemoved:upperRemoval.removed')&&btr.includes('painted.upperRemoved'),'Recompte de detalls superiors retirats');
 const selector=read('src/vehicle-annotation-editor.mjs');
 assert(selector.includes('raycaster.intersectObjects')&&selector.includes('navigator.clipboard')&&selector.includes('EXPLICACIÓ:'));
 assert(selector.includes("fill:'TAPAR FORAT'")&&selector.includes("remove:'ELIMINAR PEÇA'"));
