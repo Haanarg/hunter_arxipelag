@@ -1,3 +1,13 @@
+**P1 · 2026-11-10 · BTR-82: reparar forats reals i arribar amb el canó a la torreta:**
+- [x] Detectada la causa de la regressió: la versió de 5.371 triangles ja tenia el buit frontal; simplement conservar tots els triangles no el tapava.
+- [x] Nova geometria de tancament del morro a −Z (part alta, frontal i sota el llavi), i dels laterals/sponsons a la popa +Z, seguint el perfil.
+- [x] Tub del canó negre estès des de z = −4,35 fins a z = −1,015 (dins de la torreta); boca de major diàmetre.
+- [x] Vuit rodes tancades, amb 12 facetes i llantes, 168 triangles cadascuna; quatre fars a −Z.
+- [x] GLB exportat i validat: **4.581 triangles, 25 malles, 185.796 bytes**; SHA256 fixat a test; conservació exacta del casc base.
+- [x] Visor limitat a base i model reparat, amb revisió de memòria cau del GLB.
+- [ ] Comprovar visualment amb Three.js/Chrome Android que el nou tancament es veu bé; si encara hi ha discontinuïtats, corregir les peces exactes abans d'integrar.
+- [ ] Integrar al joc SOLO/COOP només després de validar el visor.
+
 **P1 · 2026-11-10 · regressió BTR-82: restaurar casc i sentit del canó:**
 - [x] Eliminades completament les planxes frontals i posteriors artificials de la variant anterior.
 - [x] Restaurats tots els 2.556 triangles superficials del casc de la base de 5.371, més els 44 triangles de folre interior originals; les proves comparen les cares geomètriques per evitar regressions de forats.

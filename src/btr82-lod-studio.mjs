@@ -1,16 +1,18 @@
 // Low Poly BTR-82 by SIpriv (CC BY 4.0). Only two verified models in the
 // candidate page: 5,371-triangle iteration base and corrected chosen 50%.
-export const BTR82_VERSION='authentic-hull-forward-gun-v3';
+export const BTR82_VERSION='sealed-front-rear-long-gun-v4';
 const URL='./assets/vehicle-candidates/tanqueta/';
 const CREDIT='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
 const MODELS=Object.freeze([
  {slot:1,file:'btr82-base-100.glb',triangles:5371,meshes:18,
   title:'BTR-82 · base original 100%',detail:'Antic 25% · referència de 5.371 triangles'},
- {slot:2,file:'btr82-50-repaired.glb',triangles:4199,meshes:13,
-  title:'BTR-82 · 50% corregit',detail:'Casc original recuperat · canó cap endavant · 8 rodes detallades · fars al frontal'}
+ {slot:2,file:'btr82-50-repaired.glb',triangles:4581,meshes:25,
+  title:'BTR-82 · escollit i reparat',detail:'Frontal tancat · laterals posteriors reconstruïts · canó unit a la torreta · 8 rodes detallades · 4 fars'}
 ]);
-const requiredRepairs=['BTR82_hull_original_restored','BTR82_black_barrel_and_muzzle',
- 'BTR82_turret','BTR82_aux_front_housings','BTR82_aux_front_lenses'];
+const requiredRepairs=['BTR82_repair_olive_armour_repaired',
+ 'BTR82_repair_olive_bevel_repaired','BTR82_repair_olive_inner_shell',
+ 'BTR82_repair_black_barrel_protrudes_into_turret',
+ 'BTR82_repair_headlight_housings_matte','BTR82_repair_headlight_lens_ivory'];
 function inspect(scene){
  let triangles=0,meshes=0;const names=new Set();
  scene.traverse(o=>{
@@ -67,7 +69,7 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
    }
   }));
   if(alive(token,run))notice.textContent=results.every(Boolean)?
-   'Només dos BTR-82: base de 5.371 triangles i versió corregida de 4.199 triangles/13 malles. Casc autèntic recuperat, canó cap al morro (−Z), rodes detallades i fars al frontal. El joc continua intacte.':
+   'Comparador BTR-82: base de 5.371 triangles i model reparat de 4.581 triangles/25 malles. Frontal i laterals posteriors amb peces de tancament; canó negre prolongat fins dins de la torreta, vuit rodes sòlides i quatre fars. Sense canvis a la tanqueta jugable.':
    'No s’han pogut carregar els dos GLB. Recarrega el visor o comprova el desplegament.';
  }
  async function importGlb(blob,token,slotIndex){
