@@ -217,4 +217,5 @@ for(const old of ['helicopters-lod-proves.html','apache-variants-proves.html',
  assert(!fs.existsSync(path.join(root,old)),'Cal retirar el candidat obsolet: '+old);
 for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/vehicle-annotation-editor.mjs','src/vehicle-hole-brush.mjs','src/vehicle-surface-paint.mjs','src/btr82-part-selector.mjs','src/btr82-rear-seam-repair.mjs','src/btr82-annotated-detail-removal.mjs','src/btr82-painted-hole-repair.mjs','src/btr82-confirmed-repairs.mjs','src/btr82-hull-v2.mjs','src/btr82-hull-v3.mjs','src/streetfighter-25-geometry.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
+execFileSync(process.execPath,[path.join(root,'tests/btr82-hull-v3-geometry.cjs')],{stdio:'pipe'});
 console.log('PASS default reusable vehicle 3D annotation editor: join parts, paint holes and mark parts for removal');
