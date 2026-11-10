@@ -238,6 +238,7 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
   present(PASSES[1],clean,local);
   const v1=clean.userData.btr82HullV1;
   slots[1].status.textContent+=' · casc '+v1.hullTriangles+' △ · torreta '+v1.turretTriangles+' △ · 8 rodes i canó conservats';
+  try {
   for(const [i,ratio] of LOD_RATIOS.entries()){
    if(!alive(token,run))return;
    slots[2].status.textContent='Calculant referència anterior · pas '+(i+1)+' de 4…';
@@ -247,9 +248,8 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
    if(total>last)throw Error('La reducció '+(i+1)+' ha augmentat els triangles');
    previous=next;last=total;
   }
-  // Conservem la versió antiga com a comparativa; si una reparació antiga
-  // falla, NO bloquegem la presentació del casc nou de la targeta central.
-  try {
+  // Conservem la versió antiga com a comparativa. Qualsevol error en
+  // simplificació o reparacions velles no bloqueja el casc v1 nou.
   const joinedGroups=repairMarkedRearSeams(previous);
   const cleanup=removeMarkedFrontDetails(previous);
   const preciseCleanup=removeBtr82AnnotatedDetails(previous);
