@@ -86,6 +86,51 @@ function createTurretGeometry(){
  return geometry;
 }
 
+// Assaig de la hipòtesi d'orientació: antic lateral -> nova proa.
+// Cal fer DUES operacions: gir Y +90° i intercanvi de dimensions X/Z.
+// Un gir sol deixaria un casc 11 m d'ample i 4 m de llarg.
+// La geometria original roman disponible per comparar instantàniament.
+export function createBtr82HullV3AxisSwapGeometry(original){
+ const source=original.getAttribute('position');
+ if(!source)throw Error('La v3 no té vèrtexs de posició');
+ original.computeBoundingBox();
+ const bounds=original.boundingBox;
+ const width=bounds.max.x-bounds.min.x;
+ const length=bounds.max.z-bounds.min.z;
+ if(width<2||length<6)throw Error('Proporcions inesperades del casc BTR v3');
+ const centerX=(bounds.min.x+bounds.max.x)*.5;
+ const centerZ=(bounds.min.z+bounds.max.z)*.5;
+ const result=original.clone(),position=result.getAttribute('position');
+ for(let i=0;i<position.count;i++){
+  const x=source.getX(i)-centerX;
+  const y=source.getY(i);
+  const z=source.getZ(i)-centerZ;
+  // Gir Y +90: (x,z)->(z,-x). Escalat posterior:
+  // X torna a la mateixa amplada, Z a la mateixa llargada.
+  position.setXYZ(i,centerX+z*(width/length),y,centerZ-x*(length/width));
+ }
+ position.needsUpdate=true;
+ result.computeVertexNormals();
+ result.computeBoundingBox();result.computeBoundingSphere();
+ result.userData.candidateSimplified=true;
+ result.userData.btr82AxisSwap=true;
+ return result;
+}
+
+const hullAxisCache=new WeakMap();
+export function setBtr82HullV3AxisSwap(root,enabled){
+ const mesh=root.getObjectByName('BTR82_v3_lowered_centre_hull');
+ if(!mesh?.isMesh) return false;
+ let pair=hullAxisCache.get(mesh);
+ if(!pair){
+  pair={original:mesh.geometry,swapped:createBtr82HullV3AxisSwapGeometry(mesh.geometry)};
+  hullAxisCache.set(mesh,pair);
+ }
+ mesh.geometry=enabled?pair.swapped:pair.original;
+ mesh.userData.btr82AxisSwap=!!enabled;
+ return true;
+}
+
 const KEEP=/^BTR82_(?:truck_A43_wheel_[0-9]+|new_black_(?:barrel|muzzle))$/;
 export function makeBtr82HullV3(baseline){
  const scene=baseline.clone(true),discard=[];
