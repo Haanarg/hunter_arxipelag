@@ -19,10 +19,10 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 #info{display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:10px;margin:0 0 11px}
 #warning{color:#f0d9a8;font-size:12px;line-height:1.5;max-width:900px}
 #grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;position:relative}
-#grid.btr-study{grid-template-columns:repeat(3,minmax(0,1fr))}
+#grid.btr-study{grid-template-columns:repeat(2,minmax(0,1fr))}
 .panel[hidden]{display:none!important}
 .panel{min-width:0;height:clamp(350px,40vw,470px);position:relative;border:1px solid #54736e;border-radius:12px;overflow:hidden;background:linear-gradient(#314c52,#142c34);touch-action:pan-y}
-.panel:first-child{border-color:#d6c089}
+.panel:first-child{border-color:#d6c089}#grid.btr-study .panel:nth-child(3){border-color:#d6c089}
 .panel .label{position:absolute;z-index:3;top:9px;left:9px;right:9px;pointer-events:none;background:#122629dd;border:1px solid #647d78;border-radius:7px;padding:7px 9px;min-height:51px}
 .panel .label strong{display:block;font-size:13px}.panel .label span{font-size:10px;color:#c1d6cd;line-height:1.3;display:block}
 .panel .viewport{position:absolute;inset:0;touch-action:pan-y;cursor:grab;overscroll-behavior-y:auto}.panel .viewport:active{cursor:grabbing}
@@ -54,7 +54,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </head><body>
 <header><div class="kicker">HUNTER: ARXIPÈLAG · LABORATORI DE MODELS</div>
 <h1>Flota · Models i simplificació</h1>
-<p>Els <strong>7 tipus de vehicles pendents de seleccionar</strong>. Els models definitius dels helicòpters Huey i Apache, de la moto i de la moto aquàtica ja no són al banc. A l'esquerra, el vehicle actual; a la dreta, tres alternatives. El tanc conserva els tres models de referència M1A1 Abrams. La tanqueta només conserva el Low Poly BTR 82 de SIpriv, amb l’antiga variant 25% com a nova base de 5.371 triangles (100%) i tres reduccions de segona generació del 75%, 50% i 25%. Els quatre GLB ja estan simplificats i tenen materials mats. El recompte real de triangles i malles apareix a cada targeta. La resta de vehicles mantenen els GLB CC0 locals. Els models externs encara no substitueixen els vehicles del joc.</p>
+<p>Els <strong>7 tipus de vehicles pendents de seleccionar</strong>. Els models definitius dels helicòpters Huey i Apache, de la moto i de la moto aquàtica ja no són al banc. A l'esquerra, el vehicle actual; a la dreta, tres alternatives. El tanc conserva els tres models de referència M1A1 Abrams. La tanqueta ara només compara la base original de 5.371 triangles amb el 50% escollit i reparat (3.671 triangles), amb casc tancat, rodes plenes i quatre fars. La resta de vehicles mantenen els GLB CC0 locals. Els models externs encara no substitueixen els vehicles del joc.</p>
 <nav aria-label="Vistes">
 <button id="view-quarter" data-view="quarter" class="active">3/4</button><button data-view="front" id="view-front">Frontal</button>
 <button data-view="side" id="view-side">Lateral</button><button data-view="rear" id="view-rear">Posterior</button>
@@ -71,7 +71,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </div></section>
 <section id="grid" aria-label="Comparativa de models 3D"></section>
 <div class="explainer">
-<strong>Com funciona:</strong> el banc mostra el model del joc i tres alternatives per a cada vehicle pendent. Els visors Sketchfab del tanc es manipulen individualment. En importar el BTR-82, l'original i els tres LOD comparteixen càmera i escala. Arrossega la resta dels panells per girar les càmeres del joc, i usa <strong>Alt + roda</strong> o els botons ＋ / － per fer zoom. Les quatre variants de la segona generació es carreguen automàticament des de GitHub. La nova referència 100% correspon a l'antic model 25%. També pots importar manualment un GLB de la nova generació a qualsevol targeta. Els nivells 5/4/3/2% ja s'han descartat; utilitza els GLB nous del 75%, 50% i 25%. La nova base i els seus tres LOD conserven els materials militars mats, sense atles UV ni artefactes de colors; l'original de Sketchfab queda arxivat al repositori. Es carreguen automàticament des de GitHub. Cal adaptar física, seients i col·lisions abans de substituir un model.</div>
+<strong>Com funciona:</strong> el banc mostra el model del joc i tres alternatives per a cada vehicle pendent. Els visors Sketchfab del tanc es manipulen individualment. Els dos BTR-82 comparteixen càmera i escala. Arrossega la resta dels panells per girar les càmeres del joc, i usa <strong>Alt + roda</strong> o els botons ＋ / － per fer zoom. Per a la tanqueta només hi ha dues targetes: la base de referència i el 50% reparat, carregats automàticament des del repositori. Les variants anteriors ja no són candidates; es mantenen els crèdits SIpriv / CC BY 4.0. Cal adaptar física, seients i col·lisions abans de substituir un model.</div>
 </main><footer>Prova independent · Three.js r186 (el mateix del joc) · GLTFLoader · models originals importats de la fàbrica del joc · cap canvi a la física, combat o desament. Algunes fonts externes poden no permetre carregar fitxers des d'un altre domini; en aquest cas, utilitza la importació local.</footer>
-<script type="module" src="./src/vehicles-externs-proves.mjs?rev=btr82-second-generation-25base-v1"></script>
+<script type="module" src="./src/vehicles-externs-proves.mjs?rev=btr82-two-approved-only-v1"></script>
 </body></html>

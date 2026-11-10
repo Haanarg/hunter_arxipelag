@@ -44,48 +44,22 @@ assert(studio.includes("entry.provider==='sketchfab'")&&studio.includes("frame.s
 assert(studio.includes('slot.sourceFrame.remove()'),'El visor anterior s’ha de destruir quan es canvia de categoria');
 assert(html.includes('M1A1 Abrams')&&html.includes('Low Poly BTR 82'),
  'Cal explicar el BTR-82 seleccionat al preview');
-assert.deepEqual(manifest.selectedForLod?.tanqueta?.ratioLevels,[1,.75,.50,.25]);
-assert.equal(manifest.selectedForLod.tanqueta.sourceTriangles,5371);
-assert.equal(manifest.selectedForLod.tanqueta.sourceMeshes,18);
-assert.deepEqual(manifest.selectedForLod.tanqueta.offlineVariantStats.map(x=>x.triangles),[4025,2684,1338]);
+assert.equal(manifest.selectedForLod?.tanqueta?.activePreviewModels,2);
+assert.equal(manifest.selectedForLod.tanqueta.original.triangles,5371);
+assert.equal(manifest.selectedForLod.tanqueta.selected.triangles,3671);
 assert.equal(manifest.externalModels.tanqueta[0]?.modelId,'6226acae68424d99bf03882b245ff7c5');
-assert(!catalog.includes('fe28759be4914e4a9ea52d73aa503a4e'),'Stryker de bunny encara al catàleg');
-assert(!catalog.includes('3a813f5520974d21b3b3bba52e04a7d9'),'M1128 Stryker encara al catàleg');
-const btrCode=read('src/btr82-lod-studio.mjs');
-const aggressive=read('src/btr82-aggressive-simplification.mjs');
-assert(aggressive.includes('new SimplifyModifier()')&&aggressive.includes('modifier.modify('),
- 'El LOD ha d’usar Three.js r186 i meshoptimizer');
-assert(aggressive.includes('simplifySloppy(')&&aggressive.includes('mergeGeometries('),
- 'Cal fusionar malles i aplicar reducció agressiva');
-assert(aggressive.includes('wheel:')&&aggressive.includes('bone27_180'),
- 'Cal mantenir vuit rodes i torreta separades');
-assert(aggressive.includes('KHR_materials_pbrSpecularGlossiness'),
- 'Cal adaptar els materials antics del BTR-82');
-assert(btrCode.includes('repoPrecomputedLod(')&&btrCode.includes('normalizeBtr82Glb('),
- 'El visor ha de carregar els GLB de la nova base ja reduïts des del servidor');
-assert(btrCode.includes('new GLTFExporter()')&&btrCode.includes('saveSource('),
- 'Cal poder exportar GLB i recordar l’original al navegador');
-assert(studio.includes("const btrStudy=config.id==='tanqueta'")&&
- studio.includes("await studio.load(token)")&&studio.includes("studio.importGlb(file,current,slots.indexOf(slot))"),
- 'Cal poder importar BTR-82 i generar reduccions dins la mateixa pàgina');
-assert(html.includes('#grid.btr-study'),'Cinc panells de comparació a la pàgina');
-assert(studio.includes('for(let i=0;i<5;i++){'),
- 'BTR-82: model jugable + original + tres nivells; no han de quedar sis panells');
-const routing=read('src/btr82-upload-policy.mjs');
-assert(routing.includes('Object.freeze([75,50,25])'),
- 'El classificador només ha d’admetre les reduccions 75/50/25 com a candidates');
-assert(!routing.includes('Object.freeze([5,4,3,2])'),
- 'S’han d’eliminar del catàleg actiu els nivells que no són reconeixibles');
-assert(btrCode.includes("BTR82_LIVE_ASSET_VERSION='btr82-25base-second-generation-v1'")&&btrCode.includes("percent+'.glb?rev='"),
- 'Cal invalidar la memòria cau dels GLB antics després de corregir els materials');
-assert(btrCode.includes('repoPrecomputedLod(')&&btrCode.includes('BTR82_EXPECTED_TRIANGLES'),
- 'El visor ha de carregar automàticament els tres GLB precomputats del repositori');
-assert(btrCode.includes('classifyBtr82Upload(')&&btrCode.includes('restoreSourceMaterials('),
- 'El GLB complet i els LOD importats s’han de distingir, amb textures originals restaurades');
-assert(btrCode.includes('const run=++revision')&&btrCode.includes('async function importLod('),
- 'La importació de cada LOD ha de ser independent dels altres panells');
-assert(btrCode.includes('initial!==5371||initialMeshes!==18'),
- 'La referència del 100% ha de ser l’antiga versió 25% (5.371 triangles, 18 malles)');
+assert(!catalog.includes('fe28759be4914e4a9ea52d73aa503a4e'));
+assert(!catalog.includes('3a813f5520974d21b3b3bba52e04a7d9'));
+const btr=read('src/btr82-lod-studio.mjs');
+assert(btr.includes("file:'btr82-base-100.glb'")&&btr.includes("file:'btr82-50-repaired.glb'"));
+assert(!btr.includes('SimplifyModifier')&&!btr.includes('repoPrecomputedLod'));
+assert(studio.includes("const btrStudy=config.id==='tanqueta'"));
+assert(studio.includes("slot.outer.hidden=btrStudy?![1,2].includes(slots.indexOf(slot)):slots.indexOf(slot)>3"));
+assert(html.includes('#grid.btr-study{grid-template-columns:repeat(2'));
+assert(html.includes('3.671')&&html.includes('quatre fars'));
+for(const obsolete of ['src/btr82-aggressive-simplification.mjs',
+ 'src/btr82-upload-policy.mjs','tests/btr82-preview-runtime.mjs','tools/repair-btr82-materials.cjs'])
+ assert(!fs.existsSync(path.join(root,obsolete)),'Obsolete BTR-82 generator left behind: '+obsolete);
 for(const id of ['heli','heli_combat'])assert(!(id in manifest.models),'Helicòpter descartat encara al manifest: '+id);
 assert.equal(manifest.retiredHelicopterCandidates,6);
 assert(!catalog.includes('755d8518a06e41b19752c1b54c0da588'),'El Huey aprovat ja no ha de figurar entre els candidats');
@@ -103,6 +77,6 @@ for(const old of ['helicopters-lod-proves.html','apache-variants-proves.html',
  'assets/vehicle-candidates/helicopter-lods/manifest.json',
  'assets/vehicle-candidates/helicopter-lods/apache-hybrid-manifest.json'])
  assert(!fs.existsSync(path.join(root,old)),'Cal retirar el candidat obsolet: '+old);
-for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/btr82-aggressive-simplification.mjs','src/streetfighter-25-geometry.mjs'])
+for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/streetfighter-25-geometry.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
-console.log('Banc de models: BTR-82 nova base 5.371 triangles + 75/50/25%=4.025/2.684/1.338, 18 malles; 3 Abrams; cap Stryker.');
+console.log('PASS BTR-82 two-model preview: 5.371/18 source and 3.671/23 corrected; 3 Abrams');

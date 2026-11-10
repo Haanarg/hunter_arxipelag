@@ -1,3 +1,11 @@
+**P1 · 2026-11-10 · tanqueta BTR-82 50% reparada al comparador:**
+- [x] Casc recuperat dels panells més complets, folre intern de coberta i laterals per tapar forats.
+- [x] Vuit rodes octogonals tancades amb tapes de cub i quatre fars davanters visibles (dos existents + dos auxiliars).
+- [x] Nou GLB de 3.671 triangles / 23 malles; mats militars opacs i sense UV corruptes.
+- [x] Pestanya Tanqueta reduïda a dos GLB: base 5.371/18 i 50% reparat 3.671/23. Candidats anteriors eliminats.
+- [ ] Revisió visual final en Chrome Android; sense canvis a la tanqueta jugable.
+- [ ] Després de validar-lo, adaptar torreta, rodes, hitboxes i ocupants a SOLO/COOP.
+
 **2026-11-09 · Caixes de munició i comptadors (v0.6.202):**
 - [x] Cada caixa de munició afegeix **16 bales** per pistola/fusell d'assalt, **5 cartutxos** de franctirador i **3 coets** de bazuca (SOLO/COOP).
 - [x] Possessió del bazuca independent dels coets, incloent recuperació de partides antigues i autoritat del servidor.
