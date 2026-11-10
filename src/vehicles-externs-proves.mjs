@@ -283,15 +283,14 @@ async function choose(config){
  const token=generation;
  nameOut.textContent=config.name;
  warning.textContent=(config.note?config.note+' ':'')+
-   (config.id==='bici'?'Model original del joc: sense candidats externs.':'Comparació visual: la física, les hitboxes i les animacions pròpies dels vehicles no s’han transferit.');
+   'Comparació visual: la física, les hitboxes i les animacions pròpies dels vehicles no s’han transferit.';
  for(const b of list.querySelectorAll('button'))b.classList.toggle('active',b.dataset.type===config.id);
  const marine=config.kind==='mar';
  grid.classList.remove('featured');
  const btrStudy=config.id==='tanqueta';
  grid.classList.toggle('btr-study',btrStudy);
- grid.classList.toggle('single-model',config.id==='bici');
  for(const slot of slots){
-   slot.outer.hidden=config.id==='bici'?slots.indexOf(slot)!==0:(btrStudy?![1,2].includes(slots.indexOf(slot)):slots.indexOf(slot)>3);
+   slot.outer.hidden=btrStudy?![1,2].includes(slots.indexOf(slot)):slots.indexOf(slot)>3;
    dropPrevious(slot);
    slot.kind=config.kind;
    slot.ground.material.color.setHex(marine?0x285f65:config.kind==='aire'?0x6a7b67:0x69735e);
@@ -420,7 +419,7 @@ const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.textContent=config.name;
- const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='bici'?'Model original':config.id==='tanqueta'?'2 models: original i reparat':config.id==='ferry'?'2–3 alternatives':'3 alternatives');
+ const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'2 models: original i reparat':config.id==='ferry'?'2–3 alternatives':'3 alternatives');
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }
