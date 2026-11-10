@@ -65,7 +65,15 @@ assert(studio.includes("slot.outer.hidden=btrStudy?slots.indexOf(slot)>1:slots.i
  'El BTR-82 només ha de mostrar dos panells, sense modificar els altres vehicles');
 assert(html.includes('#grid.btr-study{grid-template-columns:repeat(2'));
 assert(html.includes('Editor de marques 3D')&&html.includes('btrSelectGroup')&&html.includes('btrCopySelection')&&html.includes('btrSelectMode'));
-assert(html.includes('Pintar forats')&&html.includes('Eliminar peces'));
+assert(html.includes('Tapar forats (clic)')&&html.includes('Eliminar peces'));
+assert(html.includes('Verd')&&html.includes('blau')&&html.includes('Desfer última acció'));
+assert(html.includes('surface-hole-brush-v1'));
+const holeBrush=read('src/vehicle-hole-brush.mjs');
+assert(holeBrush.includes('getHoleBrushTarget')&&holeBrush.includes('closeHoleUnderBrush'));
+assert(holeBrush.includes('boundaries(mesh)')&&holeBrush.includes('ShapeUtils.triangulateShape'));
+assert(holeBrush.includes('e.count!==1')&&holeBrush.includes('maxPlanar>.065'));
+assert(holeBrush.includes('geo.setIndex(indices)')&&holeBrush.includes('geo.computeVertexNormals()'));
+
 assert(!html.includes('id="btrPartTool" class="btr-part-tool" hidden'),'L\'editor ha de ser visible per defecte');
 assert(html.includes('id="pan-up"')&&html.includes('id="pan-down"'),'Calen botons de navegació vertical');
 assert(studio.includes('zoom=Math.max(.025')&&studio.includes('const distance=Math.max(.35,size*1.85*zoom+.35)'), 'Cal zoom proper sense límit fix de 3 metres');
@@ -115,7 +123,11 @@ assert(selector.includes("fill:'TAPAR FORAT'")&&selector.includes("remove:'ELIMI
 assert(selector.includes('intersectPlane')&&selector.includes('stroke.marks.push'));
 assert(selector.includes("stroke.mode==='fill'||stroke.mode==='remove'?nearestHit")&&selector.includes('espai buit / cap cara detectada'), 'El pinzell d’eliminar ha de preservar marques fins i tot sense un hit sobre la malla');
 assert(selector.includes('No s’ha pogut marcar aquesta zona'), 'Cal avisar si no es pot desar la traçada');
-assert(studio.includes('vehicle-annotation-editor.mjs?rev=delete-brush-fix-v2'), 'Cal invalidar la memòria cau del mòdul de l’editor');
+assert(studio.includes('vehicle-annotation-editor.mjs?rev=surface-hole-brush-v1'), 'Cal invalidar la memòria cau del nou pinzell');
+assert(studio.includes('vehicleEditor.hover(slot,e)'),'El cursor ha de seguir la superfície en moviment');
+assert(selector.includes('getHoleBrushTarget')&&selector.includes('closeHoleUnderBrush'));
+assert(selector.includes('stroke.edits.push(edit)')&&selector.includes('edit.mesh.geometry=edit.previous'));
+assert(!selector.includes('stroke.plane=new THREE.Plane()'),'No es poden pintar forats al pla virtual fix');
 assert(selector.includes('getType()')&&selector.includes('mesh.name'));
 assert(read('README.md').includes('editor de marques 3D'));
 assert(read('to-do.MD').includes('Laboratori de proves de models 3D'));
@@ -142,6 +154,6 @@ for(const old of ['helicopters-lod-proves.html','apache-variants-proves.html',
  'assets/vehicle-candidates/helicopter-lods/manifest.json',
  'assets/vehicle-candidates/helicopter-lods/apache-hybrid-manifest.json'])
  assert(!fs.existsSync(path.join(root,old)),'Cal retirar el candidat obsolet: '+old);
-for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/vehicle-annotation-editor.mjs','src/btr82-part-selector.mjs','src/btr82-rear-seam-repair.mjs','src/btr82-annotated-detail-removal.mjs','src/btr82-painted-hole-repair.mjs','src/streetfighter-25-geometry.mjs'])
+for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/vehicle-annotation-editor.mjs','src/vehicle-hole-brush.mjs','src/btr82-part-selector.mjs','src/btr82-rear-seam-repair.mjs','src/btr82-annotated-detail-removal.mjs','src/btr82-painted-hole-repair.mjs','src/streetfighter-25-geometry.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
 console.log('PASS default reusable vehicle 3D annotation editor: join parts, paint holes and mark parts for removal');
