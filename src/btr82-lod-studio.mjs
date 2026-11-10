@@ -4,7 +4,7 @@ import {SimplifyModifier} from 'three/addons/modifiers/SimplifyModifier.js';
 // Low Poly BTR-82 by SIpriv (CC BY 4.0): base Three.js al 25%.
  // El punt de partida de les quatre reduccions és la variant actual amb
  // vuit rodes del camió A4.3 i canó negre cilíndric, NO el GLB original.
-export const BTR82_VERSION='base25-progressive-four-lods-v1';
+export const BTR82_VERSION='base25-sealed-side-rear-v2';
 const ASSET_DIR='./assets/vehicle-candidates/tanqueta/';
 const BASE_FILE='btr82-base-100.glb';
 const CREDIT='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
@@ -67,7 +67,7 @@ function replaceBarrelWithCylinders(scene){
  cleaned.computeBoundingBox();cleaned.computeBoundingSphere();
  turret.geometry=cleaned;
  // En les coordenades del GLB, -Z és la direcció de la proa.
- // El canó comença DINS la torreta, a z=-1,35, per evitar qualsevol buit.
+ // El canó comença profundament DINS la torreta, a z=-0,46, per evitar qualsevol buit.
  const black=new THREE.MeshStandardMaterial({color:0x101010,roughness:.78,metalness:.20});
  const addCylinder=(name,radius,length,z)=>{
   const mesh=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,length,12,1,false),black);
@@ -78,8 +78,8 @@ function replaceBarrelWithCylinders(scene){
   turret.parent.add(mesh);
   return mesh;
  };
- // Cos principal: de z=-1,35 a z=-3,36; extrem posterior connectat a la torreta.
- addCylinder('BTR82_new_black_barrel',.085,2.01,-2.355);
+ // Cos principal: de z=-0,46 a z=-3,36; el darrere travessa la boca de la torreta.
+ addCylinder('BTR82_new_black_barrel',.085,2.90,-1.91);
  // Boca de foc de diàmetre lleugerament més gran; s'encavalca 3 cm.
  addCylinder('BTR82_new_black_muzzle',.115,.28,-3.47);
  scene.userData.btr82Gun='forward-black-two-cylinders';
@@ -93,11 +93,11 @@ function installFourHeadlights(scene){
  const lens=new THREE.MeshStandardMaterial({color:0xffedb7,emissive:0x564621,roughness:.46,metalness:0});
  for(const [i,x] of [-1.53,-1.06,1.06,1.53].entries()){
   for(const [part,radius,length,z,mat] of [
-   ['housing',.154,.075,-5.045,housing],['lens',.112,.042,-5.098,lens]]){
+   ['housing',.154,.075,-5.12,housing],['lens',.112,.042,-5.18,lens]]){
    const mesh=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,length,10),mat);
    mesh.name='BTR82_front_headlight_'+(i+1)+'_'+part;
    mesh.rotation.x=Math.PI/2;
-   mesh.position.set(x,1.56,z);
+   mesh.position.set(x,.54,z);
    mesh.castShadow=true;mesh.receiveShadow=true;
    scene.add(mesh);
   }
@@ -105,11 +105,82 @@ function installFourHeadlights(scene){
  scene.userData.btr82Headlights=4;
  return scene;
 }
+
+function sealArmourPanels(scene){
+ // Peces de tancament afegides a la base abans de les simplificacions.
+ // Tots els tancaments utilitzen superfícies contínues (no meitats separades),
+ // amb les vores lleugerament encavalcades sobre el casc existent.
+ const armor=new THREE.MeshStandardMaterial({
+  color:0x626d49,roughness:.93,metalness:.05,side:THREE.DoubleSide
+ });
+ const underside=new THREE.MeshStandardMaterial({
+  color:0x48523d,roughness:.97,metalness:.02,side:THREE.DoubleSide
+ });
+ const makeSurface=(name,vertices,faces,material)=>{
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices.flat(),3));
+  geometry.setIndex(faces.flat());
+  geometry.computeVertexNormals();
+  const mesh=new THREE.Mesh(geometry,material);
+  mesh.name=name;mesh.castShadow=true;mesh.receiveShadow=true;
+  scene.add(mesh);
+  return mesh;
+ };
+ // Coberta lateral esquerra i dreta: tira contínua entre el sostre i
+ // l'espatlla de les rodes. La inclinació segueix la silueta de la carrosseria.
+ // La base actual conté forats entre fragments del GLB; les tirades
+ // encavalquen les vores per evitar que hi aparegui el fons.
+ for(const side of [-1,1]){
+  const profile=[
+   [-4.78,1.18,1.73,2.04],
+   [-3.70,1.22,1.79,2.15],
+   [-1.90,1.20,1.81,2.15],
+   [  .10,1.20,1.81,2.15],
+   [ 2.15,1.19,1.80,2.12],
+   [ 4.35,1.16,1.73,2.01],
+   [ 5.56,1.11,1.48,1.86]
+  ];
+  const vertices=[];
+  for(const [z,yLow,xLow,yHigh] of profile){
+   vertices.push([side*xLow,yLow,z],[side*1.53,yHigh,z]);
+  }
+  const faces=[];
+  for(let i=0;i<profile.length-1;i++){
+   const k=i*2;
+   if(side===1)faces.push([k,k+2,k+1],[k+1,k+2,k+3]);
+   else faces.push([k+1,k+2,k],[k+3,k+2,k+1]);
+  }
+  makeSurface('BTR82_sealed_side_cover_'+(side<0?'left':'right'),vertices,faces,armor);
+ }
+ // Coberta posterior: UNA sola superfície que travessa l'eix central
+ // des d'una espatlla fins a l'altra, sense junta al mig.
+ makeSurface('BTR82_unified_rear_upper_cover',[
+  [-1.58,2.04,3.78],[0,2.09,3.78],[1.58,2.04,3.78],
+  [-1.73,1.88,5.49],[0,1.94,5.62],[1.73,1.88,5.49],
+  [-1.72,1.54,5.78],[0,1.57,5.83],[1.72,1.54,5.78]
+ ],[[0,3,1],[1,3,4],[1,4,2],[2,4,5],
+    [3,6,4],[4,6,7],[4,7,5],[5,7,8]],armor);
+ // Baixos posteriors: una sola peça transversal que uneix els dos costats;
+ // la llengüeta inferior i la paret posterior comparteixen vèrtexs.
+ makeSurface('BTR82_unified_rear_underside',[
+  [-1.65,.92,4.95],[0,.92,4.95],[1.65,.92,4.95],
+  [-1.67,.26,5.61],[0,.26,5.61],[1.67,.26,5.61],
+  [-1.67,.12,5.84],[0,.12,5.84],[1.67,.12,5.84],
+  [-1.62,1.01,5.86],[0,1.01,5.86],[1.62,1.01,5.86]
+ ],[[0,3,1],[1,3,4],[1,4,2],[2,4,5],
+    [3,6,4],[4,6,7],[4,7,5],[5,7,8],
+    [6,9,7],[7,9,10],[7,10,8],[8,10,11]],underside);
+ scene.userData.btr82SealedPanels=4;
+ return scene;
+}
+
 function makeBaseline(original){
- const base=installFourHeadlights(replaceBarrelWithCylinders(withTruckWheels(original)));
+ const base=installFourHeadlights(sealArmourPanels(replaceBarrelWithCylinders(withTruckWheels(original))));
  const lights=[];
  base.traverse(o=>{if(o.name.endsWith('_lens')&&o.name.startsWith('BTR82_front_headlight_'))lights.push(o)});
- if(lights.length!==4||!base.getObjectByName('BTR82_new_black_barrel'))
+ if(lights.length!==4||!base.getObjectByName('BTR82_new_black_barrel')||
+    !base.getObjectByName('BTR82_unified_rear_upper_cover')||
+    !base.getObjectByName('BTR82_unified_rear_underside'))
   throw Error('Falten fars o el canó de la base de simplificació');
  return base;
 }
@@ -138,7 +209,9 @@ async function reduceSurfaces(scene,removeFraction){
  }
  result.userData.btr82Reduction={before,after};
  if(result.getObjectByName('BTR82_new_black_barrel')===undefined||
-    !result.getObjectByName('BTR82_front_headlight_4_lens'))
+    !result.getObjectByName('BTR82_front_headlight_4_lens')||
+    !result.getObjectByName('BTR82_unified_rear_upper_cover')||
+    !result.getObjectByName('BTR82_unified_rear_underside'))
   throw Error('La simplificació ha perdut un detall identificatiu');
  return result;
 }
@@ -170,7 +243,9 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
   const slot=slots[spec.slot],stats=inspect(scene);
   if(!stats.names.has('BTR82_new_black_barrel')||
      !stats.names.has('BTR82_new_black_muzzle')||
-     ![1,2,3,4].every(i=>stats.names.has('BTR82_front_headlight_'+i+'_lens')))
+     ![1,2,3,4].every(i=>stats.names.has('BTR82_front_headlight_'+i+'_lens'))||
+     !stats.names.has('BTR82_unified_rear_upper_cover')||
+     !stats.names.has('BTR82_unified_rear_underside'))
    throw Error('La variant '+spec.level+' ha perdut fars, torreta o canó');
   setModel(slot,scene,false,[],true);
   slot.bold.textContent=spec.title;
@@ -200,7 +275,7 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
    previous=next;last=total;
   }
   if(alive(token,run))notice.textContent=
-   'BTR-82: base amb vuit rodes A4.3, canó negre cap endavant i quatre fars, més quatre reduccions acumulatives de superfícies (meshoptimizer). Les xifres de triangles són reals. La tanqueta jugable no canvia.';
+   'BTR-82: costats i cobertes posteriors tancats en peces contínues, canó allargat fins a la torreta i quatre fars sota el morro; vuit rodes A4.3 i quatre reduccions acumulatives de superfícies (meshoptimizer). Les xifres de triangles són reals. La tanqueta jugable no canvia.';
  }
  async function load(token){
   const run=++revision;
