@@ -52,7 +52,7 @@ assert.equal(manifest.externalModels.tanqueta[0]?.modelId,'6226acae68424d99bf038
 assert(!catalog.includes('fe28759be4914e4a9ea52d73aa503a4e'));
 assert(!catalog.includes('3a813f5520974d21b3b3bba52e04a7d9'));
 const btr=read('src/btr82-lod-studio.mjs');
-assert(btr.includes("file:'btr82-base-100.glb'")&&btr.includes('withTruckWheels')&&btr.includes('createTruckModel'));
+assert(btr.includes("file:'btr82-base-100.glb'")&&btr.includes('withTruckWheels')&&btr.includes('createTruckModel')&&btr.includes('replaceBarrelWithCylinders')&&btr.includes('BTR82_new_black_muzzle'));
 assert(!btr.includes('SimplifyModifier')&&!btr.includes('repoPrecomputedLod'));
 assert(studio.includes("const btrStudy=config.id==='tanqueta'"));
 assert(studio.includes("btrStudy?![1,2].includes(slots.indexOf(slot)):slots.indexOf(slot)>3"),
