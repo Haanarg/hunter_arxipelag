@@ -3,9 +3,12 @@ import * as THREE from '../vendor/three-r186.module.mjs';
 // Identifica contorns de vores lliures. Repara NOMÉS llaços simples tancats
 // i prou plans a prop de la posició del pinzell: res de plans ficticis.
 const vkey=p=>p.map(x=>Math.round(x*10000)).join(',');
+const boundaryCache=new WeakMap();
 function boundaries(mesh){
  const g=mesh.geometry,pos=g?.getAttribute('position'),idx=g?.index;
  if(!pos||!idx)return [];
+ const cached=boundaryCache.get(g);
+ if(cached)return cached;
  const point=i=>[pos.getX(i),pos.getY(i),pos.getZ(i)];
  const vertices=new Map(),edges=new Map();
  for(let t=0;t<idx.count;t+=3){
@@ -42,6 +45,7 @@ function boundaries(mesh){
   for(const k of local)seen.add(k);
   if(closed&&path.length>=3&&path.length<=100)loops.push(path);
  }
+ boundaryCache.set(g,loops);
  return loops;
 }
 const distance=(a,b)=>a.distanceTo(b);
