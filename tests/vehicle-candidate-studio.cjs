@@ -80,4 +80,4 @@ for(const old of ['helicopters-lod-proves.html','apache-variants-proves.html',
  assert(!fs.existsSync(path.join(root,old)),'Cal retirar el candidat obsolet: '+old);
 for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/streetfighter-25-geometry.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
-console.log('PASS BTR-82 two-model preview: 5.371/18 source and 3.671/23 corrected; 3 Abrams');
+console.log('PASS BTR-82 two-model preview: 5.371/18 source and 4.199/13 hull-restored; 3 Abrams');
