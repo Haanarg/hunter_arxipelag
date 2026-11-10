@@ -20118,7 +20118,7 @@ if(worldVisualTick<=0){
 updateDoors(dt);
 items.forEach(it=>{const dx=it.x-P.x,dz=it.z-P.z;if(dx*dx+dz*dz<ITEM_ANIM2){it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25}});
 if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-it.z;if(dx*dx+dz*dz<4.84&&Math.abs(P.y-it.y)<3){let mapMessage=null;
-  if(it.t==='arma'){ammo+=16;sniperAmmo+=5;bazookaAmmo+=3;}
+  if(it.t==='arma'){ammo+=12;sniperAmmo+=3;bazookaAmmo+=2;}
   else if(it.t==='mapa'||it.t==='mapa_heli'||it.t==='mapa_tanc'){
     mapMessage=revealMapPickup(it.t,false,MAP_SCALE===2?mapSector(it.x,it.z):null);
     mini(); // la informació apareix de seguida, sense entrar a cap menú
@@ -20127,7 +20127,7 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-i
   else if(it.t==='bazooka'){inv.bazooka=1;bazookaAmmo+=3}
   else inv[it.t]=(inv[it.t]||0)+(it.t==='granada'?5:1);
   world.remove(it.o);items.splice(k,1);requestOperationAutosave('equipment');recordOperationMetric('pickups');
-  msg=mapMessage||'Has trobat: '+IT[it.t].n+(it.t==='arma'?' · +16 bales, +5 rifle, +3 coets':it.t==='granada'?' ×5':it.t==='bazooka'?' +3 coets':it.t==='franctirador'?' +6 cartutxos':'');
+  msg=mapMessage||'Has trobat: '+IT[it.t].n+(it.t==='arma'?' · +12 bales, +3 rifle, +2 coets':it.t==='granada'?' ×5':it.t==='bazooka'?' +3 coets':it.t==='franctirador'?' +6 cartutxos':'');
   msgT=3;snd('pick')}}
 msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
 // Strafe independent: gir visual de la cintura i les cames, no de P.hd.
