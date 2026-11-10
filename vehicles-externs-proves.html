@@ -41,6 +41,8 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 16px}
 .toolbar label{font-size:12px;color:#c3d4c9}
 .toolbar input{accent-color:#ccdf99}
+#btrAxisSwapControl[hidden]{display:none!important}
+#btrAxisSwapControl{border:1px solid #a4b99e;padding:7px 10px;border-radius:8px;color:#e8edcb!important;background:#243b35}
 
 .btr-part-tool{padding:14px 16px;margin:0 0 14px;border:1px solid #698a7b;border-radius:11px;background:#193136}
 .btr-part-tool[hidden]{display:none!important}
@@ -89,6 +91,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <div class="toolbar"><label><input id="fitScale" type="checkbox" checked> Ajustar candidates a l'escala del model actual</label>
 <label><input id="animate" type="checkbox" checked> Animacions disponibles</label>
 <label><input id="showGrid" type="checkbox" checked> Graella i referència humana</label>
+<label id="btrAxisSwapControl" title="Prova reversible només al casc v3: gir de 90 graus al pla horitzontal i reajustament de l'amplada i la llargada" hidden><input id="btrAxisSwapHull" type="checkbox" checked> Provar el casc girat 90° + ample/llarg intercanviats</label>
 
 </div></section>
 <section id="btrPartTool" class="btr-part-tool" aria-label="Editor de marques 3D del laboratori de vehicles">
@@ -112,7 +115,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </section>
 <section id="grid" aria-label="Comparativa de models 3D"></section>
 <div class="explainer">
-<strong>Com funciona:</strong> el banc mostra el model del joc i tres alternatives per a cada vehicle pendent. Els visors Sketchfab del tanc es manipulen individualment. L'original i el low-poly del BTR-82 comparteixen càmera i escala. Arrossega per girar la vista, utilitza <strong>Majúscules + arrossegar</strong> per desplaçar-la verticalment i <strong>Alt + roda</strong> o ＋ / － per apropar-te molt als detalls. Per a la tanqueta hi ha tres targetes: original de treball, casc v3 amb el ventre central rebaixat i casc v2 de referència. La v3 conserva les rodes i el canó; els fars i altres detalls s'afegiran posteriorment. No s’ha implementat encara al joc. L'editor 3D permet unir peces, indicar cares per eliminar i intentar reparar petits forats delimitats per vores reals. El cercle del mode Tapar forats segueix el model: verd quan ha trobat un contorn reparable i blau en cas contrari. Un clic verd afegeix triangles a la geometria d'aquesta variant; «Desfer» restaura el retall. Les altres marques continuen sent anotacions no destructives. Les variants intermèdies ja no ocupen espai; es mantenen els crèdits SIpriv / CC BY 4.0. Cal adaptar física, seients i col·lisions abans de substituir un model.</div>
+<strong>Com funciona:</strong> el banc mostra el model del joc i tres alternatives per a cada vehicle pendent. Els visors Sketchfab del tanc es manipulen individualment. L'original i el low-poly del BTR-82 comparteixen càmera i escala. Arrossega per girar la vista, utilitza <strong>Majúscules + arrossegar</strong> per desplaçar-la verticalment i <strong>Alt + roda</strong> o ＋ / － per apropar-te molt als detalls. Per a la tanqueta hi ha tres targetes: original de treball, casc v3 amb el ventre central rebaixat i casc v2 de referència. Pots activar o desactivar «Provar el casc girat 90° + ample/llarg intercanviats» per veure la geometria de la v3 transposada, sense tocar les rodes ni el canó. La v3 conserva les rodes i el canó; els fars i altres detalls s'afegiran posteriorment. No s’ha implementat encara al joc. L'editor 3D permet unir peces, indicar cares per eliminar i intentar reparar petits forats delimitats per vores reals. El cercle del mode Tapar forats segueix el model: verd quan ha trobat un contorn reparable i blau en cas contrari. Un clic verd afegeix triangles a la geometria d'aquesta variant; «Desfer» restaura el retall. Les altres marques continuen sent anotacions no destructives. Les variants intermèdies ja no ocupen espai; es mantenen els crèdits SIpriv / CC BY 4.0. Cal adaptar física, seients i col·lisions abans de substituir un model.</div>
 </main><footer>Prova independent · Three.js r186 (el mateix del joc) · GLTFLoader · models originals importats de la fàbrica del joc · cap canvi a la física, combat o desament. Algunes fonts externes poden no permetre carregar fitxers des d'un altre domini; en aquest cas, utilitza la importació local.</footer>
-<script type="module" src="./src/vehicles-externs-proves.mjs?rev=btr82-central-belly-hull-v3"></script>
+<script type="module" src="./src/vehicles-externs-proves.mjs?rev=btr82-rotate-rescale-test-v3b"></script>
 </body></html>
