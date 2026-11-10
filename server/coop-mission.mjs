@@ -399,9 +399,9 @@ export function restoreRelayMission(record,geometry){
         else{
           const bag=inventory.get(candidates[0].p.id);
           if(supply.item==='bullets'){
-            bag.bullets=Math.min(capacities.bullets,bag.bullets+supply.amount);
-            bag.sniperAmmo=Math.min(capacities.sniperAmmo,bag.sniperAmmo+5);
-            bag.bazookaAmmo=Math.min(capacities.bazookaAmmo,bag.bazookaAmmo+3);
+            bag.bullets=Math.min(capacities.bullets,bag.bullets+12);
+            bag.sniperAmmo=Math.min(capacities.sniperAmmo,bag.sniperAmmo+3);
+            bag.bazookaAmmo=Math.min(capacities.bazookaAmmo,bag.bazookaAmmo+2);
           }else if(supply.item==='bazooka'){
             bag.bazooka=1;
             bag.bazookaAmmo=Math.min(capacities.bazookaAmmo,bag.bazookaAmmo+3);
