@@ -3,15 +3,51 @@ import * as THREE from '../vendor/three-r186.module.mjs';
 // Reparació quirúrgica de les discontinuïtats marcades per l'usuari.
 // Els punts són coordenades del BTR-82 a l'escena del model sense normalitzar.
 export const BTR82_REAR_MARKS=Object.freeze([
- {group:1,label:'Coberta posterior superior',points:[
-  [-.580,1.588,5.674],[.515,1.805,5.503],[.121,1.750,5.547],
-  [.942,1.896,5.432],[-1.026,1.481,5.758]
+ {group:1,label:'Coberta posterior superior: una sola peça trapezoidal',points:[
+  [-.581,1.813,5.497],[.636,1.721,5.569],[.251,1.741,5.554],
+  [-.011,1.497,5.734],[.942,1.779,5.524],[-1.397,1.494,5.748]
  ]},
- {group:2,label:'Baixos posteriors',points:[
+ {group:2,label:'Baixos posteriors: unions locals anteriors',points:[
   [-.352,.543,5.518],[1.327,.517,5.511],
   [-.772,.551,5.521],[-1.164,.556,5.522]
  ]}
 ]);
+
+// Aquests sis punts defineixen una superfície posterior inclinada.
+// Els dos vèrtexs superiors són més propers al centre; els dos inferiors
+// segueixen les vores laterals. És UNA sola malla quadrilateral (2 triangles)
+// i no una successió de planxes rectangulars superposades.
+const UPPER_TRAPEZOID=Object.freeze([
+ [-.96,1.84,5.50], // vèrtex superior esquerre
+ [ .96,1.84,5.50], // vèrtex superior dret
+ [ 1.40,1.48,5.76], // vèrtex inferior dret
+ [-1.40,1.48,5.76] // vèrtex inferior esquerre
+]);
+
+function addUpperTrapezoid(scene,hull){
+ if(scene.getObjectByName('BTR82_upper_rear_single_trapezoid'))
+  throw Error('La coberta posterior trapezoidal ja existeix');
+ const geometry=new THREE.BufferGeometry();
+ geometry.setAttribute('position',new THREE.Float32BufferAttribute(UPPER_TRAPEZOID.flat(),3));
+ // Dos triangles que comparteixen una diagonal: una sola peça contínua.
+ geometry.setIndex([0,1,2,0,2,3]);
+ geometry.computeVertexNormals();
+ geometry.computeBoundingBox();geometry.computeBoundingSphere();
+ geometry.userData.candidateSimplified=true;
+ const material=hull.material.clone();
+ material.side=THREE.DoubleSide;
+ material.polygonOffset=true;
+ material.polygonOffsetFactor=-1;
+ material.polygonOffsetUnits=-1;
+ const mesh=new THREE.Mesh(geometry,material);
+ mesh.name='BTR82_upper_rear_single_trapezoid';
+ mesh.castShadow=true;mesh.receiveShadow=true;
+ hull.parent.add(mesh);
+ scene.userData.btr82UpperTrapezoid={
+  corners:UPPER_TRAPEZOID.map(p=>[...p]),triangles:2
+ };
+ return mesh;
+}
 
 const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
 const midpoint=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2];
@@ -59,6 +95,12 @@ export function repairMarkedRearSeams(scene){
  });
  const used=new Set(),patches=[],groups=[];
  for(const group of BTR82_REAR_MARKS){
+  // Grup 1: substituïm els ponts automàtics per una única peça trapezoidal.
+  if(group.group===1){
+   addUpperTrapezoid(scene,hull);
+   groups.push({group:1,label:group.label,bridges:1,triangles:2});
+   continue;
+  }
   const isUpper=group.group===1;
   const candidates=boundary.filter(e=>
    e.mid[2]>5.25&&e.mid[2]<5.93&&
