@@ -288,10 +288,7 @@ export const vehicleModels=Object.freeze({
         saddle.position.set(0,1.84,.33);g.add(saddle);
         rod(g,[0,1.65,.34],[0,1.80,.33],.035,metal);
         round(g,.105,.14,metal,0,.73,0,'x','metal');
-        for(const x of[-.31,.31]){
-          rod(g,[x*.45,.73,0],[x,.73,x>0?.25:-.25],.030,metal);
-          box(g,.16,.06,.30,rubber,x,.73,x>0?.25:-.25,'rubber');
-        }
+        // Els pedals animats continuen definits al bloc de pedalier comu.
         g.userData.bicycleModel='road-frame-v2';
       }
       if(t==='tanqueta'){
