@@ -114,7 +114,7 @@ let yaw=.60,elev=.32,zoom=1,lookY=.6,defaultLookY=.6;
 let prev=performance.now();
 let btrStudioPromise=null;
 function getBtrStudio(){
- return btrStudioPromise??=import('./btr82-lod-studio.mjs?rev=btr82-confirmed-brush-replay-v9').then(module=>module.createBtr82Studio({
+ return btrStudioPromise??=import('./btr82-lod-studio.mjs?rev=btr82-symmetric-closed-hull-v1').then(module=>module.createBtr82Studio({
    slots,loadUploadedGlb,setModel,metrics,
    isCurrent:token=>token===generation&&currentType.id==='tanqueta',
    notice:warning
@@ -294,7 +294,7 @@ async function choose(config){
  const btrStudy=config.id==='tanqueta';
  grid.classList.toggle('btr-study',btrStudy);
  for(const slot of slots){
-   slot.outer.hidden=btrStudy?slots.indexOf(slot)>1:slots.indexOf(slot)>3;
+   slot.outer.hidden=btrStudy?slots.indexOf(slot)>2:slots.indexOf(slot)>3;
    dropPrevious(slot);
    slot.kind=config.kind;
    slot.ground.material.color.setHex(marine?0x285f65:config.kind==='aire'?0x6a7b67:0x69735e);
