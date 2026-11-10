@@ -54,16 +54,23 @@ assert(!catalog.includes('3a813f5520974d21b3b3bba52e04a7d9'));
 const btr=read('src/btr82-lod-studio.mjs');
 assert(btr.includes("BASE_FILE='btr82-base-100.glb'")&&btr.includes('withTruckWheels')&&btr.includes('createTruckModel')&&btr.includes('replaceBarrelWithCylinders')&&btr.includes('BTR82_new_black_muzzle'));
 assert(btr.includes('SimplifyModifier')&&btr.includes('reduceSurfaces')&&btr.includes('installFourHeadlights'));
-assert(btr.includes('sealArmourPanels')&&btr.includes('BTR82_sealed_side_cover_')&&btr.includes('BTR82_unified_rear_upper_cover')&&btr.includes('BTR82_unified_rear_underside'));
+assert(!btr.includes('sealArmourPanels')&&!btr.includes('BTR82_sealed_side_cover_')&&!btr.includes('BTR82_unified_rear_upper_cover')&&!btr.includes('BTR82_unified_rear_underside'), 'No han de tornar els tancaments artificials');
 assert(btr.includes("addCylinder('BTR82_new_black_barrel',.085,2.90,-1.91)"));
-assert(btr.includes('mesh.position.set(x,.54,z)'),'Els quatre fars han de quedar sota el morro');
-assert.equal((btr.match(/slot:[0-4],level:[0-4]/g)||[]).length,5,'Calen la base i quatre iteracions');
+assert(btr.includes('mesh.position.set(x,1.56,z)'),'Els fars han de tornar a la posició anterior');
+assert.equal((btr.match(/slot:[0-4],level:[0-4]/g)||[]).length,2,'La comparativa només ha de tenir base i low-poly');
+assert(btr.includes('LOD_RATIOS=[.18,.22,.27,.32]'),'El low-poly ha de conservar les reduccions acumulatives');
 assert(!btr.includes('repoPrecomputedLod'));
 assert(studio.includes("const btrStudy=config.id==='tanqueta'"));
-assert(studio.includes("slot.outer.hidden=btrStudy?false:slots.indexOf(slot)>3"),
- 'El BTR-82 necessita els cinc panells, sense modificar els altres vehicles');
+assert(studio.includes("slot.outer.hidden=btrStudy?slots.indexOf(slot)>1:slots.indexOf(slot)>3"),
+ 'El BTR-82 només ha de mostrar dos panells, sense modificar els altres vehicles');
 assert(html.includes('#grid.btr-study{grid-template-columns:repeat(2'));
-assert(html.includes('quatre simplificacions progressives')&&html.includes('rodes del camió'));
+assert(html.includes('Seleccionar peces')&&html.includes('btrSelectGroup')&&html.includes('btrCopySelection'));
+assert(studio.includes('createBtr82PartSelector')&&studio.includes('btrPartSelector.mark(slot,e)'));
+const selector=read('src/btr82-part-selector.mjs');
+assert(selector.includes('raycaster.intersectObjects')&&selector.includes('navigator.clipboard')&&selector.includes('EXPLICACIÓ:'));
+assert(btr.includes('withTruckWheels')&&btr.includes('replaceBarrelWithCylinders'));
+assert(!btr.includes('mesh.position.set(x,.54,z)'));
+
 for(const obsolete of ['src/btr82-aggressive-simplification.mjs',
  'src/btr82-upload-policy.mjs','tests/btr82-preview-runtime.mjs','tools/repair-btr82-materials.cjs'])
  assert(!fs.existsSync(path.join(root,obsolete)),'Obsolete BTR-82 generator left behind: '+obsolete);
@@ -84,6 +91,6 @@ for(const old of ['helicopters-lod-proves.html','apache-variants-proves.html',
  'assets/vehicle-candidates/helicopter-lods/manifest.json',
  'assets/vehicle-candidates/helicopter-lods/apache-hybrid-manifest.json'])
  assert(!fs.existsSync(path.join(root,old)),'Cal retirar el candidat obsolet: '+old);
-for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/streetfighter-25-geometry.mjs'])
+for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/btr82-part-selector.mjs','src/streetfighter-25-geometry.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
-console.log('PASS BTR-82 five-panel preview: new base plus four progressive surface LODs; protected headlights and gun; 3 Abrams');
+console.log('PASS BTR-82 two-panel annotated preview: base plus final LOD, original headlamps and extended gun; four selectable groups');
