@@ -18,6 +18,10 @@ Read `to-do.MD` before changing behavior, architecture, performance or old COOP 
 
 For performance work, follow `docs/PERFORMANCE_TESTING.md`. Establish a baseline, make one small extraction at a time, run the appropriate Node/parity tests and verify graphics and two-device behavior separately. Never delete generated runtime bundles, the pinned Three.js dependency or test assets merely because they are large; first prove that production and tests no longer need them.
 
+## Default 3D model testing interface
+
+The vehicle model lab `vehicles-externs-proves.html` is the default reusable interface for testing 3D model changes. Preserve the shared, non-destructive annotation editor in `src/vehicle-annotation-editor.mjs` across vehicle types and future models. Its workflows are: group/join parts, brush-paint regions to fill holes (including empty areas near boundaries), and mark faces/parts for deletion. Export copyable coordinates, model variant, mesh labels and instructions. Do not infer that annotation marks should directly change geometry, and do not restrict this editor to the BTR-82. Keep Alt-drag camera orbit and Alt-wheel zoom available while painting. Record validation gaps in `to-do.MD`, not a parallel backlog.
+
 ## Phase 2 tools
 
 Before bumping `GAME_VERSION`, update `src/version.mjs`, run `npm run sync:version`, then `npm run build`. `npm run check:build` must reject stale version stamps and generated bundles. Preserve the only runtime generation workflow at `.github/workflows/rebuild-runtime.yml`; do not reintroduce a second writer. For the reduced set of essential regressions use `npm test` (`npm run test:regression:once` is a compatibility alias), and `node tools/repository-audit.cjs` for a conservative dependency/preview inventory. HTML labs may have external URLs even when no source file links to them; never delete on graph reachability alone.
