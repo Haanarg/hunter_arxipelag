@@ -1,20 +1,20 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {createTruckModel} from './truck-model.mjs';
-// Low Poly BTR-82 by SIpriv (CC BY 4.0). Only two verified models in the
-// candidate page: Three.js 25% baseline and truck-wheel / barrel variant.
-export const BTR82_VERSION='base25-truck-wheels-cylinder-gun-v2';
-const URL='./assets/vehicle-candidates/tanqueta/';
+import {SimplifyModifier} from 'three/addons/modifiers/SimplifyModifier.js';
+// Low Poly BTR-82 by SIpriv (CC BY 4.0): base Three.js al 25%.
+ // El punt de partida de les quatre reduccions és la variant actual amb
+ // vuit rodes del camió A4.3 i canó negre cilíndric, NO el GLB original.
+export const BTR82_VERSION='base25-progressive-four-lods-v1';
+const ASSET_DIR='./assets/vehicle-candidates/tanqueta/';
+const BASE_FILE='btr82-base-100.glb';
 const CREDIT='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
-const MODELS=Object.freeze([
- {slot:1,file:'btr82-base-100.glb',triangles:5371,meshes:18,
-  title:'BTR-82 · base Three.js 25%',detail:'Transformació de 5.371 triangles, sense canvis'},
- {slot:2,file:'btr82-50-repaired.glb',triangles:4581,meshes:25,
-  title:'BTR-82 · rodes camió + canó cilíndric',detail:'Base Three.js 25% · vuit rodes A4.3 · canó negre nou, orientat endavant i unit a la torreta'}
+const PASSES=Object.freeze([
+ {slot:0,level:0,title:'Base · rodes A4.3 i canó nou',ratio:0},
+ {slot:1,level:1,title:'Iteració 1 · detalls fins',ratio:.18},
+ {slot:2,level:2,title:'Iteració 2 · superfícies',ratio:.22},
+ {slot:3,level:3,title:'Iteració 3 · xassís',ratio:.27},
+ {slot:4,level:4,title:'Iteració 4 · low-poly',ratio:.32}
 ]);
-const requiredRepairs=['BTR82_repair_olive_armour_repaired',
- 'BTR82_repair_olive_bevel_repaired','BTR82_repair_olive_inner_shell',
- 'BTR82_repair_black_barrel_protrudes_into_turret',
- 'BTR82_repair_headlight_housings_matte','BTR82_repair_headlight_lens_ivory'];
 // Les primeres vuit malles de la base 25% són les rodes, separades de la carrosseria.
 // Substitució no destructiva: no es toca cap triangle de casc, torreta o canó.
 function withTruckWheels(source){
@@ -86,6 +86,62 @@ function replaceBarrelWithCylinders(scene){
  scene.userData.btr82OriginalBarrelFacesRemoved=removed;
  return scene;
 }
+
+function installFourHeadlights(scene){
+ // Quatre fars frontals independents: la reducció de superfícies no els toca.
+ const housing=new THREE.MeshStandardMaterial({color:0x333b32,roughness:.88,metalness:.12});
+ const lens=new THREE.MeshStandardMaterial({color:0xffedb7,emissive:0x564621,roughness:.46,metalness:0});
+ for(const [i,x] of [-1.53,-1.06,1.06,1.53].entries()){
+  for(const [part,radius,length,z,mat] of [
+   ['housing',.154,.075,-5.045,housing],['lens',.112,.042,-5.098,lens]]){
+   const mesh=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,length,10),mat);
+   mesh.name='BTR82_front_headlight_'+(i+1)+'_'+part;
+   mesh.rotation.x=Math.PI/2;
+   mesh.position.set(x,1.56,z);
+   mesh.castShadow=true;mesh.receiveShadow=true;
+   scene.add(mesh);
+  }
+ }
+ scene.userData.btr82Headlights=4;
+ return scene;
+}
+function makeBaseline(original){
+ const base=installFourHeadlights(replaceBarrelWithCylinders(withTruckWheels(original)));
+ const lights=[];
+ base.traverse(o=>{if(o.name.endsWith('_lens')&&o.name.startsWith('BTR82_front_headlight_'))lights.push(o)});
+ if(lights.length!==4||!base.getObjectByName('BTR82_new_black_barrel'))
+  throw Error('Falten fars o el canó de la base de simplificació');
+ return base;
+}
+const LOD_SURFACES=new Set(['hull_material_0','hull_material_1','turret_material_3']);
+const modifier=new SimplifyModifier();
+async function reduceSurfaces(scene,removeFraction){
+ const result=scene.clone(true);
+ let before=0,after=0;
+ for(const name of LOD_SURFACES){
+  const mesh=result.getObjectByName(name);
+  if(!mesh?.isMesh)throw Error('Falta una superfície del blindat: '+name);
+  const input=mesh.geometry;
+  const n=input.index?.count??input.getAttribute('position').count;
+  const count=Math.floor(input.getAttribute('position').count*removeFraction);
+  before+=n/3;
+  if(count<3){after+=n/3;continue}
+  const simplified=await modifier.modify(input,count);
+  simplified.userData.candidateSimplified=true;
+  simplified.computeBoundingBox();
+  simplified.computeBoundingSphere();
+  const newTriangles=(simplified.index?.count??simplified.getAttribute('position').count)/3;
+  // No substituïm una superfície si el simplificador la deixa buida.
+  if(newTriangles<12||newTriangles>n/3){simplified.dispose();after+=n/3;continue}
+  mesh.geometry=simplified;
+  after+=newTriangles;
+ }
+ result.userData.btr82Reduction={before,after};
+ if(result.getObjectByName('BTR82_new_black_barrel')===undefined||
+    !result.getObjectByName('BTR82_front_headlight_4_lens'))
+  throw Error('La simplificació ha perdut un detall identificatiu');
+ return result;
+}
 function inspect(scene){
  let triangles=0,meshes=0;const names=new Set();
  scene.traverse(o=>{
@@ -110,50 +166,69 @@ function download(blob,name){
 export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurrent,notice}){
  let revision=0;
  const alive=(token,run)=>isCurrent(token)&&revision===run;
- function present(spec,blob,gltf,local=false){
-  const slot=slots[spec.slot],stats=inspect(gltf.scene);
-  if(spec.slot===1&&(stats.triangles!==spec.triangles||stats.meshes!==spec.meshes))
-   throw Error('GLB inesperat: '+stats.triangles+' triangles i '+stats.meshes+' malles');
-  if(false)for(const item of requiredRepairs)
-   if(!stats.names.has(item))throw Error('Falta '+item);
-  setModel(slot,gltf.scene,false,gltf.animations);
+ function present(spec,scene,local=false){
+  const slot=slots[spec.slot],stats=inspect(scene);
+  if(!stats.names.has('BTR82_new_black_barrel')||
+     !stats.names.has('BTR82_new_black_muzzle')||
+     ![1,2,3,4].every(i=>stats.names.has('BTR82_front_headlight_'+i+'_lens')))
+   throw Error('La variant '+spec.level+' ha perdut fars, torreta o canó');
+  setModel(slot,scene,false,[],true);
   slot.bold.textContent=spec.title;
-  slot.sub.textContent='SIpriv · CC BY 4.0 · '+spec.detail;
-  slot.source.href=CREDIT;slot.source.hidden=false;
-  slot.status.textContent=metrics(slot.model)+(local?' · importat localment':' · GLB verificat a GitHub');
-  slot.downloadBtr.hidden=spec.slot===2; // Variant construïda a Three.js: no descarregar el GLB base com si fos el resultat.
-  slot.downloadBtr.onclick=()=>download(blob,spec.file);
+  const delta=spec.level?' · '+Math.round(100*(1-stats.triangles/baselineTriangles))+'% menys triangles':' · punt de partida';
+  slot.sub.textContent='SIpriv · CC BY 4.0 · '+stats.triangles.toLocaleString('ca')+' △'+delta;
+  slot.source.href=CREDIT;slot.source.hidden=spec.slot===0;
+  slot.downloadBtr.hidden=true; // Models generats en memòria: no descarregar el GLB sense transformar.
+  slot.status.textContent=metrics(slot.model)+(local?' · importat':' · Three.js + meshoptimizer');
+  return stats.triangles;
+ }
+ let baselineTriangles=0;
+ async function renderFromSource(source,token,run,local=false){
+  const baseline=makeBaseline(source);
+  baselineTriangles=inspect(baseline).triangles;
+  if(!alive(token,run))return;
+  let previous=baseline,last=baselineTriangles;
+  present(PASSES[0],baseline,local);
+  for(const spec of PASSES.slice(1)){
+   if(!alive(token,run))return;
+   const slot=slots[spec.slot];
+   slot.status.textContent='Simplificant superfícies · iteració '+spec.level+' de 4…';
+   const next=await reduceSurfaces(previous,spec.ratio);
+   if(!alive(token,run))return;
+   const total=inspect(next).triangles;
+   if(total>last)throw Error('La iteració '+spec.level+' ha augmentat els triangles');
+   present(spec,next,local);
+   previous=next;last=total;
+  }
+  if(alive(token,run))notice.textContent=
+   'BTR-82: base amb vuit rodes A4.3, canó negre cap endavant i quatre fars, més quatre reduccions acumulatives de superfícies (meshoptimizer). Les xifres de triangles són reals. La tanqueta jugable no canvia.';
  }
  async function load(token){
   const run=++revision;
-  const results=await Promise.all(MODELS.map(async spec=>{
-   const slot=slots[spec.slot];
-   slot.status.textContent='Carregant '+spec.file+'…';
-   try{
-    const response=await fetch(URL+(spec.slot===2?'btr82-base-100.glb':spec.file)+'?rev='+BTR82_VERSION,{cache:'no-store'});
-    if(!response.ok)throw Error('HTTP '+response.status+' ('+spec.file+')');
-    const blob=await check(await response.blob());
-    const gltf=await loadUploadedGlb(blob);
-    if(!alive(token,run))return false;
-    if(spec.slot===2)gltf.scene=replaceBarrelWithCylinders(withTruckWheels(gltf.scene));
-    present(spec,blob,gltf);return true;
-   }catch(error){
-    if(alive(token,run))slot.status.textContent='Error GLB: '+(error?.message||String(error));
-    return false;
+  for(const spec of PASSES)slots[spec.slot].status.textContent='Preparant BTR-82…';
+  try{
+   const response=await fetch(ASSET_DIR+BASE_FILE+'?rev='+BTR82_VERSION,{cache:'no-store'});
+   if(!response.ok)throw Error('HTTP '+response.status);
+   const blob=await check(await response.blob());
+   const gltf=await loadUploadedGlb(blob);
+   if(alive(token,run))await renderFromSource(gltf.scene,token,run);
+  }catch(error){
+   if(alive(token,run)){
+    const detail=error?.message||String(error);
+    notice.textContent='No s’ha pogut completar la comparació: '+detail;
+    for(const spec of PASSES)if(!slots[spec.slot].model)
+     slots[spec.slot].status.textContent='Error: '+detail;
    }
-  }));
-  if(alive(token,run))notice.textContent=results.every(Boolean)?
-   'Comparador BTR-82: base Three.js al 25% (5.371 triangles) i variant amb vuit rodes del camió A4.3 i canó negre cilíndric orientat cap endavant, connectat a la torreta. Sense reduccions noves ni canvis a la tanqueta jugable.':
-   'No s’han pogut carregar els dos GLB. Recarrega el visor o comprova el desplegament.';
+  }
  }
  async function importGlb(blob,token,slotIndex){
-  const spec=MODELS.find(m=>m.slot===slotIndex);if(!spec)return;
-  const run=revision;
+  if(!PASSES.some(p=>p.slot===slotIndex))return;
+  const run=++revision;
   try{
-   await check(blob);const gltf=await loadUploadedGlb(blob);
-   if(alive(token,run)){if(spec.slot===2)gltf.scene=withTruckWheels(gltf.scene);present(spec,blob,gltf,true)}
+   await check(blob);
+   const gltf=await loadUploadedGlb(blob);
+   if(alive(token,run))await renderFromSource(gltf.scene,token,run,true);
   }catch(e){
-   if(alive(token,run))slots[slotIndex].status.textContent='Error GLB: '+(e?.message||String(e));
+   if(alive(token,run))notice.textContent='Error en importar la base: '+(e?.message||String(e));
   }
  }
  return {load,importGlb};
