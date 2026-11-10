@@ -7,7 +7,7 @@ import {applyBtr82PaintAnnotations} from './btr82-painted-hole-repair.mjs';
 // Low Poly BTR-82 by SIpriv (CC BY 4.0): base Three.js al 25%.
  // El punt de partida de les quatre reduccions és la variant actual amb
  // vuit rodes del camió A4.3 i canó negre cilíndric, NO el GLB original.
-export const BTR82_VERSION='btr82-paint-guided-stitch-v6';
+export const BTR82_VERSION='btr82-annotated-top-rear-v7';
 const ASSET_DIR='./assets/vehicle-candidates/tanqueta/';
 const BASE_FILE='btr82-base-100.glb';
 const CREDIT='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
@@ -249,9 +249,10 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
   const preciseRemoved=preciseCleanup.reduce((sum,item)=>sum+item.triangles,0);
   slots[1].status.textContent+=' · '+repairs+' · '+cleanup.triangles+' △ frontals + '+preciseRemoved+' △ marcats eliminats'
    +' · pintats: '+painted.bridges+' unions / '+painted.unresolved.length+' zones pendents'
-   +' · detall posterior: '+painted.removed+' △ retirats';
+   +' · detall posterior: '+painted.removed+' △ retirats'
+   +' · peces superiors: '+painted.upperRemoved+' △ retirats';
   if(alive(token,run))notice.textContent=
-   'BTR-82: original de treball intacte. Al low-poly, els sis punts del grup 1 defineixen una única peça trapezoidal de dos triangles per cobrir l’obertura superior posterior. El grup 2 conserva les unions locals anteriors dels baixos. S’han mantingut les 88 eliminacions frontals prèvies; s’han retallat també, només al low-poly, els components petits independents corresponents a les 43 marques noves. Les superfícies grans del blindatge i la torreta es protegeixen per dimensions. Les 15 anotacions noves s’han incorporat al low-poly: eliminació local de detall posterior només si és independent; costures de forats limitades a vores reals coincidents, sense planxes flotants. El visor mostra les unions creades i les zones pendents de revisar. Activa l’editor per continuar-hi treballant.';
+   'BTR-82: original de treball intacte. Al low-poly, els sis punts del grup 1 defineixen una única peça trapezoidal de dos triangles per cobrir l’obertura superior posterior. El grup 2 conserva les unions locals anteriors dels baixos. S’han mantingut les 88 eliminacions frontals prèvies; s’han retallat també, només al low-poly, els components petits independents corresponents a les 43 marques noves. Les superfícies grans del blindatge i la torreta es protegeixen per dimensions. Les 15 anotacions anteriors i les 6 noves s’han incorporat al low-poly: eliminació local de detall posterior només si és independent; costures de forats limitades a vores reals coincidents, sense planxes flotants. El visor mostra les unions creades, les peces superiors retirades i les zones pendents de revisar. Activa l’editor per continuar-hi treballant.';
  }
  async function load(token){
   const run=++revision;
