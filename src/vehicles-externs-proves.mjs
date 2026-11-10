@@ -110,7 +110,7 @@ for(let i=0;i<5;i++){
 }
 let currentType=CATALOG[0],generation=0,originalDims=new THREE.Vector3(3,2,5);
 const vehicleEditor=createVehicleAnnotationEditor({slots,getType:()=>currentType.id});
-let yaw=.60,elev=.32,zoom=1,lookY=.6;
+let yaw=.60,elev=.32,zoom=1,lookY=.6,defaultLookY=.6;
 let prev=performance.now();
 let btrStudioPromise=null;
 function getBtrStudio(){
@@ -333,7 +333,8 @@ async function choose(config){
 }
 function updateCamera(){
  const size=Math.max(originalDims.x,originalDims.z,originalDims.y*.85,3);
- const distance=size*1.85*zoom+3;
+ // Zoom de precisió: sense el sòcol fix de +3 m que impedia apropar-se.
+  const distance=Math.max(.35,size*1.85*zoom+.35);
  for(const slot of slots){
    const rect=slot.viewport.getBoundingClientRect();
    if(rect.height<=0||rect.width<=0)continue;
@@ -394,9 +395,11 @@ function applyView(id){
  updateCamera();
 }
 document.querySelectorAll('[data-view]').forEach(btn=>btn.addEventListener('click',()=>applyView(btn.dataset.view)));
-document.querySelector('#zoom-in').addEventListener('click',()=>{zoom=Math.max(.27,zoom*.78);updateCamera()});
+document.querySelector('#zoom-in').addEventListener('click',()=>{zoom=Math.max(.025,zoom*.78);updateCamera()});
 document.querySelector('#zoom-out').addEventListener('click',()=>{zoom=Math.min(7,zoom*1.28);updateCamera()});
-document.querySelector('#zoom-reset').addEventListener('click',()=>{zoom=1;updateCamera()});
+document.querySelector('#zoom-reset').addEventListener('click',()=>{zoom=1;lookY=defaultLookY;updateCamera()});
+document.querySelector('#pan-up').addEventListener('click',()=>{lookY+=Math.max(.025,zoom*.30);updateCamera()});
+document.querySelector('#pan-down').addEventListener('click',()=>{lookY-=Math.max(.025,zoom*.30);updateCamera()});
 document.querySelector('#fitScale').addEventListener('change',()=>choose(currentType));
 document.querySelector('#showGrid').addEventListener('change',e=>{for(const s of slots){s.lines.visible=e.target.checked;s.person.visible=e.target.checked}});
 const drag=new Map(),pointerStarts=new Map(),paintPointers=new Set();
@@ -405,7 +408,7 @@ slots.forEach(slot=>{
   slot.viewport.setPointerCapture(e.pointerId);
   drag.set(e.pointerId,[e.clientX,e.clientY]);
   pointerStarts.set(e.pointerId,[e.clientX,e.clientY]);
-  if(vehicleEditor.active()&&!e.altKey&&e.button===0){
+  if(vehicleEditor.active()&&!e.altKey&&!e.shiftKey&&e.button===0){
    paintPointers.add(e.pointerId);
    vehicleEditor.begin(slot,e);
   }
@@ -414,8 +417,16 @@ slots.forEach(slot=>{
   if(!drag.has(e.pointerId))return;
   if(paintPointers.has(e.pointerId)){vehicleEditor.move(slot,e);return}
   const old=drag.get(e.pointerId);drag.set(e.pointerId,[e.clientX,e.clientY]);
-  yaw-=(e.clientX-old[0])*.012;
-  elev=Math.max(.03,Math.min(1.51,elev+(e.clientY-old[1])*.008));
+  if(e.shiftKey||(e.buttons&2)){
+   // Desplaçar verticalment la vista sense girar el vehicle; precisió
+   // proporcional al zoom (més lent quan el model és molt a prop).
+   const size=Math.max(originalDims.x,originalDims.z,originalDims.y*.85,3);
+   const distance=Math.max(.35,size*1.85*zoom+.35);
+   lookY+=(e.clientY-old[1])*distance*.0017;
+  }else{
+   yaw-=(e.clientX-old[0])*.012;
+   elev=Math.max(.03,Math.min(1.51,elev+(e.clientY-old[1])*.008));
+  }
   updateCamera();
  });
  slot.viewport.addEventListener('pointerup',e=>{
@@ -430,7 +441,7 @@ slots.forEach(slot=>{
  slot.viewport.addEventListener('wheel',e=>{
   if(!e.altKey)return;
   e.preventDefault();
-  zoom=Math.max(.27,Math.min(7,zoom*(e.deltaY>0?1.12:.89)));
+  zoom=Math.max(.025,Math.min(7,zoom*(e.deltaY>0?1.12:.89)));
   updateCamera();
  },{passive:false});
 });
