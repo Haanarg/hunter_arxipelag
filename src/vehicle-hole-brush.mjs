@@ -109,7 +109,7 @@ export function closeHoleUnderBrush(target){
   if(name==='position')continue;
   const old=geo.getAttribute(name),values=Array.from(old.array);
   for(const v of target.path){
-   for(let i=0;i<old.itemSize;i++)values.push(i===3?1:old.getX?old.getX(v.i):0);
+   for(let i=0;i<old.itemSize;i++)values.push(old.array[v.i*old.itemSize+i]);
   }
   geo.setAttribute(name,new THREE.Float32BufferAttribute(values,old.itemSize));
  }
