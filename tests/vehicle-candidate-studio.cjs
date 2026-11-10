@@ -42,7 +42,7 @@ for(const id of ['tanc','tanqueta']){
 assert(studio.includes("entry.provider==='sketchfab'")&&studio.includes("frame.src='https://sketchfab.com/models/'"),
  'El preview ha de mostrar els models reals amb el visor oficial Sketchfab');
 assert(studio.includes('slot.sourceFrame.remove()'),'El visor anterior s’ha de destruir quan es canvia de categoria');
-assert(html.includes('M1A1 Abrams')&&html.includes('Low Poly BTR 82'),
+assert(html.includes('M1A1 Abrams')&&html.includes('BTR-82'),
  'Cal explicar el BTR-82 seleccionat al preview');
 assert.equal(manifest.selectedForLod?.tanqueta?.activePreviewModels,2);
 assert.equal(manifest.selectedForLod.tanqueta.original.triangles,5371);
