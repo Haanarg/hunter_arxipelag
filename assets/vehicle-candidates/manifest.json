@@ -8,41 +8,6 @@
     "maxTotalBytes": 134217728
   },
   "models": {
-    "bici": [
-      {
-        "slot": 1,
-        "id": "38013",
-        "title": "Track Bicycle (Upright) (Velodrome and Track Cycling)",
-        "bytes": 22724,
-        "triangles": 412,
-        "file": "bici/1-velodrome-and-track-cycling-track-bicycle-upright-12525f51.glb",
-        "url": "https://3dassets.dev/assets/velodrome-and-track-cycling-track-bicycle-upright-12525f51",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/38013/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 2,
-        "id": "29030",
-        "title": "Bicycle (Pixel Modern City Street)",
-        "bytes": 13292,
-        "triangles": 224,
-        "file": "bici/2-pixel-modern-city-street-bicycle-ecfb4c16.glb",
-        "url": "https://3dassets.dev/assets/pixel-modern-city-street-bicycle-ecfb4c16",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/29030/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 3,
-        "id": "36561",
-        "title": "Bicycle with Carrier (Indian Bazaar Street and Temple)",
-        "bytes": 54760,
-        "triangles": 1076,
-        "file": "bici/3-indian-bazaar-street-and-temple-bicycle-with-carrier-9d979e52.glb",
-        "url": "https://3dassets.dev/assets/indian-bazaar-street-and-temple-bicycle-with-carrier-9d979e52",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/36561/v1/model.glb",
-        "license": "CC0-1.0"
-      }
-    ],
     "cotxe_civil": [
       {
         "slot": 1,
