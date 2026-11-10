@@ -5,16 +5,18 @@ import {repairMarkedRearSeams} from './btr82-rear-seam-repair.mjs';
 import {removeBtr82AnnotatedDetails} from './btr82-annotated-detail-removal.mjs';
 import {applyBtr82PaintAnnotations} from './btr82-painted-hole-repair.mjs';
 import {applyBtr82ConfirmedRepairs} from './btr82-confirmed-repairs.mjs';
+import {makeBtr82HullV1} from './btr82-hull-v1.mjs';
 // Low Poly BTR-82 by SIpriv (CC BY 4.0): base Three.js al 25%.
  // El punt de partida de les quatre reduccions és la variant actual amb
  // vuit rodes del camió A4.3 i canó negre cilíndric, NO el GLB original.
-export const BTR82_VERSION='btr82-confirmed-brush-replay-v9';
+export const BTR82_VERSION='btr82-symmetric-closed-hull-v1';
 const ASSET_DIR='./assets/vehicle-candidates/tanqueta/';
 const BASE_FILE='btr82-base-100.glb';
 const CREDIT='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
 const PASSES=Object.freeze([
  {slot:0,level:0,title:'Original · base aprovada',ratio:0},
- {slot:1,level:4,title:'Low-poly · iteració 4',ratio:.32}
+ {slot:1,level:1,title:'Casc nou v1 · simètric',ratio:0},
+ {slot:2,level:4,title:'Low-poly anterior · referència',ratio:.32}
 ]);
 const LOD_RATIOS=[.18,.22,.27,.32];
 // Les primeres vuit malles de la base 25% són les rodes, separades de la carrosseria.
@@ -232,31 +234,41 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
   if(!alive(token,run))return;
   let previous=baseline,last=baselineTriangles;
   present(PASSES[0],baseline,local);
+  const clean=makeBtr82HullV1(baseline);
+  present(PASSES[1],clean,local);
+  const v1=clean.userData.btr82HullV1;
+  slots[1].status.textContent+=' · casc '+v1.hullTriangles+' △ · torreta '+v1.turretTriangles+' △ · 8 rodes i canó conservats';
   for(const [i,ratio] of LOD_RATIOS.entries()){
    if(!alive(token,run))return;
-   slots[1].status.textContent='Calculant low-poly · pas '+(i+1)+' de 4…';
+   slots[2].status.textContent='Calculant referència anterior · pas '+(i+1)+' de 4…';
    const next=await reduceSurfaces(previous,ratio);
    if(!alive(token,run))return;
    const total=inspect(next).triangles;
    if(total>last)throw Error('La reducció '+(i+1)+' ha augmentat els triangles');
    previous=next;last=total;
   }
+  // Conservem la versió antiga com a comparativa; si una reparació antiga
+  // falla, NO bloquegem la presentació del casc nou de la targeta central.
+  try {
   const joinedGroups=repairMarkedRearSeams(previous);
   const cleanup=removeMarkedFrontDetails(previous);
   const preciseCleanup=removeBtr82AnnotatedDetails(previous);
   const painted=applyBtr82PaintAnnotations(previous);
   const confirmed=applyBtr82ConfirmedRepairs(previous);
-  present(PASSES[1],previous,local);
+  present(PASSES[2],previous,local);
   const repairs=joinedGroups.map(g=>g.group===1?'coberta superior: 1 trapezi (2 triangles)':'baixos: '+g.bridges+' unions locals').join(' · ');
   const preciseRemoved=preciseCleanup.reduce((sum,item)=>sum+item.triangles,0);
-  slots[1].status.textContent+=' · '+repairs+' · '+cleanup.triangles+' △ frontals + '+preciseRemoved+' △ marcats eliminats'
+  slots[2].status.textContent+=' · '+repairs+' · '+cleanup.triangles+' △ frontals + '+preciseRemoved+' △ marcats eliminats'
    +' · costures locals: '+painted.bridges+' / '+painted.unresolved.length+' grups pendents'
    +' · detall posterior: '+painted.removed+' △ retirats'
    +' · peces superiors: '+painted.upperRemoved+' △ retirats'
    +' · pinzell desat: '+confirmed.applied+'/'+confirmed.requested+' accions, +'+confirmed.triangles+' △'
    +' · '+confirmed.skipped.length+' accions sense correspondència segura';
+  }catch(error){
+   slots[2].status.textContent='Low-poly antic no disponible: '+(error?.message||String(error));
+  }
   if(alive(token,run))notice.textContent=
-   'BTR-82: original de treball intacte. Al low-poly, els sis punts del grup 1 defineixen una única peça trapezoidal de dos triangles per cobrir l’obertura superior posterior. El grup 2 conserva les unions locals anteriors dels baixos. S’han mantingut les 88 eliminacions frontals prèvies; s’han retallat també, només al low-poly, els components petits independents corresponents a les 43 marques noves. Les superfícies grans del blindatge i la torreta es protegeixen per dimensions. Les anotacions anteriors i les 49 noves s’han incorporat al low-poly: eliminació local de detall posterior només si és independent; costures de forats limitades a vores reals coincidents, sense planxes flotants. Les 18 reparacions confirmades pel pinzell es tornen a cercar per contorn i només s’apliquen si encaixen; les 5 anotacions pendents es conserven com a referència. Les costures locals no garanteixen el tancament complet d’un forat gran. El visor mostra les unions creades, les peces superiors retirades i les zones que continuen pendents de revisar. Activa l’editor per continuar-hi treballant.';
+   'BTR-82 · PROTOTIP CASC V1: la targeta central és una reconstrucció geomètrica nova, tancada i simètrica de casc i torreta. Es mantenen sense modificar les vuit rodes, el canó cilíndric negre i els quatre fars. Sense pintures ni reparacions sobre el casc nou. La targeta dreta conserva el low-poly anterior com a referència per comparar proporcions. Encara cal validar visualment la silueta i l’encaix de la torreta; no és el model definitiu del joc.';
  }
  async function load(token){
   const run=++revision;
