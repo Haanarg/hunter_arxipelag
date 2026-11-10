@@ -1,3 +1,12 @@
+**P1 · 2026-11-10 · regressió BTR-82: restaurar casc i sentit del canó:**
+- [x] Eliminades completament les planxes frontals i posteriors artificials de la variant anterior.
+- [x] Restaurats tots els 2.556 triangles superficials del casc de la base de 5.371, més els 44 triangles de folre interior originals; les proves comparen les cares geomètriques per evitar regressions de forats.
+- [x] Canó negre amb boca més gruixuda orientat cap al frontal real (−Z) i no cap al darrere (+Z).
+- [x] Conservades les 8 rodes refinades, 144 triangles cadascuna, i reorientats els fars auxiliars cap al frontal real.
+- [x] Nou GLB de 4.199 triangles / 13 malles / 147.776 bytes. El visor manté només original i corregit; cap canvi al model jugable.
+- [ ] Validar visualment el casc i la torreta al Chrome Android després del desplegament públic.
+- [ ] Integrar al joc SOLO/COOP després de validar el GLB i els pivots de rodes/canó.
+
 **P1 · 2026-11-10 · BTR-82 escollit: façanes simètriques, canó negre i rodes:**
 - [x] Davant i darrere amb panells simètrics a X=0 i blindatge central fosc, comprovats geomètricament.
 - [x] Canó cilíndric negre prim (radi 0,065) i tram final més gruixut (radi 0,096), una sola malla.

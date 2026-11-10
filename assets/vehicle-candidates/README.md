@@ -1,36 +1,47 @@
-# Tanqueta BTR-82 · simetria, canó, rodes i optimització (10 novembre 2026)
+# BTR-82: restauració de la silueta del casc i del canó (10 novembre 2026)
 
-La pàgina de proves conserva **només dos GLB**:
+## Correcció de regressions
 
-| Versió | Triangles | Malles | Bytes |
+El refinament anterior havia incorporat grans planxes **planes, superposades i
+mal orientades** als dos extrems. A més, el tub del canó s'havia dibuixat cap
+a **+Z**, quan el frontal real del BTR-82 i el canó de la geometria d'origen
+estan orientats a **−Z**.
+
+Aquesta versió **elimina del tot** les planxes artificials i reconstrueix el
+casc usant els vuit grups originals del GLB de referència
+`btr82-base-100.glb`. Preserva els seus **2.556 triangles exactes** de
+superfície i hi manté els **44 triangles** del folre interior ja existents
+(per cobrir buits). No s'ha realitzat cap decimació addicional al casc.
+
+La torreta escollida es manté (303 triangles), sense el canó gris antic.
+El canó negre cilíndric (96 triangles) està ara orientat cap a **−Z**:
+tub de radi **0,065 m** i boca de radi **0,096 m**. Les vuit rodes
+independents conserven el detall millorat (144 triangles per roda, llanta,
+cub i pneumàtic tancat). Els dos fars auxiliars que s'havien posat a
+l'extrem equivocat s'han reorientat cap al frontal real, preservant el
+mateix material opac de les lents.
+
+## Resultats
+
+| Model de comparació | Triangles | Malles | GLB |
 |---|---:|---:|---:|
-| Base de referència | 5.371 | 18 | 428.172 |
-| **50% escollit refinat** | **4.253** | **12** | **148.760** |
+| Base de referència | 5.371 | 18 | `btr82-base-100.glb` |
+| **Versió restaurada** | **4.199** | **13** | `btr82-50-repaired.glb` |
 
-S'ha refet la cara anterior i posterior amb parells de planxes
-**simètriques respecte a X=0**, i un panell central fosc
-centrat explícitament als dos extrems. S'ha substituït la
-geometria d'un antic fragment de canó per **un tub negre cilíndric
-prim** (radi 0,065 m) i **una boca més ampla** (radi 0,096 m),
-agrupats en una única malla.
+El GLB restaurat pesa **147.776 bytes**. El nombre de malles puja de 12
+a 13 respecte de la versió incorrecta perquè els fars tenen la seva
+carcassa independent, però queda molt per sota de les 23 malles de la
+reparació inicial. No s'ha introduït cap atles UV que torni a mostrar
+colors estranys.
 
-Les vuit rodes són **geometries tancades independents**, cadascuna
-amb dotze facetes, pneumàtic bisellat, llanta metàl·lica i cub
-central; 144 triangles per roda. Se n'ha recuperat el detall
-anterior sense tornar a crear rodes buides ni UV corruptes.
+Les proves automatitzades comparen les coordenades de **cada triangle
+del casc de la base** amb el GLB restaurat, verifiquen el sentit del canó
+i de la boca, les vuit rodes, els fars i el SHA256 del model. La
+comprovació visual final s'ha fet amb vistes anterior, posterior,
+lateral i perspectives mitjançant VTK.
 
-**Optimització:** s'han fusionat les peces del casc amb colors per
-vèrtex (`COLOR_0`), mantenint-ne els diferents colors militars en
-**una sola malla**. Les malles totals passen de **23 a 12** (-47,8%)
-i la mida del GLB de 175.632 a 148.760 bytes (-15,3%). Els triangles
-pugen de 3.671 a 4.253 (+15,9%) per tornar a donar volum a les rodes,
-però són un 20,8% menys que els 5.371 de la base.
-
-La geometria s'ha revisat amb renderitzacions VTK de davant, darrere,
-costat i perspectives. Les proves del repositori comproven els dos
-panells centrals de debò (coordenades i colors), les rodes, el canó
-negre, els malles, els bytes i el SHA256. **No s'ha modificat la
-tanqueta jugable** ni la seva física, hitboxes o IA.
-
-Font: **Low Poly BTR 82**, SIpriv, **CC BY 4.0**:
+**Font i llicència:** Low Poly BTR 82 de SIpriv · CC BY 4.0
 https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5
+
+La tanqueta jugable NO ha canviat. El comparador manté només els dos
+models i carrega la versió nova automàticament.

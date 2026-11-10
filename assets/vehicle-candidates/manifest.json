@@ -223,14 +223,14 @@
         "triangles": 21500,
         "license": "CC BY 4.0",
         "url": "https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5",
-        "note": "Només dues versions al visor: base 5.371 triangles/18 malles i 50% refinat 4.253 triangles/12 malles amb extrems simètrics i la part fosca centrada, canó negre cilíndric, rodes arrodonides i quatre fars.",
+        "note": "Dues variants: base 5.371/18 i BTR-82 reparat 4.199 triangles/13 malles. Retirades les planxes planes del davant/darrere; recuperats tots els triangles originals del casc; canó negre cap al frontal (-Z), vuit rodes de 12 facetes i dos fars auxiliars reorientats cap al frontal.",
         "provider": "sketchfab",
         "slot": 1
       }
     ]
   },
   "lastCurated": "2026-11-08",
-  "curationNotes": "2026-11-10: Refinat el BTR-82 escollit: dos extrems simètrics amb panell fosc centrat, canó negre prim i boca més ampla, vuit rodes de 12 facetes amb llanta i cub. Material batching de 23 a 12 malles (48% menys). Nou GLB 148.760 bytes; 4.253 triangles. Base de 5.371 triangles intacta.",
+  "curationNotes": "2026-11-10: restaurat casc autèntic del BTR-82: preservats tots els 2.556 triangles dels vuit grups de casc de la base de 5.371 més 44 triangles de folre interior, sense panells falsament simètrics que causaven forats. Canó negre orientat -Z, fins a z=-3.60; 8 rodes originals refinades de 144 triangles. Total 4.199 triangles, 13 malles, 147.776 bytes. Original 5.371 intacte.",
   "selectedForLod": {
     "tanqueta": {
       "modelId": "6226acae68424d99bf03882b245ff7c5",
@@ -249,18 +249,30 @@
       },
       "selected": {
         "file": "tanqueta/btr82-50-repaired.glb",
-        "triangles": 4253,
-        "meshes": 12,
-        "bytes": 148760,
-        "derivedFrom": "Selected second-generation 50% with repaired hull, symmetric front and rear dark centred armour, thin black barrel with wider muzzle, 12-sided inset wheel rims and hubs",
-        "sha256": "1ed1a2c58c00378c78ba5ead13a310000de496799a15d4044d9a29fae91566e7",
+        "triangles": 4199,
+        "meshes": 13,
+        "bytes": 147776,
+        "derivedFrom": "Original 5,371-triangle hull + 303-triangle turret of chosen 50% + eight existing detailed 144-triangle wheels + forward black gun and two correctly front-facing auxiliary headlamps",
+        "sha256": "fd8b42095ef030cf6d055074ab342a953d1129b31cbc606061509ceb2a4e1ee1",
+        "repairedHull": {
+          "source": "tanqueta/btr82-base-100.glb",
+          "unchangedOriginalHullTriangles": 2556,
+          "extraInteriorLinerTriangles": 44,
+          "noArtificialSymmetricCaps": true
+        },
+        "gun": {
+          "direction": "-Z",
+          "black": true,
+          "thinRadius": 0.065,
+          "muzzleRadius": 0.096
+        },
         "optimized": {
-          "previousTriangles": 3671,
-          "previousMeshes": 23,
-          "previousBytes": 175632,
-          "newTriangles": 4253,
-          "newMeshes": 12,
-          "newBytes": 148760,
+          "previousTriangles": 4253,
+          "previousMeshes": 12,
+          "previousBytes": 148760,
+          "newTriangles": 4199,
+          "newMeshes": 13,
+          "newBytes": 147776,
           "independentWheelMeshes": 8
         }
       },
