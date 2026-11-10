@@ -116,23 +116,50 @@ function stitchGeometry(mesh,strokes){
 function removeSmallRearDetail(scene){
  const mesh=scene.getObjectByName('hull_material_1');
  if(!mesh?.isMesh||!mesh.geometry?.index)return {removed:0,reason:'malla no disponible'};
- const center=[-.793,1.973,5.128],geo=mesh.geometry;
+ const target=[-.793,1.973,5.128],geo=mesh.geometry;
  const pos=geo.getAttribute('position'),idx=geo.index;
- const original=[],removed=[];
- for(let i=0;i<idx.count;i+=3){
-  const ids=[idx.getX(i),idx.getX(i+1),idx.getX(i+2)];
-  const points=ids.map(j=>[pos.getX(j),pos.getY(j),pos.getZ(j)]);
-  const p=[0,1,2].map(k=>points.reduce((v,x)=>v+x[k],0)/3);
-  const near=dist(p,center)<.16&&p[1]>1.88&&p[1]<2.06&&p[2]>4.91&&p[2]<5.35;
-  (near?removed:original).push(...ids);
+ const count=pos.count,parent=new Int32Array(count);
+ for(let i=0;i<count;i++)parent[i]=i;
+ function root(i){while(parent[i]!==i){parent[i]=parent[parent[i]];i=parent[i]}return i}
+ function join(i,j){i=root(i);j=root(j);if(i!==j)parent[j]=i}
+ const welded=new Map();
+ for(let i=0;i<count;i++){
+  const p=[pos.getX(i),pos.getY(i),pos.getZ(i)],k=key(p);
+  if(welded.has(k))join(i,welded.get(k));else welded.set(k,i);
  }
- // Guardar el tros de carrósseria: només retallar quan és un detall petit.
- if(removed.length<3||removed.length>48||original.length<60)
-  return {removed:0,reason:'selecció no segura'};
- const cleaned=geo.clone();cleaned.setIndex(original);
+ for(let i=0;i<idx.count;i+=3){
+  const a=idx.getX(i),b=idx.getX(i+1),c=idx.getX(i+2);
+  join(a,b);join(b,c);
+ }
+ const comps=new Map();
+ for(let i=0;i<idx.count;i+=3){
+  const ids=[idx.getX(i),idx.getX(i+1),idx.getX(i+2)],group=root(ids[0]);
+  const entry=comps.get(group)||{faces:[],points:[],min:[Infinity,Infinity,Infinity],max:[-Infinity,-Infinity,-Infinity]};
+  entry.faces.push(i);
+  const vertices=ids.map(j=>[pos.getX(j),pos.getY(j),pos.getZ(j)]);
+  entry.points.push([0,1,2].map(k=>vertices.reduce((sum,p)=>sum+p[k],0)/3));
+  for(const p of vertices)for(let k=0;k<3;k++){
+   entry.min[k]=Math.min(entry.min[k],p[k]);entry.max[k]=Math.max(entry.max[k],p[k]);
+  }
+  comps.set(group,entry);
+ }
+ const selected=[];
+ for(const c of comps.values()){
+  const span=c.min.map((n,i)=>c.max[i]-n);
+  if(c.faces.length>14||span[0]>.36||span[1]>.28||span[2]>.40)continue;
+  if(c.points.some(p=>dist(p,target)<.17))selected.push(...c.faces);
+ }
+ if(!selected.length)return {removed:0,reason:'cap component independent prou petit'};
+ const remove=new Set(selected),kept=[];
+ for(let i=0;i<idx.count;i+=3){
+  if(remove.has(i))continue;
+  kept.push(idx.getX(i),idx.getX(i+1),idx.getX(i+2));
+ }
+ if(kept.length<60)return {removed:0,reason:'massa geometria afectada'};
+ const cleaned=geo.clone();cleaned.setIndex(kept);
  cleaned.computeBoundingBox();cleaned.computeBoundingSphere();
  cleaned.userData.candidateSimplified=true;mesh.geometry=cleaned;
- return {removed:removed.length/3};
+ return {removed:selected.length};
 }
 export function applyBtr82PaintAnnotations(scene){
  const removal=removeSmallRearDetail(scene);
