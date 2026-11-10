@@ -57,7 +57,7 @@ assert(btr.includes('SimplifyModifier')&&btr.includes('reduceSurfaces')&&btr.inc
 assert(!btr.includes('sealArmourPanels')&&!btr.includes('BTR82_sealed_side_cover_')&&!btr.includes('BTR82_unified_rear_upper_cover')&&!btr.includes('BTR82_unified_rear_underside'), 'No han de tornar els tancaments artificials');
 assert(btr.includes("addCylinder('BTR82_new_black_barrel',.085,2.90,-1.91)"));
 assert(btr.includes('mesh.position.set(x,1.56,z)'),'Els fars han de tornar a la posició anterior');
-assert.equal((btr.match(/slot:[0-4],level:[0-4]/g)||[]).length,3,'La comparativa ha de tenir base, casc nou i low-poly antic');
+assert.equal((btr.match(/slot:[0-4],level:[0-4]/g)||[]).length,3,'Comparativa: original, v2 i v1');
 assert(btr.includes('LOD_RATIOS=[.18,.22,.27,.32]'),'El low-poly ha de conservar les reduccions acumulatives');
 assert(!btr.includes('repoPrecomputedLod'));
 assert(studio.includes("const btrStudy=config.id==='tanqueta'"));
@@ -69,14 +69,26 @@ assert(hullV1.includes('BTR82_HULL_V1_STATIONS')&&hullV1.includes('createBtr82Cl
 assert(hullV1.includes('makeBtr82HullV1')&&hullV1.includes('BTR82_v1_symmetrical_closed_hull'));
 assert(hullV1.includes('BTR82_v1_symmetrical_turret')&&hullV1.includes('keepNode(node)'));
 assert(hullV1.includes('wheels.length!==8||guns.length!==2||headlights.length!==4'));
-assert(btr.includes('const clean=makeBtr82HullV1(baseline)'));
-assert(btr.includes('present(PASSES[1],clean,local)')&&btr.includes('present(PASSES[2],previous,local)'));
+assert(btr.includes('const previous=makeBtr82HullV1(baseline)'));
+assert(btr.includes('const angular=makeBtr82HullV2(baseline)'));
+const hullV2=read('src/btr82-hull-v2.mjs');
+assert(hullV2.includes('BTR82_HULL_V2_STATIONS')&&hullV2.includes('createBtr82HullV2Geometry'));
+assert(hullV2.includes('createBtr82TurretV2Geometry')&&hullV2.includes('makeBtr82HullV2'));
+assert(hullV2.includes('flatShading:true')&&hullV2.includes('BTR82_v2_aggressive_symmetric_hull'));
+assert(hullV2.includes('BTR82_v2_angular_turret')&&hullV2.includes('retainedWheels:wheels.length'));
+assert(hullV2.includes('roofHeight:1.87')&&hullV2.includes('hullBottom:.39'));
+assert(hullV2.includes('wheels.length!==8||gun.length!==2'),'La v2 ha de conservar les rodes i el canó');
+assert(btr.includes('present(PASSES[1],angular,local)')&&btr.includes('present(PASSES[2],previous,local)'));
+const currentRender=btr.slice(btr.indexOf('async function renderFromSource'),btr.indexOf('async function load'));
 assert(html.includes('casc nou v1')&&html.includes('tres targetes'));
 
 assert(html.includes('Editor de marques 3D')&&html.includes('btrSelectGroup')&&html.includes('btrCopySelection')&&html.includes('btrSelectMode'));
 assert(html.includes('Tapar forats (clic)')&&html.includes('Eliminar peces'));
 assert(html.includes('Verd')&&html.includes('blau')&&html.includes('Desfer última acció'));
-assert(html.includes('btr82-new-closed-hull-v1'));
+assert(html.includes('btr82-angular-low-hull-v2'));
+assert(html.includes('frontal en falca')&&html.includes('baixos en V'));
+assert(html.includes('tres targetes'));
+
 assert(html.includes('Pintar xapa (arrossegar)')&&html.includes('id="btrMirrorSurfacePaint"'));
 assert(html.includes('Simetria de la xapa (X)'));
 const armourPaint=read('src/vehicle-surface-paint.mjs');
@@ -91,12 +103,13 @@ assert(html.includes('max="2.50"'));
 assert(studio.includes('vehicle-annotation-editor.mjs?rev=surface-paint-v12'));
 assert(html.includes('id="btrRepairLiveStatus"')&&html.includes('id="btrRepairLiveCount"'));
 assert(html.includes('superfície exacta')&&html.includes('el comptador de triangles'));
-assert(studio.includes('btr82-symmetric-closed-hull-v1'));
+assert(studio.includes('btr82-angular-low-hull-v2'));
+assert(!currentRender.includes('reduceSurfaces('),'La v2 no ha de passar per SimplifyModifier');
 const confirmed=read('src/btr82-confirmed-repairs.mjs');
 assert(confirmed.includes('BTR82_CONFIRMED_REPAIRS')&&confirmed.includes('applyBtr82ConfirmedRepairs'));
-assert(btr.includes('applyBtr82ConfirmedRepairs(previous)'));
+assert(!currentRender.includes('applyBtr82ConfirmedRepairs('),'La v2 no hereta reparacions antigues');
 
-assert(btr.includes("BTR82_VERSION='btr82-symmetric-closed-hull-v1'"));
+assert(btr.includes("BTR82_VERSION='btr82-angular-low-hull-v2'"));
 const holeBrush=read('src/vehicle-hole-brush.mjs');
 assert(holeBrush.includes('getHoleBrushTarget')&&holeBrush.includes('closeHoleUnderBrush'));
 assert(holeBrush.includes('boundaries(mesh)')&&holeBrush.includes('ShapeUtils.triangulateShape'));
@@ -121,15 +134,15 @@ assert(repair.includes('[-.581,1.813,5.497]')&&repair.includes('[-1.397,1.494,5.
 assert(repair.includes('BTR82_upper_rear_single_trapezoid')&&repair.includes('geometry.setIndex([0,1,2,0,2,3])'));
 assert(repair.includes('if(group.group===1)')&&repair.includes('addUpperTrapezoid(scene,hull)'));
 assert(repair.includes('joined.setIndex([...faces,...patches])'));
-assert(btr.includes('repairMarkedRearSeams(previous)'));
-assert(btr.includes('coberta superior: 1 trapezi (2 triangles)'));
-assert(btr.includes('removeMarkedFrontDetails(previous)'));
+assert(!currentRender.includes('repairMarkedRearSeams('));
+assert(currentRender.includes('baixos bisellats en V'));
+assert(!currentRender.includes('removeMarkedFrontDetails('));
 assert(btr.includes('if(removed!==18||keep.length!==12)'));
 assert(btr.includes("[['hull_material_7',66],['hull_material_8',4]]"));
 assert(btr.includes('trim.geometry=cleaned')&&btr.includes('mesh.parent.remove(mesh)'));
 assert(btr.includes('retainedRearTriangles:4'));
 assert(btr.includes('triangles:removed+70'));
-assert(btr.includes('removeBtr82AnnotatedDetails(previous)'), 'Aplicar el darrer grup de marques només al low-poly');
+assert(!currentRender.includes('removeBtr82AnnotatedDetails('),'El casc nou no pot heretar pedaços antics');
 const details=read('src/btr82-annotated-detail-removal.mjs');
 assert(details.includes('export const BTR82_DELETE_MARKS')&&details.includes('connectedPatches'));
 assert(details.includes('hull_material_0')&&details.includes('hull_material_1')&&details.includes('hull_material_2'));
@@ -145,13 +158,14 @@ assert(painted.includes('id:15')&&painted.includes('id:2')&&painted.includes('id
 assert(painted.includes("mesh:'hull_material_0'")&&painted.includes("mesh:'hull_material_1'"));
 assert(painted.includes('pointToTrack')&&painted.includes('boundaryEdges')&&painted.includes('maxGap>(stroke.pointCloud?.42:.28)'));
 assert(painted.includes('cap component independent prou petit')&&painted.includes('c.faces.length>14'));
-assert(btr.includes('applyBtr82PaintAnnotations(previous)'));
-assert(btr.includes('painted.unresolved.length')&&btr.includes('painted.bridges'));
+assert(!currentRender.includes('applyBtr82PaintAnnotations('));
+assert(hullV2.includes('buildClosedGeometry(rings)')&&hullV2.includes('indices.push(a,c,b,a,d,c)'));
+
 assert(painted.includes('id:105')&&painted.includes('id:106'),'Dues noves traçades per tapar forats');
 for(const id of [201,202,203,204])assert(painted.includes('id:'+id),'Falta una zona del nou informe de 49 marques');
 assert(painted.includes('pointCloud:true')&&painted.includes('pointToStroke'), 'No s’han de generar unions fictícies entre marques llunyanes');
 assert(painted.includes('removeNewPaintedUpperDetails(scene)'),'Eliminació dels petits detalls de dalt');
-assert(painted.includes('upperRemoved:upperRemoval.removed')&&btr.includes('painted.upperRemoved'),'Recompte de detalls superiors retirats');
+assert(painted.includes('upperRemoved:upperRemoval.removed'),'Recompte antic de detalls retirats');
 const selector=read('src/vehicle-annotation-editor.mjs');
 assert(selector.includes('paintArmour(stroke,x,y,force=false)'));
 assert(selector.includes("current.mode==='patch'")&&selector.includes('stroke.paintMirror'));
@@ -200,6 +214,6 @@ for(const old of ['helicopters-lod-proves.html','apache-variants-proves.html',
  'assets/vehicle-candidates/helicopter-lods/manifest.json',
  'assets/vehicle-candidates/helicopter-lods/apache-hybrid-manifest.json'])
  assert(!fs.existsSync(path.join(root,old)),'Cal retirar el candidat obsolet: '+old);
-for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/vehicle-annotation-editor.mjs','src/vehicle-hole-brush.mjs','src/vehicle-surface-paint.mjs','src/btr82-part-selector.mjs','src/btr82-rear-seam-repair.mjs','src/btr82-annotated-detail-removal.mjs','src/btr82-painted-hole-repair.mjs','src/btr82-confirmed-repairs.mjs','src/btr82-hull-v1.mjs','src/streetfighter-25-geometry.mjs'])
+for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/vehicle-annotation-editor.mjs','src/vehicle-hole-brush.mjs','src/vehicle-surface-paint.mjs','src/btr82-part-selector.mjs','src/btr82-rear-seam-repair.mjs','src/btr82-annotated-detail-removal.mjs','src/btr82-painted-hole-repair.mjs','src/btr82-confirmed-repairs.mjs','src/btr82-hull-v1.mjs','src/btr82-hull-v2.mjs','src/streetfighter-25-geometry.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
 console.log('PASS default reusable vehicle 3D annotation editor: join parts, paint holes and mark parts for removal');
