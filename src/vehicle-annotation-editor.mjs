@@ -10,6 +10,7 @@ export function createVehicleAnnotationEditor({slots,getType}){
  const sizeLabel=$('btrBrushRadiusText'),notes=$('btrSelectNote');
  const feedback=$('btrSelectFeedback'),list=$('btrSelections');
  const liveStatus=$('btrRepairLiveStatus'),liveCount=$('btrRepairLiveCount');
+ const largeHole=$('btrLargeHoleMode');
  const raycaster=new THREE.Raycaster(),cursor=new THREE.Vector2();
  const COLORS={join:[0xffcf55,0x57ddf2,0xff70ab,0x9af07a],fill:0x2ee6e9,remove:0xff5e64};
  const NAMES={join:'UNIR PECES',fill:'TAPAR FORAT',remove:'ELIMINAR PEÇA'};
@@ -172,7 +173,7 @@ export function createVehicleAnnotationEditor({slots,getType}){
   const hit=nearestHit(slot,x,y);
   if(!hit){preview.visible=false;clearPatchPreview();return null}
   const radius=Number(size.value);
-  const target=getHoleBrushTarget(hit.object,hit.point,radius);
+  const target=getHoleBrushTarget(hit.object,hit.point,radius,{large:largeHole?.checked===true});
   const worldPoint=target?hit.object.localToWorld(target.center.clone()):hit.point.clone();
   showPatchPreview(target);
   let normal;
@@ -187,8 +188,8 @@ export function createVehicleAnnotationEditor({slots,getType}){
    preview.removeFromParent();slot.scene.add(preview);previewSlot=slot;
   }
   preview.visible=true;
-  if(target)updateLiveStatus('Previsualització verda: '+target.triangles.length+' triangles. Clica per aplicar-los al model.');
-  else updateLiveStatus('Contorn incompatible: cap triangle aplicable. Mou el cursor per cercar una vora oberta.');
+  if(target)updateLiveStatus('Previsualització verda: '+target.triangles.length+' triangles, contorn '+(target.span*2).toFixed(2)+' m. Clica per aplicar-los.');
+  else updateLiveStatus(largeHole?.checked?'Sense contorn tancat compatible. Si la carrosseria té una vora oberta, cal reconstruir-ne el panell per contorn.':'Contorn incompatible: prova «Forats grans» per buscar llaços més amplis.');
   return {hit,target,worldPoint};
  }
  function markPendingOnSurface(stroke,hit){
@@ -353,6 +354,11 @@ export function createVehicleAnnotationEditor({slots,getType}){
   feedback.textContent=enabled.checked?'Editor actiu: selecciona una eina i pinta o clica sobre el model.':'Editor desactivat.';
  });
  size.addEventListener('input',()=>{sizeLabel.textContent=Number(size.value).toFixed(2)+' m';preview.visible=false;clearPatchPreview()});
+ largeHole?.addEventListener('change',()=>{
+  if(largeHole.checked&&Number(size.value)<1.0){size.value='1.0';sizeLabel.textContent='1.00 m'}
+  preview.visible=false;clearPatchPreview();
+  updateLiveStatus(largeHole.checked?'Forats grans: contorns tancats fins a uns 4 m de radi. Previsualitza abans de clicar.':'Forats petits: comprovació estricta de contorns.');
+ });
  updateList();updateLiveStatus('Mou el cursor per previsualitzar la reparació; clica per aplicar-la.');
  return {active:isEnabled,begin,move,end,reset,hover:(slot,e)=>placeCursor(slot,e.clientX,e.clientY),hideCursor:()=>{preview.visible=false;clearPatchPreview()},mark:(slot,e)=>{begin(slot,e);end(slot,e)}};
 }
