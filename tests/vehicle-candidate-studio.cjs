@@ -75,14 +75,11 @@ assert(armourPaint.includes('surfacePaintSample')&&armourPaint.includes('createS
 assert(armourPaint.includes('MAX_BRIDGE=.58')&&armourPaint.includes('MAX_DEPTH_JUMP=.36'));
 assert(armourPaint.includes('mirror')&&armourPaint.includes('mirrored(a)')&&armourPaint.includes('mirrored(b)'));
 assert(armourPaint.includes('stroke.mesh.geometry=geo;old.dispose()'));
-assert(selector.includes('paintArmour(stroke,x,y,force=false)'));
-assert(selector.includes("current.mode==='patch'")&&selector.includes('stroke.paintMirror'));
-assert(selector.includes('stroke.paint.mesh.removeFromParent()'));
 assert(studio.includes('vehicle-annotation-editor.mjs?rev=surface-paint-v12'));
 
 assert(html.includes('id="btrLargeHoleMode"')&&html.includes('Forats grans (contorn tancat)'));
 assert(html.includes('max="2.50"'));
-assert(studio.includes('vehicle-annotation-editor.mjs?rev=large-hole-loops-v11'));
+assert(studio.includes('vehicle-annotation-editor.mjs?rev=surface-paint-v12'));
 assert(html.includes('id="btrRepairLiveStatus"')&&html.includes('id="btrRepairLiveCount"'));
 assert(html.includes('superfície exacta')&&html.includes('el comptador de triangles'));
 assert(studio.includes('btr82-confirmed-brush-replay-v9'));
@@ -147,6 +144,9 @@ assert(painted.includes('pointCloud:true')&&painted.includes('pointToStroke'), '
 assert(painted.includes('removeNewPaintedUpperDetails(scene)'),'Eliminació dels petits detalls de dalt');
 assert(painted.includes('upperRemoved:upperRemoval.removed')&&btr.includes('painted.upperRemoved'),'Recompte de detalls superiors retirats');
 const selector=read('src/vehicle-annotation-editor.mjs');
+assert(selector.includes('paintArmour(stroke,x,y,force=false)'));
+assert(selector.includes("current.mode==='patch'")&&selector.includes('stroke.paintMirror'));
+assert(selector.includes('stroke.paint.mesh.removeFromParent()'));
 assert(selector.includes('raycaster.intersectObjects')&&selector.includes('navigator.clipboard')&&selector.includes('EXPLICACIÓ:'));
 assert(selector.includes("fill:'TAPAR FORAT'")&&selector.includes("remove:'ELIMINAR PEÇA'"));
 assert(selector.includes('intersectPlane')&&selector.includes('stroke.marks.push'));
