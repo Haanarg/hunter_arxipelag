@@ -174,12 +174,24 @@ export function createVehicleAnnotationEditor({slots,getType}){
  // El cercle segueix la superfície real o el contorn obert detectat,
  // i mai no s'ancora en un pla virtual de profunditat inventada.
  function placeCursor(slot,x,y){
-  if(!isEnabled()||mode()!=='fill'||slot.outer.hidden||!slot.model){
+  if(!isEnabled()||(mode()!=='fill'&&mode()!=='patch')||slot.outer.hidden||!slot.model){
    preview.visible=false;clearPatchPreview();return null;
   }
   const hit=nearestHit(slot,x,y);
   if(!hit){preview.visible=false;clearPatchPreview();return null}
   const radius=Number(size.value);
+  if(mode()==='patch'){
+   clearPatchPreview();
+   const normal=(hit.face?.normal?.clone()||new THREE.Vector3(0,1,0))
+    .transformDirection(hit.object.matrixWorld).normalize();
+   preview.position.copy(hit.point).addScaledVector(normal,.018);
+   preview.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),normal);
+   preview.scale.setScalar(radius*.5);
+   previewMaterial.color.setHex(COLORS.patch);
+   if(previewSlot!==slot){preview.removeFromParent();slot.scene.add(preview);previewSlot=slot}
+   preview.visible=true;
+   return {hit,worldPoint:hit.point};
+  }
   const target=getHoleBrushTarget(hit.object,hit.point,radius,{large:largeHole?.checked===true});
   const worldPoint=target?hit.object.localToWorld(target.center.clone()):hit.point.clone();
   showPatchPreview(target);
@@ -318,7 +330,11 @@ export function createVehicleAnnotationEditor({slots,getType}){
  function move(slot,e){
   if(!current||current.slot!==slot)return false;
   if(mode()==='fill'){placeCursor(slot,e.clientX,e.clientY);return true}
-  if(current.mode==='patch'){paintArmour(current,e.clientX,e.clientY);return true}
+  if(current.mode==='patch'){
+   paintArmour(current,e.clientX,e.clientY);
+   placeCursor(slot,e.clientX,e.clientY);
+   return true;
+  }
   if(mode()==='join')return true; // reparació: un forat per clic
   sample(current,e.clientX,e.clientY);
   return true;
