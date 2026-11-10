@@ -68,9 +68,12 @@ assert(html.includes('Seleccionar peces')&&html.includes('btrSelectGroup')&&html
 assert(studio.includes('createBtr82PartSelector')&&studio.includes('btrPartSelector.mark(slot,e)'));
 const repair=read('src/btr82-rear-seam-repair.mjs');
 assert(repair.includes('repairMarkedRearSeams')&&repair.includes('hull_material_0')&&repair.includes('groups.push'));
-assert(repair.includes('[-.580,1.588,5.674]')&&repair.includes('[-.352,.543,5.518]'));
+assert(repair.includes('[-.581,1.813,5.497]')&&repair.includes('[-1.397,1.494,5.748]')&&repair.includes('[-.352,.543,5.518]'));
+assert(repair.includes('BTR82_upper_rear_single_trapezoid')&&repair.includes('geometry.setIndex([0,1,2,0,2,3])'));
+assert(repair.includes('if(group.group===1)')&&repair.includes('addUpperTrapezoid(scene,hull)'));
 assert(repair.includes('joined.setIndex([...faces,...patches])'));
 assert(btr.includes('repairMarkedRearSeams(previous)'));
+assert(btr.includes('coberta superior: 1 trapezi (2 triangles)'));
 const selector=read('src/btr82-part-selector.mjs');
 assert(selector.includes('raycaster.intersectObjects')&&selector.includes('navigator.clipboard')&&selector.includes('EXPLICACIÓ:'));
 assert(btr.includes('withTruckWheels')&&btr.includes('replaceBarrelWithCylinders'));
