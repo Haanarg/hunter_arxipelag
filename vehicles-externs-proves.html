@@ -22,7 +22,7 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 #grid.btr-study{grid-template-columns:repeat(2,minmax(0,1fr))}
 .panel[hidden]{display:none!important}
 .panel{min-width:0;height:clamp(350px,40vw,470px);position:relative;border:1px solid #54736e;border-radius:12px;overflow:hidden;background:linear-gradient(#314c52,#142c34);touch-action:pan-y}
-.panel:first-child{border-color:#d6c089}#grid.btr-study .panel:nth-child(3){border-color:#d6c089}
+.panel:first-child{border-color:#d6c089}#grid.btr-study .panel:first-child{border-color:#d6c089}#grid.btr-study .panel:nth-child(3){border-color:#54736e}
 .panel .label{position:absolute;z-index:3;top:9px;left:9px;right:9px;pointer-events:none;background:#122629dd;border:1px solid #647d78;border-radius:7px;padding:7px 9px;min-height:51px}
 .panel .label strong{display:block;font-size:13px}.panel .label span{font-size:10px;color:#c1d6cd;line-height:1.3;display:block}
 .panel .viewport{position:absolute;inset:0;touch-action:pan-y;cursor:grab;overscroll-behavior-y:auto}.panel .viewport:active{cursor:grabbing}
@@ -45,7 +45,7 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 .explainer{padding:13px 17px;border:1px solid #42645f;border-radius:11px;background:#152a2d;font-size:12px;line-height:1.6;color:#c6dbd0;margin-top:16px}
 .explainer strong{color:#eef2d1}.explainer a{color:#daebac}
 footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-height:1.6}
-@media(min-width:1650px){#grid{grid-template-columns:repeat(4,minmax(0,1fr))}.panel{height:450px}}
+@media(min-width:1650px){#grid{grid-template-columns:repeat(4,minmax(0,1fr))}#grid.btr-study{grid-template-columns:repeat(3,minmax(0,1fr))}.panel{height:450px}}
 @media(max-width:1050px){#grid.btr-study{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){#grid,#grid.btr-study{grid-template-columns:1fr}.panel{height:420px}.panel .status{min-height:16px}#vehicleList button{min-width:130px;flex-basis:130px}}
 
@@ -54,7 +54,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </head><body>
 <header><div class="kicker">HUNTER: ARXIPÈLAG · LABORATORI DE MODELS</div>
 <h1>Flota · Models i simplificació</h1>
-<p>Els <strong>7 tipus de vehicles pendents de seleccionar</strong>. Els models definitius dels helicòpters Huey i Apache, de la moto i de la moto aquàtica ja no són al banc. A l'esquerra, el vehicle actual; a la dreta, tres alternatives. El tanc conserva els tres models de referència M1A1 Abrams. La tanqueta compara la base Three.js al 25% (5.371 triangles) amb la mateixa carrosseria, les vuit rodes del camió A4.3 i un canó negre de dos cilindres que apunta cap endavant i arriba fins a la torreta. No es fan reduccions addicionals. </p>
+<p>Els <strong>7 tipus de vehicles pendents de seleccionar</strong>. Els models definitius dels helicòpters Huey i Apache, de la moto i de la moto aquàtica ja no són al banc. A l'esquerra, el vehicle actual; a la dreta, tres alternatives. El tanc conserva els tres models de referència M1A1 Abrams. La tanqueta presenta cinc models: la nova base derivada de la transformació Three.js al 25%, amb les vuit rodes del camió A4.3 i el canó negre de dos cilindres, més quatre simplificacions progressives de les superfícies. Es mantenen els quatre fars, la torreta, el canó i la silueta característica. Cada targeta mostra el recompte real de triangles. </p>
 <nav aria-label="Vistes">
 <button id="view-quarter" data-view="quarter" class="active">3/4</button><button data-view="front" id="view-front">Frontal</button>
 <button data-view="side" id="view-side">Lateral</button><button data-view="rear" id="view-rear">Posterior</button>
@@ -71,7 +71,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </div></section>
 <section id="grid" aria-label="Comparativa de models 3D"></section>
 <div class="explainer">
-<strong>Com funciona:</strong> el banc mostra el model del joc i tres alternatives per a cada vehicle pendent. Els visors Sketchfab del tanc es manipulen individualment. Els dos BTR-82 comparteixen càmera i escala. Arrossega la resta dels panells per girar les càmeres del joc, i usa <strong>Alt + roda</strong> o els botons ＋ / － per fer zoom. Per a la tanqueta només hi ha dues targetes: la base Three.js al 25% i la variant amb rodes del camió, generada al navegador. Les variants anteriors ja no són candidates; es mantenen els crèdits SIpriv / CC BY 4.0. Cal adaptar física, seients i col·lisions abans de substituir un model.</div>
+<strong>Com funciona:</strong> el banc mostra el model del joc i tres alternatives per a cada vehicle pendent. Els visors Sketchfab del tanc es manipulen individualment. Les cinc variants del BTR-82 comparteixen càmera i escala. Arrossega la resta dels panells per girar les càmeres del joc, i usa <strong>Alt + roda</strong> o els botons ＋ / － per fer zoom. Per a la tanqueta hi ha cinc targetes: el model base actual amb rodes del camió i canó nou, i quatre iteracions consecutives de simplificació amb meshoptimizer; els quatre fars i els elements distintius queden protegits. Les variants anteriors ja no són candidates; es mantenen els crèdits SIpriv / CC BY 4.0. Cal adaptar física, seients i col·lisions abans de substituir un model.</div>
 </main><footer>Prova independent · Three.js r186 (el mateix del joc) · GLTFLoader · models originals importats de la fàbrica del joc · cap canvi a la física, combat o desament. Algunes fonts externes poden no permetre carregar fitxers des d'un altre domini; en aquest cas, utilitza la importació local.</footer>
-<script type="module" src="./src/vehicles-externs-proves.mjs?rev=btr82-sealed-hull-gun-v4"></script>
+<script type="module" src="./src/vehicles-externs-proves.mjs?rev=btr82-progressive-four-lods-v1"></script>
 </body></html>
