@@ -72,7 +72,14 @@ function createBtr82V1TurretGeometry(){
 }
 export function makeBtr82HullV1(baseline){
  const scene=baseline.clone(true),removed=[];
- scene.traverse(o=>{if(o.isMesh&&!KEEP.test(o.name))removed.push(o)});
+ // Els pneumàtics i les llantes són MESHES filles del grup de cada roda:
+ // protegir tots els descendents, no només el node arrel de la roda.
+ function keepNode(node){
+  let o=node;
+  while(o&&o!==scene){if(KEEP.test(o.name))return true;o=o.parent}
+  return false;
+ }
+ scene.traverse(o=>{if(o.isMesh&&!keepNode(o))removed.push(o)});
  for(const mesh of removed)mesh.parent?.remove(mesh);
  const hull=new THREE.Mesh(createBtr82ClosedHullGeometry(),
   new THREE.MeshStandardMaterial({color:0x626d57,roughness:.92,metalness:.08,side:THREE.DoubleSide}));
