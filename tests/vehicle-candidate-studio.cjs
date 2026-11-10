@@ -58,7 +58,7 @@ assert(studio.includes("const btrStudy=config.id==='tanqueta'"));
 assert(studio.includes("btrStudy?![1,2].includes(slots.indexOf(slot)):slots.indexOf(slot)>3"),
  'Només dos panells de BTR-82, independentment de la lògica d’altres vehicles');
 assert(html.includes('#grid.btr-study{grid-template-columns:repeat(2'));
-assert(html.includes('4.581')&&html.includes('canó'));
+assert(html.includes('5.371')&&html.includes('rodes del camió'));
 for(const obsolete of ['src/btr82-aggressive-simplification.mjs',
  'src/btr82-upload-policy.mjs','tests/btr82-preview-runtime.mjs','tools/repair-btr82-materials.cjs'])
  assert(!fs.existsSync(path.join(root,obsolete)),'Obsolete BTR-82 generator left behind: '+obsolete);
