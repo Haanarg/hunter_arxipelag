@@ -867,7 +867,16 @@ export const vehicleModels=Object.freeze({
           g.add(tail);g.userData.tailRotor=tail;
         }
       }
-      if(t==='bici'){const crank=new THREE.Group();crank.position.set(0,.75,0);for(const side of[-1,1]){rod(crank,[side*.3,0,0],[side*.3,0,side*.28],.045,metal);box(crank,.26,.08,.18,rubber,side*.4,0,side*.28,'rubber')}g.add(crank);g.userData.crank=crank}
+      if(t==='bici'){
+        const crank=new THREE.Group();crank.position.set(0,.75,0);
+        // Eix del pedalier: uneix les dues bieles i gira amb els pedals.
+        rod(crank,[-.3,0,0],[.3,0,0],.058,metal,'metal');
+        for(const side of[-1,1]){
+          rod(crank,[side*.3,0,0],[side*.3,0,side*.28],.045,metal);
+          box(crank,.26,.08,.18,rubber,side*.4,0,side*.28,'rubber');
+        }
+        g.add(crank);g.userData.crank=crank;
+      }
       if(t==='bici'){
         // Reduccio visual al 50% al voltant de l'origen de terra.
         // El grup inclou rodes, manillar i pedalier; la col.lisio i
