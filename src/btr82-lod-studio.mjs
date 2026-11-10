@@ -1,15 +1,15 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {createTruckModel} from './truck-model.mjs';
 // Low Poly BTR-82 by SIpriv (CC BY 4.0). Only two verified models in the
-// candidate page: 5,371-triangle iteration base and corrected chosen 50%.
-export const BTR82_VERSION='base25-truck-wheels-v1';
+// candidate page: Three.js 25% baseline and truck-wheel / barrel variant.
+export const BTR82_VERSION='base25-truck-wheels-cylinder-gun-v2';
 const URL='./assets/vehicle-candidates/tanqueta/';
 const CREDIT='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
 const MODELS=Object.freeze([
  {slot:1,file:'btr82-base-100.glb',triangles:5371,meshes:18,
   title:'BTR-82 · base Three.js 25%',detail:'Transformació de 5.371 triangles, sense canvis'},
  {slot:2,file:'btr82-50-repaired.glb',triangles:4581,meshes:25,
-  title:'BTR-82 · base 25% + rodes del camió',detail:'Carrosseria i torreta originals de la reducció 25% · vuit rodes A4.3 del camió'}
+  title:'BTR-82 · rodes camió + canó cilíndric',detail:'Base Three.js 25% · vuit rodes A4.3 · canó negre nou, orientat endavant i unit a la torreta'}
 ]);
 const requiredRepairs=['BTR82_repair_olive_armour_repaired',
  'BTR82_repair_olive_bevel_repaired','BTR82_repair_olive_inner_shell',
@@ -41,6 +41,49 @@ function withTruckWheels(source){
   old.parent.remove(old);
  }
  scene.userData.btr82WheelDonor='truck-A4.3';
+ return scene;
+}
+// El canó de la base 25% està integrat a turret_material_3, no és una malla independent.
+// Només se'n retiren els triangles situats davant la torreta, en el corredor estret
+// del canó original. La resta de la torreta, el casc i les rodes es conserven.
+function replaceBarrelWithCylinders(scene){
+ const turret=scene.getObjectByName('turret_material_3');
+ if(!turret?.isMesh||!turret.geometry?.index)throw Error('No s’ha trobat la torreta de la base Three.js 25%');
+ const geometry=turret.geometry;
+ const positions=geometry.getAttribute('position'),indices=geometry.index;
+ const retained=[];
+ let removed=0;
+ for(let i=0;i<indices.count;i+=3){
+  const a=indices.getX(i),b=indices.getX(i+1),c=indices.getX(i+2);
+  const x=(positions.getX(a)+positions.getX(b)+positions.getX(c))/3;
+  const y=(positions.getY(a)+positions.getY(b)+positions.getY(c))/3;
+  const z=(positions.getZ(a)+positions.getZ(b)+positions.getZ(c))/3;
+  if(z < -1.55 && y > 2.50 && Math.abs(x) < .26){removed++;continue}
+  retained.push(a,b,c);
+ }
+ if(removed<35||removed>110)throw Error('La selecció del canó original no és segura: '+removed+' triangles');
+ const cleaned=geometry.clone();
+ cleaned.setIndex(retained);
+ cleaned.computeBoundingBox();cleaned.computeBoundingSphere();
+ turret.geometry=cleaned;
+ // En les coordenades del GLB, -Z és la direcció de la proa.
+ // El canó comença DINS la torreta, a z=-1,35, per evitar qualsevol buit.
+ const black=new THREE.MeshStandardMaterial({color:0x101010,roughness:.78,metalness:.20});
+ const addCylinder=(name,radius,length,z)=>{
+  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,length,12,1,false),black);
+  mesh.name=name;
+  mesh.rotation.x=Math.PI/2;
+  mesh.position.set(-.06,2.69,z);
+  mesh.castShadow=true;mesh.receiveShadow=true;
+  turret.parent.add(mesh);
+  return mesh;
+ };
+ // Cos principal: de z=-1,35 a z=-3,36; extrem posterior connectat a la torreta.
+ addCylinder('BTR82_new_black_barrel',.085,2.01,-2.355);
+ // Boca de foc de diàmetre lleugerament més gran; s'encavalca 3 cm.
+ addCylinder('BTR82_new_black_muzzle',.115,.28,-3.47);
+ scene.userData.btr82Gun='forward-black-two-cylinders';
+ scene.userData.btr82OriginalBarrelFacesRemoved=removed;
  return scene;
 }
 function inspect(scene){
@@ -92,7 +135,7 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
     const blob=await check(await response.blob());
     const gltf=await loadUploadedGlb(blob);
     if(!alive(token,run))return false;
-    if(spec.slot===2)gltf.scene=withTruckWheels(gltf.scene);
+    if(spec.slot===2)gltf.scene=replaceBarrelWithCylinders(withTruckWheels(gltf.scene));
     present(spec,blob,gltf);return true;
    }catch(error){
     if(alive(token,run))slot.status.textContent='Error GLB: '+(error?.message||String(error));
@@ -100,7 +143,7 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
    }
   }));
   if(alive(token,run))notice.textContent=results.every(Boolean)?
-   'Comparador BTR-82: base Three.js al 25% (5.371 triangles) i la mateixa geometria amb vuit rodes del camió A4.3. Sense reduccions noves ni canvis a la tanqueta jugable.':
+   'Comparador BTR-82: base Three.js al 25% (5.371 triangles) i variant amb vuit rodes del camió A4.3 i canó negre cilíndric orientat cap endavant, connectat a la torreta. Sense reduccions noves ni canvis a la tanqueta jugable.':
    'No s’han pogut carregar els dos GLB. Recarrega el visor o comprova el desplegament.';
  }
  async function importGlb(blob,token,slotIndex){
