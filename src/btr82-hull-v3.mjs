@@ -29,7 +29,7 @@ function section(station){
   return [x,y,station.z+dz];
  });
  return [...right.map(([x,y,z])=>[-x,y,z]).slice(0,1),...right,
-  ...right.slice(1,-1).reverse().map(([x,y,z])=>[-x,y,z])];
+  ...right.slice(1).reverse().map(([x,y,z])=>[-x,y,z])];
 }
 
 // El punt central es duplica entre costats? NO: cada secció inclou
