@@ -3983,7 +3983,7 @@ if(worldVisualTick<=0){
 updateDoors(dt);
 items.forEach(it=>{const dx=it.x-P.x,dz=it.z-P.z;if(dx*dx+dz*dz<ITEM_ANIM2){it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25}});
 if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-it.z;if(dx*dx+dz*dz<4.84&&Math.abs(P.y-it.y)<3){let mapMessage=null;
-  if(it.t==='arma'){ammo+=16;sniperAmmo+=5;bazookaAmmo+=3;}
+  if(it.t==='arma'){ammo+=12;sniperAmmo+=3;bazookaAmmo+=2;}
   else if(it.t==='mapa'||it.t==='mapa_heli'||it.t==='mapa_tanc'){
     mapMessage=revealMapPickup(it.t,false,MAP_SCALE===2?mapSector(it.x,it.z):null);
     mini(); // la informació apareix de seguida, sense entrar a cap menú
