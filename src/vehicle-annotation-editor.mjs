@@ -65,7 +65,13 @@ export function createVehicleAnnotationEditor({slots,getType}){
  function remove(i){
   const [stroke]=strokes.splice(i,1);
   if(stroke)for(const edit of [...(stroke.edits||[])].reverse()){
-   if(edit.mesh.geometry===edit.current){edit.mesh.geometry=edit.previous;edit.current.dispose()}
+   if(edit.mesh.geometry===edit.current){
+    edit.mesh.geometry=edit.previous;
+    edit.mesh.material=edit.previousMaterial;
+    edit.current.dispose();
+    const mats=Array.isArray(edit.repairedMaterial)?edit.repairedMaterial:[edit.repairedMaterial];
+    for(const mat of mats)mat.dispose();
+   }
   }
   if(stroke)for(const v of stroke.visuals){
    v.removeFromParent();v.geometry?.dispose();v.material?.dispose();
@@ -140,6 +146,20 @@ export function createVehicleAnnotationEditor({slots,getType}){
   preview.visible=true;
   return {hit,target,worldPoint};
  }
+ function markPendingOnSurface(stroke,hit){
+  // Anotació visible, enganxada a la cara real: no hi ha cap pla fictici.
+  const normal=(hit.face?.normal?.clone()||new THREE.Vector3(0,0,1))
+   .transformDirection(hit.object.matrixWorld).normalize();
+  const mark=new THREE.Mesh(new THREE.RingGeometry(.73,1,24),
+   new THREE.MeshBasicMaterial({color:COLORS.fill,side:THREE.DoubleSide,
+    transparent:true,opacity:.66,depthWrite:false,polygonOffset:true,
+    polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
+  mark.position.copy(hit.point).addScaledVector(normal,.008);
+  mark.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),normal);
+  mark.scale.setScalar(Number(size.value)*.72);
+  mark.userData.vehicleAnnotationOverlay=true;mark.raycast=()=>{};
+  stroke.slot.scene.add(mark);stroke.visuals.push(mark);
+ }
  function sample(stroke,x,y,force=false){
   if(!stroke||!stroke.slot.model)return false;
   if(!force&&stroke.last&&Math.hypot(stroke.last[0]-x,stroke.last[1]-y)<10)return false;
@@ -162,6 +182,7 @@ export function createVehicleAnnotationEditor({slots,getType}){
     // Conservem el punt sobre la superfície real com a anotació.
     meta.mesh=surfaceHit.object.name||'(sense nom)';
     meta.status='pendent: sense contorn compatible';
+    markPendingOnSurface(stroke,surfaceHit);
    }else{
     const edit=closeHoleUnderBrush(target);
     if(!edit)return false;
@@ -212,7 +233,8 @@ export function createVehicleAnnotationEditor({slots,getType}){
  }
  function move(slot,e){
   if(!current||current.slot!==slot)return false;
-  if(mode()==='join'||mode()==='fill')return true; // el tapament s'aplica per clic, un forat cada vegada
+  if(mode()==='fill'){placeCursor(slot,e.clientX,e.clientY);return true}
+  if(mode()==='join')return true; // reparació: un forat per clic
   sample(current,e.clientX,e.clientY);
   return true;
  }
