@@ -5,7 +5,7 @@ import {repairMarkedRearSeams} from './btr82-rear-seam-repair.mjs';
 // Low Poly BTR-82 by SIpriv (CC BY 4.0): base Three.js al 25%.
  // El punt de partida de les quatre reduccions és la variant actual amb
  // vuit rodes del camió A4.3 i canó negre cilíndric, NO el GLB original.
-export const BTR82_VERSION='btr82-single-upper-trapezoid-v3';
+export const BTR82_VERSION='btr82-front-decor-remove-v4';
 const ASSET_DIR='./assets/vehicle-candidates/tanqueta/';
 const BASE_FILE='btr82-base-100.glb';
 const CREDIT='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
@@ -142,6 +142,47 @@ async function reduceSurfaces(scene,removeFraction){
   throw Error('La simplificació ha perdut un detall identificatiu');
  return result;
 }
+// Anotacions ELIMINAR PEÇA (Model 2) — sis marques sobre el frontal.
+// S'han inspeccionat els triangles del GLB base: hull_material_4 inclou 4
+// triangles de la part posterior (+Z) QUE ES CONSERVEN i 18 triangles
+// frontals (-Z) que corresponen a les marques. hull_material_7 (66 △)
+// i hull_material_8 (4 △) són exclusivament detalls frontals associats.
+// No es toquen hull_material_0/1, fars, torreta, rodes ni model original.
+export function removeMarkedFrontDetails(scene){
+ const trim=scene.getObjectByName('hull_material_4');
+ if(!trim?.isMesh||!trim.geometry?.index)throw Error('Falta hull_material_4');
+ const geometry=trim.geometry,vertices=geometry.getAttribute('position'),index=geometry.index;
+ if(index.count!==66)throw Error('hull_material_4 inesperat: no aplicar retall destructiu');
+ const keep=[];
+ let removed=0;
+ for(let t=0;t<index.count;t+=3){
+  const a=index.getX(t),b=index.getX(t+1),c=index.getX(t+2);
+  const z=(vertices.getZ(a)+vertices.getZ(b)+vertices.getZ(c))/3;
+  if(z < -2.6){removed++;continue}
+  keep.push(a,b,c);
+ }
+ if(removed!==18||keep.length!==12)throw Error('Les peces frontals de hull_material_4 han canviat');
+ const cleaned=geometry.clone();
+ cleaned.setIndex(keep);
+ cleaned.computeBoundingBox();cleaned.computeBoundingSphere();
+ cleaned.userData.candidateSimplified=true;
+ trim.geometry=cleaned;
+ const removedMeshes=[];
+ for(const [name,expectedTriangles] of [['hull_material_7',66],['hull_material_8',4]]){
+  const mesh=scene.getObjectByName(name);
+  if(!mesh?.isMesh)throw Error('Falta el detall frontal '+name);
+  const triangles=(mesh.geometry.index?.count??mesh.geometry.getAttribute('position').count)/3;
+  mesh.geometry.computeBoundingBox();
+  const bounds=mesh.geometry.boundingBox;
+  // Guardes: eliminar només els detalls propers als punts de la selecció.
+  if(triangles!==expectedTriangles||bounds.min.z < -3.35||bounds.max.z > -2.55)
+   throw Error('La geometria de '+name+' no coincideix amb el detall anotat');
+  mesh.parent.remove(mesh);
+  removedMeshes.push(name);
+ }
+ scene.userData.btr82RemovedFrontDetails={triangles:removed+70,removedMeshes,retainedRearTriangles:4};
+ return scene.userData.btr82RemovedFrontDetails;
+}
 function inspect(scene){
  let triangles=0,meshes=0;const names=new Set();
  scene.traverse(o=>{
@@ -198,11 +239,12 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
    previous=next;last=total;
   }
   const joinedGroups=repairMarkedRearSeams(previous);
+  const cleanup=removeMarkedFrontDetails(previous);
   present(PASSES[1],previous,local);
   const repairs=joinedGroups.map(g=>g.group===1?'coberta superior: 1 trapezi (2 triangles)':'baixos: '+g.bridges+' unions locals').join(' · ');
-  slots[1].status.textContent+=' · '+repairs;
+  slots[1].status.textContent+=' · '+repairs+' · '+cleanup.triangles+' △ de detalls frontals eliminats';
   if(alive(token,run))notice.textContent=
-   'BTR-82: original de treball intacte. Al low-poly, els sis punts del grup 1 defineixen una única peça trapezoidal de dos triangles per cobrir l’obertura superior posterior. El grup 2 conserva les unions locals anteriors dels baixos. Activa «Seleccionar peces» per revisar i tornar a marcar les zones.';
+   'BTR-82: original de treball intacte. Al low-poly, els sis punts del grup 1 defineixen una única peça trapezoidal de dos triangles per cobrir l’obertura superior posterior. El grup 2 conserva les unions locals anteriors dels baixos. S’han eliminat 88 triangles de detalls frontals assenyalats (sense retirar peces posteriors ni blindatge estructural). Activa l’editor per revisar el resultat.';
  }
  async function load(token){
   const run=++revision;
