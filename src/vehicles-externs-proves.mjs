@@ -112,7 +112,7 @@ let yaw=.60,elev=.32,zoom=1,lookY=.6;
 let prev=performance.now();
 let btrStudioPromise=null;
 function getBtrStudio(){
- return btrStudioPromise??=import('./btr82-lod-studio.mjs?rev=btr82-sealed-hull-gun-v4').then(module=>module.createBtr82Studio({
+ return btrStudioPromise??=import('./btr82-lod-studio.mjs?rev=btr82-base25-truck-wheels-v1').then(module=>module.createBtr82Studio({
    slots,loadUploadedGlb,setModel,metrics,
    isCurrent:token=>token===generation&&currentType.id==='tanqueta',
    notice:warning
@@ -300,7 +300,7 @@ async function choose(config){
    const isSource=slots.indexOf(slot)===1;
    const fileLabel=slot.upload.parentNode;
    if(fileLabel&&fileLabel.tagName==='LABEL')fileLabel.firstChild.textContent=btrStudy?
-     (isSource?'Importa base 100%':'Importa 50% corregit'):'Importa GLB';
+     (isSource?'Importa base 25%':'Importa base 25% per canviar rodes'):'Importa GLB';
    slot.sub.textContent=slots.indexOf(slot)?'Preparant candidat…':'Model real del joc';
    slot.source.hidden=true;
  }
@@ -419,7 +419,7 @@ const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.textContent=config.name;
- const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'2 models: original i reparat':config.id==='ferry'?'2–3 alternatives':'3 alternatives');
+ const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'2 models: base 25% i rodes del camió':config.id==='ferry'?'2–3 alternatives':'3 alternatives');
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }
