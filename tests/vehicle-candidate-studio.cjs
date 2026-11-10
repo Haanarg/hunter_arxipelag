@@ -77,6 +77,13 @@ assert(repair.includes('if(group.group===1)')&&repair.includes('addUpperTrapezoi
 assert(repair.includes('joined.setIndex([...faces,...patches])'));
 assert(btr.includes('repairMarkedRearSeams(previous)'));
 assert(btr.includes('coberta superior: 1 trapezi (2 triangles)'));
+assert(btr.includes('removeMarkedFrontDetails(previous)'));
+assert(btr.includes('if(removed!==18||keep.length!==12)'));
+assert(btr.includes("[['hull_material_7',66],['hull_material_8',4]]"));
+assert(btr.includes('trim.geometry=cleaned')&&btr.includes('mesh.parent.remove(mesh)'));
+assert(btr.includes('retainedRearTriangles:4'));
+assert(btr.includes('triangles:removed+70'));
+assert(!btr.includes("scene.getObjectByName('hull_material_0');\n  mesh.parent.remove"));
 const selector=read('src/vehicle-annotation-editor.mjs');
 assert(selector.includes('raycaster.intersectObjects')&&selector.includes('navigator.clipboard')&&selector.includes('EXPLICACIÓ:'));
 assert(selector.includes("fill:'TAPAR FORAT'")&&selector.includes("remove:'ELIMINAR PEÇA'"));
