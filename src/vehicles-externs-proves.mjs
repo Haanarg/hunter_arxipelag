@@ -114,7 +114,7 @@ let yaw=.60,elev=.32,zoom=1,lookY=.6,defaultLookY=.6;
 let prev=performance.now();
 let btrStudioPromise=null;
 function getBtrStudio(){
- return btrStudioPromise??=import('./btr82-lod-studio.mjs?rev=btr82-central-belly-hull-v3').then(module=>module.createBtr82Studio({
+ return btrStudioPromise??=import('./btr82-lod-studio.mjs?rev=btr82-rotate-rescale-test-v3b').then(module=>module.createBtr82Studio({
    slots,loadUploadedGlb,setModel,metrics,
    isCurrent:token=>token===generation&&currentType.id==='tanqueta',
    notice:warning
@@ -293,6 +293,8 @@ async function choose(config){
  grid.classList.remove('featured');
  const btrStudy=config.id==='tanqueta';
  grid.classList.toggle('btr-study',btrStudy);
+ const axisSwapControl=document.querySelector('#btrAxisSwapControl');
+ if(axisSwapControl)axisSwapControl.hidden=!btrStudy;
  for(const slot of slots){
    slot.outer.hidden=btrStudy?slots.indexOf(slot)>2:slots.indexOf(slot)>3;
    dropPrevious(slot);
@@ -402,6 +404,11 @@ document.querySelector('#pan-up').addEventListener('click',()=>{lookY+=Math.max(
 document.querySelector('#pan-down').addEventListener('click',()=>{lookY-=Math.max(.025,zoom*.30);updateCamera()});
 document.querySelector('#fitScale').addEventListener('change',()=>choose(currentType));
 document.querySelector('#showGrid').addEventListener('change',e=>{for(const s of slots){s.lines.visible=e.target.checked;s.person.visible=e.target.checked}});
+document.querySelector('#btrAxisSwapHull').addEventListener('change',async event=>{
+ if(currentType.id!=='tanqueta')return;
+ const editor=await getBtrStudio();
+ editor.setHullAxisSwap(event.target.checked);
+});
 const drag=new Map(),pointerStarts=new Map(),paintPointers=new Set();
 slots.forEach(slot=>{
  slot.viewport.addEventListener('pointerleave',()=>vehicleEditor.hideCursor());
