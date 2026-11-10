@@ -4,6 +4,7 @@ import {vehicleModels} from './vehicle-model-core.mjs';
 import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
+import {createBtr82PartSelector} from './btr82-part-selector.mjs';
 
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
@@ -108,11 +109,12 @@ for(let i=0;i<5;i++){
  });
 }
 let currentType=CATALOG[0],generation=0,originalDims=new THREE.Vector3(3,2,5);
+const btrPartSelector=createBtr82PartSelector({slots,getType:()=>currentType.id});
 let yaw=.60,elev=.32,zoom=1,lookY=.6;
 let prev=performance.now();
 let btrStudioPromise=null;
 function getBtrStudio(){
- return btrStudioPromise??=import('./btr82-lod-studio.mjs?rev=btr82-sealed-side-rear-v2').then(module=>module.createBtr82Studio({
+ return btrStudioPromise??=import('./btr82-lod-studio.mjs?rev=btr82-base25-annotate-lowpoly-v1').then(module=>module.createBtr82Studio({
    slots,loadUploadedGlb,setModel,metrics,
    isCurrent:token=>token===generation&&currentType.id==='tanqueta',
    notice:warning
@@ -279,7 +281,9 @@ async function loadExternal(slot,entry,used,token){
  }
 }
 async function choose(config){
- currentType=config;generation++;
+ btrPartSelector.reset();
+  currentType=config;generation++;
+  document.querySelector('#btrPartTool').hidden=config.id!=='tanqueta';
  const token=generation;
  nameOut.textContent=config.name;
  warning.textContent=(config.note?config.note+' ':'')+
@@ -290,7 +294,7 @@ async function choose(config){
  const btrStudy=config.id==='tanqueta';
  grid.classList.toggle('btr-study',btrStudy);
  for(const slot of slots){
-   slot.outer.hidden=btrStudy?false:slots.indexOf(slot)>3;
+   slot.outer.hidden=btrStudy?slots.indexOf(slot)>1:slots.indexOf(slot)>3;
    dropPrevious(slot);
    slot.kind=config.kind;
    slot.ground.material.color.setHex(marine?0x285f65:config.kind==='aire'?0x6a7b67:0x69735e);
@@ -300,7 +304,7 @@ async function choose(config){
    const isSource=slots.indexOf(slot)===0;
    const fileLabel=slot.upload.parentNode;
    if(fileLabel&&fileLabel.tagName==='LABEL')fileLabel.firstChild.textContent=btrStudy?
-     'Importa GLB base 25% (recalcula les 4 iteracions)':'Importa GLB';
+     'Importa GLB base 25% (recalcula el low-poly)':'Importa GLB';
    slot.sub.textContent=slots.indexOf(slot)?'Preparant candidat…':'Model real del joc';
    slot.source.hidden=true;
  }
@@ -395,9 +399,9 @@ document.querySelector('#zoom-out').addEventListener('click',()=>{zoom=Math.min(
 document.querySelector('#zoom-reset').addEventListener('click',()=>{zoom=1;updateCamera()});
 document.querySelector('#fitScale').addEventListener('change',()=>choose(currentType));
 document.querySelector('#showGrid').addEventListener('change',e=>{for(const s of slots){s.lines.visible=e.target.checked;s.person.visible=e.target.checked}});
-const drag=new Map();
+const drag=new Map(),pointerStarts=new Map();
 slots.forEach(slot=>{
- slot.viewport.addEventListener('pointerdown',e=>{slot.viewport.setPointerCapture(e.pointerId);drag.set(e.pointerId,[e.clientX,e.clientY])});
+ slot.viewport.addEventListener('pointerdown',e=>{slot.viewport.setPointerCapture(e.pointerId);drag.set(e.pointerId,[e.clientX,e.clientY]);pointerStarts.set(e.pointerId,[e.clientX,e.clientY])});
  slot.viewport.addEventListener('pointermove',e=>{
   if(!drag.has(e.pointerId))return;
   const old=drag.get(e.pointerId);drag.set(e.pointerId,[e.clientX,e.clientY]);
@@ -405,7 +409,8 @@ slots.forEach(slot=>{
   elev=Math.max(.03,Math.min(1.51,elev+(e.clientY-old[1])*.008));
   updateCamera();
  });
- for(const event of ['pointerup','pointercancel','lostpointercapture'])slot.viewport.addEventListener(event,e=>drag.delete(e.pointerId));
+ slot.viewport.addEventListener('pointerup',e=>{const start=pointerStarts.get(e.pointerId);if(start&&Math.hypot(e.clientX-start[0],e.clientY-start[1])<6&&btrPartSelector.active())btrPartSelector.mark(slot,e);drag.delete(e.pointerId);pointerStarts.delete(e.pointerId)});
+  for(const event of ['pointercancel','lostpointercapture'])slot.viewport.addEventListener(event,e=>{drag.delete(e.pointerId);pointerStarts.delete(e.pointerId)});
  // La roda del ratolí HA de desplaçar la pàgina. Només Alt + roda
  // modifica el zoom de les quatre càmeres (els botons continuen disponibles).
  slot.viewport.addEventListener('wheel',e=>{
@@ -419,7 +424,7 @@ const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.textContent=config.name;
- const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'base + 4 reduccions progressives':config.id==='ferry'?'2–3 alternatives':'3 alternatives');
+ const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'original + low-poly · eina de selecció':config.id==='ferry'?'2–3 alternatives':'3 alternatives');
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }
