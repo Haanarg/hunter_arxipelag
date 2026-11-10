@@ -52,7 +52,7 @@ assert.equal(manifest.externalModels.tanqueta[0]?.modelId,'6226acae68424d99bf038
 assert(!catalog.includes('fe28759be4914e4a9ea52d73aa503a4e'));
 assert(!catalog.includes('3a813f5520974d21b3b3bba52e04a7d9'));
 const btr=read('src/btr82-lod-studio.mjs');
-assert(btr.includes("file:'btr82-base-100.glb'")&&btr.includes("file:'btr82-50-repaired.glb'"));
+assert(btr.includes("file:'btr82-base-100.glb'")&&btr.includes('withTruckWheels')&&btr.includes('createTruckModel'));
 assert(!btr.includes('SimplifyModifier')&&!btr.includes('repoPrecomputedLod'));
 assert(studio.includes("const btrStudy=config.id==='tanqueta'"));
 assert(studio.includes("btrStudy?![1,2].includes(slots.indexOf(slot)):slots.indexOf(slot)>3"),
@@ -81,4 +81,4 @@ for(const old of ['helicopters-lod-proves.html','apache-variants-proves.html',
  assert(!fs.existsSync(path.join(root,old)),'Cal retirar el candidat obsolet: '+old);
 for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/streetfighter-25-geometry.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
-console.log('PASS BTR-82 two-model preview: 5.371/18 reference and 4.581/25 actual front-rear-and-gun repair; 3 Abrams');
+console.log('PASS BTR-82 two-model preview: 5.371/18 Three.js 25% base and truck A4.3 wheel variant; 3 Abrams');
