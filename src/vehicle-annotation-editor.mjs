@@ -121,8 +121,14 @@ export function createVehicleAnnotationEditor({slots,getType}){
  function sample(stroke,x,y,force=false){
   if(!stroke||!stroke.slot.model)return false;
   if(!force&&stroke.last&&Math.hypot(stroke.last[0]-x,stroke.last[1]-y)<10)return false;
-  const hit=stroke.mode==='fill'?nearestHit(stroke.slot,x,y):findHit(stroke.slot,x,y);
-  if(!hit&&stroke.mode!=='fill')return false;
+  const hit=stroke.mode==='fill'||stroke.mode==='remove'?nearestHit(stroke.slot,x,y):findHit(stroke.slot,x,y);
+  // Les malles GLB poden tenir forats, triangles d'una sola cara o parts
+  // no col·lisionables. El mode d'eliminar no pot perdre la selecció
+  // simplement perquè el primer raig no hagi trobat una cara.
+  if(!hit&&stroke.mode==='join'){
+   feedback.textContent='No he trobat cap cara en aquest punt. Prova més a prop del model.';
+   return false;
+  }
   let point,normal,meta={mesh:'(forat / espai buit)',face:null,triangles:0};
   if(stroke.mode==='fill'){
    if(!rayAt(stroke.slot,x,y))return false;
@@ -138,10 +144,30 @@ export function createVehicleAnnotationEditor({slots,getType}){
    normal=stroke.plane.normal;
    holePaint(stroke,point,normal);
    if(hit)meta.mesh=hit.object.name||'(sense nom)';
-  }else{
+  }else if(hit){
    point=hit.point.clone();
    meta=surfacePaint(stroke,hit);
-   if(!meta)return false;
+   if(!meta){
+    feedback.textContent='La cara no té una malla seleccionable.';
+    return false;
+   }
+  }else{
+   // Eliminar: conserva una marca espacial encara que el model tingui
+   // una cara buida o la malla no respongui al raycast.
+   if(!rayAt(stroke.slot,x,y))return false;
+   const modelCenter=new THREE.Box3().setFromObject(stroke.slot.model).getCenter(new THREE.Vector3());
+   const plane=new THREE.Plane().setFromNormalAndCoplanarPoint(
+    stroke.slot.camera.getWorldDirection(new THREE.Vector3()).negate(),modelCenter);
+   point=new THREE.Vector3();
+   if(!raycaster.ray.intersectPlane(plane,point))return false;
+   const sphere=new THREE.Mesh(new THREE.SphereGeometry(Math.max(.055,Number(size.value)*.25),10,8),
+    new THREE.MeshBasicMaterial({color:COLORS.remove,transparent:true,opacity:.75,depthTest:false}));
+   sphere.position.copy(point);
+   sphere.userData.vehicleAnnotationOverlay=true;
+   sphere.raycast=()=>{};
+   stroke.slot.scene.add(sphere);
+   stroke.visuals.push(sphere);
+   meta={mesh:'(espai buit / cap cara detectada)',face:null,triangles:0};
   }
   const local=stroke.slot.model.worldToLocal(point.clone()).toArray();
   stroke.marks.push({point:local,radius:Number(size.value),...meta});
@@ -166,7 +192,12 @@ export function createVehicleAnnotationEditor({slots,getType}){
   if(!current||current.slot!==slot)return false;
   if(!current.marks.length||!current.last||Math.hypot(current.last[0]-e.clientX,current.last[1]-e.clientY)>9)
    sample(current,e.clientX,e.clientY,true);
-  if(!current.marks.length)remove(strokes.indexOf(current));
+  if(!current.marks.length){
+   // No eliminem silenciosament les marques: així l'usuari sap què ha passat.
+   const index=strokes.indexOf(current);
+   if(index>=0)remove(index);
+   feedback.textContent='No s’ha pogut marcar aquesta zona. Prova amb un pinzell més gros o una altra vista.';
+  }
   current=null;return true;
  }
  function description(){
