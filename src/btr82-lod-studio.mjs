@@ -1,16 +1,16 @@
 // Low Poly BTR-82 by SIpriv (CC BY 4.0). Only two verified models in the
 // candidate page: 5,371-triangle iteration base and corrected chosen 50%.
-export const BTR82_VERSION='corrected-50-body-wheels-lamps-v1';
+export const BTR82_VERSION='symmetric-ends-black-gun-wheels-v2';
 const URL='./assets/vehicle-candidates/tanqueta/';
 const CREDIT='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
 const MODELS=Object.freeze([
  {slot:1,file:'btr82-base-100.glb',triangles:5371,meshes:18,
   title:'BTR-82 · base original 100%',detail:'Antic 25% · referència de 5.371 triangles'},
- {slot:2,file:'btr82-50-repaired.glb',triangles:3671,meshes:23,
-  title:'BTR-82 · 50% escollit i corregit',detail:'Casc reparat · 8 rodes tancades · 4 fars visibles'}
+ {slot:2,file:'btr82-50-repaired.glb',triangles:4253,meshes:12,
+  title:'BTR-82 · 50% refinat',detail:'Davant/darrere simètrics · canó negre · rodes detallades · 4 fars'}
 ]);
-const requiredRepairs=['hull_continuous_roof_liner','hull_continuous_side_liners',
- 'eight_closed_wheel_hubs','auxiliary_headlamp_housings_2','auxiliary_front_headlamps_2'];
+const requiredRepairs=['BTR82_hull_symmetric_batched','BTR82_black_barrel_and_muzzle',
+ 'BTR82_turret','BTR82_front_lenses_two'];
 function inspect(scene){
  let triangles=0,meshes=0;const names=new Set();
  scene.traverse(o=>{
@@ -67,7 +67,7 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
    }
   }));
   if(alive(token,run))notice.textContent=results.every(Boolean)?
-   'Només dos BTR-82: base 5.371 triangles i 50% reparat de 3.671. Casc, vuit rodes i quatre fars. Sense canvis al vehicle jugable.':
+   'Només dos BTR-82: base 5.371 triangles i 50% refinat de 4.253 amb 12 malles. Extrems simètrics, canó negre de doble diàmetre, rodes detallades i quatre fars. Sense canvis al vehicle jugable.':
    'No s’han pogut carregar els dos GLB. Recarrega el visor o comprova el desplegament.';
  }
  async function importGlb(blob,token,slotIndex){

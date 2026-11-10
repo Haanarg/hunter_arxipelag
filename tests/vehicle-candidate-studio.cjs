@@ -46,7 +46,8 @@ assert(html.includes('M1A1 Abrams')&&html.includes('BTR-82'),
  'Cal explicar el BTR-82 seleccionat al preview');
 assert.equal(manifest.selectedForLod?.tanqueta?.activePreviewModels,2);
 assert.equal(manifest.selectedForLod.tanqueta.original.triangles,5371);
-assert.equal(manifest.selectedForLod.tanqueta.selected.triangles,3671);
+assert.equal(manifest.selectedForLod.tanqueta.selected.triangles,4253);
+assert.equal(manifest.selectedForLod.tanqueta.selected.meshes,12);
 assert.equal(manifest.externalModels.tanqueta[0]?.modelId,'6226acae68424d99bf03882b245ff7c5');
 assert(!catalog.includes('fe28759be4914e4a9ea52d73aa503a4e'));
 assert(!catalog.includes('3a813f5520974d21b3b3bba52e04a7d9'));
@@ -56,7 +57,7 @@ assert(!btr.includes('SimplifyModifier')&&!btr.includes('repoPrecomputedLod'));
 assert(studio.includes("const btrStudy=config.id==='tanqueta'"));
 assert(studio.includes("slot.outer.hidden=btrStudy?![1,2].includes(slots.indexOf(slot)):slots.indexOf(slot)>3"));
 assert(html.includes('#grid.btr-study{grid-template-columns:repeat(2'));
-assert(html.includes('3.671')&&html.includes('quatre fars'));
+assert(html.includes('4.253')&&html.includes('quatre fars'));
 for(const obsolete of ['src/btr82-aggressive-simplification.mjs',
  'src/btr82-upload-policy.mjs','tests/btr82-preview-runtime.mjs','tools/repair-btr82-materials.cjs'])
  assert(!fs.existsSync(path.join(root,obsolete)),'Obsolete BTR-82 generator left behind: '+obsolete);

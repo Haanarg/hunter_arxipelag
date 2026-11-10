@@ -1,25 +1,36 @@
-# BTR-82 · dos models de comparació (10 novembre 2026)
+# Tanqueta BTR-82 · simetria, canó, rodes i optimització (10 novembre 2026)
 
-La pestanya **Tanqueta** conté només **base original** i **50% reparat**.
+La pàgina de proves conserva **només dos GLB**:
 
-| Variant | Triangles | Malles | Fitxer |
-|---|---:|---:|---|
-| Nova base original (antiga iteració 25%) | 5.371 | 18 | `btr82-base-100.glb` |
-| **50% escollit, corregit** | **3.671** | **23** | `btr82-50-repaired.glb` |
+| Versió | Triangles | Malles | Bytes |
+|---|---:|---:|---:|
+| Base de referència | 5.371 | 18 | 428.172 |
+| **50% escollit refinat** | **4.253** | **12** | **148.760** |
 
-La reparació pren el model escollit del 50% (2.684 triangles) i li recupera
-els panells del casc de la base de 5.371 triangles. Inclou una coberta
-interior contínua per tapar forats, vuit rodes octogonals tancades amb
-tapes de cub i quatre fars frontals: la parella existent i dos auxiliars
-amb carcassa. El preu de la reparació és de 987 triangles addicionals
-respecte del 50% sense reparar.
+S'ha refet la cara anterior i posterior amb parells de planxes
+**simètriques respecte a X=0**, i un panell central fosc
+centrat explícitament als dos extrems. S'ha substituït la
+geometria d'un antic fragment de canó per **un tub negre cilíndric
+prim** (radi 0,065 m) i **una boca més ampla** (radi 0,096 m),
+agrupats en una única malla.
 
-S'han retirat els GLB addicionals 75%, 50% anterior, 25%, i el GLB antic
-de 21.483 triangles de la carpeta de candidats. Aquest últim continua
-accessible per l'enllaç del creador i l'historial de GitHub.
+Les vuit rodes són **geometries tancades independents**, cadascuna
+amb dotze facetes, pneumàtic bisellat, llanta metàl·lica i cub
+central; 144 triangles per roda. Se n'ha recuperat el detall
+anterior sense tornar a crear rodes buides ni UV corruptes.
 
-Crèdits: **SIpriv · Low Poly BTR 82 · CC BY 4.0**
+**Optimització:** s'han fusionat les peces del casc amb colors per
+vèrtex (`COLOR_0`), mantenint-ne els diferents colors militars en
+**una sola malla**. Les malles totals passen de **23 a 12** (-47,8%)
+i la mida del GLB de 175.632 a 148.760 bytes (-15,3%). Els triangles
+pugen de 3.671 a 4.253 (+15,9%) per tornar a donar volum a les rodes,
+però són un 20,8% menys que els 5.371 de la base.
+
+La geometria s'ha revisat amb renderitzacions VTK de davant, darrere,
+costat i perspectives. Les proves del repositori comproven els dos
+panells centrals de debò (coordenades i colors), les rodes, el canó
+negre, els malles, els bytes i el SHA256. **No s'ha modificat la
+tanqueta jugable** ni la seva física, hitboxes o IA.
+
+Font: **Low Poly BTR 82**, SIpriv, **CC BY 4.0**:
 https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5
-
-El model jugable no s'ha canviat; queda pendent una validació visual al
-navegador, i després adaptar rodes, torreta, col·lisions i ocupants.

@@ -223,14 +223,14 @@
         "triangles": 21500,
         "license": "CC BY 4.0",
         "url": "https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5",
-        "note": "Només base de 5.371 triangles/18 malles i el 50% reparat de 3.671 triangles/23 malles, amb casc continu, vuit rodes tancades i quatre fars davanters.",
+        "note": "Només dues versions al visor: base 5.371 triangles/18 malles i 50% refinat 4.253 triangles/12 malles amb extrems simètrics i la part fosca centrada, canó negre cilíndric, rodes arrodonides i quatre fars.",
         "provider": "sketchfab",
         "slot": 1
       }
     ]
   },
   "lastCurated": "2026-11-08",
-  "curationNotes": "2026-11-10: únics GLB de tanqueta al comparador: btr82-base-100.glb i btr82-50-repaired.glb. Eliminats 75%, 50% antic, 25% i model 21.483 triangles del directori de candidats. SIpriv CC BY 4.0.",
+  "curationNotes": "2026-11-10: Refinat el BTR-82 escollit: dos extrems simètrics amb panell fosc centrat, canó negre prim i boca més ampla, vuit rodes de 12 facetes amb llanta i cub. Material batching de 23 a 12 malles (48% menys). Nou GLB 148.760 bytes; 4.253 triangles. Base de 5.371 triangles intacta.",
   "selectedForLod": {
     "tanqueta": {
       "modelId": "6226acae68424d99bf03882b245ff7c5",
@@ -249,11 +249,20 @@
       },
       "selected": {
         "file": "tanqueta/btr82-50-repaired.glb",
-        "triangles": 3671,
-        "meshes": 23,
-        "bytes": 175632,
-        "derivedFrom": "Second-generation 50%, restoring hull from cleaner base; solid wheels with hubcaps; four front lights",
-        "sha256": "1450da14334ebece0c4f4f30212ac18f98715bf7fe5204cffaf1155e9b8b76f3"
+        "triangles": 4253,
+        "meshes": 12,
+        "bytes": 148760,
+        "derivedFrom": "Selected second-generation 50% with repaired hull, symmetric front and rear dark centred armour, thin black barrel with wider muzzle, 12-sided inset wheel rims and hubs",
+        "sha256": "1ed1a2c58c00378c78ba5ead13a310000de496799a15d4044d9a29fae91566e7",
+        "optimized": {
+          "previousTriangles": 3671,
+          "previousMeshes": 23,
+          "previousBytes": 175632,
+          "newTriangles": 4253,
+          "newMeshes": 12,
+          "newBytes": 148760,
+          "independentWheelMeshes": 8
+        }
       },
       "gameIntegration": "pending_visual_review"
     }

@@ -1,3 +1,12 @@
+**P1 · 2026-11-10 · BTR-82 escollit: façanes simètriques, canó negre i rodes:**
+- [x] Davant i darrere amb panells simètrics a X=0 i blindatge central fosc, comprovats geomètricament.
+- [x] Canó cilíndric negre prim (radi 0,065) i tram final més gruixut (radi 0,096), una sola malla.
+- [x] Vuit rodes de 12 facetes amb llantes i cubs, sòlides i independents.
+- [x] Optimització per color de vèrtex: 23 → 12 malles i 175.632 → 148.760 bytes. Model resultant: 4.253 triangles.
+- [x] Quatre fars preservats. Visor continua amb només la base i el refinat, sense candidats antics.
+- [ ] Validació visual final al Chrome Android després del desplegament.
+- [ ] Integrar la tanqueta al joc només després de revisar rodes, torreta, hitbox i orientació (SOLO/COOP).
+
 **P1 · 2026-11-10 · tanqueta BTR-82 50% reparada al comparador:**
 - [x] Casc recuperat dels panells més complets, folre intern de coberta i laterals per tapar forats.
 - [x] Vuit rodes octogonals tancades amb tapes de cub i quatre fars davanters visibles (dos existents + dos auxiliars).
