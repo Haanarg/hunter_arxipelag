@@ -216,9 +216,14 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
  function present(spec,scene,local=false){
   const slot=slots[spec.slot],stats=inspect(scene);
   if(!stats.names.has('BTR82_new_black_barrel')||
-     !stats.names.has('BTR82_new_black_muzzle')||
-     ![1,2,3,4].every(i=>stats.names.has('BTR82_front_headlight_'+i+'_lens')))
-   throw Error('La variant '+spec.level+' ha perdut fars, torreta o canó');
+     !stats.names.has('BTR82_new_black_muzzle'))
+   throw Error('La variant '+spec.level+' ha perdut el canó original');
+  if(spec.level===2){
+   if(!stats.names.has('BTR82_v2_aggressive_symmetric_hull')||
+      !stats.names.has('BTR82_v2_angular_turret'))
+    throw Error('El casc angular v2 no està complet');
+  }else if(![1,2,3,4].every(i=>stats.names.has('BTR82_front_headlight_'+i+'_lens')))
+   throw Error('Falten fars a la base o al casc v1');
   setModel(slot,scene,false,[],true);
   slot.bold.textContent=spec.title;
   const delta=spec.level?' · '+Math.round(100*(1-stats.triangles/baselineTriangles))+'% menys triangles':' · punt de partida';
