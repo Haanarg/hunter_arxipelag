@@ -60,6 +60,9 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 .btr-part-footer{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
 #btrCopySelection{font-weight:800;background:#3b5b47;color:#f4f7e5}
 #btrSelectFeedback{font-size:12px;color:#e7dba8}
+#btrRepairLive{display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid #4e7b73;background:#132b2b;border-radius:8px;padding:9px 12px;margin:8px 0;font-size:12px}
+#btrRepairLiveCount{font-weight:750;color:#bcf3da;font-variant-numeric:tabular-nums}
+#btrRepairLiveStatus{color:#c6e5e3}
 .btr-part-tool.selecting~#grid .viewport{cursor:crosshair}
 .explainer{padding:13px 17px;border:1px solid #42645f;border-radius:11px;background:#152a2d;font-size:12px;line-height:1.6;color:#c6dbd0;margin-top:16px}
 .explainer strong{color:#eef2d1}.explainer a{color:#daebac}
@@ -90,7 +93,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </div></section>
 <section id="btrPartTool" class="btr-part-tool" aria-label="Editor de marques 3D del laboratori de vehicles">
  <div class="btr-part-header"><h2>Editor de marques 3D</h2><span>Per a tots els vehicles · Anotacions no destructives</span></div>
- <p><strong>Unir peces:</strong> clica diverses superfícies del mateix grup. <strong>Tapar forats:</strong> mou el cercle sobre el model i clica. <strong>Verd</strong> vol dir que hi ha un contorn obert petit detectable i es pot intentar tancar; <strong>blau</strong> vol dir que encara no s’hi ha trobat un contorn compatible. Les reparacions són reals i es poden desfer. <strong>Eliminar peces:</strong> arrossega per pintar les cares sobrants. Les marques no canvien el model. Amb l’editor actiu, usa <strong>Alt + arrossegar</strong> per girar, <strong>Majúscules + arrossegar</strong> (o botó dret) per pujar i baixar la vista i <strong>Alt + roda</strong> per fer zoom de precisió. També tens els botons ↑ Pujar i ↓ Baixar.</p>
+ <p><strong>Unir peces:</strong> clica diverses superfícies del mateix grup. <strong>Tapar forats:</strong> mou el cercle sobre el model: si el contorn és compatible, es veu <strong>en verd la superfície exacta que s'afegirà</strong> abans de clicar. En clicar s'actualitza immediatament el 3D i el comptador de triangles; pots girar el model per comprovar el resultat i desfer-lo. <strong>Verd</strong> vol dir que hi ha un contorn obert petit detectable i es pot intentar tancar; <strong>blau</strong> vol dir que encara no s’hi ha trobat un contorn compatible. Les reparacions són reals i es poden desfer. <strong>Eliminar peces:</strong> arrossega per pintar les cares sobrants. Les marques no canvien el model. Amb l’editor actiu, usa <strong>Alt + arrossegar</strong> per girar, <strong>Majúscules + arrossegar</strong> (o botó dret) per pujar i baixar la vista i <strong>Alt + roda</strong> per fer zoom de precisió. També tens els botons ↑ Pujar i ↓ Baixar.</p>
  <div class="btr-part-controls">
  <label class="btr-option"><input type="checkbox" id="btrSelectEnabled" checked> Editor actiu</label>
  <label>Eina <select id="btrSelectMode"><option value="join">Unir peces</option><option value="fill">Tapar forats (clic)</option><option value="remove">Eliminar peces</option></select></label>
@@ -99,6 +102,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
  <button id="btrUndoSelection" type="button">Desfer última acció</button>
  <button id="btrClearSelection" type="button">Netejar selecció</button>
  </div>
+ <div id="btrRepairLive" role="status" aria-live="polite"><span id="btrRepairLiveCount">0 reparacions · +0 triangles · 0 pendents</span><span id="btrRepairLiveStatus">Mou el cursor per previsualitzar la reparació; clica per aplicar-la.</span></div>
  <div id="btrSelections" class="btr-selection-list" aria-live="polite">Encara no hi ha cap peça seleccionada.</div>
  <label class="btr-notes-label" for="btrSelectNote">Detalls de les correccions que vols fer:</label>
  <textarea id="btrSelectNote" rows="3" placeholder="Ex.: les dues meitats de la coberta posterior han de formar una sola superfície contínua; els baixos dels dos costats també..."></textarea>
@@ -108,5 +112,5 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <div class="explainer">
 <strong>Com funciona:</strong> el banc mostra el model del joc i tres alternatives per a cada vehicle pendent. Els visors Sketchfab del tanc es manipulen individualment. L'original i el low-poly del BTR-82 comparteixen càmera i escala. Arrossega per girar la vista, utilitza <strong>Majúscules + arrossegar</strong> per desplaçar-la verticalment i <strong>Alt + roda</strong> o ＋ / － per apropar-te molt als detalls. Per a la tanqueta hi ha dues targetes: l'original de treball (rodes A4.3, quatre fars en la posició anterior i canó allargat) i el low-poly final. L'editor 3D permet unir peces, indicar cares per eliminar i intentar reparar petits forats delimitats per vores reals. El cercle del mode Tapar forats segueix el model: verd quan ha trobat un contorn reparable i blau en cas contrari. Un clic verd afegeix triangles a la geometria d'aquesta variant; «Desfer» restaura el retall. Les altres marques continuen sent anotacions no destructives. Les variants intermèdies ja no ocupen espai; es mantenen els crèdits SIpriv / CC BY 4.0. Cal adaptar física, seients i col·lisions abans de substituir un model.</div>
 </main><footer>Prova independent · Three.js r186 (el mateix del joc) · GLTFLoader · models originals importats de la fàbrica del joc · cap canvi a la física, combat o desament. Algunes fonts externes poden no permetre carregar fitxers des d'un altre domini; en aquest cas, utilitza la importació local.</footer>
-<script type="module" src="./src/vehicles-externs-proves.mjs?rev=vehicle-editor-49-hole-marks-v8"></script>
+<script type="module" src="./src/vehicles-externs-proves.mjs?rev=vehicle-editor-live-repair-preview-v9"></script>
 </body></html>
