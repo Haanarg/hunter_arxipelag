@@ -112,7 +112,7 @@ let yaw=.60,elev=.32,zoom=1,lookY=.6;
 let prev=performance.now();
 let btrStudioPromise=null;
 function getBtrStudio(){
- return btrStudioPromise??=import('./btr82-lod-studio.mjs?rev=btr82-base25-truck-wheels-cylinder-gun-v2').then(module=>module.createBtr82Studio({
+ return btrStudioPromise??=import('./btr82-lod-studio.mjs?rev=btr82-base25-progressive-four-lods-v1').then(module=>module.createBtr82Studio({
    slots,loadUploadedGlb,setModel,metrics,
    isCurrent:token=>token===generation&&currentType.id==='tanqueta',
    notice:warning
@@ -201,11 +201,11 @@ function normalize(obj,original){
  obj.updateMatrixWorld(true);
  return obj;
 }
-function setModel(slot,obj,original,animations=[]){
+function setModel(slot,obj,original,animations=[],keepNativeOrientation=false){
  dropPrevious(slot);
  // Els GLB verificats de 3DAssets apunten el morro cap a +Z;
  // la fàbrica del joc el dibuixa cap a -Z. Orientam sense deformar.
- if(!original)obj.rotation.y+=Math.PI;
+ if(!original&&!keepNativeOrientation)obj.rotation.y+=Math.PI;
  const wrap=new THREE.Group();wrap.add(obj);
  normalize(wrap,original);
  wrap.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
@@ -290,17 +290,17 @@ async function choose(config){
  const btrStudy=config.id==='tanqueta';
  grid.classList.toggle('btr-study',btrStudy);
  for(const slot of slots){
-   slot.outer.hidden=btrStudy?![1,2].includes(slots.indexOf(slot)):slots.indexOf(slot)>3;
+   slot.outer.hidden=btrStudy?false:slots.indexOf(slot)>3;
    dropPrevious(slot);
    slot.kind=config.kind;
    slot.ground.material.color.setHex(marine?0x285f65:config.kind==='aire'?0x6a7b67:0x69735e);
    slot.ground.material.roughness=marine?.43:1;
    slot.ground.material.needsUpdate=true;
    slot.status.textContent='Carregant…';slot.bold.textContent=slots.indexOf(slot)?'Alternativa '+slots.indexOf(slot):'Actual · '+config.name;
-   const isSource=slots.indexOf(slot)===1;
+   const isSource=slots.indexOf(slot)===0;
    const fileLabel=slot.upload.parentNode;
    if(fileLabel&&fileLabel.tagName==='LABEL')fileLabel.firstChild.textContent=btrStudy?
-     (isSource?'Importa base 25%':'Importa base 25% per canviar rodes'):'Importa GLB';
+     'Importa GLB base 25% (recalcula les 4 iteracions)':'Importa GLB';
    slot.sub.textContent=slots.indexOf(slot)?'Preparant candidat…':'Model real del joc';
    slot.source.hidden=true;
  }
@@ -419,7 +419,7 @@ const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.textContent=config.name;
- const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'2 models: base 25% i rodes del camió':config.id==='ferry'?'2–3 alternatives':'3 alternatives');
+ const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'base + 4 reduccions progressives':config.id==='ferry'?'2–3 alternatives':'3 alternatives');
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }
