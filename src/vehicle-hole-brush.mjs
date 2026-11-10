@@ -34,7 +34,7 @@ function boundaries(mesh){
  for(const [key,adj] of neighbors){
   if(adj.length!==2||seen.has(key))continue;
   const path=[],local=new Set();let current=key,previous=null,closed=false;
-  for(let n=0;n<256;n++){
+  for(let n=0;n<512;n++){
    if(local.has(current)){closed=current===key;break}
    const nexts=neighbors.get(current);
    if(!nexts||nexts.length!==2)break;
@@ -43,30 +43,38 @@ function boundaries(mesh){
    previous=current;current=next;
   }
   for(const k of local)seen.add(k);
-  if(closed&&path.length>=3&&path.length<=100)loops.push(path);
+  if(closed&&path.length>=3&&path.length<=256)loops.push(path);
  }
  boundaryCache.set(g,loops);
  return loops;
 }
 const distance=(a,b)=>a.distanceTo(b);
-export function getHoleBrushTarget(mesh,worldPoint,maxRadius){
+export function getHoleBrushTarget(mesh,worldPoint,maxRadius,options={}){
  if(!mesh?.isMesh||!mesh.geometry?.index)return null;
  mesh.updateWorldMatrix(true,false);
  const hit=mesh.worldToLocal(worldPoint.clone()),loops=boundaries(mesh);
  const localScale=mesh.getWorldScale(new THREE.Vector3());
  const scale=Math.max(.0001,(Math.abs(localScale.x)+Math.abs(localScale.y)+Math.abs(localScale.z))/3);
  const radius=maxRadius/scale;
+ const large=options.large===true;
  let best=null;
  for(const path of loops){
   const pts=path.map(v=>new THREE.Vector3(...v.p)),center=pts.reduce((v,p)=>v.add(p),new THREE.Vector3()).divideScalar(pts.length);
-  const nearest=Math.min(...pts.map(p=>distance(hit,p)));
+  // Distància a una ARESTA (no només a vèrtexs): fonamental en panells grans.
+  let nearest=Infinity;
+  for(let i=0;i<pts.length;i++){
+   const a=pts[i],b=pts[(i+1)%pts.length],ab=b.clone().sub(a);
+   const t=THREE.MathUtils.clamp(hit.clone().sub(a).dot(ab)/Math.max(1e-10,ab.lengthSq()),0,1);
+   nearest=Math.min(nearest,hit.distanceTo(a.clone().addScaledVector(ab,t)));
+  }
   if(nearest>Math.max(.11,radius*.85))continue;
   let span=0,perimeter=0;
   for(let i=0;i<pts.length;i++){
    span=Math.max(span,distance(center,pts[i]));
    perimeter+=distance(pts[i],pts[(i+1)%pts.length]);
   }
-  if(span>Math.min(1.15,Math.max(.25,radius*1.55))||perimeter>7.5)continue;
+  const maxSpan=large?Math.min(4.0,Math.max(.3,radius*2.5)):Math.min(1.15,Math.max(.25,radius*1.55));
+  if(span>maxSpan||perimeter>(large?24:7.5))continue;
   const normal=new THREE.Vector3();
   for(let i=0;i<pts.length;i++){
    const a=pts[i],b=pts[(i+1)%pts.length];
@@ -77,7 +85,7 @@ export function getHoleBrushTarget(mesh,worldPoint,maxRadius){
   if(normal.lengthSq()<1e-6)continue;
   normal.normalize();
   const maxPlanar=Math.max(...pts.map(p=>Math.abs(p.clone().sub(center).dot(normal))));
-  if(maxPlanar>.065)continue;
+  if(maxPlanar>(large?.20:.065))continue;
   // Dues dimensions derivades del pla de la vora real.
   const u=new THREE.Vector3().crossVectors(normal,new THREE.Vector3(0,1,0));
   if(u.lengthSq()<.01)u.crossVectors(normal,new THREE.Vector3(1,0,0));
@@ -86,10 +94,16 @@ export function getHoleBrushTarget(mesh,worldPoint,maxRadius){
   const planar=pts.map(p=>new THREE.Vector2(p.clone().sub(center).dot(u),p.clone().sub(center).dot(v)));
   const triangles=THREE.ShapeUtils.triangulateShape(planar,[]);
   if(triangles.length!==pts.length-2)continue;
+  const area=triangles.reduce((sum,[a,b,c])=>sum+Math.abs(
+   (planar[b].x-planar[a].x)*(planar[c].y-planar[a].y)-
+   (planar[c].x-planar[a].x)*(planar[b].y-planar[a].y))*.5,0);
+  if(area<.0005||area>(large?12:2))continue;
+  // Una obertura gran no s'ha de cobrir en mode automàtic petit.
+  if(!large&&span>1.15)continue;
   // No fer créixer peces si el punter és lluny del pla real.
-  if(Math.abs(hit.clone().sub(center).dot(normal))>Math.max(.22,radius))continue;
+  if(Math.abs(hit.clone().sub(center).dot(normal))>Math.max(large?.38:.22,radius))continue;
   const score=nearest+maxPlanar*2;
-  if(!best||score<best.score)best={mesh,path,center,normal,triangles,score,points:pts};
+  if(!best||score<best.score)best={mesh,path,center,normal,triangles,score,points:pts,area,span,large};
  }
  return best;
 }
