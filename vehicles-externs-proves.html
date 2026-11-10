@@ -20,6 +20,8 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 #warning{color:#f0d9a8;font-size:12px;line-height:1.5;max-width:900px}
 #grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;position:relative}
 #grid.btr-study{grid-template-columns:repeat(2,minmax(0,1fr))}
+#grid.single-model{grid-template-columns:minmax(0,1fr)}
+#grid.single-model .panel{height:clamp(440px,65vh,720px)}
 .panel[hidden]{display:none!important}
 .panel{min-width:0;height:clamp(350px,40vw,470px);position:relative;border:1px solid #54736e;border-radius:12px;overflow:hidden;background:linear-gradient(#314c52,#142c34);touch-action:pan-y}
 .panel:first-child{border-color:#d6c089}#grid.btr-study .panel:nth-child(3){border-color:#d6c089}
