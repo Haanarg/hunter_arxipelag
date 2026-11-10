@@ -54,7 +54,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </head><body>
 <header><div class="kicker">HUNTER: ARXIPÈLAG · LABORATORI DE MODELS</div>
 <h1>Flota · Models i simplificació</h1>
-<p>Els <strong>7 tipus de vehicles pendents de seleccionar</strong>. Els models definitius dels helicòpters Huey i Apache, de la moto i de la moto aquàtica ja no són al banc. A l'esquerra, el vehicle actual; a la dreta, tres alternatives. El tanc conserva els tres models de referència M1A1 Abrams. La tanqueta compara la base de 5.371 triangles amb el BTR-82 reparat de 4.581 triangles i 25 malles. La reparació tanca el buit frontal i els laterals posteriors, i allarga el canó negre fins a dins de la torreta. Es mantenen les vuit rodes detallades i els quatre fars. La resta de vehicles mantenen els GLB CC0 locals. Els models externs encara no substitueixen els vehicles del joc.</p>
+<p>Els <strong>7 tipus de vehicles pendents de seleccionar</strong>. Els models definitius dels helicòpters Huey i Apache, de la moto i de la moto aquàtica ja no són al banc. A l'esquerra, el vehicle actual; a la dreta, tres alternatives. El tanc conserva els tres models de referència M1A1 Abrams. La tanqueta compara la base Three.js al 25% (5.371 triangles) amb la mateixa carrosseria i les vuit rodes del camió A4.3. No es fan reduccions addicionals. </p>
 <nav aria-label="Vistes">
 <button id="view-quarter" data-view="quarter" class="active">3/4</button><button data-view="front" id="view-front">Frontal</button>
 <button data-view="side" id="view-side">Lateral</button><button data-view="rear" id="view-rear">Posterior</button>
@@ -71,7 +71,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </div></section>
 <section id="grid" aria-label="Comparativa de models 3D"></section>
 <div class="explainer">
-<strong>Com funciona:</strong> el banc mostra el model del joc i tres alternatives per a cada vehicle pendent. Els visors Sketchfab del tanc es manipulen individualment. Els dos BTR-82 comparteixen càmera i escala. Arrossega la resta dels panells per girar les càmeres del joc, i usa <strong>Alt + roda</strong> o els botons ＋ / － per fer zoom. Per a la tanqueta només hi ha dues targetes: la base de referència i el 50% reparat, carregats automàticament des del repositori. Les variants anteriors ja no són candidates; es mantenen els crèdits SIpriv / CC BY 4.0. Cal adaptar física, seients i col·lisions abans de substituir un model.</div>
+<strong>Com funciona:</strong> el banc mostra el model del joc i tres alternatives per a cada vehicle pendent. Els visors Sketchfab del tanc es manipulen individualment. Els dos BTR-82 comparteixen càmera i escala. Arrossega la resta dels panells per girar les càmeres del joc, i usa <strong>Alt + roda</strong> o els botons ＋ / － per fer zoom. Per a la tanqueta només hi ha dues targetes: la base Three.js al 25% i la variant amb rodes del camió, generada al navegador. Les variants anteriors ja no són candidates; es mantenen els crèdits SIpriv / CC BY 4.0. Cal adaptar física, seients i col·lisions abans de substituir un model.</div>
 </main><footer>Prova independent · Three.js r186 (el mateix del joc) · GLTFLoader · models originals importats de la fàbrica del joc · cap canvi a la física, combat o desament. Algunes fonts externes poden no permetre carregar fitxers des d'un altre domini; en aquest cas, utilitza la importació local.</footer>
 <script type="module" src="./src/vehicles-externs-proves.mjs?rev=btr82-sealed-hull-gun-v4"></script>
 </body></html>
