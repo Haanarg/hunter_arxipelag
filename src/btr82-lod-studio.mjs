@@ -5,19 +5,19 @@ import {repairMarkedRearSeams} from './btr82-rear-seam-repair.mjs';
 import {removeBtr82AnnotatedDetails} from './btr82-annotated-detail-removal.mjs';
 import {applyBtr82PaintAnnotations} from './btr82-painted-hole-repair.mjs';
 import {applyBtr82ConfirmedRepairs} from './btr82-confirmed-repairs.mjs';
-import {makeBtr82HullV1} from './btr82-hull-v1.mjs';
+import {makeBtr82HullV3} from './btr82-hull-v3.mjs';
 import {makeBtr82HullV2} from './btr82-hull-v2.mjs';
 // Low Poly BTR-82 by SIpriv (CC BY 4.0): base Three.js al 25%.
  // El punt de partida de les quatre reduccions és la variant actual amb
  // vuit rodes del camió A4.3 i canó negre cilíndric, NO el GLB original.
-export const BTR82_VERSION='btr82-angular-low-hull-v2';
+export const BTR82_VERSION='btr82-central-belly-hull-v3';
 const ASSET_DIR='./assets/vehicle-candidates/tanqueta/';
 const BASE_FILE='btr82-base-100.glb';
 const CREDIT='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
 const PASSES=Object.freeze([
  {slot:0,level:0,title:'Original · base aprovada',ratio:0},
- {slot:1,level:2,title:'Casc v2 · angular i més baix',ratio:0},
- {slot:2,level:1,title:'Casc v1 · comparació',ratio:0}
+ {slot:1,level:3,title:'Casc v3 · ventre central baix',ratio:0},
+ {slot:2,level:2,title:'Casc v2 · referència',ratio:0}
 ]);
 const LOD_RATIOS=[.18,.22,.27,.32];
 // Les primeres vuit malles de la base 25% són les rodes, separades de la carrosseria.
@@ -218,12 +218,16 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
   if(!stats.names.has('BTR82_new_black_barrel')||
      !stats.names.has('BTR82_new_black_muzzle'))
    throw Error('La variant '+spec.level+' ha perdut el canó original');
-  if(spec.level===2){
+  if(spec.level===3){
+   if(!stats.names.has('BTR82_v3_lowered_centre_hull')||
+      !stats.names.has('BTR82_v3_low_angular_turret'))
+    throw Error('El casc v3 o la torreta nova estan incomplets');
+  }else if(spec.level===2){
    if(!stats.names.has('BTR82_v2_aggressive_symmetric_hull')||
       !stats.names.has('BTR82_v2_angular_turret'))
     throw Error('El casc angular v2 no està complet');
   }else if(![1,2,3,4].every(i=>stats.names.has('BTR82_front_headlight_'+i+'_lens')))
-   throw Error('Falten fars a la base o al casc v1');
+   throw Error('Falten els fars de la base');
   setModel(slot,scene,false,[],true);
   slot.bold.textContent=spec.title;
   const delta=spec.level?' · '+Math.round(100*(1-stats.triangles/baselineTriangles))+'% menys triangles':' · punt de partida';
@@ -239,28 +243,25 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
   baselineTriangles=inspect(baseline).triangles;
   if(!alive(token,run))return;
   present(PASSES[0],baseline,local);
-  // Les dues variants es reconstrueixen directament des de la base:
-  // no hereten els forats o els pedaços del low-poly antic.
-  const previous=makeBtr82HullV1(baseline);
+  // Construïm v2 i v3 de manera independent, sempre des de la mateixa
+  // base amb les rodes i el canó aprovats. No reutilitzem pedaços antics.
+  const previous=makeBtr82HullV2(baseline);
   if(!alive(token,run))return;
   present(PASSES[2],previous,local);
-  const angular=makeBtr82HullV2(baseline);
+  const clean=makeBtr82HullV3(baseline);
   if(!alive(token,run))return;
-  present(PASSES[1],angular,local);
-  const v2=angular.userData.btr82HullV2;
-  slots[1].status.textContent+=' · casc '+v2.hullTriangles+' △ · torreta '+v2.turretTriangles+
-   ' △ · arestes vives · baixos en V · 8 rodes + canó originals';
-  const v1=previous.userData.btr82HullV1;
-  slots[2].status.textContent+=' · casc '+v1.hullTriangles+' △ · torreta '+v1.turretTriangles+
-   ' △ · versió anterior';
+  present(PASSES[1],clean,local);
+  const v3=clean.userData.btr82HullV3,v2=previous.userData.btr82HullV2;
+  slots[1].status.textContent+=' · casc '+v3.hullTriangles+' △ · torreta '+v3.turretTriangles+
+   ' △ · ventre central a '+v3.hullBottom.toFixed(2)+' m · sostre '+v3.roofHeight.toFixed(2)+' m · 8 rodes + canó';
+  slots[2].status.textContent+=' · casc '+v2.hullTriangles+' △ · torreta '+v2.turretTriangles+' △ · comparació v2';
   if(alive(token,run))notice.textContent=
-   'BTR-82 · CASC V2: nova silueta angular basada en les fotografies de referència. '
-   +'La carrosseria és uns 20 cm més baixa, amb frontal en falca, arestes laterals marcades, '
-   +'baixos bisellats en V i posterior inclinat. Casc i torreta tancats i simètrics. '
-   +'Es conserven intactes les vuit rodes i les dues peces del canó negre. '
-   +'Sense fars ni detalls petits a la nova versió: els recuperarem més endavant. '
-   +'L’original i el casc v1 continuen disponibles per comparar formes. '
-   +'Prototip només al laboratori, no implementat al joc.';
+   'BTR-82 · CASC V3: prototip de silueta més fidel amb frontal afilat i coberta rebaixada. '
+   +'La nova part inferior central baixa entre les dues columnes de rodes, '
+   +'fins a 0,15 m en la zona mitjana, mentre les espatlles laterals continuen angulars. '
+   +'Les dues peces noves són simètriques i tancades; rodes i canó negre originals preservats. '
+   +'La v2 queda a la dreta per comparar. La v1 s’ha retirat. '
+   +'Sense fars ni detalls petits: encara no és el model del joc.';
  }
  async function load(token){
   const run=++revision;
