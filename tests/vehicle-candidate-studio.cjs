@@ -55,7 +55,8 @@ const btr=read('src/btr82-lod-studio.mjs');
 assert(btr.includes("file:'btr82-base-100.glb'")&&btr.includes("file:'btr82-50-repaired.glb'"));
 assert(!btr.includes('SimplifyModifier')&&!btr.includes('repoPrecomputedLod'));
 assert(studio.includes("const btrStudy=config.id==='tanqueta'"));
-assert(studio.includes("slot.outer.hidden=btrStudy?![1,2].includes(slots.indexOf(slot)):slots.indexOf(slot)>3"));
+assert(studio.includes("btrStudy?![1,2].includes(slots.indexOf(slot)):slots.indexOf(slot)>3"),
+ 'Només dos panells de BTR-82, independentment de la lògica d’altres vehicles');
 assert(html.includes('#grid.btr-study{grid-template-columns:repeat(2'));
 assert(html.includes('4.581')&&html.includes('canó'));
 for(const obsolete of ['src/btr82-aggressive-simplification.mjs',
