@@ -60,7 +60,7 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 .btr-part-footer{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
 #btrCopySelection{font-weight:800;background:#3b5b47;color:#f4f7e5}
 #btrSelectFeedback{font-size:12px;color:#e7dba8}
-#grid.btr-study.selecting .viewport{cursor:crosshair}
+.btr-part-tool.selecting~#grid .viewport{cursor:crosshair}
 .explainer{padding:13px 17px;border:1px solid #42645f;border-radius:11px;background:#152a2d;font-size:12px;line-height:1.6;color:#c6dbd0;margin-top:16px}
 .explainer strong{color:#eef2d1}.explainer a{color:#daebac}
 footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-height:1.6}
@@ -88,24 +88,25 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <label><input id="showGrid" type="checkbox" checked> Graella i referència humana</label>
 
 </div></section>
-<section id="btrPartTool" class="btr-part-tool" hidden aria-label="Eina per seleccionar peces del BTR-82">
- <div class="btr-part-header"><h2>Seleccionar peces que han d'anar juntes</h2><span>Només per a la tanqueta · No modifica el model</span></div>
- <p>Activa el mode selecció, escull un grup de color i <strong>clica les parts del 3D que vols unir</strong>. Pots seleccionar punts del model original o del low-poly; els clics marquen una zona acolorida de la superfície. Arrossega per girar el model com sempre. Usa el mateix grup per a peces que han d'anar juntes; canvia de grup per a unions diferents.</p>
+<section id="btrPartTool" class="btr-part-tool" aria-label="Editor de marques 3D del laboratori de vehicles">
+ <div class="btr-part-header"><h2>Editor de marques 3D</h2><span>Per a tots els vehicles · Anotacions no destructives</span></div>
+ <p><strong>Unir peces:</strong> clica diverses superfícies del mateix grup. <strong>Pintar forats:</strong> arrossega des de la vora i pinta també sobre el buit. <strong>Eliminar peces:</strong> arrossega per pintar les cares sobrants. Les marques no canvien el model. Amb l’editor actiu, usa <strong>Alt + arrossegar</strong> per girar i <strong>Alt + roda</strong> per fer zoom.</p>
  <div class="btr-part-controls">
- <label class="btr-option"><input type="checkbox" id="btrSelectEnabled"> Seleccionar peces</label>
+ <label class="btr-option"><input type="checkbox" id="btrSelectEnabled" checked> Editor actiu</label>
+ <label>Eina <select id="btrSelectMode"><option value="join">Unir peces</option><option value="fill">Pintar forats</option><option value="remove">Eliminar peces</option></select></label>
  <label>Grup <select id="btrSelectGroup" aria-label="Grup de peces a unir"><option value="1">1 · Groc</option><option value="2">2 · Blau</option><option value="3">3 · Rosa</option><option value="4">4 · Verd</option></select></label>
- <label>Grandària de la zona <input type="range" id="btrBrushRadius" min=".10" max="1.20" step=".05" value=".40"> <output id="btrBrushRadiusText">0.40 m</output></label>
+ <label>Mida del pinzell <input type="range" id="btrBrushRadius" min=".10" max="1.20" step=".05" value=".40"> <output id="btrBrushRadiusText">0.40 m</output></label>
  <button id="btrUndoSelection" type="button">Desfer últim punt</button>
  <button id="btrClearSelection" type="button">Netejar selecció</button>
  </div>
  <div id="btrSelections" class="btr-selection-list" aria-live="polite">Encara no hi ha cap peça seleccionada.</div>
- <label class="btr-notes-label" for="btrSelectNote">Explica què hauria d'unir o corregir en aquestes zones:</label>
+ <label class="btr-notes-label" for="btrSelectNote">Detalls de les correccions que vols fer:</label>
  <textarea id="btrSelectNote" rows="3" placeholder="Ex.: les dues meitats de la coberta posterior han de formar una sola superfície contínua; els baixos dels dos costats també..."></textarea>
- <div class="btr-part-footer"><button id="btrCopySelection" type="button">Copiar selecció i explicació</button><span id="btrSelectFeedback" role="status">Marca les peces del model per indicar quines han d'anar juntes.</span></div>
+ <div class="btr-part-footer"><button id="btrCopySelection" type="button">Copiar marques i explicació</button><span id="btrSelectFeedback" role="status">Marca les peces del model per indicar quines han d'anar juntes.</span></div>
 </section>
 <section id="grid" aria-label="Comparativa de models 3D"></section>
 <div class="explainer">
-<strong>Com funciona:</strong> el banc mostra el model del joc i tres alternatives per a cada vehicle pendent. Els visors Sketchfab del tanc es manipulen individualment. L'original i el low-poly del BTR-82 comparteixen càmera i escala. Arrossega la resta dels panells per girar les càmeres del joc, i usa <strong>Alt + roda</strong> o els botons ＋ / － per fer zoom. Per a la tanqueta hi ha dues targetes: l'original de treball (rodes A4.3, quatre fars en la posició anterior i canó allargat) i el low-poly final. Per descriure quines superfícies s'han d'unir, activa «Seleccionar peces», clica diverses zones del mateix grup i copia'm el resultat. No es modifica la geometria en seleccionar. Les variants intermèdies ja no ocupen espai; es mantenen els crèdits SIpriv / CC BY 4.0. Cal adaptar física, seients i col·lisions abans de substituir un model.</div>
+<strong>Com funciona:</strong> el banc mostra el model del joc i tres alternatives per a cada vehicle pendent. Els visors Sketchfab del tanc es manipulen individualment. L'original i el low-poly del BTR-82 comparteixen càmera i escala. Arrossega la resta dels panells per girar les càmeres del joc, i usa <strong>Alt + roda</strong> o els botons ＋ / － per fer zoom. Per a la tanqueta hi ha dues targetes: l'original de treball (rodes A4.3, quatre fars en la posició anterior i canó allargat) i el low-poly final. L'editor 3D, disponible amb tots els vehicles, permet unir peces, pintar forats o indicar cares per eliminar, i exportar les marques per compartir-les. No es modifica la geometria en seleccionar. Les variants intermèdies ja no ocupen espai; es mantenen els crèdits SIpriv / CC BY 4.0. Cal adaptar física, seients i col·lisions abans de substituir un model.</div>
 </main><footer>Prova independent · Three.js r186 (el mateix del joc) · GLTFLoader · models originals importats de la fàbrica del joc · cap canvi a la física, combat o desament. Algunes fonts externes poden no permetre carregar fitxers des d'un altre domini; en aquest cas, utilitza la importació local.</footer>
-<script type="module" src="./src/vehicles-externs-proves.mjs?rev=btr82-single-upper-trapezoid-v3"></script>
+<script type="module" src="./src/vehicles-externs-proves.mjs?rev=vehicle-annotation-editor-v1"></script>
 </body></html>
