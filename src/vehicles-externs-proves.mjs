@@ -4,7 +4,7 @@ import {vehicleModels} from './vehicle-model-core.mjs';
 import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
-import {createVehicleAnnotationEditor} from './vehicle-annotation-editor.mjs?rev=delete-brush-fix-v2';
+import {createVehicleAnnotationEditor} from './vehicle-annotation-editor.mjs?rev=surface-hole-brush-v1';
 
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
@@ -404,6 +404,7 @@ document.querySelector('#fitScale').addEventListener('change',()=>choose(current
 document.querySelector('#showGrid').addEventListener('change',e=>{for(const s of slots){s.lines.visible=e.target.checked;s.person.visible=e.target.checked}});
 const drag=new Map(),pointerStarts=new Map(),paintPointers=new Set();
 slots.forEach(slot=>{
+ slot.viewport.addEventListener('pointerleave',()=>vehicleEditor.hideCursor());
  slot.viewport.addEventListener('pointerdown',e=>{
   slot.viewport.setPointerCapture(e.pointerId);
   drag.set(e.pointerId,[e.clientX,e.clientY]);
@@ -414,7 +415,10 @@ slots.forEach(slot=>{
   }
  });
  slot.viewport.addEventListener('pointermove',e=>{
-  if(!drag.has(e.pointerId))return;
+  if(!drag.has(e.pointerId)){
+   vehicleEditor.hover(slot,e);
+   return;
+  }
   if(paintPointers.has(e.pointerId)){vehicleEditor.move(slot,e);return}
   const old=drag.get(e.pointerId);drag.set(e.pointerId,[e.clientX,e.clientY]);
   if(e.shiftKey||(e.buttons&2)){
