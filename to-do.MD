@@ -530,6 +530,12 @@
 - Es mantenen com a documentació de referència les decisions d'arquitectura, validació, generació, guardat/comptes, regles físiques i disseny de missions que no són substituïbles per un checklist.
 - A partir d'ara, nous pendents es registren **només aquí**. Les notes de versions que es vulguin conservar han d'explicar decisions o contractes, no obrir llistes paral·leles.
 
+## Laboratori de proves de models 3D (decisió de producte)
+
+- **Implementat al codi:** `vehicles-externs-proves.html` disposa d'un **editor d'anotació no destructiu per defecte** i reutilitzable per a tots els models: `src/vehicle-annotation-editor.mjs`. Tres modes: unir peces per grups, pintar zones de forats (amb pintura sobre el buit a partir d'una vora) i marcar les cares per eliminar. Copia coordenades XYZ locals, malles, variants i explicació per comunicar canvis precisos. Permet continuar orbitant amb Alt + arrossegar i fer zoom amb Alt + roda. Aquest és el flux de referència per a futures proves de models; no tornar a crear eines temporals exclusives per vehicle.
+- **Pendent de validació:** provar el visor a Paradoxa i al navegador real, especialment la pintura sobre forats sense malla, la selecció amb ratolí i tàctil, la còpia al porta-retalls, la superposició de marques i les diferents categories de vehicle. Validar-ho separadament de les proves Node.
+- **Contracte:** les marques són anotacions, **no edicions automàtiques de la geometria**. S'han de conservar els models originals i presentar canvis de malla en variants comparables i reversibles.
+
 ## Ordre d'execució i criteris de «fet»
 
 1. **Primer**: eliminar lag d'explosions i completar prova real HOST/GUEST; estabilitzar regressions P0.
