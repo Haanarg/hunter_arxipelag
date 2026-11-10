@@ -1,4 +1,5 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
+import {getHoleBrushTarget,closeHoleUnderBrush} from './vehicle-hole-brush.mjs';
 
 // Editor d'anotacions 3D reutilitzable. Mai no altera les malles originals:
 // els pinzells són visuals i s'exporten com instruccions i coordenades.
@@ -12,6 +13,11 @@ export function createVehicleAnnotationEditor({slots,getType}){
  const COLORS={join:[0xffcf55,0x57ddf2,0xff70ab,0x9af07a],fill:0x2ee6e9,remove:0xff5e64};
  const NAMES={join:'UNIR PECES',fill:'TAPAR FORAT',remove:'ELIMINAR PEÇA'};
  const strokes=[];let current=null;
+ const previewMaterial=new THREE.MeshBasicMaterial({color:COLORS.fill,side:THREE.DoubleSide,depthTest:false,depthWrite:false,transparent:true,opacity:.78});
+ const preview=new THREE.Mesh(new THREE.RingGeometry(.91,1,32),previewMaterial);
+ preview.name='Vehicle_hole_brush_surface_cursor';preview.visible=false;
+ preview.userData.vehicleAnnotationOverlay=true;preview.raycast=()=>{};
+ let previewSlot=null;
  const fmt=x=>Number(x).toFixed(3);
  const isEnabled=()=>enabled.checked&&!panel.hidden;
  const mode=()=>modeControl.value;
@@ -58,20 +64,23 @@ export function createVehicleAnnotationEditor({slots,getType}){
  }
  function remove(i){
   const [stroke]=strokes.splice(i,1);
+  if(stroke)for(const edit of [...(stroke.edits||[])].reverse()){
+   if(edit.mesh.geometry===edit.current){edit.mesh.geometry=edit.previous;edit.current.dispose()}
+  }
   if(stroke)for(const v of stroke.visuals){
    v.removeFromParent();v.geometry?.dispose();v.material?.dispose();
   }
   updateList();
  }
  function reset(){
-  current=null;
+  current=null;preview.visible=false;
   while(strokes.length)remove(strokes.length-1);
   feedback.textContent='Selecciona una eina i marca les zones del model.';
  }
  function makeStroke(slot){
   const stroke={mode:mode(),group:Number(groupControl.value),vehicle:getType(),
    variant:slots.indexOf(slot)===0?'Model 1':'Model '+(slots.indexOf(slot)+1),
-   marks:[],visuals:[],last:null,slot,plane:null,anchor:null};
+   marks:[],visuals:[],edits:[],last:null,slot,plane:null,anchor:null};
   strokes.push(stroke);updateList();return stroke;
  }
  function surfacePaint(stroke,hit){
@@ -106,17 +115,30 @@ export function createVehicleAnnotationEditor({slots,getType}){
   mesh.add(overlay);stroke.visuals.push(overlay);
   return {mesh:mesh.name||'(sense nom)',face:hit.faceIndex,triangles:triangles.length/9};
  }
- function holePaint(stroke,point,normal){
-  // Disc orientat amb el pla de la primera vora trobada; es pot pintar
-  // també a l'espai buit, en comptes de seleccionar només triangles existents.
-  const g=new THREE.CircleGeometry(Number(size.value),24);
-  const m=new THREE.MeshBasicMaterial({color:COLORS.fill,side:THREE.DoubleSide,
-   transparent:true,opacity:.42,depthWrite:false,depthTest:false});
-  const circle=new THREE.Mesh(g,m);
-  circle.userData.vehicleAnnotationOverlay=true;circle.raycast=()=>{};
-  circle.position.copy(point);
-  circle.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),normal);
-  stroke.slot.scene.add(circle);stroke.visuals.push(circle);
+ // El cercle segueix la superfície real o el contorn obert detectat,
+ // i mai no s'ancora en un pla virtual de profunditat inventada.
+ function placeCursor(slot,x,y){
+  if(!isEnabled()||mode()!=='fill'||slot.outer.hidden||!slot.model){
+   preview.visible=false;return null;
+  }
+  const hit=nearestHit(slot,x,y);
+  if(!hit){preview.visible=false;return null}
+  const radius=Number(size.value);
+  const target=getHoleBrushTarget(hit.object,hit.point,radius);
+  const worldPoint=target?hit.object.localToWorld(target.center.clone()):hit.point.clone();
+  let normal;
+  if(target)normal=target.normal.clone().transformDirection(hit.object.matrixWorld);
+  else normal=(hit.face?.normal?.clone()||new THREE.Vector3(0,0,1)).transformDirection(hit.object.matrixWorld);
+  const scale=target?Math.min(radius*1.2,.48):radius;
+  preview.position.copy(worldPoint).addScaledVector(normal,.012);
+  preview.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),normal.normalize());
+  preview.scale.setScalar(scale);
+  previewMaterial.color.setHex(target?0x32efaa:COLORS.fill);
+  if(previewSlot!==slot){
+   preview.removeFromParent();slot.scene.add(preview);previewSlot=slot;
+  }
+  preview.visible=true;
+  return {hit,target,worldPoint};
  }
  function sample(stroke,x,y,force=false){
   if(!stroke||!stroke.slot.model)return false;
@@ -131,19 +153,25 @@ export function createVehicleAnnotationEditor({slots,getType}){
   }
   let point,normal,meta={mesh:'(forat / espai buit)',face:null,triangles:0};
   if(stroke.mode==='fill'){
-   if(!rayAt(stroke.slot,x,y))return false;
-   if(!stroke.plane){
-    if(!hit){feedback.textContent='Comença la pintada prop de la vora del forat.';return false}
-    const faceNormal=hit.face?.normal?.clone()||new THREE.Vector3(0,0,1);
-    faceNormal.transformDirection(hit.object.matrixWorld).normalize();
-    stroke.anchor=hit.point.clone();
-    stroke.plane=new THREE.Plane().setFromNormalAndCoplanarPoint(faceNormal,stroke.anchor);
+   const placement=placeCursor(stroke.slot,x,y);
+   if(!placement){feedback.textContent='Acosta el cursor a una vora real del model.';return false}
+   const {target,hit:surfaceHit,worldPoint}=placement;
+   point=worldPoint;
+   if(!target){
+    feedback.textContent='Sense contorn tancat sota el pinzell. El cercle blau marca la superfície, però encara no s’ha reparat res.';
+    // Conservem el punt sobre la superfície real com a anotació.
+    meta.mesh=surfaceHit.object.name||'(sense nom)';
+    meta.status='pendent: sense contorn compatible';
+   }else{
+    const edit=closeHoleUnderBrush(target);
+    if(!edit)return false;
+    stroke.edits.push(edit);
+    meta.mesh=edit.mesh.name||'(sense nom)';
+    meta.face=surfaceHit.faceIndex;
+    meta.triangles=edit.triangles;
+    meta.status='REPARAT: '+edit.triangles+' triangles afegits';
+    preview.visible=false;
    }
-   point=new THREE.Vector3();
-   if(!raycaster.ray.intersectPlane(stroke.plane,point))return false;
-   normal=stroke.plane.normal;
-   holePaint(stroke,point,normal);
-   if(hit)meta.mesh=hit.object.name||'(sense nom)';
   }else if(hit){
    point=hit.point.clone();
    meta=surfacePaint(stroke,hit);
@@ -173,7 +201,7 @@ export function createVehicleAnnotationEditor({slots,getType}){
   stroke.marks.push({point:local,radius:Number(size.value),...meta});
   stroke.last=[x,y];
   updateList();
-  feedback.textContent=NAMES[stroke.mode]+' · '+stroke.marks.length+' punts a la traçada.';
+  feedback.textContent=meta.status||NAMES[stroke.mode]+' · '+stroke.marks.length+' punts a la traçada.';
   return true;
  }
  function begin(slot,e){
@@ -184,13 +212,13 @@ export function createVehicleAnnotationEditor({slots,getType}){
  }
  function move(slot,e){
   if(!current||current.slot!==slot)return false;
-  if(mode()==='join')return true; // unió: clics puntuals; pintar: arrossegar
+  if(mode()==='join'||mode()==='fill')return true; // el tapament s'aplica per clic, un forat cada vegada
   sample(current,e.clientX,e.clientY);
   return true;
  }
  function end(slot,e){
   if(!current||current.slot!==slot)return false;
-  if(!current.marks.length||!current.last||Math.hypot(current.last[0]-e.clientX,current.last[1]-e.clientY)>9)
+  if(mode()!=='fill'&&(!current.marks.length||!current.last||Math.hypot(current.last[0]-e.clientX,current.last[1]-e.clientY)>9))
    sample(current,e.clientX,e.clientY,true);
   if(!current.marks.length){
    // No eliminem silenciosament les marques: així l'usuari sap què ha passat.
@@ -214,7 +242,8 @@ export function createVehicleAnnotationEditor({slots,getType}){
    for(const [j,m] of s.marks.entries())
     lines.push(' '+(j+1)+'. malla '+m.mesh+' · triangle '+(m.face??'sense cara')+
      ' · centre ('+m.point.map(fmt).join(', ')+') · radi '+m.radius.toFixed(2)+
-     ' m'+(s.mode==='remove'?' · triangles pintats '+m.triangles:''));
+     ' m'+(s.mode==='remove'?' · triangles pintats '+m.triangles:'')+
+     (m.status?' · '+m.status:''));
    lines.push('');
   }
   lines.push('EXPLICACIÓ:');
@@ -242,16 +271,18 @@ export function createVehicleAnnotationEditor({slots,getType}){
  $('btrUndoSelection').addEventListener('click',()=>{if(strokes.length)remove(strokes.length-1)});
  $('btrClearSelection').addEventListener('click',reset);
  modeControl.addEventListener('change',()=>{
-  feedback.textContent=mode()==='fill'?'Pinta el forat arrossegant des d’una vora.':
+  preview.visible=false;
+  feedback.textContent=mode()==='fill'?'Mou el cercle sobre una vora del forat. Verd = contorn detectable; clica per tancar-lo. Blau = encara no reparable.':
    mode()==='remove'?'Arrossega per marcar les cares que vols eliminar.':
    'Clica les peces que vols unir; selecciona un mateix grup per relacionar-les.';
   groupControl.disabled=mode()!=='join';
  });
  enabled.addEventListener('change',()=>{
   panel.classList.toggle('selecting',enabled.checked);
+  if(!enabled.checked)preview.visible=false;
   feedback.textContent=enabled.checked?'Editor actiu: selecciona una eina i pinta o clica sobre el model.':'Editor desactivat.';
  });
- size.addEventListener('input',()=>sizeLabel.textContent=Number(size.value).toFixed(2)+' m');
+ size.addEventListener('input',()=>{sizeLabel.textContent=Number(size.value).toFixed(2)+' m';preview.visible=false});
  updateList();
- return {active:isEnabled,begin,move,end,reset,mark:(slot,e)=>{begin(slot,e);end(slot,e)}};
+ return {active:isEnabled,begin,move,end,reset,hover:(slot,e)=>placeCursor(slot,e.clientX,e.clientY),hideCursor:()=>{preview.visible=false},mark:(slot,e)=>{begin(slot,e);end(slot,e)}};
 }
