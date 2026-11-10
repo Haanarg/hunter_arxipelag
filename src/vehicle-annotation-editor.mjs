@@ -9,6 +9,7 @@ export function createVehicleAnnotationEditor({slots,getType}){
  const groupControl=$('btrSelectGroup'),size=$('btrBrushRadius');
  const sizeLabel=$('btrBrushRadiusText'),notes=$('btrSelectNote');
  const feedback=$('btrSelectFeedback'),list=$('btrSelections');
+ const liveStatus=$('btrRepairLiveStatus'),liveCount=$('btrRepairLiveCount');
  const raycaster=new THREE.Raycaster(),cursor=new THREE.Vector2();
  const COLORS={join:[0xffcf55,0x57ddf2,0xff70ab,0x9af07a],fill:0x2ee6e9,remove:0xff5e64};
  const NAMES={join:'UNIR PECES',fill:'TAPAR FORAT',remove:'ELIMINAR PEÇA'};
@@ -17,7 +18,47 @@ export function createVehicleAnnotationEditor({slots,getType}){
  const preview=new THREE.Mesh(new THREE.RingGeometry(.91,1,32),previewMaterial);
  preview.name='Vehicle_hole_brush_surface_cursor';preview.visible=false;
  preview.userData.vehicleAnnotationOverlay=true;preview.raycast=()=>{};
- let previewSlot=null;
+ let previewSlot=null,previewPatch=null,previewKey=null;
+ const repairCounts=()=>strokes.reduce((acc,stroke)=>{
+  if(stroke.mode!=='fill')return acc;
+  for(const mark of stroke.marks){
+   if(mark.status?.startsWith('REPARAT:')){acc.repaired++;acc.triangles+=mark.triangles||0}
+   else if(mark.status?.startsWith('pendent:'))acc.pending++;
+  }
+  return acc;
+ },{repaired:0,triangles:0,pending:0});
+ function updateLiveStatus(message){
+  const {repaired,triangles,pending}=repairCounts();
+  if(liveCount)liveCount.textContent=repaired+' reparacions · +'+triangles+' triangles · '+pending+' pendents';
+  if(liveStatus&&message)liveStatus.textContent=message;
+ }
+ function clearPatchPreview(){
+  if(previewPatch){
+   previewPatch.removeFromParent();previewPatch.geometry.dispose();previewPatch.material.dispose();previewPatch=null;
+  }
+  previewKey=null;
+ }
+ function showPatchPreview(target){
+  if(!target){clearPatchPreview();return}
+  const identifier=target.mesh.geometry.uuid+':'+target.path.map(p=>p.i).join(',');
+  if(previewKey===identifier)return;
+  clearPatchPreview();
+  const coordinates=target.points.flatMap(p=>[p.x,p.y,p.z]),indices=target.triangles.flat();
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(coordinates,3));
+  geometry.setIndex(indices);geometry.computeVertexNormals();
+  const material=new THREE.MeshBasicMaterial({color:0x44ffae,side:THREE.DoubleSide,
+   transparent:true,opacity:.62,depthWrite:false,depthTest:true,
+   polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+  previewPatch=new THREE.Mesh(geometry,material);
+  previewPatch.name='Vehicle_hole_repair_live_preview';
+  previewPatch.userData.vehicleAnnotationOverlay=true;
+  previewPatch.raycast=()=>{};
+  // Local al mesh: exactament els triangles que s'afegiran en confirmar.
+  target.mesh.add(previewPatch);
+  previewKey=identifier;
+ }
+
  const fmt=x=>Number(x).toFixed(3);
  const isEnabled=()=>enabled.checked&&!panel.hidden;
  const mode=()=>modeControl.value;
@@ -76,12 +117,13 @@ export function createVehicleAnnotationEditor({slots,getType}){
   if(stroke)for(const v of stroke.visuals){
    v.removeFromParent();v.geometry?.dispose();v.material?.dispose();
   }
-  updateList();
+  updateList();updateLiveStatus('Acció desfeta: el model s’ha actualitzat.');
  }
  function reset(){
-  current=null;preview.visible=false;
+  current=null;preview.visible=false;clearPatchPreview();
   while(strokes.length)remove(strokes.length-1);
   feedback.textContent='Selecciona una eina i marca les zones del model.';
+  updateLiveStatus('Sense reparacions interactives en aquesta sessió.');
  }
  function makeStroke(slot){
   const stroke={mode:mode(),group:Number(groupControl.value),vehicle:getType(),
@@ -125,13 +167,14 @@ export function createVehicleAnnotationEditor({slots,getType}){
  // i mai no s'ancora en un pla virtual de profunditat inventada.
  function placeCursor(slot,x,y){
   if(!isEnabled()||mode()!=='fill'||slot.outer.hidden||!slot.model){
-   preview.visible=false;return null;
+   preview.visible=false;clearPatchPreview();return null;
   }
   const hit=nearestHit(slot,x,y);
-  if(!hit){preview.visible=false;return null}
+  if(!hit){preview.visible=false;clearPatchPreview();return null}
   const radius=Number(size.value);
   const target=getHoleBrushTarget(hit.object,hit.point,radius);
   const worldPoint=target?hit.object.localToWorld(target.center.clone()):hit.point.clone();
+  showPatchPreview(target);
   let normal;
   if(target)normal=target.normal.clone().transformDirection(hit.object.matrixWorld);
   else normal=(hit.face?.normal?.clone()||new THREE.Vector3(0,0,1)).transformDirection(hit.object.matrixWorld);
@@ -144,6 +187,8 @@ export function createVehicleAnnotationEditor({slots,getType}){
    preview.removeFromParent();slot.scene.add(preview);previewSlot=slot;
   }
   preview.visible=true;
+  if(target)updateLiveStatus('Previsualització verda: '+target.triangles.length+' triangles. Clica per aplicar-los al model.');
+  else updateLiveStatus('Contorn incompatible: cap triangle aplicable. Mou el cursor per cercar una vora oberta.');
   return {hit,target,worldPoint};
  }
  function markPendingOnSurface(stroke,hit){
@@ -184,6 +229,7 @@ export function createVehicleAnnotationEditor({slots,getType}){
     meta.status='pendent: sense contorn compatible';
     markPendingOnSurface(stroke,surfaceHit);
    }else{
+    clearPatchPreview();
     const edit=closeHoleUnderBrush(target);
     if(!edit)return false;
     stroke.edits.push(edit);
@@ -192,6 +238,7 @@ export function createVehicleAnnotationEditor({slots,getType}){
     meta.triangles=edit.triangles;
     meta.status='REPARAT: '+edit.triangles+' triangles afegits';
     preview.visible=false;
+    updateLiveStatus('Reparació aplicada al model 3D: +'+edit.triangles+' triangles. Pots girar la vista o desfer.');
    }
   }else if(hit){
    point=hit.point.clone();
@@ -221,7 +268,7 @@ export function createVehicleAnnotationEditor({slots,getType}){
   const local=stroke.slot.model.worldToLocal(point.clone()).toArray();
   stroke.marks.push({point:local,radius:Number(size.value),...meta});
   stroke.last=[x,y];
-  updateList();
+  updateList();updateLiveStatus();
   feedback.textContent=meta.status||NAMES[stroke.mode]+' · '+stroke.marks.length+' punts a la traçada.';
   return true;
  }
@@ -293,7 +340,8 @@ export function createVehicleAnnotationEditor({slots,getType}){
  $('btrUndoSelection').addEventListener('click',()=>{if(strokes.length)remove(strokes.length-1)});
  $('btrClearSelection').addEventListener('click',reset);
  modeControl.addEventListener('change',()=>{
-  preview.visible=false;
+  preview.visible=false;clearPatchPreview();
+  updateLiveStatus(mode()==='fill'?'Mou el cursor sobre el model per veure la reparació en verd abans de clicar.':'Mode d’anotació: la geometria no es modifica.');
   feedback.textContent=mode()==='fill'?'Mou el cercle sobre una vora del forat. Verd = contorn detectable; clica per tancar-lo. Blau = encara no reparable.':
    mode()==='remove'?'Arrossega per marcar les cares que vols eliminar.':
    'Clica les peces que vols unir; selecciona un mateix grup per relacionar-les.';
@@ -301,10 +349,10 @@ export function createVehicleAnnotationEditor({slots,getType}){
  });
  enabled.addEventListener('change',()=>{
   panel.classList.toggle('selecting',enabled.checked);
-  if(!enabled.checked)preview.visible=false;
+  if(!enabled.checked){preview.visible=false;clearPatchPreview()}
   feedback.textContent=enabled.checked?'Editor actiu: selecciona una eina i pinta o clica sobre el model.':'Editor desactivat.';
  });
- size.addEventListener('input',()=>{sizeLabel.textContent=Number(size.value).toFixed(2)+' m';preview.visible=false});
- updateList();
- return {active:isEnabled,begin,move,end,reset,hover:(slot,e)=>placeCursor(slot,e.clientX,e.clientY),hideCursor:()=>{preview.visible=false},mark:(slot,e)=>{begin(slot,e);end(slot,e)}};
+ size.addEventListener('input',()=>{sizeLabel.textContent=Number(size.value).toFixed(2)+' m';preview.visible=false;clearPatchPreview()});
+ updateList();updateLiveStatus('Mou el cursor per previsualitzar la reparació; clica per aplicar-la.');
+ return {active:isEnabled,begin,move,end,reset,hover:(slot,e)=>placeCursor(slot,e.clientX,e.clientY),hideCursor:()=>{preview.visible=false;clearPatchPreview()},mark:(slot,e)=>{begin(slot,e);end(slot,e)}};
 }
