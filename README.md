@@ -68,7 +68,7 @@ Les proves Node no substitueixen una partida real, una revisió WebGL/Android o 
 
 ## Laboratori de models 3D — editor de proves per defecte
 
-**Tanqueta BTR-82 (prototip geomètric actual):** comparativa en tres targetes: base de treball, casc **v2** més baix i d'arestes marcades (`src/btr82-hull-v2.mjs`) i casc v1 (`src/btr82-hull-v1.mjs`). La v2 conserva les vuit rodes i el canó negre, però refà el morro en falca, els laterals, el sostre, la part posterior i els baixos en V amb geometria tancada i simètrica. La torreta nova té cares planes. No porta fars encara, ni detalls decoratius. No està implementada al joc: cal validar-ne visualment les proporcions abans d'afegir detalls.
+**Tanqueta BTR-82 (prototip geomètric actual):** comparativa en tres targetes: base de treball, casc **v3** (`src/btr82-hull-v3.mjs`) i casc **v2** (`src/btr82-hull-v2.mjs`). La v3 modifica la silueta frontal i baixa el sostre de 1,87 a 1,68 m; la panxa estreta central, situada entre les rodes, baixa de 0,39 a 0,15 m. La malla està tancada i és simètrica, amb rodes i canó original conservats. S'ha eliminat la v1. De moment no hi ha fars ni petits detalls, i no està integrat al joc. Cal validar les proporcions en navegador.
 
 
 El banc de proves de vehicles és [vehicles-externs-proves.html](vehicles-externs-proves.html), publicat a `https://hunter.paradoxa.cat/vehicles-externs-proves.html`. La interfície de referència incorpora l'**editor de marques 3D**, reutilitzable per a tots els vehicles i per a futurs models. El codi general és `src/vehicle-annotation-editor.mjs`; no s'ha d'acoblar exclusivament a la tanqueta.
