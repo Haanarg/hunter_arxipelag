@@ -262,16 +262,16 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
   const clean=makeBtr82HullV3(baseline);
   if(!alive(token,run))return;
   present(PASSES[1],clean,local);
-  setHullAxisSwap(axisSwapEnabled);
   const v3=clean.userData.btr82HullV3,v2=previous.userData.btr82HullV2;
   slots[1].status.textContent+=' · casc '+v3.hullTriangles+' △ · torreta '+v3.turretTriangles+
    ' △ · ventre central a '+v3.hullBottom.toFixed(2)+' m · sostre '+v3.roofHeight.toFixed(2)+' m · 8 rodes + canó';
+  setHullAxisSwap(axisSwapEnabled);
   slots[2].status.textContent+=' · casc '+v2.hullTriangles+' △ · torreta '+v2.turretTriangles+' △ · comparació v2';
   if(alive(token,run))notice.textContent=
    'BTR-82 · CASC V3: prototip de silueta més fidel amb frontal afilat i coberta rebaixada. '
    +'La nova part inferior central baixa entre les dues columnes de rodes, '
    +'fins a 0,15 m en la zona mitjana, mentre les espatlles laterals continuen angulars. '
-   +'Les dues peces noves són simètriques i tancades; rodes i canó negre originals preservats. '
+   +'Les malles originals de la v3 són tancades i simètriques; el gir experimental del casc en conserva les cares, però pot traslladar diferències entre morro i popa als costats. Rodes i canó originals preservats. '
    +'A la v3 es pot activar o desactivar la prova de gir de 90° amb reajustament ample/llarg; '+
    'les rodes i el canó no es mouen. La v2 queda a la dreta per comparar. '
    +'Sense fars ni detalls petits: encara no és el model del joc.';
