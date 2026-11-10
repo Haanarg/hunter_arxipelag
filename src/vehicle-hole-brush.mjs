@@ -99,8 +99,7 @@ export function closeHoleUnderBrush(target){
  for(const p of target.points)positions.push(p.x,p.y,p.z);
  for(const [a,b,c] of target.triangles){
   indices.push(offset+a,offset+b,offset+c);
-  // Doble cara real per evitar desaparició si el GLB té normals invertides.
-  indices.push(offset+c,offset+b,offset+a);
+  // Una sola cara per no anul·lar les normals sumant cares inverses.
  }
  const geo=original.clone();
  geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
@@ -115,6 +114,13 @@ export function closeHoleUnderBrush(target){
  }
  geo.setIndex(indices);geo.computeVertexNormals();geo.computeBoundingBox();geo.computeBoundingSphere();
  geo.userData.candidateSimplified=true;
+ const previousMaterial=mesh.material;
+ // Doble cara al material reparat (no duplica triangles ni corromp normals).
+ const repairedMaterial=Array.isArray(previousMaterial)
+  ?previousMaterial.map(m=>{const copy=m.clone();copy.side=THREE.DoubleSide;return copy})
+  :previousMaterial.clone();
+ if(!Array.isArray(repairedMaterial))repairedMaterial.side=THREE.DoubleSide;
+ mesh.material=repairedMaterial;
  mesh.geometry=geo;
- return {mesh,previous:original,current:geo,triangles:target.triangles.length*2,vertices:target.points.length};
+ return {mesh,previous:original,current:geo,previousMaterial,repairedMaterial,triangles:target.triangles.length,vertices:target.points.length};
 }
