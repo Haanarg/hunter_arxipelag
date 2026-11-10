@@ -532,7 +532,7 @@
 
 ## Laboratori de proves de models 3D (decisió de producte)
 
-- **Tanqueta:** el casc **v2** és un prototip nou, tancat, simètric i ~20 cm més baix, amb morro en falca, laterals angulars i baixos en V (`src/btr82-hull-v2.mjs`); es mantenen rodes i canó. Es compara a Paradoxa amb l'original i amb la v1. **Pendent de validar visualment en navegador**: inclinació frontal, altura sobre rodes, volums de la part posterior, encaix torreta/sostre i canó. Els fars i detalls s'afegiran en iteracions posteriors. No integrar encara al joc.
+- **Tanqueta:** casc **v3** reconstruït i simètric (`src/btr82-hull-v3.mjs`), amb sostre 1,68 m i panxa central baixa (0,15 m) entre els dos costats de rodes. Manté les 8 rodes i el canó, elimina v1 i compara v3 amb v2 i original a Paradoxa. **Pendent de validar visualment en navegador**: contorn del morro, alçada del casc i volum central entre rodes, transició amb popa i encaix torreta/canó. Els detalls i fars s'afegiran posteriorment. No integrar encara al joc.
 
 
 - **Implementat al codi:** `vehicles-externs-proves.html` disposa d'un **editor d'anotació no destructiu per defecte** i reutilitzable per a tots els models: `src/vehicle-annotation-editor.mjs`. Tres modes: unir peces per grups; tapar forats amb un cercle que segueix la superfície real (verd si detecta un contorn simple, blau si no) i que tanca amb triangles reals en clicar, recuperables amb Desfer; marcar les cares per eliminar. Copia coordenades XYZ locals, malles, variants i explicació per comunicar canvis precisos. Permet continuar orbitant amb Alt + arrossegar i fer zoom amb Alt + roda. Aquest és el flux de referència per a futures proves de models; no tornar a crear eines temporals exclusives per vehicle.
