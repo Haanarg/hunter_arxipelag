@@ -5,12 +5,12 @@ import {repairMarkedRearSeams} from './btr82-rear-seam-repair.mjs';
 import {removeBtr82AnnotatedDetails} from './btr82-annotated-detail-removal.mjs';
 import {applyBtr82PaintAnnotations} from './btr82-painted-hole-repair.mjs';
 import {applyBtr82ConfirmedRepairs} from './btr82-confirmed-repairs.mjs';
-import {makeBtr82HullV3} from './btr82-hull-v3.mjs';
+import {makeBtr82HullV3,setBtr82HullV3AxisSwap} from './btr82-hull-v3.mjs';
 import {makeBtr82HullV2} from './btr82-hull-v2.mjs';
 // Low Poly BTR-82 by SIpriv (CC BY 4.0): base Three.js al 25%.
  // El punt de partida de les quatre reduccions és la variant actual amb
  // vuit rodes del camió A4.3 i canó negre cilíndric, NO el GLB original.
-export const BTR82_VERSION='btr82-central-belly-hull-v3';
+export const BTR82_VERSION='btr82-rotate-rescale-test-v3b';
 const ASSET_DIR='./assets/vehicle-candidates/tanqueta/';
 const BASE_FILE='btr82-base-100.glb';
 const CREDIT='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
@@ -212,6 +212,17 @@ function download(blob,name){
 }
 export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurrent,notice}){
  let revision=0;
+ let axisSwapEnabled=true;
+ function setHullAxisSwap(enabled){
+  axisSwapEnabled=!!enabled;
+  const mesh=slots[1]?.model;
+  const changed=mesh?setBtr82HullV3AxisSwap(mesh,axisSwapEnabled):false;
+  if(changed){
+   const suffix=' · '+(axisSwapEnabled?'GIR +90° i ample/llarg reajustats':'EIXOS ORIGINALS');
+   slots[1].status.textContent=slots[1].status.textContent.replace(/ · (GIR \+90° i ample\/llarg reajustats|EIXOS ORIGINALS)$/,'')+suffix;
+  }
+  return changed;
+ }
  const alive=(token,run)=>isCurrent(token)&&revision===run;
  function present(spec,scene,local=false){
   const slot=slots[spec.slot],stats=inspect(scene);
@@ -251,6 +262,7 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
   const clean=makeBtr82HullV3(baseline);
   if(!alive(token,run))return;
   present(PASSES[1],clean,local);
+  setHullAxisSwap(axisSwapEnabled);
   const v3=clean.userData.btr82HullV3,v2=previous.userData.btr82HullV2;
   slots[1].status.textContent+=' · casc '+v3.hullTriangles+' △ · torreta '+v3.turretTriangles+
    ' △ · ventre central a '+v3.hullBottom.toFixed(2)+' m · sostre '+v3.roofHeight.toFixed(2)+' m · 8 rodes + canó';
@@ -260,7 +272,8 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
    +'La nova part inferior central baixa entre les dues columnes de rodes, '
    +'fins a 0,15 m en la zona mitjana, mentre les espatlles laterals continuen angulars. '
    +'Les dues peces noves són simètriques i tancades; rodes i canó negre originals preservats. '
-   +'La v2 queda a la dreta per comparar. La v1 s’ha retirat. '
+   +'A la v3 es pot activar o desactivar la prova de gir de 90° amb reajustament ample/llarg; '+
+   'les rodes i el canó no es mouen. La v2 queda a la dreta per comparar. '
    +'Sense fars ni detalls petits: encara no és el model del joc.';
  }
  async function load(token){
@@ -292,5 +305,5 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
    if(alive(token,run))notice.textContent='Error en importar la base: '+(e?.message||String(e));
   }
  }
- return {load,importGlb};
+ return {load,importGlb,setHullAxisSwap};
 }
