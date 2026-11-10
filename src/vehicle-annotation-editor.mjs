@@ -1,0 +1,225 @@
+import * as THREE from '../vendor/three-r186.module.mjs';
+
+// Editor d'anotacions 3D reutilitzable. Mai no altera les malles originals:
+// els pinzells són visuals i s'exporten com instruccions i coordenades.
+export function createVehicleAnnotationEditor({slots,getType}){
+ const $=id=>document.getElementById(id);
+ const panel=$('btrPartTool'),enabled=$('btrSelectEnabled'),modeControl=$('btrSelectMode');
+ const groupControl=$('btrSelectGroup'),size=$('btrBrushRadius');
+ const sizeLabel=$('btrBrushRadiusText'),notes=$('btrSelectNote');
+ const feedback=$('btrSelectFeedback'),list=$('btrSelections');
+ const raycaster=new THREE.Raycaster(),cursor=new THREE.Vector2();
+ const COLORS={join:[0xffcf55,0x57ddf2,0xff70ab,0x9af07a],fill:0x2ee6e9,remove:0xff5e64};
+ const NAMES={join:'UNIR PECES',fill:'TAPAR FORAT',remove:'ELIMINAR PEÇA'};
+ const strokes=[];let current=null;
+ const fmt=x=>Number(x).toFixed(3);
+ const isEnabled=()=>enabled.checked&&!panel.hidden;
+ const mode=()=>modeControl.value;
+ function rayAt(slot,x,y){
+  const rect=slot.viewport.getBoundingClientRect();
+  if(!slot.model||rect.width<=0||rect.height<=0)return false;
+  cursor.set((x-rect.left)/rect.width*2-1,-(y-rect.top)/rect.height*2+1);
+  slot.camera.updateMatrixWorld(true);slot.model.updateMatrixWorld(true);
+  raycaster.setFromCamera(cursor,slot.camera);
+  return true;
+ }
+ function findHit(slot,x,y){
+  if(!rayAt(slot,x,y))return null;
+  const targets=[];
+  slot.model.traverse(mesh=>{
+   if(mesh.isMesh&&!mesh.userData.vehicleAnnotationOverlay)targets.push(mesh);
+  });
+  return raycaster.intersectObjects(targets,false)[0]||null;
+ }
+ function nearestHit(slot,x,y){
+  let hit=findHit(slot,x,y);if(hit)return hit;
+  // Un forat pot no tenir cap triangle sota el cursor. Busquem les vores
+  // properes i hi fixem el pla del pinzell, sense fingir que hem trobat una cara.
+  for(const r of [10,24,42,65]){
+   for(let i=0;i<12;i++){
+    const a=i*Math.PI/6;
+    hit=findHit(slot,x+Math.cos(a)*r,y+Math.sin(a)*r);
+    if(hit)return hit;
+   }
+  }
+  return null;
+ }
+ function updateList(){
+  list.textContent='';
+  if(!strokes.length){list.textContent='Encara no hi ha marques.';return}
+  strokes.forEach((stroke,i)=>{
+   const row=document.createElement('div');row.className='btr-selection-row';
+   const label=document.createElement('span');
+   label.textContent=NAMES[stroke.mode]+(stroke.mode==='join'?' · grup '+stroke.group:'')+
+    ' · '+stroke.vehicle+' · '+stroke.variant+' · '+stroke.marks.length+' punts';
+   const button=document.createElement('button');button.type='button';button.textContent='Treure';
+   button.addEventListener('click',()=>remove(i));row.append(label,button);list.append(row);
+  });
+ }
+ function remove(i){
+  const [stroke]=strokes.splice(i,1);
+  if(stroke)for(const v of stroke.visuals){
+   v.removeFromParent();v.geometry?.dispose();v.material?.dispose();
+  }
+  updateList();
+ }
+ function reset(){
+  current=null;
+  while(strokes.length)remove(strokes.length-1);
+  feedback.textContent='Selecciona una eina i marca les zones del model.';
+ }
+ function makeStroke(slot){
+  const stroke={mode:mode(),group:Number(groupControl.value),vehicle:getType(),
+   variant:slots.indexOf(slot)===0?'Model 1':'Model '+(slots.indexOf(slot)+1),
+   marks:[],visuals:[],last:null,slot,plane:null,anchor:null};
+  strokes.push(stroke);updateList();return stroke;
+ }
+ function surfacePaint(stroke,hit){
+  const mesh=hit.object,geo=mesh.geometry,pos=geo?.getAttribute('position');
+  if(!pos)return false;
+  const index=geo.index;
+  const center=mesh.worldToLocal(hit.point.clone());
+  const scale=mesh.getWorldScale(new THREE.Vector3());
+  const localRadius=Number(size.value)/Math.max(.0001,(Math.abs(scale.x)+Math.abs(scale.y)+Math.abs(scale.z))/3);
+  const faceNormal=hit.face?.normal?.clone().normalize()||new THREE.Vector3(0,0,1);
+  const va=new THREE.Vector3(),vb=new THREE.Vector3(),vc=new THREE.Vector3();
+  const mid=new THREE.Vector3(),ab=new THREE.Vector3(),ac=new THREE.Vector3(),normal=new THREE.Vector3();
+  const triangles=[];
+  const total=Math.floor((index?.count??pos.count)/3);
+  for(let i=0;i<total;i++){
+   const a=index?index.getX(i*3):i*3,b=index?index.getX(i*3+1):i*3+1,c=index?index.getX(i*3+2):i*3+2;
+   va.fromBufferAttribute(pos,a);vb.fromBufferAttribute(pos,b);vc.fromBufferAttribute(pos,c);
+   mid.copy(va).add(vb).add(vc).multiplyScalar(1/3);
+   normal.crossVectors(ab.subVectors(vb,va),ac.subVectors(vc,va)).normalize();
+   if(i!==hit.faceIndex&&(mid.distanceTo(center)>localRadius||normal.dot(faceNormal)<.16))continue;
+   triangles.push(...va.toArray(),...vb.toArray(),...vc.toArray());
+  }
+  if(!triangles.length)return false;
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(triangles,3));
+  g.computeVertexNormals();
+  const color=stroke.mode==='join'?COLORS.join[stroke.group-1]:COLORS[stroke.mode];
+  const mat=new THREE.MeshBasicMaterial({color,transparent:true,opacity:stroke.mode==='remove'?.77:.60,
+   side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+  const overlay=new THREE.Mesh(g,mat);
+  overlay.userData.vehicleAnnotationOverlay=true;overlay.raycast=()=>{};
+  mesh.add(overlay);stroke.visuals.push(overlay);
+  return {mesh:mesh.name||'(sense nom)',face:hit.faceIndex,triangles:triangles.length/9};
+ }
+ function holePaint(stroke,point,normal){
+  // Disc orientat amb el pla de la primera vora trobada; es pot pintar
+  // també a l'espai buit, en comptes de seleccionar només triangles existents.
+  const g=new THREE.CircleGeometry(Number(size.value),24);
+  const m=new THREE.MeshBasicMaterial({color:COLORS.fill,side:THREE.DoubleSide,
+   transparent:true,opacity:.42,depthWrite:false,depthTest:false});
+  const circle=new THREE.Mesh(g,m);
+  circle.userData.vehicleAnnotationOverlay=true;circle.raycast=()=>{};
+  circle.position.copy(point);
+  circle.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),normal);
+  stroke.slot.scene.add(circle);stroke.visuals.push(circle);
+ }
+ function sample(stroke,x,y,force=false){
+  if(!stroke||!stroke.slot.model)return false;
+  if(!force&&stroke.last&&Math.hypot(stroke.last[0]-x,stroke.last[1]-y)<10)return false;
+  const hit=stroke.mode==='fill'?nearestHit(stroke.slot,x,y):findHit(stroke.slot,x,y);
+  if(!hit&&stroke.mode!=='fill')return false;
+  let point,normal,meta={mesh:'(forat / espai buit)',face:null,triangles:0};
+  if(stroke.mode==='fill'){
+   if(!rayAt(stroke.slot,x,y))return false;
+   if(!stroke.plane){
+    if(!hit){feedback.textContent='Comença la pintada prop de la vora del forat.';return false}
+    const faceNormal=hit.face?.normal?.clone()||new THREE.Vector3(0,0,1);
+    faceNormal.transformDirection(hit.object.matrixWorld).normalize();
+    stroke.anchor=hit.point.clone();
+    stroke.plane=new THREE.Plane().setFromNormalAndCoplanarPoint(faceNormal,stroke.anchor);
+   }
+   point=new THREE.Vector3();
+   if(!raycaster.ray.intersectPlane(stroke.plane,point))return false;
+   normal=stroke.plane.normal;
+   holePaint(stroke,point,normal);
+   if(hit)meta.mesh=hit.object.name||'(sense nom)';
+  }else{
+   point=hit.point.clone();
+   meta=surfacePaint(stroke,hit);
+   if(!meta)return false;
+  }
+  const local=stroke.slot.model.worldToLocal(point.clone()).toArray();
+  stroke.marks.push({point:local,radius:Number(size.value),...meta});
+  stroke.last=[x,y];
+  updateList();
+  feedback.textContent=NAMES[stroke.mode]+' · '+stroke.marks.length+' punts a la traçada.';
+  return true;
+ }
+ function begin(slot,e){
+  if(!isEnabled()||slot.outer.hidden||!slot.model)return false;
+  current=makeStroke(slot);
+  sample(current,e.clientX,e.clientY,true);
+  return true;
+ }
+ function move(slot,e){
+  if(!current||current.slot!==slot)return false;
+  if(mode()==='join')return true; // unió: clics puntuals; pintar: arrossegar
+  sample(current,e.clientX,e.clientY);
+  return true;
+ }
+ function end(slot,e){
+  if(!current||current.slot!==slot)return false;
+  sample(current,e.clientX,e.clientY,true);
+  if(!current.marks.length)remove(strokes.indexOf(current));
+  current=null;return true;
+ }
+ function description(){
+  const lines=[
+   'HUNTER: ARXIPÈLAG — editor de models 3D · anotacions',
+   'Vehicle: '+getType(),
+   'Marques no destructives. Coordenades XYZ locals del model, aproximades.',
+   'Modes: UNIR PECES, TAPAR FORAT (traçada a l’espai, fins i tot sense triangles) i ELIMINAR PEÇA.',
+   ''
+  ];
+  for(const [i,s] of strokes.entries()){
+   lines.push('ANOTACIÓ '+(i+1)+' — '+NAMES[s.mode]+
+    (s.mode==='join'?' · GRUP '+s.group:'')+' · '+s.variant+':');
+   for(const [j,m] of s.marks.entries())
+    lines.push(' '+(j+1)+'. malla '+m.mesh+' · triangle '+(m.face??'sense cara')+
+     ' · centre ('+m.point.map(fmt).join(', ')+') · radi '+m.radius.toFixed(2)+
+     ' m'+(s.mode==='remove'?' · triangles pintats '+m.triangles:''));
+   lines.push('');
+  }
+  lines.push('EXPLICACIÓ:');
+  lines.push(notes.value.trim()||'(Sense comentaris addicionals)');
+  return lines.join('\n');
+ }
+ async function copy(){
+  if(!strokes.length){feedback.textContent='Marca almenys una zona abans de copiar.';return}
+  const text=description();
+  try{
+   if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);
+   else{
+    const temp=document.createElement('textarea');temp.value=text;
+    document.body.append(temp);temp.select();
+    if(!document.execCommand('copy'))throw Error('No es pot copiar');
+    temp.remove();
+   }
+   feedback.textContent='Anotacions copiades. Enganxa-les al xat.';
+  }catch{
+   notes.value=text;notes.focus();notes.select();
+   feedback.textContent='Selecciona i copia manualment el text del camp.';
+  }
+ }
+ $('btrCopySelection').addEventListener('click',copy);
+ $('btrUndoSelection').addEventListener('click',()=>{if(strokes.length)remove(strokes.length-1)});
+ $('btrClearSelection').addEventListener('click',reset);
+ modeControl.addEventListener('change',()=>{
+  feedback.textContent=mode()==='fill'?'Pinta el forat arrossegant des d’una vora.':
+   mode()==='remove'?'Arrossega per marcar les cares que vols eliminar.':
+   'Clica les peces que vols unir; selecciona un mateix grup per relacionar-les.';
+  groupControl.disabled=mode()!=='join';
+ });
+ enabled.addEventListener('change',()=>{
+  panel.classList.toggle('selecting',enabled.checked);
+  feedback.textContent=enabled.checked?'Editor actiu: selecciona una eina i pinta o clica sobre el model.':'Editor desactivat.';
+ });
+ size.addEventListener('input',()=>sizeLabel.textContent=Number(size.value).toFixed(2)+' m');
+ updateList();
+ return {active:isEnabled,begin,move,end,reset,mark:(slot,e)=>{begin(slot,e);end(slot,e)}};
+}
