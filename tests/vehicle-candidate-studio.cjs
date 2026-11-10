@@ -80,7 +80,8 @@ assert(hullV2.includes('roofHeight:1.87')&&hullV2.includes('hullBottom:.39'));
 assert(hullV2.includes('wheels.length!==8||gun.length!==2'),'La v2 ha de conservar les rodes i el canó');
 assert(btr.includes('present(PASSES[1],angular,local)')&&btr.includes('present(PASSES[2],previous,local)'));
 const currentRender=btr.slice(btr.indexOf('async function renderFromSource'),btr.indexOf('async function load'));
-assert(html.includes('casc nou v1')&&html.includes('tres targetes'));
+assert(html.includes('casc v2')&&html.includes('tres targetes'));
+
 
 assert(html.includes('Editor de marques 3D')&&html.includes('btrSelectGroup')&&html.includes('btrCopySelection')&&html.includes('btrSelectMode'));
 assert(html.includes('Tapar forats (clic)')&&html.includes('Eliminar peces'));
@@ -147,7 +148,7 @@ const details=read('src/btr82-annotated-detail-removal.mjs');
 assert(details.includes('export const BTR82_DELETE_MARKS')&&details.includes('connectedPatches'));
 assert(details.includes('hull_material_0')&&details.includes('hull_material_1')&&details.includes('hull_material_2'));
 assert(details.includes('turret_material_3')&&details.includes('turret_material_2'));
-assert(details.includes('[1.585,1.665,-3.063]')&&details.includes('[-.450,2.333,-1.311]'));
+assert(details.includes('[1.585,1.665,-3.063]')&&details.includes('[-0.450,2.333,-1.311]'));
 assert(details.includes('maxTriangles')&&details.includes('maxSpan')&&details.includes('patch.centroids.some'));
 assert(details.includes('scene.userData.btr82AnnotatedDetailCleanup=report'));
 
