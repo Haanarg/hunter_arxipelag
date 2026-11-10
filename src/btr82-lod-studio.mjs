@@ -5,7 +5,7 @@ import {repairMarkedRearSeams} from './btr82-rear-seam-repair.mjs';
 // Low Poly BTR-82 by SIpriv (CC BY 4.0): base Three.js al 25%.
  // El punt de partida de les quatre reduccions és la variant actual amb
  // vuit rodes del camió A4.3 i canó negre cilíndric, NO el GLB original.
-export const BTR82_VERSION='base25-annotated-rear-stitches-v2';
+export const BTR82_VERSION='btr82-single-upper-trapezoid-v3';
 const ASSET_DIR='./assets/vehicle-candidates/tanqueta/';
 const BASE_FILE='btr82-base-100.glb';
 const CREDIT='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
@@ -199,10 +199,10 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
   }
   const joinedGroups=repairMarkedRearSeams(previous);
   present(PASSES[1],previous,local);
-  const repairs=joinedGroups.map(g=>'grup '+g.group+': '+g.bridges+' unions').join(' · ');
+  const repairs=joinedGroups.map(g=>g.group===1?'coberta superior: 1 trapezi (2 triangles)':'baixos: '+g.bridges+' unions locals').join(' · ');
   slots[1].status.textContent+=' · '+repairs;
   if(alive(token,run))notice.textContent=
-   'BTR-82: original intacte i low-poly amb costures posteriors corregides segons les coordenades dels grups 1 (coberta superior) i 2 (baixos). Les unions són triangles de la mateixa malla, no planxes afegides. El visor mostra el nombre real de ponts creats per grup; activa «Seleccionar peces» per revisar el resultat.';
+   'BTR-82: original de treball intacte. Al low-poly, els sis punts del grup 1 defineixen una única peça trapezoidal de dos triangles per cobrir l’obertura superior posterior. El grup 2 conserva les unions locals anteriors dels baixos. Activa «Seleccionar peces» per revisar i tornar a marcar les zones.';
  }
  async function load(token){
   const run=++revision;
