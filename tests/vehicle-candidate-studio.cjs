@@ -64,8 +64,11 @@ assert(studio.includes("const btrStudy=config.id==='tanqueta'"));
 assert(studio.includes("slot.outer.hidden=btrStudy?slots.indexOf(slot)>1:slots.indexOf(slot)>3"),
  'El BTR-82 només ha de mostrar dos panells, sense modificar els altres vehicles');
 assert(html.includes('#grid.btr-study{grid-template-columns:repeat(2'));
-assert(html.includes('Seleccionar peces')&&html.includes('btrSelectGroup')&&html.includes('btrCopySelection'));
-assert(studio.includes('createBtr82PartSelector')&&studio.includes('btrPartSelector.mark(slot,e)'));
+assert(html.includes('Editor de marques 3D')&&html.includes('btrSelectGroup')&&html.includes('btrCopySelection')&&html.includes('btrSelectMode'));
+assert(html.includes('Pintar forats')&&html.includes('Eliminar peces'));
+assert(!html.includes('id="btrPartTool" class="btr-part-tool" hidden'),'L\'editor ha de ser visible per defecte');
+assert(studio.includes('createVehicleAnnotationEditor')&&studio.includes('vehicleEditor.begin(slot,e)')&&studio.includes('vehicleEditor.move(slot,e)'));
+assert(studio.includes("document.querySelector('#btrPartTool').hidden=false"));
 const repair=read('src/btr82-rear-seam-repair.mjs');
 assert(repair.includes('repairMarkedRearSeams')&&repair.includes('hull_material_0')&&repair.includes('groups.push'));
 assert(repair.includes('[-.581,1.813,5.497]')&&repair.includes('[-1.397,1.494,5.748]')&&repair.includes('[-.352,.543,5.518]'));
@@ -74,8 +77,13 @@ assert(repair.includes('if(group.group===1)')&&repair.includes('addUpperTrapezoi
 assert(repair.includes('joined.setIndex([...faces,...patches])'));
 assert(btr.includes('repairMarkedRearSeams(previous)'));
 assert(btr.includes('coberta superior: 1 trapezi (2 triangles)'));
-const selector=read('src/btr82-part-selector.mjs');
+const selector=read('src/vehicle-annotation-editor.mjs');
 assert(selector.includes('raycaster.intersectObjects')&&selector.includes('navigator.clipboard')&&selector.includes('EXPLICACIÓ:'));
+assert(selector.includes("fill:'TAPAR FORAT'")&&selector.includes("remove:'ELIMINAR PEÇA'"));
+assert(selector.includes('intersectPlane')&&selector.includes('stroke.marks.push'));
+assert(selector.includes('getType()')&&selector.includes('mesh.name'));
+assert(read('README.md').includes('editor de marques 3D'));
+assert(read('to-do.MD').includes('Laboratori de proves de models 3D'));
 assert(btr.includes('withTruckWheels')&&btr.includes('replaceBarrelWithCylinders'));
 assert(!btr.includes('mesh.position.set(x,.54,z)'));
 
@@ -99,6 +107,6 @@ for(const old of ['helicopters-lod-proves.html','apache-variants-proves.html',
  'assets/vehicle-candidates/helicopter-lods/manifest.json',
  'assets/vehicle-candidates/helicopter-lods/apache-hybrid-manifest.json'])
  assert(!fs.existsSync(path.join(root,old)),'Cal retirar el candidat obsolet: '+old);
-for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/btr82-part-selector.mjs','src/btr82-rear-seam-repair.mjs','src/streetfighter-25-geometry.mjs'])
+for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/vehicle-annotation-editor.mjs','src/btr82-part-selector.mjs','src/btr82-rear-seam-repair.mjs','src/streetfighter-25-geometry.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
-console.log('PASS BTR-82 two-panel annotated preview: base plus final LOD, original headlamps and extended gun; four selectable groups');
+console.log('PASS default reusable vehicle 3D annotation editor: join parts, paint holes and mark parts for removal');
