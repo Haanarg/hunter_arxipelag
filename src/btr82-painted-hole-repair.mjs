@@ -42,7 +42,7 @@ export const BTR82_PAINTED_HOLES=Object.freeze([
   [.115,.323,5.453],[.344,.333,5.457],[.570,.288,5.443]
  ]},
  // Marques del nou informe: el pinzell agrupava múltiples punts del mateix buit.
- {id:201,mesh:'hull_material_0',radius:.40,points:[
+ {id:201,mesh:'hull_material_0',radius:.40,pointCloud:true,points:[
   [-.559,2.063,.829],[-.225,2.062,.598],[-.085,2.063,.613],[.244,2.063,.691],
   [.679,2.031,1.090],[.921,2.017,1.151],[.218,2.035,1.110],
   [-.082,2.045,1.079],[-.369,2.048,1.085],[-.943,2.045,.377],
@@ -52,17 +52,17 @@ export const BTR82_PAINTED_HOLES=Object.freeze([
   [.833,2.056,-.736],[.799,2.057,-1.166],[.722,2.061,-1.606],
   [.879,2.056,.066]
  ]},
- {id:202,mesh:'hull_material_0',radius:.35,points:[
+ {id:202,mesh:'hull_material_0',radius:.35,pointCloud:true,points:[
   [1.607,1.405,-.387],[1.910,1.318,-.811],[1.910,1.347,-1.754],
   [1.880,1.289,-.332],[1.824,1.277,-.514],[1.895,1.266,-.252]
  ]},
- {id:203,mesh:'hull_material_0',radius:.35,points:[
+ {id:203,mesh:'hull_material_0',radius:.35,pointCloud:true,points:[
   [-.064,.570,5.526],[-.017,.363,5.465],[1.049,.387,5.473],
   [.878,.381,5.471],[.895,.549,5.520],[.027,.439,5.488],
   [-.012,.585,5.531],[.296,.278,5.440],[.903,.196,5.416],
   [-.097,.517,5.511],[.087,.375,5.469],[.426,.230,5.426]
  ]},
- {id:204,mesh:'hull_material_0',radius:.35,points:[
+ {id:204,mesh:'hull_material_0',radius:.35,pointCloud:true,points:[
   [.170,.374,4.479],[.398,.238,4.494],[.574,.239,4.494],
   [.556,.171,4.501],[.011,.654,4.448],[-.179,.753,4.437],
   [-.211,.834,4.429],[.515,.476,4.468]
@@ -86,6 +86,9 @@ function pointToTrack(p,track){
   d=Math.min(d,dist(p,a.map((x,k)=>x+v[k]*t)));
  }
  return d;
+}
+function pointToStroke(p,stroke){
+ return stroke.pointCloud?Math.min(...stroke.points.map(q=>dist(p,q))):pointToTrack(p,stroke.points);
 }
 function boundaryEdges(geo){
  const pos=geo.getAttribute('position'),idx=geo.index;
@@ -112,24 +115,24 @@ function stitchGeometry(mesh,strokes){
  const matches=[],used=new Set(),byStroke=new Map();
  for(const stroke of strokes){
   const maxDistance=stroke.radius===.10?.18:.27;
-  const candidates=edges.filter(e=>pointToTrack(e.mid,stroke.points)<maxDistance);
+  const candidates=edges.filter(e=>pointToStroke(e.mid,stroke)<maxDistance);
   const scored=[];
   for(let i=0;i<candidates.length;i++)for(let j=i+1;j<candidates.length;j++){
    const a=candidates[i],b=candidates[j];
    if(a===b||[a.a,a.b].includes(b.a)||[a.a,a.b].includes(b.b))continue;
    const midpointDistance=dist(a.mid,b.mid);
-   if(midpointDistance<.035||midpointDistance>.24)continue;
+   if(midpointDistance<.035||midpointDistance>(stroke.pointCloud?.38:.24))continue;
    if(dot(a.normal,b.normal)<.72)continue;
    if(Math.abs(a.len-b.len)>.12)continue;
    const direct=dist(a.pa,b.pa)+dist(a.pb,b.pb),reverse=dist(a.pa,b.pb)+dist(a.pb,b.pa);
    const reverseOrder=reverse<direct;
    const q0=reverseOrder?b.pb:b.pa,q1=reverseOrder?b.pa:b.pb;
    const maxGap=Math.max(dist(a.pa,q0),dist(a.pb,q1));
-   if(maxGap>.28||maxGap<.025)continue;
-   if(pointToTrack(midway(a.mid,b.mid),stroke.points)>maxDistance)continue;
+   if(maxGap>(stroke.pointCloud?.42:.28)||maxGap<.025)continue;
+   if(pointToStroke(midway(a.mid,b.mid),stroke)>maxDistance)continue;
    const p=sub(a.pb,a.pa),q=sub(q0,a.pa),normal=norm(cross(p,q));
    const area=Math.hypot(...cross(p,q))/2+Math.hypot(...cross(sub(q1,a.pb),sub(q0,a.pb)))/2;
-   if(area<.0008||area>.032)continue;
+   if(area<.0008||area>(stroke.pointCloud?.075:.032))continue;
    if(Math.abs(dot(normal,a.normal))<.65)continue;
    scored.push({a,b,reverseOrder,score:direct<reverse?direct:reverse,normal});
   }
