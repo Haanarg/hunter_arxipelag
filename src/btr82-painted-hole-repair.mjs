@@ -184,8 +184,60 @@ function removeSmallRearDetail(scene){
  cleaned.userData.candidateSimplified=true;mesh.geometry=cleaned;
  return {removed:selected.length};
 }
+// Quatre marques ELIMINAR PEÇA a la part superior, Model 2.
+// No esborrem per índex de triangle: els índexs canvien amb SimplifyModifier.
+// Només s'accepten illes geomètriques connectades petites i properes.
+export function removeNewPaintedUpperDetails(scene){
+ const mesh=scene.getObjectByName('hull_material_1');
+ if(!mesh?.isMesh||!mesh.geometry?.index)return {removed:0,reason:'malla no indexada'};
+ const marks=[[-1.216,2.020,.513],[1.216,2.011,.345],[1.228,2.007,.345],[1.187,2.026,.694]];
+ const geo=mesh.geometry,p=geo.getAttribute('position'),idx=geo.index;
+ const parents=new Int32Array(p.count);
+ for(let i=0;i<p.count;i++)parents[i]=i;
+ function root(i){while(parents[i]!==i){parents[i]=parents[parents[i]];i=parents[i]}return i}
+ function join(a,b){a=root(a);b=root(b);if(a!==b)parents[b]=a}
+ const coord=i=>[p.getX(i),p.getY(i),p.getZ(i)],weld=new Map();
+ for(let i=0;i<p.count;i++){
+  const k=key(coord(i));
+  if(weld.has(k))join(i,weld.get(k));else weld.set(k,i);
+ }
+ for(let t=0;t<idx.count;t+=3){
+  const a=idx.getX(t),b=idx.getX(t+1),c=idx.getX(t+2);
+  join(a,b);join(b,c);
+ }
+ const groups=new Map();
+ for(let t=0;t<idx.count;t+=3){
+  const ids=[idx.getX(t),idx.getX(t+1),idx.getX(t+2)],id=root(ids[0]);
+  const entry=groups.get(id)||{faces:[],min:[Infinity,Infinity,Infinity],max:[-Infinity,-Infinity,-Infinity],centers:[]};
+  entry.faces.push(t);
+  const verts=ids.map(coord),center=[0,1,2].map(k=>verts.reduce((n,v)=>n+v[k],0)/3);
+  entry.centers.push(center);
+  for(const v of verts)for(let k=0;k<3;k++){
+   entry.min[k]=Math.min(entry.min[k],v[k]);entry.max[k]=Math.max(entry.max[k],v[k]);
+  }
+  groups.set(id,entry);
+ }
+ const remove=new Set();
+ for(const g of groups.values()){
+  const span=g.min.map((v,k)=>g.max[k]-v);
+  if(g.faces.length>24||span[0]>.65||span[1]>.34||span[2]>.75)continue;
+  if(!g.centers.some(c=>c[1]>1.87&&c[1]<2.14&&marks.some(m=>dist(m,c)<.19)))continue;
+  for(const t of g.faces)remove.add(t);
+ }
+ if(!remove.size)return {removed:0,reason:'les peces marcades no són illes independents petites'};
+ const kept=[];
+ for(let t=0;t<idx.count;t+=3){
+  if(!remove.has(t))kept.push(idx.getX(t),idx.getX(t+1),idx.getX(t+2));
+ }
+ if(kept.length<60)return {removed:0,reason:'retall insegur'};
+ const revised=geo.clone();revised.setIndex(kept);
+ revised.computeBoundingBox();revised.computeBoundingSphere();
+ revised.userData.candidateSimplified=true;mesh.geometry=revised;
+ return {removed:remove.size};
+}
 export function applyBtr82PaintAnnotations(scene){
  const removal=removeSmallRearDetail(scene);
+ const upperRemoval=removeNewPaintedUpperDetails(scene);
  const groups=new Map();
  for(const s of BTR82_PAINTED_HOLES){
   if(!groups.has(s.mesh))groups.set(s.mesh,[]);
@@ -198,6 +250,7 @@ export function applyBtr82PaintAnnotations(scene){
   fills.push(...stitchGeometry(mesh,strokes));
  }
  const summary={removed:removal.removed,removalReason:removal.reason||null,
+  upperRemoved:upperRemoval.removed,upperRemovalReason:upperRemoval.reason||null,
   bridges:fills.reduce((n,f)=>n+f.bridges,0),fills,
   unresolved:fills.filter(x=>!x.bridges).map(x=>x.id)};
  scene.userData.btr82PaintedAnnotations=summary;
