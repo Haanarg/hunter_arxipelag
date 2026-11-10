@@ -147,6 +147,10 @@ const selector=read('src/vehicle-annotation-editor.mjs');
 assert(selector.includes('paintArmour(stroke,x,y,force=false)'));
 assert(selector.includes("current.mode==='patch'")&&selector.includes('stroke.paintMirror'));
 assert(selector.includes('stroke.paint.mesh.removeFromParent()'));
+assert(selector.includes("mode()==='patch'")&&selector.includes('previewMaterial.color.setHex(COLORS.patch)'));
+assert(selector.includes('placeCursor(slot,e.clientX,e.clientY)'));
+assert(selector.includes('paintArmour(current,e.clientX,e.clientY)'));
+
 assert(selector.includes('raycaster.intersectObjects')&&selector.includes('navigator.clipboard')&&selector.includes('EXPLICACIÓ:'));
 assert(selector.includes("fill:'TAPAR FORAT'")&&selector.includes("remove:'ELIMINAR PEÇA'"));
 assert(selector.includes('intersectPlane')&&selector.includes('stroke.marks.push'));
