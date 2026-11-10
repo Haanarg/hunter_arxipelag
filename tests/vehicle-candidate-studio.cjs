@@ -66,6 +66,11 @@ assert(studio.includes("slot.outer.hidden=btrStudy?slots.indexOf(slot)>1:slots.i
 assert(html.includes('#grid.btr-study{grid-template-columns:repeat(2'));
 assert(html.includes('Seleccionar peces')&&html.includes('btrSelectGroup')&&html.includes('btrCopySelection'));
 assert(studio.includes('createBtr82PartSelector')&&studio.includes('btrPartSelector.mark(slot,e)'));
+const repair=read('src/btr82-rear-seam-repair.mjs');
+assert(repair.includes('repairMarkedRearSeams')&&repair.includes('hull_material_0')&&repair.includes('groups.push'));
+assert(repair.includes('[-.580,1.588,5.674]')&&repair.includes('[-.352,.543,5.518]'));
+assert(repair.includes('joined.setIndex([...faces,...patches])'));
+assert(btr.includes('repairMarkedRearSeams(previous)'));
 const selector=read('src/btr82-part-selector.mjs');
 assert(selector.includes('raycaster.intersectObjects')&&selector.includes('navigator.clipboard')&&selector.includes('EXPLICACIÓ:'));
 assert(btr.includes('withTruckWheels')&&btr.includes('replaceBarrelWithCylinders'));
@@ -91,6 +96,6 @@ for(const old of ['helicopters-lod-proves.html','apache-variants-proves.html',
  'assets/vehicle-candidates/helicopter-lods/manifest.json',
  'assets/vehicle-candidates/helicopter-lods/apache-hybrid-manifest.json'])
  assert(!fs.existsSync(path.join(root,old)),'Cal retirar el candidat obsolet: '+old);
-for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/btr82-part-selector.mjs','src/streetfighter-25-geometry.mjs'])
+for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/btr82-part-selector.mjs','src/btr82-rear-seam-repair.mjs','src/streetfighter-25-geometry.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
 console.log('PASS BTR-82 two-panel annotated preview: base plus final LOD, original headlamps and extended gun; four selectable groups');
