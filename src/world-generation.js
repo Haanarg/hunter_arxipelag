@@ -778,7 +778,7 @@ const add=(t,x,z,a,meta={})=>{
   const civilian=t==='cotxe_civil',bicycle=t==='bici',
     jetski=t==='moto_aquatica',motorcycle=t==='moto',windsurf=t==='windsurf',
     colors=window.HUNTER_CIVILIAN_CARS,
-    palette=jetski||motorcycle||windsurf?colors.jetskiColors:colors.colors;
+    palette=jetski||motorcycle||bicycle||windsurf?colors.jetskiColors:colors.colors;
   // Every windsurf gets the same vivid palette as the jet skis, but the
   // start hue is determined by the island seed's base position and each
   // successive windsurf advances by one hue. Crucially, this uses NO
