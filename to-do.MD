@@ -532,6 +532,9 @@
 
 ## Laboratori de proves de models 3D (decisió de producte)
 
+- **Tanqueta:** el casc **v2** és un prototip nou, tancat, simètric i ~20 cm més baix, amb morro en falca, laterals angulars i baixos en V (`src/btr82-hull-v2.mjs`); es mantenen rodes i canó. Es compara a Paradoxa amb l'original i amb la v1. **Pendent de validar visualment en navegador**: inclinació frontal, altura sobre rodes, volums de la part posterior, encaix torreta/sostre i canó. Els fars i detalls s'afegiran en iteracions posteriors. No integrar encara al joc.
+
+
 - **Implementat al codi:** `vehicles-externs-proves.html` disposa d'un **editor d'anotació no destructiu per defecte** i reutilitzable per a tots els models: `src/vehicle-annotation-editor.mjs`. Tres modes: unir peces per grups; tapar forats amb un cercle que segueix la superfície real (verd si detecta un contorn simple, blau si no) i que tanca amb triangles reals en clicar, recuperables amb Desfer; marcar les cares per eliminar. Copia coordenades XYZ locals, malles, variants i explicació per comunicar canvis precisos. Permet continuar orbitant amb Alt + arrossegar i fer zoom amb Alt + roda. Aquest és el flux de referència per a futures proves de models; no tornar a crear eines temporals exclusives per vehicle.
 - **Pendent de validació:** provar el visor a Paradoxa i al navegador real, especialment la detecció de contorns reals, el tapament de forats petits i el desfer de la geometria, la selecció amb ratolí i tàctil, la còpia al porta-retalls, la superposició de marques i les diferents categories de vehicle. Validar-ho separadament de les proves Node.
 - **Contracte:** les marques d'unió i eliminació són anotacions; **el mode Tapar forats sí que pot modificar la geometria en memòria en un clic** i cal poder desfer-ho; no es desa automàticament al GLB. S'han de conservar els models originals i presentar canvis de malla en variants comparables i reversibles.
