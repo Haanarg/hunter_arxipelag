@@ -164,7 +164,8 @@ export function createVehicleAnnotationEditor({slots,getType}){
  }
  function end(slot,e){
   if(!current||current.slot!==slot)return false;
-  sample(current,e.clientX,e.clientY,true);
+  if(!current.marks.length||!current.last||Math.hypot(current.last[0]-e.clientX,current.last[1]-e.clientY)>9)
+   sample(current,e.clientX,e.clientY,true);
   if(!current.marks.length)remove(strokes.indexOf(current));
   current=null;return true;
  }
