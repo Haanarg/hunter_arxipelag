@@ -66,6 +66,14 @@ Les proves Node no substitueixen una partida real, una revisió WebGL/Android o 
 - **Huey UH-1 de Duane's Mind** — [Bell Huey helicopter](https://sketchfab.com/3d-models/bell-huey-helicopter-755d8518a06e41b19752c1b54c0da588), llicència [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Modificat per obrir les dues portes laterals de passatgers; [detalls de la modificació i atribució](assets/vehicle-models/README.md). Model definitiu integrat al joc.
 - **Apache AH-64 d'Araon** — [model original](https://sketchfab.com/3d-models/ah-64-apache-df0993ee21e74a759cd0519f6fc51cf8), CC BY 4.0. Variant seleccionada: sàlvia mat, aspes i detalls negres, fuselatge 50%/rodes 75%, 2.193 triangles. S'ha connectat a `heli_combat`; **la publicació del GLB binari definitiu encara està pendent** i fins aleshores s'empra la reserva procedural. [Crèdits i instruccions](assets/vehicle-models/README.md).
 
+## Laboratori de models 3D — editor de proves per defecte
+
+El banc de proves de vehicles és [vehicles-externs-proves.html](vehicles-externs-proves.html), publicat a `https://hunter.paradoxa.cat/vehicles-externs-proves.html`. La interfície de referència incorpora l'**editor de marques 3D**, reutilitzable per a tots els vehicles i per a futurs models. El codi general és `src/vehicle-annotation-editor.mjs`; no s'ha d'acoblar exclusivament a la tanqueta.
+
+Modes de l'editor: **Unir peces** (grups acolorits), **Pintar forats** (pinzell que es pot estendre per l'espai buit a partir d'una vora) i **Eliminar peces** (ressaltar les cares que s'haurien de retirar). Les marques **no modifiquen la geometria**: exporten coordenades locals, nom de malla, variant, mida i instruccions mitjançant «Copiar marques i explicació». Alt + arrossegar gira la càmera mentre es pinta, i Alt + roda fa zoom. L'editor és el flux per defecte per descriure canvis a futures variants abans de modificar malles.
+
+El BTR-82 conserva una comparativa de base i low-poly, però l'eina d'anotació es manté independent de les transformacions específiques del BTR-82. L'exportació de marques permet iterar amb seleccions reproduïbles sense fer reconstruccions cegues de la carrosseria. **La presència del codi i les proves Node no equivalen a validació en navegador**; les comprovacions pendents es registren a `to-do.MD`.
+
 ## Documents de referència
 
 - [Pla de refactorització i tasques vigents](to-do.MD).
