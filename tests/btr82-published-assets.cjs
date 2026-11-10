@@ -62,7 +62,7 @@ for(const item of assets){
    }
    assert(x.length>=6,'Missing central dark '+side+' panel');
    const sorted=x.map(v=>Math.round(v*1000)).sort((a,b)=>a-b);
-   assert.deepEqual(sorted,sorted.map(v=>-v).reverse(),
+   assert.deepEqual(sorted,sorted.map(v=>v===0?0:-v).reverse(),
     'Dark panel offset from central axis: '+side);
   }
   assert(j.materials.every(m=>m.alphaMode!=='BLEND'),'No translucent palette artifacts');
