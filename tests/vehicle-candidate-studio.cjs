@@ -67,7 +67,19 @@ assert(html.includes('#grid.btr-study{grid-template-columns:repeat(2'));
 assert(html.includes('Editor de marques 3D')&&html.includes('btrSelectGroup')&&html.includes('btrCopySelection')&&html.includes('btrSelectMode'));
 assert(html.includes('Tapar forats (clic)')&&html.includes('Eliminar peces'));
 assert(html.includes('Verd')&&html.includes('blau')&&html.includes('Desfer última acció'));
-assert(html.includes('vehicle-editor-large-hole-loops-v11'));
+assert(html.includes('vehicle-editor-surface-paint-v12'));
+assert(html.includes('Pintar xapa (arrossegar)')&&html.includes('id="btrMirrorSurfacePaint"'));
+assert(html.includes('Simetria de la xapa (X)'));
+const armourPaint=read('src/vehicle-surface-paint.mjs');
+assert(armourPaint.includes('surfacePaintSample')&&armourPaint.includes('createSurfacePaintStroke')&&armourPaint.includes('appendSurfacePaint'));
+assert(armourPaint.includes('MAX_BRIDGE=.58')&&armourPaint.includes('MAX_DEPTH_JUMP=.36'));
+assert(armourPaint.includes('mirror')&&armourPaint.includes('mirrored(a)')&&armourPaint.includes('mirrored(b)'));
+assert(armourPaint.includes('stroke.mesh.geometry=geo;old.dispose()'));
+assert(selector.includes('paintArmour(stroke,x,y,force=false)'));
+assert(selector.includes("current.mode==='patch'")&&selector.includes('stroke.paintMirror'));
+assert(selector.includes('stroke.paint.mesh.removeFromParent()'));
+assert(studio.includes('vehicle-annotation-editor.mjs?rev=surface-paint-v12'));
+
 assert(html.includes('id="btrLargeHoleMode"')&&html.includes('Forats grans (contorn tancat)'));
 assert(html.includes('max="2.50"'));
 assert(studio.includes('vehicle-annotation-editor.mjs?rev=large-hole-loops-v11'));
@@ -140,7 +152,7 @@ assert(selector.includes("fill:'TAPAR FORAT'")&&selector.includes("remove:'ELIMI
 assert(selector.includes('intersectPlane')&&selector.includes('stroke.marks.push'));
 assert(selector.includes("stroke.mode==='fill'||stroke.mode==='remove'?nearestHit")&&selector.includes('espai buit / cap cara detectada'), 'El pinzell d’eliminar ha de preservar marques fins i tot sense un hit sobre la malla');
 assert(selector.includes('No s’ha pogut marcar aquesta zona'), 'Cal avisar si no es pot desar la traçada');
-assert(studio.includes('vehicle-annotation-editor.mjs?rev=large-hole-loops-v11'), 'Cal invalidar la memòria cau del nou pinzell');
+assert(studio.includes('vehicle-annotation-editor.mjs?rev=surface-paint-v12'), 'Cal invalidar la memòria cau del nou pinzell');
 assert(selector.includes('Vehicle_hole_repair_live_preview')&&selector.includes('showPatchPreview(target)'));
 assert(selector.includes('target.mesh.add(previewPatch)')&&selector.includes('clearPatchPreview()'));
 assert(selector.includes('repairCounts()')&&selector.includes('btrRepairLiveCount'));
@@ -175,6 +187,6 @@ for(const old of ['helicopters-lod-proves.html','apache-variants-proves.html',
  'assets/vehicle-candidates/helicopter-lods/manifest.json',
  'assets/vehicle-candidates/helicopter-lods/apache-hybrid-manifest.json'])
  assert(!fs.existsSync(path.join(root,old)),'Cal retirar el candidat obsolet: '+old);
-for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/vehicle-annotation-editor.mjs','src/vehicle-hole-brush.mjs','src/btr82-part-selector.mjs','src/btr82-rear-seam-repair.mjs','src/btr82-annotated-detail-removal.mjs','src/btr82-painted-hole-repair.mjs','src/btr82-confirmed-repairs.mjs','src/streetfighter-25-geometry.mjs'])
+for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/vehicle-annotation-editor.mjs','src/vehicle-hole-brush.mjs','src/vehicle-surface-paint.mjs','src/btr82-part-selector.mjs','src/btr82-rear-seam-repair.mjs','src/btr82-annotated-detail-removal.mjs','src/btr82-painted-hole-repair.mjs','src/btr82-confirmed-repairs.mjs','src/streetfighter-25-geometry.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
 console.log('PASS default reusable vehicle 3D annotation editor: join parts, paint holes and mark parts for removal');
