@@ -88,6 +88,15 @@ assert(btr.includes("[['hull_material_7',66],['hull_material_8',4]]"));
 assert(btr.includes('trim.geometry=cleaned')&&btr.includes('mesh.parent.remove(mesh)'));
 assert(btr.includes('retainedRearTriangles:4'));
 assert(btr.includes('triangles:removed+70'));
+assert(btr.includes('removeBtr82AnnotatedDetails(previous)'), 'Aplicar el darrer grup de marques només al low-poly');
+const details=read('src/btr82-annotated-detail-removal.mjs');
+assert(details.includes('export const BTR82_DELETE_MARKS')&&details.includes('connectedPatches'));
+assert(details.includes('hull_material_0')&&details.includes('hull_material_1')&&details.includes('hull_material_2'));
+assert(details.includes('turret_material_3')&&details.includes('turret_material_2'));
+assert(details.includes('[1.585,1.665,-3.063]')&&details.includes('[-.450,2.333,-1.311]'));
+assert(details.includes('maxTriangles')&&details.includes('maxSpan')&&details.includes('patch.centroids.some'));
+assert(details.includes('scene.userData.btr82AnnotatedDetailCleanup=report'));
+
 assert(!btr.includes("scene.getObjectByName('hull_material_0');\n  mesh.parent.remove"));
 const selector=read('src/vehicle-annotation-editor.mjs');
 assert(selector.includes('raycaster.intersectObjects')&&selector.includes('navigator.clipboard')&&selector.includes('EXPLICACIÓ:'));
@@ -122,6 +131,6 @@ for(const old of ['helicopters-lod-proves.html','apache-variants-proves.html',
  'assets/vehicle-candidates/helicopter-lods/manifest.json',
  'assets/vehicle-candidates/helicopter-lods/apache-hybrid-manifest.json'])
  assert(!fs.existsSync(path.join(root,old)),'Cal retirar el candidat obsolet: '+old);
-for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/vehicle-annotation-editor.mjs','src/btr82-part-selector.mjs','src/btr82-rear-seam-repair.mjs','src/streetfighter-25-geometry.mjs'])
+for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/vehicle-annotation-editor.mjs','src/btr82-part-selector.mjs','src/btr82-rear-seam-repair.mjs','src/btr82-annotated-detail-removal.mjs','src/streetfighter-25-geometry.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
 console.log('PASS default reusable vehicle 3D annotation editor: join parts, paint holes and mark parts for removal');
