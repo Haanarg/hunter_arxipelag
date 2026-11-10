@@ -221,27 +221,78 @@ export const vehicleModels=Object.freeze({
         g.userData.motorcycleFit=STREETFIGHTER_25_META.fit;
       }
       if(t==='bici'){
+        // Bicicleta de carretera procedural: quadre de doble triangle central,
+        // rodes primes i unions compactes. Conserva els pivots, radi de
+        // rodament, animacio de les rodes i pedalier originals.
         const r=.62,L=1.22,col=appearance.color??0x3f9b9d;
-        // Bicicleta procedural original: manté la forquilla, els radis,
-        // el plat, els pedals i la mateixa cinemàtica de sempre.
-        const steering=new THREE.Group();steering.position.set(0,1.65,-.95);g.add(steering);
-        (g.userData.steeringPivots||(g.userData.steeringPivots=[])).push(steering);
-        wheel(steering,0,r-1.65,-L+.95,r,.15,true,false,g);
-        wheel(g,0,r,L,r,.15,true);
-        for(const x of[-.15,.15]){
-          rod(g,[x,r,L],[x,1.45,.3],.07,col,'paint');
-          rod(g,[x,r,L],[x,.72,0],.07,col,'paint');
-          rod(g,[x,.72,0],[x,1.45,.3],.07,col,'paint');
-          rod(g,[x,1.45,.3],[x,1.6,-.9],.07,col,'paint');
-          rod(g,[x,.72,0],[x,1.6,-.9],.07,col,'paint');
-          rod(steering,[x,r-1.65,-L+.95],[x,1.95-1.65,0],.06,metal);
+        const rear=[0,r,L],bb=[0,.73,0],seatTop=[0,1.67,.34],
+              headTop=[0,1.73,-.85],headBottom=[0,1.48,-.94];
+        const tube=(a,b,radius=.042)=>rod(g,a,b,radius,col,'paint');
+        // El triangle principal es troba al pla central, no duplicat
+        // als dos costats com al prototip anterior.
+        tube(bb,seatTop,.057);
+        tube(seatTop,headTop,.043);
+        tube(headBottom,bb,.064);
+        tube(headTop,headBottom,.069);
+        // Tirants de darrere curts, units a unes punteres petites.
+        for(const x of[-.066,.066]){
+          tube([x,r,L],[x*.25,1.60,.36],.034);
+          tube([x,r,L],[x*.35,.73,.02],.041);
+          round(g,.066,.052,metal,x,r,L,'x','metal');
         }
-        box(g,.55,.16,.75,rubber,0,1.55,.4,'rubber');
-        rod(steering,[-.55,1.98-1.65,-.05],[.55,1.98-1.65,-.05],.07,metal);
-        round(g,.18,.65,metal,0,.75,0,'x');
-        for(const x of[-.4,.4])box(g,.22,.1,.35,rubber,x,.73,0,'rubber');
-        box(g,.5,.1,.65,0x252a2c,0,1.58,.42,'rubber');
-        round(steering,.09,.5,0xcfd5d6,0,.25,-.05,'x','metal');
+        const steering=new THREE.Group();
+        steering.position.set(0,1.68,-.89);g.add(steering);
+        (g.userData.steeringPivots||(g.userData.steeringPivots=[])).push(steering);
+        const frontZ=-L,frontY=r-1.68;
+        // Roda, forquilla i manillar giren conjuntament.
+        for(const x of[-.085,.085]){
+          rod(steering,[x,frontY,frontZ],[x,1.51-1.68,-.92],.041,col,'paint');
+          round(steering,.065,.047,metal,x,frontY,frontZ,'x','metal');
+        }
+        rod(steering,[0,-.12,-.92+.89],[0,.24,.05],.055,metal);
+        rod(steering,[-.42,.29,.05],[.42,.29,.05],.041,metal);
+        for(const x of[-.42,.42])
+          rod(steering,[x,.29,.05],[x,.29,.22],.035,rubber,'rubber');
+        // Llantes metal·liques i pneumàtics de perfil molt més estret.
+        // Les rodes continuen sent grups animables independents.
+        function roadWheel(parent,z,y,owner){
+          const p=new THREE.Group();p.position.set(0,y,z);parent.add(p);
+          const tire=new THREE.Mesh(new THREE.TorusGeometry(r-.047,.047,8,28),
+            material(0x20252a,'rubber'));
+          tire.rotation.y=Math.PI/2;p.add(tire);
+          const rim=new THREE.Mesh(new THREE.TorusGeometry(r-.092,.016,6,28),
+            material(0xaeb9be,'metal'));
+          rim.rotation.y=Math.PI/2;p.add(rim);
+          round(p,.077,.103,metal,0,0,0,'x','metal');
+          for(let i=0;i<10;i++){
+            const a=i*Math.PI/10;
+            rod(p,[0,Math.sin(a)*(r-.105),Math.cos(a)*(r-.105)],
+              [0,-Math.sin(a)*(r-.105),-Math.cos(a)*(r-.105)],
+              .010,0xb8c2c6,'metal');
+          }
+          p.userData.radius=r;
+          (owner.userData.wheels||(owner.userData.wheels=[])).push(p);
+        }
+        roadWheel(g,L,r,g);
+        roadWheel(steering,-L+.89,r-1.68,g);
+        // Selló estret de planta triangular, amb la punta cap al davant.
+        const saddleShape=new THREE.Shape();
+        saddleShape.moveTo(0,.32);
+        saddleShape.lineTo(-.24,-.22);
+        saddleShape.quadraticCurveTo(0,-.34,.24,-.22);
+        saddleShape.closePath();
+        const saddle=new THREE.Mesh(
+          new THREE.ExtrudeGeometry(saddleShape,{depth:.065,bevelEnabled:false}),
+          material(0x252a2c,'rubber'));
+        saddle.rotation.x=-Math.PI/2;
+        saddle.position.set(0,1.84,.33);g.add(saddle);
+        rod(g,[0,1.65,.34],[0,1.80,.33],.035,metal);
+        round(g,.105,.14,metal,0,.73,0,'x','metal');
+        for(const x of[-.31,.31]){
+          rod(g,[x*.45,.73,0],[x,.73,x>0?.25:-.25],.030,metal);
+          box(g,.16,.06,.30,rubber,x,.73,x>0?.25:-.25,'rubber');
+        }
+        g.userData.bicycleModel='road-frame-v2';
       }
       if(t==='tanqueta'){
         for(const x of[-1.42,1.42])for(const z of[-1.55,0,1.55])
