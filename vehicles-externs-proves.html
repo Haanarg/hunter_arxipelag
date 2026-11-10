@@ -78,7 +78,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <button id="view-quarter" data-view="quarter" class="active">3/4</button><button data-view="front" id="view-front">Frontal</button>
 <button data-view="side" id="view-side">Lateral</button><button data-view="rear" id="view-rear">Posterior</button>
 <button data-view="top" id="view-top">Zenital</button>
-<button id="zoom-in">＋</button><button id="zoom-out">－</button><button id="zoom-reset">Enquadra</button>
+<button id="zoom-in" title="Apropar més el model">＋</button><button id="zoom-out" title="Allunyar el model">－</button><button id="pan-up" title="Desplaçar la vista cap amunt">↑ Pujar</button><button id="pan-down" title="Desplaçar la vista cap avall">↓ Baixar</button><button id="zoom-reset" title="Restablir el zoom i l’altura de la vista">Enquadra</button>
 <a href="helicopters-engine-compare.html" style="color:#f3dc9d;font-weight:800">Comparar Huey / Apache: GLB vs motor</a><a href="vehicle-mides-proves.html">Mides del joc</a><a href="index.html">Jugar</a>
 </nav></header>
 <main><div id="vehicleList" aria-label="Tria vehicle"></div>
@@ -90,7 +90,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </div></section>
 <section id="btrPartTool" class="btr-part-tool" aria-label="Editor de marques 3D del laboratori de vehicles">
  <div class="btr-part-header"><h2>Editor de marques 3D</h2><span>Per a tots els vehicles · Anotacions no destructives</span></div>
- <p><strong>Unir peces:</strong> clica diverses superfícies del mateix grup. <strong>Pintar forats:</strong> arrossega des de la vora i pinta també sobre el buit. <strong>Eliminar peces:</strong> arrossega per pintar les cares sobrants. Les marques no canvien el model. Amb l’editor actiu, usa <strong>Alt + arrossegar</strong> per girar i <strong>Alt + roda</strong> per fer zoom.</p>
+ <p><strong>Unir peces:</strong> clica diverses superfícies del mateix grup. <strong>Pintar forats:</strong> arrossega des de la vora i pinta també sobre el buit. <strong>Eliminar peces:</strong> arrossega per pintar les cares sobrants. Les marques no canvien el model. Amb l’editor actiu, usa <strong>Alt + arrossegar</strong> per girar, <strong>Majúscules + arrossegar</strong> (o botó dret) per pujar i baixar la vista i <strong>Alt + roda</strong> per fer zoom de precisió. També tens els botons ↑ Pujar i ↓ Baixar.</p>
  <div class="btr-part-controls">
  <label class="btr-option"><input type="checkbox" id="btrSelectEnabled" checked> Editor actiu</label>
  <label>Eina <select id="btrSelectMode"><option value="join">Unir peces</option><option value="fill">Pintar forats</option><option value="remove">Eliminar peces</option></select></label>
@@ -106,7 +106,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </section>
 <section id="grid" aria-label="Comparativa de models 3D"></section>
 <div class="explainer">
-<strong>Com funciona:</strong> el banc mostra el model del joc i tres alternatives per a cada vehicle pendent. Els visors Sketchfab del tanc es manipulen individualment. L'original i el low-poly del BTR-82 comparteixen càmera i escala. Arrossega la resta dels panells per girar les càmeres del joc, i usa <strong>Alt + roda</strong> o els botons ＋ / － per fer zoom. Per a la tanqueta hi ha dues targetes: l'original de treball (rodes A4.3, quatre fars en la posició anterior i canó allargat) i el low-poly final. L'editor 3D, disponible amb tots els vehicles, permet unir peces, pintar forats o indicar cares per eliminar, i exportar les marques per compartir-les. No es modifica la geometria en seleccionar. Les variants intermèdies ja no ocupen espai; es mantenen els crèdits SIpriv / CC BY 4.0. Cal adaptar física, seients i col·lisions abans de substituir un model.</div>
+<strong>Com funciona:</strong> el banc mostra el model del joc i tres alternatives per a cada vehicle pendent. Els visors Sketchfab del tanc es manipulen individualment. L'original i el low-poly del BTR-82 comparteixen càmera i escala. Arrossega per girar la vista, utilitza <strong>Majúscules + arrossegar</strong> per desplaçar-la verticalment i <strong>Alt + roda</strong> o ＋ / － per apropar-te molt als detalls. Per a la tanqueta hi ha dues targetes: l'original de treball (rodes A4.3, quatre fars en la posició anterior i canó allargat) i el low-poly final. L'editor 3D, disponible amb tots els vehicles, permet unir peces, pintar forats o indicar cares per eliminar, i exportar les marques per compartir-les. No es modifica la geometria en seleccionar. Les variants intermèdies ja no ocupen espai; es mantenen els crèdits SIpriv / CC BY 4.0. Cal adaptar física, seients i col·lisions abans de substituir un model.</div>
 </main><footer>Prova independent · Three.js r186 (el mateix del joc) · GLTFLoader · models originals importats de la fàbrica del joc · cap canvi a la física, combat o desament. Algunes fonts externes poden no permetre carregar fitxers des d'un altre domini; en aquest cas, utilitza la importació local.</footer>
-<script type="module" src="./src/vehicles-externs-proves.mjs?rev=vehicle-annotation-editor-v3-front-detail-removal"></script>
+<script type="module" src="./src/vehicles-externs-proves.mjs?rev=vehicle-editor-precise-camera-v4"></script>
 </body></html>
