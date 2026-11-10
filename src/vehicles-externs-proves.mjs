@@ -4,7 +4,7 @@ import {vehicleModels} from './vehicle-model-core.mjs';
 import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
-import {createVehicleAnnotationEditor} from './vehicle-annotation-editor.mjs';
+import {createVehicleAnnotationEditor} from './vehicle-annotation-editor.mjs?rev=delete-brush-fix-v2';
 
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
