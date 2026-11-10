@@ -878,15 +878,15 @@ export const vehicleModels=Object.freeze({
         g.add(crank);g.userData.crank=crank;
       }
       if(t==='bici'){
-        // Reduccio visual al 50% al voltant de l'origen de terra.
+        // Escala visual al 75% de l'original (+50% sobre el model anterior).
         // El grup inclou rodes, manillar i pedalier; la col.lisio i
         // la conduccio continuen regides per les dimensions existents.
         const visual=new THREE.Group();
         for(const child of [...g.children])visual.add(child);
-        visual.scale.setScalar(.5);
+        visual.scale.setScalar(.75);
         g.add(visual);
-        for(const w of g.userData.wheels||[])w.userData.radius*=.5*VS.bici;
-        g.userData.bicycleVisualScale=.5;
+        for(const w of g.userData.wheels||[])w.userData.radius*=.75*VS.bici;
+        g.userData.bicycleVisualScale=.75;
       }
       // La coordenada Y de l'origen no és l'altura dels patins.
       // Les dues barres inferiors estan centrades a y=.48 i tenen radi .075.
