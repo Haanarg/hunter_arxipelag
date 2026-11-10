@@ -7,10 +7,7 @@ const Q=(query)=>({query});
 // La llicència es declara per model: CC BY i CC BY-SA requereixen atribució.
 const S=(modelId,url,title,author,triangles,license,note)=>({provider:'sketchfab',modelId,url,title,author,triangles,license,note});
 export const CATALOG=[
- {id:'bici',name:'Bicicleta',kind:'terra',options:[
-   P('velodrome-and-track-cycling','Track Bicycle'),
-   P('pixel-modern-city-street','Bicycle'),
-   P('indian-bazaar-street-and-temple','Bicycle with Carrier')]},
+ {id:'bici',name:'Bicicleta',kind:'terra',note:'Model procedural original renovat: quadre triangular, rodes primes i seient triangular. Sense candidats externs.',options:[]},
  {id:'cotxe_civil',name:'Cotxe civil',kind:'terra',options:[
    P('transport-collection-hd','Grand touring coupe'),
    P('transport-collection-hd','Executive sedan'),
