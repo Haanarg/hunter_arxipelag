@@ -235,24 +235,24 @@ export const vehicleModels=Object.freeze({
         tube(headBottom,bb,.064);
         tube(headTop,headBottom,.069);
         // Tirants de darrere curts, units a unes punteres petites.
-        for(const x of[-.066,.066]){
-          tube([x,r,L],[x*.25,1.60,.36],.034);
-          tube([x,r,L],[x*.35,.73,.02],.041);
+        for(const x of[-.11,.11]){
+          tube([x,r,L],[x*.35,1.60,.36],.034);
+          tube([x,r,L],[x*.4,.73,.02],.041);
           round(g,.066,.052,metal,x,r,L,'x','metal');
         }
         const steering=new THREE.Group();
-        steering.position.set(0,1.68,-.89);g.add(steering);
+        steering.position.set(0,1.68,-L);g.add(steering);
         (g.userData.steeringPivots||(g.userData.steeringPivots=[])).push(steering);
-        const frontZ=-L,frontY=r-1.68;
+        const frontZ=0,frontY=r-1.68;
         // Roda, forquilla i manillar giren conjuntament.
         for(const x of[-.085,.085]){
-          rod(steering,[x,frontY,frontZ],[x,1.51-1.68,-.92],.041,col,'paint');
+          rod(steering,[x,frontY,frontZ],[x,1.51-1.68,.28],.041,col,'paint');
           round(steering,.065,.047,metal,x,frontY,frontZ,'x','metal');
         }
-        rod(steering,[0,-.12,-.92+.89],[0,.24,.05],.055,metal);
-        rod(steering,[-.42,.29,.05],[.42,.29,.05],.041,metal);
+        rod(steering,[0,-.20,.28],[0,.24,.32],.055,metal);
+        rod(steering,[-.42,.29,.32],[.42,.29,.32],.041,metal);
         for(const x of[-.42,.42])
-          rod(steering,[x,.29,.05],[x,.29,.22],.035,rubber,'rubber');
+          rod(steering,[x,.29,.32],[x,.29,.48],.035,rubber,'rubber');
         // Llantes metal·liques i pneumàtics de perfil molt més estret.
         // Les rodes continuen sent grups animables independents.
         function roadWheel(parent,z,y,owner){
@@ -274,7 +274,7 @@ export const vehicleModels=Object.freeze({
           (owner.userData.wheels||(owner.userData.wheels=[])).push(p);
         }
         roadWheel(g,L,r,g);
-        roadWheel(steering,-L+.89,r-1.68,g);
+        roadWheel(steering,0,r-1.68,g);
         // Selló estret de planta triangular, amb la punta cap al davant.
         const saddleShape=new THREE.Shape();
         saddleShape.moveTo(0,.32);
@@ -868,6 +868,17 @@ export const vehicleModels=Object.freeze({
         }
       }
       if(t==='bici'){const crank=new THREE.Group();crank.position.set(0,.75,0);for(const side of[-1,1]){rod(crank,[side*.3,0,0],[side*.3,0,side*.28],.045,metal);box(crank,.26,.08,.18,rubber,side*.4,0,side*.28,'rubber')}g.add(crank);g.userData.crank=crank}
+      if(t==='bici'){
+        // Reduccio visual al 50% al voltant de l'origen de terra.
+        // El grup inclou rodes, manillar i pedalier; la col.lisio i
+        // la conduccio continuen regides per les dimensions existents.
+        const visual=new THREE.Group();
+        for(const child of [...g.children])visual.add(child);
+        visual.scale.setScalar(.5);
+        g.add(visual);
+        for(const w of g.userData.wheels||[])w.userData.radius*=.5*VS.bici;
+        g.userData.bicycleVisualScale=.5;
+      }
       // La coordenada Y de l'origen no és l'altura dels patins.
       // Les dues barres inferiors estan centrades a y=.48 i tenen radi .075.
       // Guardam el contacte inferior JA escalat per a la física d'aterratge.
