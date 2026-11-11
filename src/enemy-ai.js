@@ -590,9 +590,10 @@ function enemyVehicleBoardingTick(u,dt){
   });
   const approach=enemyRequisition.avoidVehicleBarbedWire(v,planned,
     wallCandidates(v.x,v.z,42),c.fenceAvoid??={});
-  const input=enemyRequisition.motorcycleAttackInput(v,cv||target,approach,{
+  const attack=enemyRequisition.motorcycleAttackInput(v,cv||target,approach,{
     occupied:!!cv&&spotted&&c.phase==='riding'
   });
+  const input=enemyRequisition.governedRequisitionInput(v,attack);
   // Ús del mateix stepV que el jugador, sense moure la malla a mà.
   if(input.distance>3||!v.enemyCrew[1])stepV(v,input.forward,input.turn,0,Math.min(dt,.1));
   const oldX=u.x,oldZ=u.z;
@@ -977,12 +978,13 @@ function updEn(frameDt,preserveFrameBudget=false,underPressure=false){
   }else if(u.canSee){
     // La cabina sense conductor no ha de girar per mirar el jugador.
     // El tirador viu conserva la seva pròpia orientació del fusell.
-    if(u.t!=='jeep'||u.patrolCrewHp?.[0]!==0)
+    if((u.t!=='jeep'||u.patrolCrewHp?.[0]!==0)&&u.t!=='tanqueta')
       u.hd=Math.atan2(-dx,-dz);
     if(u.sp>0&&d>u.rng*.55){
       const dp=u.defenseTarget;
       if(dp&&Math.hypot(dp.x-u.x,dp.z-u.z)>1.8){
-        u.hd=Math.atan2(u.x-dp.x,u.z-dp.z);mvE(u,u.sp*.75*dt,dp.x,dp.z)
+        if(u.t!=='tanqueta')u.hd=Math.atan2(u.x-dp.x,u.z-dp.z);
+        mvE(u,u.sp*.75*dt,dp.x,dp.z)
       }else if(d>u.rng*.72)mvE(u,u.sp*dt,q.x,q.z)
     }
     if(u.t!=='tanc'&&u.t!=='tanqueta'&&d<u.rng&&u.cd<=0){
