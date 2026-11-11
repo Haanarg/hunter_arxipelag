@@ -2,7 +2,7 @@ import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {makeBtr82LabBaseline} from './btr82-lod-studio.mjs';
 import {BTR82_NOSE_CANDIDATES,BTR82_NOSE_ASSET,extractBtr82SourceTriangles,buildBtr82NoseCandidate} from './btr82-nose-candidates.mjs?rev=model3-angular-a4';
-import {BTR82_ANGULAR_VARIANTS,buildBtr82AngularCandidate} from './btr82-angular-facets.mjs?rev=model3-angular-a4';
+import {BTR82_ANGULAR_VARIANTS,buildBtr82AngularCandidate} from './btr82-angular-facets.mjs?rev=model3-angular-a5';
 
 const angularMode=document.documentElement.dataset.btr82Angular==='true';
 const methods=angularMode?BTR82_ANGULAR_VARIANTS:BTR82_NOSE_CANDIDATES;
