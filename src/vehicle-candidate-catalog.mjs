@@ -7,9 +7,9 @@ const Q=(query)=>({query});
 // La llicència es declara per model: CC BY i CC BY-SA requereixen atribució.
 const S=(modelId,url,title,author,triangles,license,note)=>({provider:'sketchfab',modelId,url,title,author,triangles,license,note});
 export const CATALOG=[
- {id:'tanqueta',name:'Tanqueta · BTR-82 corregit',kind:'terra',
-   note:'Només dos models: la nova base de 5.371 triangles i la versió 50% refinada (4.253 triangles, 12 malles), amb davant i darrere simètrics i zona fosca centrada, canó cilíndric negre, rodes més arrodonides i quatre fars. El BTR-82 3B del comparador ja substitueix la tanqueta del joc; aquestes dues variants GLB es conserven com a referència.',
-   options:[S('6226acae68424d99bf03882b245ff7c5','https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5','Low poly BTR 82','SIpriv',21500,'CC BY 4.0','Atribució del model i dels dos GLB locals.')]},
+ {id:'tanqueta',name:'Tanqueta · BTR-82 3B',kind:'terra',
+   note:'Model 3B revisat: casc i torreta angulars, vuit rodes separades, defenses i equipaments posteriors, mirilles i quatre focus. Aquesta variant és de proves i no substitueix encara la tanqueta del joc.',
+   options:[]},
  {id:'tanc',name:'Tanc · estil M1A1 Abrams',kind:'terra',
    note:'Substituïts els tres GLB genèrics per candidats M1A1/M1 amb llicència Creative Commons identificada. Cal verificar les peces mòbils i adaptar els models abans d’usar-los al joc.',
    options:[
