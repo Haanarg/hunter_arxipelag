@@ -5,7 +5,7 @@ import {createBtr82AngularGeometry,BTR82_3B_BARREL_LOWERING_Y} from './btr82-ang
 import {shapeBtr823BTurret,BTR82_3B_TURRET_FORWARD_Z,
  BTR82_3B_TURRET_AXIS_Z,BTR82_3B_GUN_Y,BTR82_3B_YAW_Y,
  BTR82_3B_TURRET_SCALE} from './btr82-3b-geometry.mjs';
-import {createBtr823BHardwareBatch} from './btr82-3b-details.mjs';
+import {createBtr823BHardwareBatch} from './btr82-3b-details.mjs?rev=front-glass-v2';
 import {createBtr82TurretV3Geometry,BTR82_CABIN_SHIFT_Z} from './btr82-hull-v3.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
 
