@@ -43,7 +43,7 @@ const noseApi=new Function('THREE','makeBtr82HullV3','BTR82_HULL_V3_STATIONS','c
  removeImports(source)+';return {fromFacets,BTR82_NOSE_CANDIDATES};'
  )(three,()=>{},stationApi.BTR82_HULL_V3_STATIONS,stationApi.createBtr82HullGeometryFromStations);
 const angularApi=new Function('THREE','fromFacets','buildBtr82NoseCandidate',
- removeImports(angularSource)+';return {BTR82_ANGULAR_VARIANTS,createBtr82AngularGeometry};'
+ removeImports(angularSource)+';return {BTR82_ANGULAR_VARIANTS,createBtr82AngularGeometry,centreBtr82AngularHardware};'
  )(three,noseApi.fromFacets,()=>{});
 assert.equal(noseApi.BTR82_NOSE_CANDIDATES.length,6,'Els sis experiments originals han de romandre');
 assert.deepEqual(angularApi.BTR82_ANGULAR_VARIANTS.map(a=>a.id),
@@ -80,23 +80,38 @@ function checkManifold(geometry,label){
   assert(mirrorSet.has(coordinate([-x,y,z])),label+' ha de ser simètric només esquerra/dreta');
  }
  assert(positions.every(Number.isFinite),label+' té coordenades no finites');
+ // La simetria de vèrtexs no basta: comprovació del reflex exacte
+ // de CADA triangle dels laterals i les tapes.
+ const point=k=>positions.slice(k*3,k*3+3);
+ const coord=v=>v.map(n=>n.toFixed(6)).join(',');
+ const face=pts=>pts.map(coord).sort().join('|');
+ const faceSet=new Set();
+ for(let i=0;i<faces.length;i+=3)
+  faceSet.add(face(faces.slice(i,i+3).map(point)));
+ for(let i=0;i<faces.length;i+=3){
+  const mirror=faces.slice(i,i+3).map(point).map(([x,y,z])=>[-x,y,z]);
+  assert(faceSet.has(face(mirror)),label+' té triangles laterals sense reflex');
+ }
  const g=geometry.userData;
  assert(g.angularStations>3&&g.angularProfiles>=5);
  return {triangles:faces.length/3,stations:g.angularStations,profiles:g.angularProfiles};
 }
 const mild=checkManifold(angularApi.createBtr82AngularGeometry('angular-mild'),'Moderat');
 const strong=checkManifold(angularApi.createBtr82AngularGeometry('angular-strong'),'Fort');
-assert.equal(mild.triangles,296);
+assert.equal(mild.triangles,336);
 assert.equal(mild.stations,10);
 assert.equal(mild.profiles,7);
-assert.equal(strong.triangles,212);
+assert.equal(strong.triangles,240);
 assert.equal(strong.stations,7);
 assert.equal(strong.profiles,7);
-assert(strong.triangles<mild.triangles&&mild.triangles<508);
+assert(strong.triangles<mild.triangles&&mild.triangles<556);
+assert.equal(checkManifold(angularApi.createBtr82AngularGeometry('facets'),'Base reflectida').triangles,556);
 const strongGeo=angularApi.createBtr82AngularGeometry('angular-strong');
 const p=strongGeo.getAttribute('position'),at=3*14;
 assert.equal(p.getZ(at+7),-3.23);
-assert.equal(p.getX(at+7),.98,'La quilla ha de ser ampla');
+assert.equal(p.getX(at+7),1.34,'La quilla ha de tocar la zona interior de les rodes');
+assert.equal(p.getX(at+6),1.405,'La paret interior ha de ser més ampla');
+assert.equal(p.getX(at+5),1.47,'El blindatge s’ha de prolongar sobre el pneumàtic');
 assert(p.getX(at+4)>p.getX(at+5)&&p.getX(at+5)>p.getX(at+6),
  'Cal preservar la lleixa de les rodes i la paret interior');
 assert(Math.abs(p.getY(at+4)-p.getY(at+5))<.04,
@@ -119,7 +134,24 @@ for(const name of ['BTR82_v3_lowered_centre_hull','BTR82_v3_low_angular_turret',
  assert(Math.abs(nodes.get(name).position.y-.82)<1e-9,'Cos/torreta/canó desalineats');
 for(let i=0;i<8;i++)assert.equal(nodes.get('BTR82_truck_A43_wheel_'+i).position.y,0);
 assert.throws(()=>lower.lowerBtr82LabBody(fake),/Ja s’ha abaixat/);
+const wheelXZ=[[-1.688,-2.938],[1.688,-2.938],[1.688,-.938],[-1.688,-.938],
+ [1.688,1.688],[-1.688,1.813],[-1.688,3.585],[1.688,3.585]];
+for(let i=0;i<8;i++){
+ const p=nodes.get('BTR82_truck_A43_wheel_'+i).position;
+ p.x=wheelXZ[i][0];p.z=wheelXZ[i][1];
+}
+for(const name of ['BTR82_new_black_barrel','BTR82_new_black_muzzle'])
+ nodes.get(name).position.x=-.06;
+angularApi.centreBtr82AngularHardware(fake);
+for(const name of ['BTR82_new_black_barrel','BTR82_new_black_muzzle'])
+ assert.equal(nodes.get(name).position.x,0,'El canó ha de seguir X=0');
+for(const [l,r] of [[0,1],[3,2],[5,4],[6,7]]){
+ const a=nodes.get('BTR82_truck_A43_wheel_'+l).position;
+ const b=nodes.get('BTR82_truck_A43_wheel_'+r).position;
+ assert.equal(a.x,-b.x);assert.equal(a.z,b.z);
+ assert.equal(a.y,0);assert.equal(b.y,0);
+}
 assert(-.32-.18>-.8125,'Els baixos han de quedar per sobre del terra');
 assert.equal(JSON.stringify(Array.from(baseline.getAttribute('position').array)),originalData,
  'La versió original no s’ha d’alterar en crear variants');
-console.log('PASS angular BTR 3B: 508 -> 296 / 212 triangles; quilla ampla, escaló i carrosseria −18 cm');
+console.log('PASS BTR 3 / 3A / 3B: 556 / 336 / 240 triangles, triangles reflectits, baixos eixamplats i parelles de rodes alineades');
