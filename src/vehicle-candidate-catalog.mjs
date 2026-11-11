@@ -7,11 +7,6 @@ const Q=(query)=>({query});
 // La llicència es declara per model: CC BY i CC BY-SA requereixen atribució.
 const S=(modelId,url,title,author,triangles,license,note)=>({provider:'sketchfab',modelId,url,title,author,triangles,license,note});
 export const CATALOG=[
- {id:'cotxe_civil',name:'Cotxe civil',kind:'terra',options:[
-   P('transport-collection-hd','Grand touring coupe'),
-   P('transport-collection-hd','Executive sedan'),
-   P('transport-collection-hd','Touring SUV')]},
-
  {id:'tanqueta',name:'Tanqueta · BTR-82 corregit',kind:'terra',
    note:'Només dos models: la nova base de 5.371 triangles i la versió 50% refinada (4.253 triangles, 12 malles), amb davant i darrere simètrics i zona fosca centrada, canó cilíndric negre, rodes més arrodonides i quatre fars. No altera el vehicle jugable.',
    options:[S('6226acae68424d99bf03882b245ff7c5','https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5','Low poly BTR 82','SIpriv',21500,'CC BY 4.0','Atribució del model i dels dos GLB locals.')]},
