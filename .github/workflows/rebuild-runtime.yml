@@ -3,6 +3,11 @@ name: Hunter - comprovacions bàsiques i runtime
 # GitHub > Actions > Hunter - comprovacions bàsiques i runtime > Run workflow.
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/version.mjs'
+      - '.github/workflows/rebuild-runtime.yml'
 permissions:
   contents: write
 concurrency:
