@@ -53,7 +53,7 @@ function fromBottom(){
  }));
 }
 // 2: Quatre grans cares consecutives, sense anar apilant 10 perfils frontals.
-function fromFacets(){
+export function fromFacets(){
  const stations=[
   constructStation(-5.425,1.06,1.18,.81),
   constructStation(-4.77,1.40,1.36,.52),
