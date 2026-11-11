@@ -77,6 +77,11 @@ assert(studio.includes('createVehicleAnnotationEditor'));
 assert(editor.includes('getHoleBrushTarget')&&editor.includes('closeHoleUnderBrush'));
 assert(editor.includes('large:largeHole?.checked===true'));
 assert(studio.includes("document.querySelector('#pan-up')")&&studio.includes("document.querySelector('#pan-down')"));
+assert(html.includes('id="pan-left"')&&html.includes('id="pan-right"'));
+assert(studio.includes("document.querySelector('#pan-left')")&&studio.includes("document.querySelector('#pan-right')"));
+assert(studio.includes('targetX=Math.cos(yaw)*panScreenX')&&studio.includes('targetZ=-Math.sin(yaw)*panScreenX'));
+assert(studio.includes('panScreenX-=(e.clientX-old[0])*distance*.0017'),'Majúscules + arrossegar ha de moure horitzontalment');
+assert(studio.includes('zoom=1;lookY=defaultLookY;panScreenX=0;updateCamera()'),'Enquadra ha de restablir el pan horitzontal');
 
 // El node parser valida també les cadenes i l'escapat de cometes.
 for(const file of [

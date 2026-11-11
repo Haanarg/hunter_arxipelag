@@ -110,7 +110,7 @@ for(let i=0;i<5;i++){
 }
 let currentType=CATALOG[0],generation=0,originalDims=new THREE.Vector3(3,2,5);
 const vehicleEditor=createVehicleAnnotationEditor({slots,getType:()=>currentType.id});
-let yaw=.60,elev=.32,zoom=1,lookY=.6,defaultLookY=.6;
+let yaw=.60,elev=.32,zoom=1,lookY=.6,defaultLookY=.6,panScreenX=0;
 let prev=performance.now();
 let btrStudioPromise=null;
 function getBtrStudio(){
@@ -321,6 +321,8 @@ async function choose(config){
  }
  for(let k=1;k<slots.length;k++)slots[k].person.position.x=originalDims.x*.62+1.0;
  lookY=Math.min(6,Math.max(.55,originalDims.y*.38));
+ defaultLookY=lookY;
+ panScreenX=0;
  zoom=1;updateCamera();
  if(btrStudy){
    const studio=await getBtrStudio();
@@ -341,11 +343,15 @@ function updateCamera(){
    slot.camera.fov=37;
    slot.camera.near=Math.max(.05,distance/1000);
    slot.camera.far=Math.max(800,distance*10);
+   // Panoràmica en l'eix horitzontal de la pantalla, també en
+   // vistes frontal, lateral i zenital. No traslladem el model 3D.
+   const targetX=Math.cos(yaw)*panScreenX;
+   const targetZ=-Math.sin(yaw)*panScreenX;
    slot.camera.position.set(
-     Math.sin(yaw)*Math.cos(elev)*distance,
+     targetX+Math.sin(yaw)*Math.cos(elev)*distance,
      lookY+Math.sin(elev)*distance,
-     Math.cos(yaw)*Math.cos(elev)*distance);
-   slot.camera.lookAt(0,lookY,0);slot.camera.updateProjectionMatrix();
+     targetZ+Math.cos(yaw)*Math.cos(elev)*distance);
+   slot.camera.lookAt(targetX,lookY,targetZ);slot.camera.updateProjectionMatrix();
  }
 }
 function resizeRenderer(){
@@ -396,9 +402,16 @@ function applyView(id){
 document.querySelectorAll('[data-view]').forEach(btn=>btn.addEventListener('click',()=>applyView(btn.dataset.view)));
 document.querySelector('#zoom-in').addEventListener('click',()=>{zoom=Math.max(.025,zoom*.78);updateCamera()});
 document.querySelector('#zoom-out').addEventListener('click',()=>{zoom=Math.min(7,zoom*1.28);updateCamera()});
-document.querySelector('#zoom-reset').addEventListener('click',()=>{zoom=1;lookY=defaultLookY;updateCamera()});
-document.querySelector('#pan-up').addEventListener('click',()=>{lookY+=Math.max(.025,zoom*.30);updateCamera()});
-document.querySelector('#pan-down').addEventListener('click',()=>{lookY-=Math.max(.025,zoom*.30);updateCamera()});
+document.querySelector('#zoom-reset').addEventListener('click',()=>{
+ zoom=1;lookY=defaultLookY;panScreenX=0;updateCamera();
+});
+const panStep=()=>Math.max(.025,zoom*.30);
+document.querySelector('#pan-up').addEventListener('click',()=>{lookY+=panStep();updateCamera()});
+document.querySelector('#pan-down').addEventListener('click',()=>{lookY-=panStep();updateCamera()});
+// Els noms indiquen cap on es desplaça el MODEL a la pantalla:
+// moure el punt de mira a la dreta desplaça el model a l'esquerra.
+document.querySelector('#pan-left').addEventListener('click',()=>{panScreenX+=panStep();updateCamera()});
+document.querySelector('#pan-right').addEventListener('click',()=>{panScreenX-=panStep();updateCamera()});
 document.querySelector('#fitScale').addEventListener('change',()=>choose(currentType));
 document.querySelector('#showGrid').addEventListener('change',e=>{for(const s of slots){s.lines.visible=e.target.checked;s.person.visible=e.target.checked}});
 const drag=new Map(),pointerStarts=new Map(),paintPointers=new Set();
@@ -421,11 +434,12 @@ slots.forEach(slot=>{
   if(paintPointers.has(e.pointerId)){vehicleEditor.move(slot,e);return}
   const old=drag.get(e.pointerId);drag.set(e.pointerId,[e.clientX,e.clientY]);
   if(e.shiftKey||(e.buttons&2)){
-   // Desplaçar verticalment la vista sense girar el vehicle; precisió
-   // proporcional al zoom (més lent quan el model és molt a prop).
+   // Arrossegament lliure en ambdós eixos: el model segueix el cursor.
+   // No es modifica ni la geometria ni la posició del vehicle.
    const size=Math.max(originalDims.x,originalDims.z,originalDims.y*.85,3);
    const distance=Math.max(.35,size*1.85*zoom+.35);
    lookY+=(e.clientY-old[1])*distance*.0017;
+   panScreenX-=(e.clientX-old[0])*distance*.0017;
   }else{
    yaw-=(e.clientX-old[0])*.012;
    elev=Math.max(.03,Math.min(1.51,elev+(e.clientY-old[1])*.008));
