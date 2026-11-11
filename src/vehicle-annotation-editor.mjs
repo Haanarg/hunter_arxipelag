@@ -1,6 +1,5 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {getHoleBrushTarget,closeHoleUnderBrush} from './vehicle-hole-brush.mjs';
-import {surfacePaintSample,createSurfacePaintStroke,appendSurfacePaint} from './vehicle-surface-paint.mjs';
 
 // Editor d'anotacions 3D reutilitzable. Mai no altera les malles originals:
 // els pinzells són visuals i s'exporten com instruccions i coordenades.
@@ -11,10 +10,10 @@ export function createVehicleAnnotationEditor({slots,getType}){
  const sizeLabel=$('btrBrushRadiusText'),notes=$('btrSelectNote');
  const feedback=$('btrSelectFeedback'),list=$('btrSelections');
  const liveStatus=$('btrRepairLiveStatus'),liveCount=$('btrRepairLiveCount');
- const largeHole=$('btrLargeHoleMode'),mirrorPaint=$('btrMirrorSurfacePaint');
+ const largeHole=$('btrLargeHoleMode');
  const raycaster=new THREE.Raycaster(),cursor=new THREE.Vector2();
- const COLORS={join:[0xffcf55,0x57ddf2,0xff70ab,0x9af07a],fill:0x2ee6e9,patch:0x98e6ab,remove:0xff5e64};
- const NAMES={join:'UNIR PECES',fill:'TAPAR FORAT',patch:'PINTAR XAPA',remove:'ELIMINAR PEÇA'};
+ const COLORS={join:[0xffcf55,0x57ddf2,0xff70ab,0x9af07a],fill:0x2ee6e9,remove:0xff5e64};
+ const NAMES={join:'UNIR PECES',fill:'TAPAR FORAT',remove:'ELIMINAR PEÇA'};
  const strokes=[];let current=null;
  const previewMaterial=new THREE.MeshBasicMaterial({color:COLORS.fill,side:THREE.DoubleSide,depthTest:false,depthWrite:false,transparent:true,opacity:.78});
  const preview=new THREE.Mesh(new THREE.RingGeometry(.91,1,32),previewMaterial);
@@ -22,10 +21,6 @@ export function createVehicleAnnotationEditor({slots,getType}){
  preview.userData.vehicleAnnotationOverlay=true;preview.raycast=()=>{};
  let previewSlot=null,previewPatch=null,previewKey=null;
  const repairCounts=()=>strokes.reduce((acc,stroke)=>{
-  if(stroke.mode==='patch'){
-   if(stroke.paint?.triangles){acc.repaired++;acc.triangles+=stroke.paint.triangles}
-   return acc;
-  }
   if(stroke.mode!=='fill')return acc;
   for(const mark of stroke.marks){
    if(mark.status?.startsWith('REPARAT:')){acc.repaired++;acc.triangles+=mark.triangles||0}
@@ -120,7 +115,6 @@ export function createVehicleAnnotationEditor({slots,getType}){
     for(const mat of mats)mat.dispose();
    }
   }
-  if(stroke?.paint){stroke.paint.mesh.removeFromParent();stroke.paint.mesh.geometry.dispose();stroke.paint.mesh.material.dispose()}
   if(stroke)for(const v of stroke.visuals){
    v.removeFromParent();v.geometry?.dispose();v.material?.dispose();
   }
@@ -136,7 +130,7 @@ export function createVehicleAnnotationEditor({slots,getType}){
   const stroke={mode:mode(),group:Number(groupControl.value),vehicle:getType(),
    variant:slots.indexOf(slot)===0?'Model 1':'Model '+(slots.indexOf(slot)+1),
    marks:[],visuals:[],edits:[],last:null,slot,plane:null,anchor:null,
-   paint:null,paintLast:null,paintMirror:mirrorPaint?.checked===true};
+};
   strokes.push(stroke);updateList();return stroke;
  }
  function surfacePaint(stroke,hit){
@@ -174,24 +168,12 @@ export function createVehicleAnnotationEditor({slots,getType}){
  // El cercle segueix la superfície real o el contorn obert detectat,
  // i mai no s'ancora en un pla virtual de profunditat inventada.
  function placeCursor(slot,x,y){
-  if(!isEnabled()||(mode()!=='fill'&&mode()!=='patch')||slot.outer.hidden||!slot.model){
+  if(!isEnabled()||mode()!=='fill'||slot.outer.hidden||!slot.model){
    preview.visible=false;clearPatchPreview();return null;
   }
   const hit=nearestHit(slot,x,y);
   if(!hit){preview.visible=false;clearPatchPreview();return null}
   const radius=Number(size.value);
-  if(mode()==='patch'){
-   clearPatchPreview();
-   const normal=(hit.face?.normal?.clone()||new THREE.Vector3(0,1,0))
-    .transformDirection(hit.object.matrixWorld).normalize();
-   preview.position.copy(hit.point).addScaledVector(normal,.018);
-   preview.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),normal);
-   preview.scale.setScalar(radius*.5);
-   previewMaterial.color.setHex(COLORS.patch);
-   if(previewSlot!==slot){preview.removeFromParent();slot.scene.add(preview);previewSlot=slot}
-   preview.visible=true;
-   return {hit,worldPoint:hit.point};
-  }
   const target=getHoleBrushTarget(hit.object,hit.point,radius,{large:largeHole?.checked===true});
   const worldPoint=target?hit.object.localToWorld(target.center.clone()):hit.point.clone();
   showPatchPreview(target);
@@ -224,34 +206,6 @@ export function createVehicleAnnotationEditor({slots,getType}){
   mark.scale.setScalar(Number(size.value)*.72);
   mark.userData.vehicleAnnotationOverlay=true;mark.raycast=()=>{};
   stroke.slot.scene.add(mark);stroke.visuals.push(mark);
- }
- function paintArmour(stroke,x,y,force=false){
-  if(!stroke||!stroke.slot.model)return false;
-  if(!force&&stroke.last&&Math.hypot(stroke.last[0]-x,stroke.last[1]-y)<7)return false;
-  const hit=findHit(stroke.slot,x,y);
-  // Cal un primer punt real sobre el casc. Després es permet creuar un
-  // buit CURT tangent a la superfície d'origen.
-  if(!rayAt(stroke.slot,x,y))return false;
-  const next=surfacePaintSample(stroke.slot.model,hit,raycaster.ray,stroke.paintLast);
-  if(!next){
-   feedback.textContent='No s’ha trobat superfície propera. Continua des d’una vora real i travessa només escletxes curtes.';
-   return false;
-  }
-  if(!stroke.paint)stroke.paint=createSurfacePaintStroke(stroke.slot.model,next.material);
-  if(stroke.paintLast){
-   const made=appendSurfacePaint(stroke.paint,stroke.paintLast,next,Number(size.value),stroke.paintMirror);
-   if(!made)return false;
-  }
-  stroke.paintLast=next;
-  stroke.last=[x,y];
-  const local=next.point.toArray();
-  stroke.marks.push({point:local,radius:Number(size.value),
-   mesh:hit?.object?.name||'(pont sobre una escletxa)',
-   face:hit?.faceIndex??null,triangles:stroke.paint.triangles,
-   status:'XAPA PINTADA: '+stroke.paint.triangles+' triangles acumulats'+(stroke.paintMirror?' · mirall X':'')});
-  updateList();updateLiveStatus('Xapa visible al model: +'+stroke.paint.triangles+' triangles. Desfer retira tota la passada.');
-  feedback.textContent='Pintant xapa: '+stroke.paint.triangles+' triangles'+(stroke.paintMirror?' amb simetria':'');
-  return true;
  }
  function sample(stroke,x,y,force=false){
   if(!stroke||!stroke.slot.model)return false;
@@ -323,29 +277,21 @@ export function createVehicleAnnotationEditor({slots,getType}){
  function begin(slot,e){
   if(!isEnabled()||slot.outer.hidden||!slot.model)return false;
   current=makeStroke(slot);
-  if(current.mode==='patch')paintArmour(current,e.clientX,e.clientY,true);
-  else sample(current,e.clientX,e.clientY,true);
+  sample(current,e.clientX,e.clientY,true);
   return true;
  }
  function move(slot,e){
   if(!current||current.slot!==slot)return false;
   if(mode()==='fill'){placeCursor(slot,e.clientX,e.clientY);return true}
-  if(current.mode==='patch'){
-   paintArmour(current,e.clientX,e.clientY);
-   placeCursor(slot,e.clientX,e.clientY);
-   return true;
-  }
   if(mode()==='join')return true; // reparació: un forat per clic
   sample(current,e.clientX,e.clientY);
   return true;
  }
  function end(slot,e){
   if(!current||current.slot!==slot)return false;
-  if(current.mode==='patch'){
-   if(current.marks.length)paintArmour(current,e.clientX,e.clientY,true);
-  }else if(mode()!=='fill'&&(!current.marks.length||!current.last||Math.hypot(current.last[0]-e.clientX,current.last[1]-e.clientY)>9))
+  if(mode()!=='fill'&&(!current.marks.length||!current.last||Math.hypot(current.last[0]-e.clientX,current.last[1]-e.clientY)>9))
    sample(current,e.clientX,e.clientY,true);
-  if(!current.marks.length||(current.mode==='patch'&&!current.paint?.triangles)){
+  if(!current.marks.length){
    // No eliminem silenciosament les marques: així l'usuari sap què ha passat.
    const index=strokes.indexOf(current);
    if(index>=0)remove(index);
@@ -358,13 +304,13 @@ export function createVehicleAnnotationEditor({slots,getType}){
    'HUNTER: ARXIPÈLAG — editor de models 3D · anotacions',
    'Vehicle: '+getType(),
    'Marques no destructives. Coordenades XYZ locals del model, aproximades.',
-   'Modes: UNIR PECES, TAPAR FORAT, PINTAR XAPA (superfície real i ponts curts) i ELIMINAR PEÇA.',
+   'Modes: UNIR PECES, TAPAR FORAT i ELIMINAR PEÇA.',
    ''
   ];
   for(const [i,s] of strokes.entries()){
    lines.push('ANOTACIÓ '+(i+1)+' — '+NAMES[s.mode]+
     (s.mode==='join'?' · GRUP '+s.group:'')+' · '+s.variant+
-    (s.mode==='patch'?' · '+s.paint?.triangles+' triangles · simetria X '+(s.paintMirror?'sí':'no'):'')+':');
+    ':');
    for(const [j,m] of s.marks.entries())
     lines.push(' '+(j+1)+'. malla '+m.mesh+' · triangle '+(m.face??'sense cara')+
      ' · centre ('+m.point.map(fmt).join(', ')+') · radi '+m.radius.toFixed(2)+
@@ -399,12 +345,10 @@ export function createVehicleAnnotationEditor({slots,getType}){
  modeControl.addEventListener('change',()=>{
   preview.visible=false;clearPatchPreview();
   updateLiveStatus(mode()==='fill'?'Mou el cursor sobre el model per veure la reparació en verd abans de clicar.':'Mode d’anotació: la geometria no es modifica.');
-  feedback.textContent=mode()==='patch'?'Arrossega des d’una superfície real: es crea una cinta de xapa visible, amb ponts curts i simetria opcional.':
-   mode()==='fill'?'Mou el cercle sobre una vora del forat. Verd = contorn detectable; clica per tancar-lo. Blau = encara no reparable.':
+  feedback.textContent=mode()==='fill'?'Mou el cercle sobre una vora del forat. Verd = contorn detectable; clica per tancar-lo. Blau = encara no reparable.':
    mode()==='remove'?'Arrossega per marcar les cares que vols eliminar.':
    'Clica les peces que vols unir; selecciona un mateix grup per relacionar-les.';
   groupControl.disabled=mode()!=='join';
-  if(mirrorPaint)mirrorPaint.disabled=mode()!=='patch';
  });
  enabled.addEventListener('change',()=>{
   panel.classList.toggle('selecting',enabled.checked);
@@ -417,7 +361,6 @@ export function createVehicleAnnotationEditor({slots,getType}){
   preview.visible=false;clearPatchPreview();
   updateLiveStatus(largeHole.checked?'Forats grans: contorns tancats fins a uns 4 m de radi. Previsualitza abans de clicar.':'Forats petits: comprovació estricta de contorns.');
  });
- if(mirrorPaint)mirrorPaint.disabled=mode()!=='patch';
  updateList();updateLiveStatus('Mou el cursor per previsualitzar la reparació; clica per aplicar-la.');
  return {active:isEnabled,begin,move,end,reset,hover:(slot,e)=>placeCursor(slot,e.clientX,e.clientY),hideCursor:()=>{preview.visible=false;clearPatchPreview()},mark:(slot,e)=>{begin(slot,e);end(slot,e)}};
 }
