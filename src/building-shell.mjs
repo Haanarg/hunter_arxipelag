@@ -96,6 +96,11 @@ export function planBuildingShell(w,d,h,opt={},random){
   else if(opt.hangar){
     const frontZ=ds===0?d/2-t/2:-d/2+t/2,sl=Math.max(.5,(w-dw)/2),off=dw/2+sl/2;
     for(const lx of [-off,off]){const i=seg(lx,frontZ,sl,t);segments[i].hangarPost=true;}
+    // La paret del fons ha de ser un únic segment destructible de 10 PV,
+    // tant al joc individual com als col·lisionadors del servidor COOP.
+    const backZ=ds===0?-d/2+t/2:d/2-t/2;
+    const rear=seg(0,backZ,w,t);
+    segments[rear].hangarRearWall=true;
   }else{
     [[0,d/2-t/2,w,t,0],[0,-d/2+t/2,w,t,0],[w/2-t/2,0,t,d-2*t,1],[-w/2+t/2,0,t,d-2*t,1]].forEach(([cx,cz,sx,sz,ax],k)=>{
       if(k!==ds){seg(cx,cz,sx,sz,false,!opt.bunker&&!opt.solidWalls,k,1);return;}
