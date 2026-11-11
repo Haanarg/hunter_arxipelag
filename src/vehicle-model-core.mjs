@@ -1,4 +1,5 @@
 import {turretSpecs,advanceTurret} from './vehicle-turret-core.mjs';
+import {installBtr82Model3B} from './btr82-3b-native.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
 import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs?rev=vivid-engine-cover-2';
 import {createStreetfighter25,STREETFIGHTER_25_META} from './streetfighter-25-geometry.mjs';
@@ -292,23 +293,11 @@ export const vehicleModels=Object.freeze({
         g.userData.bicycleModel='road-frame-v2';
       }
       if(t==='tanqueta'){
-        for(const x of[-1.42,1.42])for(const z of[-1.55,0,1.55])
-          wheel(g,x,.68,z,.58,.34,false,z<0);
-        box(g,2.75,.42,4.6,0x596343,0,.88,0,'paint');
-        box(g,2.55,1.02,3.8,0x667348,0,1.42,.05,'paint');
-        const nose=box(g,2.48,.72,1.15,0x727c50,0,1.62,-1.65,'paint');
-        nose.rotation.x=-.18;
-        for(const x of[-1.05,1.05])box(g,.32,.18,.18,0xffe0a0,x,1.48,-2.24,'paint');
-        const turret=new THREE.Group();turret.position.set(...turretSpecs.tanqueta.pivot);g.add(turret);
-        // La base rectangular queda fixa al xassís; només gira la corona cilíndrica.
-        box(g,2.08,.58,1.7,0x727c50,0,2.02,-.15,'paint');
-        round(turret,.68,.32,0x586543,0,.18,0,'y','paint');
-        const elev=new THREE.Group();elev.position.set(...turretSpecs.tanqueta.pitch);turret.add(elev);
-        rod(elev,[0,0,0],[0,0,-2.4],.1,metal);
-        box(elev,.3,.24,.5,metal,0,0,-2.27,'metal');
-        const muzzle=new THREE.Object3D();muzzle.position.set(...turretSpecs.tanqueta.muzzle);elev.add(muzzle);
-        g.userData.turretPivot=turret;g.userData.turretPitch=elev;
-        g.userData.turretMuzzle=muzzle;g.userData.turretYawRate=turretSpecs.tanqueta.turretYawRate;
+        // BTR-82 3B aprovat al comparador: casc angular simètric,
+        // torreta corbada al davant, canó rebaixat i vuit rodes A4.3.
+        // La física, les col·lisions i les regles de combat no canvien.
+        installBtr82Model3B(THREE,g,{resources});
+        g.userData.turretYawRate=turretSpecs.tanqueta.turretYawRate;
       }
       if(t==='tanc'){
         const trackSide=x=>{
