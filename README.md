@@ -68,7 +68,7 @@ Les proves Node no substitueixen una partida real, una revisió WebGL/Android o 
 
 ## Laboratori de models 3D — editor de proves per defecte
 
-**Tanqueta BTR-82 (prototip actual):** l'experiment v3k conserva un casc simètric només a esquerra/dreta, la torreta de perfil posterior retallat, les vuit rodes A4.3 i el canó de dues peces. El laboratori principal és `vehicles-externs-proves.html` (original i v3k). La geometria del morro encara és experimental i no s'ha traslladat al joc.
+**Tanqueta BTR-82 (prototip actual):** l'experiment v3k conserva un casc simètric només a esquerra/dreta, la torreta de perfil posterior retallat, les vuit rodes A4.3 i el canó de dues peces. El laboratori principal és `vehicles-externs-proves.html` (original i v3k). **El model 3B ja s'utilitza a la partida**: vuit rodes A4.3 animades, casc angular simètric, torreta amb retall corbat frontal i canó 33 cm més baix. El motor de conducció, col·lisions i dany no s'ha modificat.
 
 
 El banc de proves de vehicles és [vehicles-externs-proves.html](vehicles-externs-proves.html), publicat a `https://hunter.paradoxa.cat/vehicles-externs-proves.html`. La interfície de referència incorpora l'**editor de marques 3D**, reutilitzable per a tots els vehicles i per a futurs models. El codi general és `src/vehicle-annotation-editor.mjs`; no s'ha d'acoblar exclusivament a la tanqueta.
