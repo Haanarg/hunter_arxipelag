@@ -335,12 +335,14 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
       lookahead=Math.min(1,decisionLookahead/Math.max(.001,longDistance));
     // La comprovació predictiva és curta, però el sweep real de tryMove
     // continua fent servir tota la petjada i les col·lisions dinàmiques.
-    // La predicció d'espai lliure tampoc no pot girar el jeep sobre el lloc:
-    // usa el primer tram realista de la corba, no una rotació en sec.
-    const preview=u.t==='jeep'?window.HUNTER_ENEMY_CAR_STEERING.enemyCarArcStep({
-      x:u.x,z:u.z,heading:oldHd,targetHeading:hd,
-      distance:Math.min(10,longDistance)
-    }):null;
+    // Els vehicles de rodes (jeep i BTR-82) segueixen arcs reals,
+    // també en la predicció: mai un gir sobre el lloc.
+    const preview=(u.t==='jeep'||u.t==='tanqueta')?
+      window.HUNTER_ENEMY_CAR_STEERING.enemyCarArcStep({
+        x:u.x,z:u.z,heading:oldHd,targetHeading:hd,
+        distance:Math.min(10,longDistance),
+        radius:u.t==='tanqueta'?14:undefined
+      }):null;
     u.navDirect=enemySweep(u,u.x,u.z,
       preview?.x??u.x+(tx-u.x)*lookahead,
       preview?.z??u.z+(tz-u.z)*lookahead,
@@ -372,12 +374,13 @@ function mvE(u,s,tx=u.tx,tz=u.tz){
   }else{u.navPath=[];u.navSearch=null}
   const distance=Math.min(s,Math.hypot(target.x-u.x,target.z-u.z));
   const tryMove=(angle,length=distance,reverse=false)=>{
-    // El jeep (amb rodes) ha de recórrer un arc per girar.
-    // Les erugues de tancs/tanquetes conserven el gir en espai reduït.
-    const car=u.t==='jeep',error=wrapAngle(angle-oldHd);
+    // Jeep i BTR-82 tenen rodes: giren recorrent un arc, no pivotant.
+    // Només el tanc amb erugues pot orientar-se en espai reduït.
+    const car=u.t==='jeep'||u.t==='tanqueta',error=wrapAngle(angle-oldHd);
     const carTravel=car?length*(reverse?1:Math.max(.58,1-Math.abs(error)*.16)):0;
     const arc=car?window.HUNTER_ENEMY_CAR_STEERING.enemyCarArcStep({
-      x:u.x,z:u.z,heading:oldHd,targetHeading:angle,distance:carTravel,reverse
+      x:u.x,z:u.z,heading:oldHd,targetHeading:angle,distance:carTravel,reverse,
+      radius:u.t==='tanqueta'?14:undefined
     }):null;
     const nextHd=car?arc.heading:veh?(reverse?oldHd:
       oldHd+Math.max(-dt*1.5,Math.min(dt*1.5,error))):angle;
