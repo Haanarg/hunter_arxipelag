@@ -8,7 +8,7 @@ import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 export const vehicleModels=Object.freeze({
   ...vehicleSpecs,
-  steeringMax:Object.freeze({bici:.60,moto:.52,cotxe:.44,cotxe_civil:.43,camio:.36,tanqueta:.34}),
+  steeringMax:Object.freeze({bici:.60,moto:.52,cotxe:.44,cotxe_civil:.43,camio:.36,tanqueta:.18}),
   // LOD purament visual de les barques de rems. Ni la física, ni els
   // ocupants, ni la posició del vehicle es veuen alterats.
   setDistantVehicleLOD,shouldSimplifyVehicle,
