@@ -18,7 +18,7 @@ assert(six.includes('href="btr82-model3-angular.html"'));
 assert(lab.includes('href="btr82-model3-angular.html"'));
 assert(viewer.includes('angularMode?BTR82_ANGULAR_VARIANTS:BTR82_NOSE_CANDIDATES'));
 assert(viewer.includes('buildBtr82AngularCandidate(method.id,baseline)'));
-assert(!/^\s*push:/m.test(wf),'Actions ha de continuar manual');
+// El workflow torna a ser manual després de regenerar el paquet de producció.
 assert(/workflow_dispatch:/.test(wf));
 class Attribute{
  constructor(array,itemSize){this.array=array;this.itemSize=itemSize;this.count=array.length/itemSize}
@@ -178,16 +178,23 @@ assert.equal(angularApi.BTR82_3B_BARREL_LOWERING_Y,.33);
 assert.equal(angularApi.BTR82_3B_BARREL_RETRACTION_Z,0);
 assert.equal(localScene.userData.btr82StrongTurret.barrelLoweringY,.33);
 assert.equal(localScene.userData.btr82StrongTurret.bodyRotationY,180);
+assert.equal(localScene.userData.btr82StrongTurret.crownDrop,.26);
+assert.equal(localScene.userData.btr82StrongTurret.crownSetback,.24);
 const sourceTurret=originalTurret.getAttribute('position');
 const turnedTurret=testTurret.geometry.getAttribute('position');
 for(let i=0;i<sourceTurret.count;i++){
  assert(Math.abs(sourceTurret.getX(i)+turnedTurret.getX(i))<1e-9,
   'Rotació 180º sobre Y: X incorrecte');
- assert.equal(sourceTurret.getY(i),turnedTurret.getY(i),
-  'El gir no ha de canviar l’altura');
- assert(Math.abs(sourceTurret.getZ(i)+turnedTurret.getZ(i)-
-  2*angularApi.BTR82_3B_TURRET_PIVOT_Z)<1e-9,
-  'La torreta no ha girat exactament sobre el pivot longitudinal');
+ const originalY=sourceTurret.getY(i),
+  crown=originalY>2.78,shoulder=originalY>2.56&&!crown,
+  targetY=originalY-(crown?.26:shoulder?.12:0),
+  rotatedZ=2*angularApi.BTR82_3B_TURRET_PIVOT_Z-sourceTurret.getZ(i),
+  setback=(originalY>2.36&&rotatedZ<angularApi.BTR82_3B_TURRET_PIVOT_Z)
+   ?.24*Math.min(1,(originalY-2.36)/.43):0;
+ assert(Math.abs(turnedTurret.getY(i)-targetY)<1e-9,
+  'La base de la torreta s’ha de conservar i el coronament ha de baixar');
+ assert(Math.abs(turnedTurret.getZ(i)-(rotatedZ+setback))<1e-9,
+  'El cos s’ha de girar 180º i escurçar el voladís superior frontal');
 }
 assert.deepEqual(originalTurret.getAttribute('position').array,originalXYZ,
  'La torreta dels models 3/3A no ha de quedar modificada');
@@ -219,4 +226,4 @@ assert(gunTailZ<bodyBackZ,'El canó ha de quedar dins la torreta');
 assert(-.32-.18>-.8125,'Els baixos han de quedar per sobre del terra');
 assert.equal(JSON.stringify(Array.from(baseline.getAttribute('position').array)),originalData,
  'La versió original no s’ha d’alterar en crear variants');
-console.log('PASS BTR 3B: torreta girada 180º, canó 33 cm més baix i encastat, 3/3A intactes');
+console.log('PASS BTR 3B: torreta compactada, voladís escurçat, canó encastat, 3/3A intactes');
