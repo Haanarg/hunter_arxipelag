@@ -17,7 +17,8 @@ for(const id of excluded){
  assert(!(id in manifest.models),'Vehicle acceptat encara al manifest: '+id);
  assert(!fs.existsSync(path.join(root,'assets/vehicle-candidates',id)),'Carpeta de GLB rebutjats encara present: '+id);
 }
-for(const id of ['bici','cotxe_civil','llanxa','ferry'])assert(types.includes(id));
+for(const id of ['bici','cotxe_civil'])assert(!types.includes(id));
+for(const id of ['llanxa','ferry'])assert(types.includes(id));
 assert(fs.existsSync(path.join(root,'src/jet-ski-25-geometry.mjs')),'Falta el model de moto aquàtica del joc');
 assert(fs.existsSync(path.join(root,'src/streetfighter-25-geometry.mjs')),'Falta el model definitiu Naked streetfighter');
 assert(!studio.includes('FEATURED'),'El banc de proves no ha de calcular LOD de motos acceptades');
@@ -111,14 +112,8 @@ assert(!html.includes('casc v1'));
 assert(html.includes('La v2 s\'ha retirat'));
 assert(html.includes('dues targetes'));
 
-assert(html.includes('Pintar xapa (arrossegar)')&&html.includes('id="btrMirrorSurfacePaint"'));
-assert(html.includes('Simetria de la xapa (X)'));
-const armourPaint=read('src/vehicle-surface-paint.mjs');
-assert(armourPaint.includes('surfacePaintSample')&&armourPaint.includes('createSurfacePaintStroke')&&armourPaint.includes('appendSurfacePaint'));
-assert(armourPaint.includes('MAX_BRIDGE=.58')&&armourPaint.includes('MAX_DEPTH_JUMP=.36'));
-assert(armourPaint.includes('mirror')&&armourPaint.includes('mirrored(a)')&&armourPaint.includes('mirrored(b)'));
-assert(armourPaint.includes('stroke.mesh.geometry=geo;old.dispose()'));
-assert(studio.includes('vehicle-annotation-editor.mjs?rev=surface-paint-v12'));
+assert(!html.includes('Pintar xapa (arrossegar)')&&!html.includes('btrMirrorSurfacePaint'));
+assert(html.includes('id="btrSelectEnabled"')&&!html.includes('id="btrSelectEnabled" checked'));
 
 assert(html.includes('id="btrLargeHoleMode"')&&html.includes('Forats grans (contorn tancat)'));
 assert(html.includes('max="2.50"'));
@@ -190,19 +185,6 @@ assert(painted.includes('pointCloud:true')&&painted.includes('pointToStroke'), '
 assert(painted.includes('removeNewPaintedUpperDetails(scene)'),'Eliminació dels petits detalls de dalt');
 assert(painted.includes('upperRemoved:upperRemoval.removed'),'Recompte antic de detalls retirats');
 const selector=read('src/vehicle-annotation-editor.mjs');
-assert(selector.includes('paintArmour(stroke,x,y,force=false)'));
-assert(selector.includes("current.mode==='patch'")&&selector.includes('stroke.paintMirror'));
-assert(selector.includes('stroke.paint.mesh.removeFromParent()'));
-assert(selector.includes("mode()==='patch'")&&selector.includes('previewMaterial.color.setHex(COLORS.patch)'));
-assert(selector.includes('placeCursor(slot,e.clientX,e.clientY)'));
-assert(selector.includes('paintArmour(current,e.clientX,e.clientY)'));
-
-assert(selector.includes('raycaster.intersectObjects')&&selector.includes('navigator.clipboard')&&selector.includes('EXPLICACIÓ:'));
-assert(selector.includes("fill:'TAPAR FORAT'")&&selector.includes("remove:'ELIMINAR PEÇA'"));
-assert(selector.includes('intersectPlane')&&selector.includes('stroke.marks.push'));
-assert(selector.includes("stroke.mode==='fill'||stroke.mode==='remove'?nearestHit")&&selector.includes('espai buit / cap cara detectada'), 'El pinzell d’eliminar ha de preservar marques fins i tot sense un hit sobre la malla');
-assert(selector.includes('No s’ha pogut marcar aquesta zona'), 'Cal avisar si no es pot desar la traçada');
-assert(studio.includes('vehicle-annotation-editor.mjs?rev=surface-paint-v12'), 'Cal invalidar la memòria cau del nou pinzell');
 assert(selector.includes('Vehicle_hole_repair_live_preview')&&selector.includes('showPatchPreview(target)'));
 assert(selector.includes('target.mesh.add(previewPatch)')&&selector.includes('clearPatchPreview()'));
 assert(selector.includes('repairCounts()')&&selector.includes('btrRepairLiveCount'));
@@ -240,4 +222,4 @@ for(const old of ['helicopters-lod-proves.html','apache-variants-proves.html',
 for(const file of ['src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs','src/btr82-lod-studio.mjs','src/vehicle-annotation-editor.mjs','src/vehicle-hole-brush.mjs','src/vehicle-surface-paint.mjs','src/btr82-part-selector.mjs','src/btr82-rear-seam-repair.mjs','src/btr82-annotated-detail-removal.mjs','src/btr82-painted-hole-repair.mjs','src/btr82-confirmed-repairs.mjs','src/btr82-hull-v3.mjs','src/streetfighter-25-geometry.mjs'])
  execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
 execFileSync(process.execPath,[path.join(root,'tests/btr82-hull-v3-geometry.cjs')],{stdio:'pipe'});
-console.log('PASS default reusable vehicle 3D annotation editor: join parts, paint holes and mark parts for removal');
+console.log('PASS vehicle editor defaults disabled: join parts, repair holes and mark parts for removal');
