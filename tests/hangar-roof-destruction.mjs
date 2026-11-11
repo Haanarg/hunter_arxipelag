@@ -13,6 +13,18 @@ const materials=new Map(),material=color=>{
 };
 const visual=buildingsWindow.HUNTER_BUILDINGS.create(THREE,{material,materialProfile:()=>({})})
  .createHangarShell({width:24,depth:33,height:12,wallColor:0xb2b4b8,roofColor:0x71818a});
+// El fons té el mateix semicercle de la coberta, no un rectangle.
+const rear=buildingsWindow.HUNTER_BUILDINGS.create(THREE,{material,materialProfile:()=>({})})
+ .addHangarRearWall(visual.group,{lx:0,lz:-33/2+.4,sx:24,sz:.8,material:material(0xb2b4b8)});
+rear.geometry.computeBoundingBox();
+const box=rear.geometry.boundingBox;
+assert.equal(rear.name,'hunter-hangar-arched-rear-wall');
+assert(Math.abs(box.max.y-12.12)<.001,'l’arc del fons arriba al mateix cim que la volta');
+assert(Math.abs(box.min.y)<.001,'la paret comença a terra');
+const pos=rear.geometry.getAttribute('position');
+assert([...Array(pos.count).keys()].some(i=>Math.abs(pos.getX(i))>11.9&&pos.getY(i)<.15));
+assert(![...Array(pos.count).keys()].some(i=>Math.abs(pos.getX(i))>11.9&&pos.getY(i)>1),
+ 'No hi poden haver cantonades altes: el perfil és semicircular');
 const world=new THREE.Group(),dgeo=new THREE.BoxGeometry(1,1,1),DB=[];
 visual.group.position.set(37,8,-51);world.add(visual.group);
 visual.group.updateMatrixWorld(true);
