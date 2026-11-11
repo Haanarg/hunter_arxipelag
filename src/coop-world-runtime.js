@@ -438,6 +438,11 @@ function updateNativeCoopFrame(dt){
  }
  refreshVehicleGridIfCellsChanged();
  updateVehicleVisualLod(elapsed,dt,{skipHidden:true});
+ // En COOP els vehicles remots reben la direcció del Worker, no
+ // passen pel bucle de conducció local: animam també les dues rodes
+ // davanteres de la tanqueta sense intervenir en la seva física.
+ for(const v of V)if(!v.destroyed&&v.t==='tanqueta'&&v.o?.userData?.steeringPivots?.length)
+   window.HUNTER_VEHICLES.animateSteering(v.o,'tanqueta',v.steerInput||0,dt);
  // Exactament els mateixos rastres instanciats del mode individual:
  // la física i el snapshot ja han actualitzat la posició de cada vehicle.
  const fxContext={playerX:P.x,playerZ:P.z,playerVehicle:cv,
