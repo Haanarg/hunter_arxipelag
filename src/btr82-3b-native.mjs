@@ -8,10 +8,10 @@ import {vehicleSpecs} from './vehicle-specs.mjs';
 
 // El casc original és molt més llarg que el vehicle procedural del joc.
 // L'ajust és exclusivament visual: no altera ni la hitbox ni la física.
-// L'eix Y i X s'ajusten per conservar les rodes circulars i l'altura;
-// Z s'adapta a la longitud de la tanqueta substituïda.
+// El multiplicador 1.5 engrandeix uniformement el model aprovat 50%;
+// els factors originals encaixen les proporcions de la tanqueta al joc.
 export const BTR82_3B_GAME_FIT=Object.freeze({
- x:.65,y:.65,z:.46,bodyDrop:.18,groundMargin:.10,
+ x:.65,y:.65,z:.46,sizeMultiplier:1.5,bodyDrop:.18,groundMargin:.15,
  sourceTireRadius:.8125,sourceWheelHalfWidth:.25
 });
 const WHEEL_Z=Object.freeze([-2.938,-.938,1.7505,3.585]);
@@ -52,8 +52,10 @@ function makeCombinedWheelGeometry(THREE,radius,width){
 
 function shared(THREE){
  if(cache.has(THREE))return cache.get(THREE);
- const {x:sx,y:sy,z:sz,bodyDrop,groundMargin,sourceTireRadius,
-   sourceWheelHalfWidth}=BTR82_3B_GAME_FIT;
+ const {x:baseX,y:baseY,z:baseZ,sizeMultiplier,bodyDrop,groundMargin,
+   sourceTireRadius,sourceWheelHalfWidth}=BTR82_3B_GAME_FIT;
+ const sx=baseX*sizeMultiplier,sy=baseY*sizeMultiplier,
+   sz=baseZ*sizeMultiplier;
  const tireRadius=sourceTireRadius*sy;
  const wheelCentreY=tireRadius+groundMargin;
  const hullGeometry=createBtr82AngularGeometry('angular-strong');
@@ -97,7 +99,7 @@ function shared(THREE){
   sourceWheelHalfWidth*2*sx);
  const result={hullGeometry,turretGeometry,hullMaterial,turretMaterial,
   gunMaterial,wheelMaterial,barrelGeometry,muzzleGeometry,wheelGeometry,
-  turretPivotY,turretPivotZ,wheelCentreY,tireRadius,sz};
+  turretPivotY,turretPivotZ,wheelCentreY,tireRadius,sx,sy,sz};
  cache.set(THREE,result);
  return result;
 }
@@ -112,29 +114,40 @@ export function installBtr82Model3B(THREE,g,{resources=null}={}){
  hull.name='BTR82_3B_hull';
  g.add(hull);
  for(const z of WHEEL_Z)for(const side of [-1,1]){
+  const front=z===WHEEL_Z[0];
+  // La mangueta gira suaument sobre Y al primer eix; la roda interior
+  // continua rodant en X. La resta de les rodes no giren direccionalment.
+  const steering=front?new THREE.Group():null;
+  const parent=steering||g;
+  if(front){
+   steering.name='BTR82_3B_front_steering';
+   steering.position.set(side*1.688*p.sx,p.wheelCentreY,z*p.sz);
+   g.add(steering);
+   (g.userData.steeringPivots||(g.userData.steeringPivots=[])).push(steering);
+  }
   const w=new THREE.Group();
-  w.position.set(side*1.688*BTR82_3B_GAME_FIT.x,
-    p.wheelCentreY,z*p.sz);
+  if(!front)w.position.set(side*1.688*p.sx,p.wheelCentreY,z*p.sz);
   w.name='BTR82_3B_wheel';
   const mesh=new THREE.Mesh(p.wheelGeometry,p.wheelMaterial);
-  w.add(mesh);g.add(w);
+  w.add(mesh);parent.add(w);
   w.userData.radius=p.tireRadius*vehicleSpecs.scales.tanqueta;
   (g.userData.wheels||(g.userData.wheels=[])).push(w);
  }
  const pivot=new THREE.Group();
- pivot.name='BTR82_3B_turret_yaw';
+ pivot.name='BTR82_3B_complete_turret_yaw';
  pivot.position.set(0,p.turretPivotY,p.turretPivotZ);
  g.add(pivot);
  const turret=new THREE.Mesh(p.turretGeometry,p.turretMaterial);
  turret.name='BTR82_3B_curved_turret';
  pivot.add(turret);
 
- // El pivot de capcineig és a la culata, dins la part endinsada
- // de la corba frontal. Les dues peces mantenen el solapament de 3 cm.
+ // La malla de la torreta gira sencera amb pivot (Y). Només aquest
+ // subgrup del canó fa el capcineig (X), sense inclinar el blindatge.
+ // El pivot de capcineig és a la culata, al rebaix frontal.
  const pitch=new THREE.Group();
  pitch.name='BTR82_3B_gun_pitch';
  pitch.position.set(0,p.wheelCentreY+
-  (GUN_SOURCE_Y-BTR82_3B_GAME_FIT.bodyDrop)*BTR82_3B_GAME_FIT.y-
+  (GUN_SOURCE_Y-BTR82_3B_GAME_FIT.bodyDrop)*p.sy-
   p.turretPivotY,GUN_REAR_Z*p.sz-p.turretPivotZ);
  pivot.add(pitch);
  const barrel=new THREE.Mesh(p.barrelGeometry,p.gunMaterial);
@@ -155,6 +168,8 @@ export function installBtr82Model3B(THREE,g,{resources=null}={}){
  g.userData.turretMuzzle=shot;
  g.userData.btr82Model='3B';
  g.userData.btr82WheelCount=8;
+ g.userData.btr82VisualScale=BTR82_3B_GAME_FIT.sizeMultiplier;
+ g.userData.btr82FrontSteerCount=g.userData.steeringPivots.length;
  g.userData.btr82HullTriangles=p.hullGeometry.index.count/3;
  g.userData.btr82BarrelLowering=BTR82_3B_BARREL_LOWERING_Y;
  return g;
