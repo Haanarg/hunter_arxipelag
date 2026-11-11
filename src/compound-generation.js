@@ -84,18 +84,9 @@ function* buildApprovedCompoundSteps(layout,q,{path,pier,prop,vehicles,rocketAss
       }
     }
     if(spec.hangar){
-      const shape=seedSearchMode?null:new THREE.Shape();if(shape){shape.moveTo(-spec.w/2,0);shape.lineTo(spec.w/2,0);for(let i=0;i<=16;i++){const a=i*Math.PI/16;shape.lineTo(Math.cos(a)*spec.w/2,.12+Math.sin(a)*spec.w/2)}shape.closePath();}
-      // La paret semicircular és l'únic tancament posterior: sense l'antic
-      // prisma rectangular baix. El seu propi mesh és el que rep els danys.
-      const rearThickness=.45,rearZ=-spec.d/2+.1;
-      const rear=seedSearchMode?new THREE.Object3D():new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:rearThickness,bevelEnabled:false}),b.wm);
-      rear.position.z=rearZ;b.o.add(rear);
-      Wl.push({
-        x0:x-spec.w/2,x1:x+spec.w/2,z0:z+rearZ,z1:z+rearZ+rearThickness,
-        y0:b.fy-1,y1:b.fy+spec.h,hp:10,m:rear,parts:[rear],
-        door:false,open:false,rammable:true,hangarRear:true,
-        cx:x,cz:z+rearZ+rearThickness/2,owner:b
-      });
+      // mkB() ja ha creat la paret del darrere amb planBuildingShell:
+      // UN sol semicercle destructible de 10 PV. No dupliquis la malla
+      // ni la col·lisió aquí; només afegim les proteccions laterals baixes.
       // The arched roof reaches the ground: its lower sides must be solid too.
       for(const sign of[-1,1]){const lx=x+sign*(spec.w/2-.4),side=seedSearchMode?new THREE.Object3D():buildingVisual.addWall(b.o,{lx:lx-x,lz:0,sx:.8,sz:spec.d,height:1,material:b.wm});Wl.push({x0:lx-.4,x1:lx+.4,z0:z-spec.d/2,z1:z+spec.d/2,y0:b.fy-1,y1:b.fy+3,hp:10,m:side,rammable:true,hangarSide:true,door:false,open:false,cx:lx,cz:z,owner:b})}
     }
