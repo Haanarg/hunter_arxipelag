@@ -1014,7 +1014,10 @@ function updEn(frameDt,preserveFrameBudget=false,underPressure=false){
         const roam=u.guard?8:25;u.tx=u.home.x+rr(-roam,roam);u.tz=u.home.z+rr(-roam,roam);u.wt=u.guard?3:6
       }
     }
-    u.wt-=dt;u.hd=Math.atan2(u.x-u.tx,u.z-u.tz);mvE(u,u.sp*(u.guard?.35:.5)*dt)
+    u.wt-=dt;
+    if(u.t!=='tanqueta')u.hd=Math.atan2(u.x-u.tx,u.z-u.tz);
+    // El BTR-82 gira seguint l'arc calculat a mvE, mai al canviar de fita.
+    mvE(u,u.sp*(u.guard?.35:.5)*dt)
   }
 
   u.o.position.set(u.x,(u.gy!=null?u.gy:enemyGroundAt(u,u.x,u.z))+(u.t=='jeep'||u.t=='tanc'?.05:0),u.z);
