@@ -57,7 +57,10 @@ assert(btr.includes('withTruckWheels')&&btr.includes('replaceBarrelWithCylinders
 assert.equal((btr.match(/\{slot:[01],level:[03],title:/g)||[]).length,2,'Calen dos visors BTR-82');
 assert(btr.includes('makeBtr82HullV3(baseline)')&&!btr.includes('makeBtr82HullV2('));
 assert(studio.includes("const btrStudy=config.id==='tanqueta'"));
-assert(studio.includes('slot.outer.hidden=btrStudy?slots.indexOf(slot)>1:slots.indexOf(slot)>3'));
+assert(studio.includes('slot.outer.hidden=btrStudy?slots.indexOf(slot)>0:slots.indexOf(slot)>3'));
+assert(studio.includes('createBtr823BPreview()'));
+assert(!studio.includes('studio.load(token)'),'Els antics GLB no han de carregar-se en triar la tanqueta');
+assert(html.includes('#grid.btr-study{grid-template-columns:minmax(0,1fr)'));
 assert(html.includes('#grid.btr-study{grid-template-columns:repeat(2'));
 assert(hull.includes('BTR82_HULL_V3_STATIONS')&&hull.includes('createBtr82HullV3Geometry'));
 assert(hull.includes('createBtr82TurretV3Geometry')&&hull.includes('makeBtr82HullV3'));
