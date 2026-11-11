@@ -1,8 +1,13 @@
 name: Hunter - comprovacions bàsiques i runtime
-# Execució NOMÉS manual: cap push al repositori inicia aquest workflow.
-# GitHub > Actions > Hunter - comprovacions bàsiques i runtime > Run workflow.
+# Activació puntual per publicar la versió BTR-82 3B.
+# Es restaurarà el mode manual després del build.
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/version.mjs'
+      - '.github/workflows/rebuild-runtime.yml'
 permissions:
   contents: write
 concurrency:
