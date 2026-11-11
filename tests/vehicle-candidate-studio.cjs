@@ -100,7 +100,7 @@ assert(html.includes('Tapar forats (clic)')&&html.includes('Eliminar peces'));
 assert(html.includes('Verd')&&html.includes('blau')&&html.includes('Desfer última acció'));
 assert(html.includes('btr82-symmetric-well-hull-v3c'));
 assert(!html.includes('casc v1'));
-assert(html.includes('part central inferior')&&html.includes('casc v2'));
+assert(html.includes('ventre central')&&html.includes('casc v2'));
 assert(html.includes('tres targetes'));
 
 assert(html.includes('Pintar xapa (arrossegar)')&&html.includes('id="btrMirrorSurfacePaint"'));
