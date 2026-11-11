@@ -71,7 +71,7 @@ assert(hullV3.includes('BTR82_HULL_V3_STATIONS')&&hullV3.includes('createBtr82Hu
 assert(hullV3.includes('makeBtr82HullV3')&&hullV3.includes('BTR82_v3_lowered_centre_hull'));
 assert(hullV3.includes('BTR82_v3_low_angular_turret')&&hullV3.includes('preserved(mesh)'));
 assert(hullV3.includes('hullBottom:-.32')&&hullV3.includes('roofHeight:1.65'));
-assert(hullV3.includes('wheelStepHeight:.96')&&hullV3.includes('lowerBellyHalfWidth:1.15'));
+assert(hullV3.includes('wheelStepHeight:.96')&&hullV3.includes('lowerBellyHalfWidth:1.11'));
 assert(hullV3.includes('symmetricalX:true')&&hullV3.includes('axisRotationDegrees:90'));
 assert(hullV3.includes('return closedMesh(BTR82_HULL_V3_STATIONS.map(section))'));
 assert(!hullV3.includes('createBtr82HullV3AxisSwapGeometry'));
@@ -93,7 +93,7 @@ const currentRender=btr.slice(btr.indexOf('async function renderFromSource'),btr
 assert(html.includes('casc v3')&&html.includes('tres targetes'));
 assert(html.includes('popa xata')&&html.includes('esglaons'));
 
-assert(html.includes('ventre central'));
+assert(html.includes('panells mitjans')&&html.includes('baixos'));
 
 
 assert(html.includes('Editor de marques 3D')&&html.includes('btrSelectGroup')&&html.includes('btrCopySelection')&&html.includes('btrSelectMode'));
@@ -101,7 +101,7 @@ assert(html.includes('Tapar forats (clic)')&&html.includes('Eliminar peces'));
 assert(html.includes('Verd')&&html.includes('blau')&&html.includes('Desfer última acció'));
 assert(html.includes('btr82-gun-axis-lower-hull-v3d'));
 assert(!html.includes('casc v1'));
-assert(html.includes('ventre central')&&html.includes('casc v2'));
+assert(html.includes('panells mitjans')&&html.includes('casc v2'));
 assert(html.includes('tres targetes'));
 
 assert(html.includes('Pintar xapa (arrossegar)')&&html.includes('id="btrMirrorSurfacePaint"'));
