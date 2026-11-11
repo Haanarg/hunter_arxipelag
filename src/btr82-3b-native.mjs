@@ -6,12 +6,12 @@ import {createBtr82AngularGeometry,BTR82_3B_TURRET_PIVOT_Z,
 import {createBtr82TurretV3Geometry,BTR82_CABIN_SHIFT_Z} from './btr82-hull-v3.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
 
-// El casc original és molt més llarg que el vehicle procedural del joc.
-// L'ajust és exclusivament visual: no altera ni la hitbox ni la física.
-// El multiplicador 1.5 engrandeix uniformement el model aprovat 50%;
-// els factors originals encaixen les proporcions de la tanqueta al joc.
+// Conservam les proporcions EXACTES del 3B del visor: la compressió
+// longitudinal antiga (.46 contra .65 en X/Y) feia solapar pneumàtics.
+// L'escala uniforme, amb el factor 1.5, recupera els espais entre eixos.
+// La hitbox física corresponent es declara a vehicle-specs.mjs.
 export const BTR82_3B_GAME_FIT=Object.freeze({
- x:.65,y:.65,z:.46,sizeMultiplier:1.5,bodyDrop:.18,groundMargin:.15,
+ x:.65,y:.65,z:.65,sizeMultiplier:1.5,bodyDrop:.18,groundMargin:.15,
  sourceTireRadius:.8125,sourceWheelHalfWidth:.25
 });
 const WHEEL_Z=Object.freeze([-2.938,-.938,1.7505,3.585]);
