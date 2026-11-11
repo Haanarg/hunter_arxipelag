@@ -9,13 +9,13 @@ import {makeBtr82HullV3} from './btr82-hull-v3.mjs';
 // Low Poly BTR-82 by SIpriv (CC BY 4.0): base Three.js al 25%.
  // El punt de partida de les quatre reduccions és la variant actual amb
  // vuit rodes del camió A4.3 i canó negre cilíndric, NO el GLB original.
-export const BTR82_VERSION='btr82-full-depth-nose-v3h';
+export const BTR82_VERSION='btr82-hex-rear-deck-v3i';
 const ASSET_DIR='./assets/vehicle-candidates/tanqueta/';
 const BASE_FILE='btr82-base-100.glb';
 const CREDIT='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
 const PASSES=Object.freeze([
  {slot:0,level:0,title:'Original · base aprovada',ratio:0},
- {slot:1,level:3,title:'Casc v3h · baixos convergents al morro',ratio:0}
+ {slot:1,level:3,title:'Casc v3i · popa hexagonal',ratio:0}
 ]);
 const LOD_RATIOS=[.18,.22,.27,.32];
 // Les primeres vuit malles de la base 25% són les rodes, separades de la carrosseria.
@@ -245,14 +245,14 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
   slots[1].status.textContent+=' · casc '+v3.hullTriangles+' △ · torreta '+v3.turretTriangles+
    ' △ · ventre a '+v3.hullBottom.toFixed(2)+' m · escalons a '+v3.wheelStepHeight.toFixed(2)+' m · 8 rodes + canó';
   if(alive(token,run))notice.textContent=
-   'BTR-82 · CASC V3H: els eixos corregits són definitius. Casc generat directament en X transversal i Z longitudinal del canó, sense girs inversos. '
+   'BTR-82 · CASC V3I: els eixos corregits són definitius. Casc generat directament en X transversal i Z longitudinal del canó, sense girs inversos. '
    +'El casc és matemàticament simètric només a esquerra/dreta (pla X=0, eix del canó cap a -Z). '
-   +'La proa es fa estreta en planta i els baixos reculen en falca; la popa queda xata, amb la part inferior bisellada. Simetria nomes esquerra/dreta. '
-   +'La coberta superior no s’ha modificat; els perfils del ventre segueixen longitudinals fins a -0,32 m i a cada costat hi ha graons '
+   +'Morro v3h intacte; la popa és més hexagonal i xata, amb espatlles inclinades i baixos elevats. Simetria només esquerra/dreta. '
+   +'La coberta és més alta i hexagonal; el ventre central continua a -0,32 m i a cada costat hi ha graons '
    +'a 0,96 m per allotjar les rodes sota el xassís, amb simetria X comprovada a cada secció. '
    +'El casc es genera com una única malla tancada, sense planxes flotants; '
    +'les vuit rodes i el canó originals es conserven. '
-   +'Torreta més baixa i amb cares inclinades, mantenint el canó original. Detalls petits pendents; no està integrat al joc.';
+   +'Base inferior de la torreta retallada per encaixar amb la coberta, mantenint-ne la part superior i el canó originals. Detalls petits pendents; no està integrat al joc.';
  }
  async function load(token){
   const run=++revision;

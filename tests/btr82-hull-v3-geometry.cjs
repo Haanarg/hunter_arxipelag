@@ -90,7 +90,7 @@ const bounds=g=>{
 const after=bounds(hull);
 assert(Math.abs(after.width-3.82)<1e-8&&Math.abs(after.length-10.85)<1e-8);
 assert.equal(after.bottom,-.32);
-assert.equal(after.top,1.65);
+assert.equal(after.top,1.78);
 const stations=api.BTR82_HULL_V3_STATIONS,front=stations[0],rear=stations.at(-1),middle=stations[5];
 assert(front.roof[2]>.6,'Proa insuficientment inclinada');
 const capStart=9*20*6,capIds=ids.slice(capStart);
@@ -107,6 +107,11 @@ for(const face of caps){
 
 assert.equal(rear.belt[2],0,'Popa xata');
 assert(rear.keel[2]<-.4,'Popa amb baixos recollits');
+assert(rear.keel[1]>.4&&rear.belly[1]>.45,'La quilla posterior no pot penjar massa');
+assert(rear.stepFoot[1]>.6,'La part inferior de la popa ha de formar un bisell');
+assert(rear.shoulder[0]>rear.roof[0]+.4,'La popa ha de tenir espatlles hexagonals');
+assert(stations[stations.length-2].keel[1]>stations[stations.length-3].keel[1]+.2,
+ 'La quilla ha de començar a pujar abans de la popa');
 assert(rear.roof[2]<0,'Popa amb bisell superior');
 assert(rear.roof[1]>front.roof[1]+.3,'La proa no es distingeix prou de la popa');
 assert(middle.wheelWell[0]<1.438&&middle.wheelWell[1]>=.94,'Escaló de les rodes incorrecte');
@@ -135,6 +140,8 @@ const topZ=Math.min(...Array.from({length:8},(_,i)=>tp.getZ(32+i)));
 assert(topX<baseX-.3, "Turret shoulders need taper");
 assert(topZ>baseZ+.2, "Turret upper prow must slope rearward");
 assert(tp.getY(32)<2.85);
+assert.equal(tp.getY(0),1.71,'Cal retallar la base inferior de la torreta');
+assert.equal(tp.getY(8),1.90,'El segon anell ha de quedar per sobre la coberta');
 // La meitat inferior de CADA secció segueix el mateix Z que l'eix del canó.
 const vertexCountPerSection=20;
 for(let i=1;i<stations.length-1;i++)for(let k=5;k<=10;k++)
@@ -155,6 +162,9 @@ assert.equal(report.axisRotationDegrees,90);
 assert.equal(report.symmetricalX,true);
 assert.equal(report.hullBottom,-.32);
 assert.equal(report.noseKeelHeight,.82);
+assert.equal(report.rearKeelHeight,.51);
+assert.equal(report.rearOutline,'raised-hex-bevel');
+assert.equal(report.turretBaseHeight,1.71);
 assert.equal(report.gunAxis,'-Z');
 assert.equal(report.transverseMirrorAxis,'X');
 assert.equal(report.wheelStepHeight,.96);
@@ -165,4 +175,4 @@ assert.equal(rebuilt.children.filter(n=>n.name.startsWith('BTR82_truck_A43_wheel
 assert(!rebuilt.children.some(n=>n.name==='hull_material_0'));
 assert.deepEqual(rebuilt.getObjectByName('BTR82_v3_lowered_centre_hull').geometry.getAttribute('position').array,position.array);
 assert.equal(rebuilt.getObjectByName('BTR82_new_black_barrel').geometry,base.getObjectByName('BTR82_new_black_barrel').geometry);
-console.log('PASS BTR v3f: sloping nose, symmetric X, tapered turret, closed geometry');
+console.log('PASS BTR v3i: raised hexagonal deck, beveled stern and shortened turret foot');
