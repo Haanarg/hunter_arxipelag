@@ -135,10 +135,14 @@ export function centreBtr82AngularHardware(scene){
 // Les peces del canó continuen orientades a -Z i mantenen la llargada.
 export const BTR82_3B_TURRET_PIVOT_Z=BTR82_CABIN_SHIFT_Z-.69;
 export const BTR82_3B_TURRET_ROTATION_DEGREES=180;
+// El centre del canó original és a Y=2.69. La vora frontal amb el
+// retall màxim de la mitja lluna girada és a Y=2.36 (anella 3).
+// Abaixem totes dues peces 33 cm, només per al candidat 3B.
+export const BTR82_3B_BARREL_LOWERING_Y=.33;
 export const BTR82_3B_BARREL_RETRACTION_Z=0;
-// El canó actual, llarg 2.90 m, queda de Z=-2.98 a Z=-.08;
-// després de girar la torreta encara hi entra pel davant i per tant
-// no cal fer retrocedir la seva boca de foc.
+// El canó llarg 2.90 m acaba a Z=-.08 (amb el desplaçament de cabina).
+// A Y=2.36, la cara frontal del retall és a Z≈-.78: l'extrem posterior
+// ja entra uns 70 cm dins del cos. No cal fer-lo retrocedir ni escurçar-lo.
 export function reverseBtr82StrongTurretBody(scene){
  const body=scene.getObjectByName('BTR82_v3_low_angular_turret');
  if(!body?.isMesh||!body.geometry?.getAttribute)throw Error('No es troba la torreta');
@@ -152,15 +156,20 @@ export function reverseBtr82StrongTurretBody(scene){
  }
  pos.needsUpdate=true;
  turned.computeVertexNormals();turned.computeBoundingBox();turned.computeBoundingSphere();
- // Abans de mutar el cos, garantim que el canó separat encara existeix.
- for(const name of ['BTR82_new_black_barrel','BTR82_new_black_muzzle']){
+ // Abans de mutar el cos, garantim que les dues peces del canó existeixen.
+ const gunParts=['BTR82_new_black_barrel','BTR82_new_black_muzzle'].map(name=>{
   const part=scene.getObjectByName(name);
   if(!part?.isMesh||!part.position)throw Error('Falta canó: '+name);
- }
+  return part;
+ });
  body.geometry=turned;
+ // Centrem el canó a l'altura del rebaix màxim de la corba frontal.
+ // No cal tocar-ne Z: la culata continua ben endins de la torreta.
+ for(const part of gunParts)part.position.y-=BTR82_3B_BARREL_LOWERING_Y;
  body.userData={...body.userData,rotated180:true,pivotZ:pivot};
  if(scene.userData)scene.userData.btr82StrongTurret={
-  bodyRotationY:180,pivotZ:pivot,barrelRetractionZ:0,gunAxis:'-Z'
+  bodyRotationY:180,pivotZ:pivot,barrelLoweringY:BTR82_3B_BARREL_LOWERING_Y,
+  barrelRetractionZ:BTR82_3B_BARREL_RETRACTION_Z,gunAxis:'-Z'
  };
  return body;
 }
@@ -182,5 +191,6 @@ export function buildBtr82AngularCandidate(method,baseline){
   profiles:PROFILES[method].length,stations:geometry.userData.angularStations,
   bodyLowering:baseDetails.bodyLowering,
   turretBodyRotationY:method==='angular-strong'?180:0,
+  barrelLoweringY:method==='angular-strong'?BTR82_3B_BARREL_LOWERING_Y:0,
   barrelRetractionZ:BTR82_3B_BARREL_RETRACTION_Z}};
 }
