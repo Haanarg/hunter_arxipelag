@@ -26,12 +26,10 @@ jobs:
         env:
           CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
         run: |
           missing=0
           if [ -z "$CF_ACCOUNT" ]; then echo "::error::Falta el secret CLOUDFLARE_ACCOUNT_ID"; missing=1; fi
           if [ -z "$CF_TOKEN" ]; then echo "::error::Falta el secret CLOUDFLARE_API_TOKEN"; missing=1; fi
-          if [ "${#AUTH_SECRET}" -lt 32 ]; then echo "::error::Falta AUTH_SECRET o no arriba als 32 caràcters"; missing=1; fi
           if [ "$missing" -ne 0 ]; then exit 1; fi
       - name: Instal·lar dependències
         run: npm ci --ignore-scripts
@@ -44,7 +42,18 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-        run: npm run deploy:cloudflare
+        run: |
+          set -euo pipefail
+          if [ "${#AUTH_SECRET}" -ge 32 ]; then
+            # Primer desplegament o rotació explícita del secret.
+            npm run deploy:cloudflare
+          else
+            # En desplegaments successius Wrangler CONSERVA els secrets
+            # existents; exigim que AUTH_SECRET ja sigui al Worker.
+            npx --yes wrangler@4.154.0 secret list --format json > "$RUNNER_TEMP/hunter-secrets.json"
+            node -e 'const fs=require("fs");const a=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(!Array.isArray(a)||!a.some(s=>s.name==="AUTH_SECRET")){console.error("::error::AUTH_SECRET no existeix al Worker. Configura’l a Cloudflare abans del deploy.");process.exit(1)}' "$RUNNER_TEMP/hunter-secrets.json"
+            npx --yes wrangler@4.154.0 deploy --keep-vars
+          fi
       - name: Verificar versió real a Paradoxa
         env:
           COMMIT: ${{ github.sha }}
