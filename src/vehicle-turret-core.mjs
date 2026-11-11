@@ -2,7 +2,7 @@ import {vehicleSpecs} from './vehicle-specs.mjs';
 // Tank/tankette rig coordinates and controller, shared by visual model and server.
 export const turretSpecs=Object.freeze({
  // Pivots del BTR-82 3B visual (mateixos en navegador i servidor COOP).
- tanqueta:Object.freeze({pivot:[0,2.8531875,-.2139],pitch:[0,.2145,.1587],muzzle:[0,0,-2.1735],turretYawRate:2.05,turretMinPitch:-.42,turretMaxPitch:.43}),
+ tanqueta:Object.freeze({pivot:[0,2.8531875,-.30225],pitch:[0,.2145,.22425],muzzle:[0,0,-3.07125],turretYawRate:2.05,turretMinPitch:-.42,turretMaxPitch:.43}),
  tanc:Object.freeze({pivot:[0,2.54,.1],pitch:[0,.08,-1.1],muzzle:[0,0,-4.35],turretYawRate:1.40,turretMinPitch:-.62,turretMaxPitch:.72})
 });
 export function advanceTurret(state,currentYaw,currentPitch,local,dt,config=state){
