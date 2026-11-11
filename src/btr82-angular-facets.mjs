@@ -10,7 +10,7 @@ export const BTR82_ANGULAR_VARIANTS=Object.freeze([
  {id:'angular-mild',title:'Model 3A · angular moderat',tag:'Menys arestes · mateix volum',
   description:'Elimina perfils redundants, però manté el tall del sostre, les espatlles, el passamans de les rodes i la quilla.'},
  {id:'angular-strong',title:'Model 3B · angular fort',tag:'Torreta invertida · corba al davant',
-  description:'Quilla ampla, escaló protector i cos de la torreta girat 180°: el retall corb mira cap al morro. El canó continua endavant.'}
+  description:'BTR-82 3B revisat: defensa posterior, trapes i ventilació, mirilles i focus frontals; torreta més baixa i coronament més curt.'}
 ]);
 
 // 14 punts per secció: al 3B conservem la lleixa i el mur protector.
@@ -130,6 +130,29 @@ export function centreBtr82AngularHardware(scene){
   left.position.z=z;right.position.z=z;
  }
 }
+// Retoc exclusiu del candidat 3B: mantenim la base i el rebaix a
+// Y=2.36, a l'altura del canó, però acurçam el coronament i n'abaixam
+// les dues anelles superiors. El voladís per sobre de la boca retrocedeix.
+export const BTR82_3B_TURRET_CROWN_DROP=.26;
+export const BTR82_3B_TURRET_SHOULDER_DROP=.12;
+export const BTR82_3B_TURRET_CROWN_SETBACK=.24;
+export function compactBtr823BTurret(geometry){
+ const position=geometry.getAttribute('position');
+ for(let i=0;i<position.count;i++){
+  const x=position.getX(i),y=position.getY(i),z=position.getZ(i);
+  const crown=y>2.78,shoulder=y>2.56&&!crown;
+  const retreat=(y>2.36&&z<BTR82_3B_TURRET_PIVOT_Z)
+   ?BTR82_3B_TURRET_CROWN_SETBACK*Math.min(1,(y-2.36)/.43):0;
+  position.setXYZ(i,x,y-(crown?BTR82_3B_TURRET_CROWN_DROP:
+   shoulder?BTR82_3B_TURRET_SHOULDER_DROP:0),z+retreat);
+ }
+ position.needsUpdate=true;
+ geometry.computeVertexNormals();
+ geometry.computeBoundingBox();
+ geometry.computeBoundingSphere();
+ return geometry;
+}
+
 // GIR NOMÉS DE LA TORRETA 3B: el corbat posterior passa a mirar -Z.
 // Pivot sobre l'eix longitudinal original (cz=-.69 + setback de .38).
 // Les peces del canó continuen orientades a -Z i mantenen la llargada.
@@ -155,7 +178,7 @@ export function reverseBtr82StrongTurretBody(scene){
   pos.setXYZ(i,-x,y,2*pivot-z); // gir 180º sobre l'eix Y pel pivot
  }
  pos.needsUpdate=true;
- turned.computeVertexNormals();turned.computeBoundingBox();turned.computeBoundingSphere();
+ compactBtr823BTurret(turned);
  // Abans de mutar el cos, garantim que les dues peces del canó existeixen.
  const gunParts=['BTR82_new_black_barrel','BTR82_new_black_muzzle'].map(name=>{
   const part=scene.getObjectByName(name);
@@ -168,7 +191,9 @@ export function reverseBtr82StrongTurretBody(scene){
  for(const part of gunParts)part.position.y-=BTR82_3B_BARREL_LOWERING_Y;
  body.userData={...body.userData,rotated180:true,pivotZ:pivot};
  if(scene.userData)scene.userData.btr82StrongTurret={
-  bodyRotationY:180,pivotZ:pivot,barrelLoweringY:BTR82_3B_BARREL_LOWERING_Y,
+  bodyRotationY:180,pivotZ:pivot,crownDrop:BTR82_3B_TURRET_CROWN_DROP,
+  crownSetback:BTR82_3B_TURRET_CROWN_SETBACK,
+  barrelLoweringY:BTR82_3B_BARREL_LOWERING_Y,
   barrelRetractionZ:BTR82_3B_BARREL_RETRACTION_Z,gunAxis:'-Z'
  };
  return body;
