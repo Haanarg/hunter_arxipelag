@@ -9,7 +9,7 @@ export const BTR82_ANGULAR_VARIANTS=Object.freeze([
   description:'Morro de plans blindats amb els baixos ampliats fins a les rodes i triangles reflectits a esquerra i dreta.'},
  {id:'angular-mild',title:'Model 3A · angular moderat',tag:'Menys arestes · mateix volum',
   description:'Elimina perfils redundants, però manté el tall del sostre, les espatlles, el passamans de les rodes i la quilla.'},
- {id:'angular-strong',title:'Model 3B · angular fort',tag:'Torreta invertida · corba al davant',
+ {id:'angular-strong',title:'Model 3B · detalls BTR-82',tag:'Defenses · mirilles · focus · torreta compacta',
   description:'BTR-82 3B revisat: defensa posterior, trapes i ventilació, mirilles i focus frontals; torreta més baixa i coronament més curt.'}
 ]);
 
