@@ -1,95 +1,104 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 
-// Casc BTR-82 v3 — silueta més propera al blindat de referència:
-// sostre baix, proa fortament inclinada, espatlles angulars, i una
-// panxa CENTRAL estreta que baixa entre les columnes de rodes.
-// El perfil es construeix en una sola malla tancada i simètrica (X).
-// No hi ha planxes solapades, forats ni pinzells de reparació.
-// Estacions en metres: proa = -Z, popa = +Z.
-// Punts de MITJA SECCIÓ [amplada x, altura y, desviació z]:
-// roof, upper, shoulder, belt, skirt, inner, belly, keel.
-// Els últims 3 punts estan ENTRE LES RODES, no a l'exterior.
-// La franja del ventre queda deliberadament prop del terreny (y=.17-.25).
+// BTR-82 v3c: el gir Y +90° i el reajustament ample/llarg són DEFINITIUS.
+// Les estacions descriuen el casc FINAL (proa=-Z, popa=+Z) i són
+// simètriques NOMÉS en X, paral·lelament al canó. Proa i popa diferents.
+// La geometria és una única closca manifold, sense plaques superposades.
+//
+// Perfil d'una MITJA secció [x,y,offsetZ], del sostre al ventre:
+// roof, brow, shoulder, belt, lip, shelf, wheelWell, stepFoot, belly, keel.
+// "shelf" + "wheelWell" formen un graó horitzontal SOBRE els pneumàtics,
+// mentre que "stepFoot" baixa la panxa entre les dues fileres de rodes.
+// Les rodes tenen centre X aproximadament ±1.69, radi ~0.81 i no es toquen.
 export const BTR82_HULL_V3_STATIONS=Object.freeze([
- {z:-5.10,roof:[1.01,1.19,.61],upper:[1.37,1.17,.24],shoulder:[1.64,1.03,-.03],belt:[1.73,.84,-.10],skirt:[1.46,.66,-.10],inner:[1.02,.43,-.04],belly:[.63,.29,.02],keel:[.18,.25,.05]},
- {z:-4.72,roof:[1.13,1.40,.30],upper:[1.53,1.36,.13],shoulder:[1.80,1.24,-.03],belt:[1.86,.97,-.10],skirt:[1.51,.71,-.10],inner:[1.10,.42,-.04],belly:[.68,.21,0],keel:[.19,.18,0]},
- {z:-4.18,roof:[1.22,1.59,.07],upper:[1.62,1.49,.02],shoulder:[1.88,1.36,0],belt:[1.88,1.00,0],skirt:[1.52,.69,0],inner:[1.14,.39,0],belly:[.69,.18,0],keel:[.20,.16,0]},
- {z:-3.55,roof:[1.26,1.68,0],upper:[1.68,1.51,0],shoulder:[1.91,1.37,0],belt:[1.91,1.00,0],skirt:[1.49,.68,0],inner:[1.09,.38,0],belly:[.67,.17,0],keel:[.20,.15,0]},
- {z:-1.65,roof:[1.26,1.68,0],upper:[1.68,1.51,0],shoulder:[1.91,1.37,0],belt:[1.91,1.00,0],skirt:[1.49,.68,0],inner:[1.09,.38,0],belly:[.67,.17,0],keel:[.20,.15,0]},
- {z: 1.25,roof:[1.26,1.68,0],upper:[1.68,1.51,0],shoulder:[1.91,1.37,0],belt:[1.91,1.00,0],skirt:[1.49,.68,0],inner:[1.09,.38,0],belly:[.67,.17,0],keel:[.20,.15,0]},
- {z: 3.60,roof:[1.26,1.68,0],upper:[1.68,1.51,0],shoulder:[1.91,1.37,0],belt:[1.91,1.00,0],skirt:[1.49,.68,0],inner:[1.09,.38,0],belly:[.67,.17,0],keel:[.20,.15,0]},
- {z: 4.55,roof:[1.21,1.64,-.06],upper:[1.63,1.47,.02],shoulder:[1.85,1.34,.09],belt:[1.82,.97,.10],skirt:[1.45,.65,.09],inner:[1.06,.36,.03],belly:[.65,.18,0],keel:[.19,.16,0]},
- {z: 5.48,roof:[1.08,1.37,-.38],upper:[1.46,1.31,-.11],shoulder:[1.70,1.17,.02],belt:[1.70,.90,.15],skirt:[1.40,.61,.17],inner:[1.03,.36,.09],belly:[.64,.22,0],keel:[.18,.20,-.03]}
+ {z:-5.425,roof:[1.04,1.12,.72],brow:[1.36,1.14,.51],shoulder:[1.65,1.06,.21],
+  belt:[1.75,.91,0],lip:[1.75,.85,0],shelf:[1.49,.83,.04],
+  wheelWell:[1.20,.79,.13],stepFoot:[1.08,-.02,.36],
+  belly:[.89,-.19,.48],keel:[.28,-.22,.56]},
+ {z:-4.36,roof:[1.16,1.44,.20],brow:[1.50,1.43,.11],shoulder:[1.83,1.29,.03],
+  belt:[1.88,1.06,0],lip:[1.88,.94,0],shelf:[1.56,.92,0],
+  wheelWell:[1.27,.92,0],stepFoot:[1.15,-.05,0],
+  belly:[.96,-.24,0],keel:[.30,-.28,0]},
+ {z:-3.23,roof:[1.24,1.65,0],brow:[1.58,1.55,0],shoulder:[1.91,1.35,0],
+  belt:[1.89,1.08,0],lip:[1.89,.94,0],shelf:[1.56,.92,0],
+  wheelWell:[1.27,.92,0],stepFoot:[1.15,-.05,0],
+  belly:[.96,-.24,0],keel:[.30,-.28,0]},
+ {z:-2.15,roof:[1.24,1.65,0],brow:[1.58,1.55,0],shoulder:[1.91,1.35,0],
+  belt:[1.89,1.08,0],lip:[1.89,.94,0],shelf:[1.56,.92,0],
+  wheelWell:[1.27,.92,0],stepFoot:[1.15,-.05,0],
+  belly:[.96,-.24,0],keel:[.30,-.28,0]},
+ {z:-.70,roof:[1.24,1.65,0],brow:[1.58,1.55,0],shoulder:[1.91,1.35,0],
+  belt:[1.89,1.08,0],lip:[1.89,.94,0],shelf:[1.56,.92,0],
+  wheelWell:[1.27,.92,0],stepFoot:[1.15,-.05,0],
+  belly:[.96,-.24,0],keel:[.30,-.28,0]},
+ {z: .85,roof:[1.24,1.65,0],brow:[1.58,1.55,0],shoulder:[1.91,1.35,0],
+  belt:[1.89,1.08,0],lip:[1.89,.94,0],shelf:[1.56,.92,0],
+  wheelWell:[1.27,.92,0],stepFoot:[1.15,-.05,0],
+  belly:[.96,-.24,0],keel:[.30,-.28,0]},
+ {z:2.25,roof:[1.24,1.65,0],brow:[1.58,1.55,0],shoulder:[1.91,1.35,0],
+  belt:[1.89,1.08,0],lip:[1.89,.94,0],shelf:[1.56,.92,0],
+  wheelWell:[1.27,.92,0],stepFoot:[1.15,-.05,0],
+  belly:[.96,-.24,0],keel:[.30,-.28,0]},
+ {z:3.54,roof:[1.24,1.65,0],brow:[1.58,1.55,0],shoulder:[1.91,1.35,0],
+  belt:[1.89,1.08,0],lip:[1.89,.94,0],shelf:[1.56,.92,0],
+  wheelWell:[1.27,.92,0],stepFoot:[1.15,-.05,0],
+  belly:[.96,-.24,0],keel:[.30,-.28,0]},
+ {z:4.58,roof:[1.24,1.62,0],brow:[1.57,1.51,0],shoulder:[1.82,1.34,0],
+  belt:[1.81,1.07,0],lip:[1.81,.93,0],shelf:[1.54,.92,0],
+  wheelWell:[1.27,.92,0],stepFoot:[1.15,-.05,0],
+  belly:[.96,-.22,0],keel:[.30,-.26,0]},
+ // Popa XATA: gairebé la mateixa amplada, tots els punts al mateix Z.
+ {z:5.425,roof:[1.26,1.56,0],brow:[1.55,1.48,0],shoulder:[1.74,1.32,0],
+  belt:[1.74,1.04,0],lip:[1.73,.94,0],shelf:[1.48,.92,0],
+  wheelWell:[1.26,.92,0],stepFoot:[1.14,-.04,0],
+  belly:[.96,-.19,0],keel:[.30,-.22,0]}
 ]);
 
+const PROFILE_ORDER=['roof','brow','shoulder','belt','lip','shelf',
+ 'wheelWell','stepFoot','belly','keel'];
 function section(station){
- const names=['roof','upper','shoulder','belt','skirt','inner','belly','keel'];
- const right=names.map(name=>{
+ const right=PROFILE_ORDER.map(name=>{
   const [x,y,dz]=station[name];
   return [x,y,station.z+dz];
  });
- return [...right.map(([x,y,z])=>[-x,y,z]).slice(0,1),...right,
-  ...right.slice(1).reverse().map(([x,y,z])=>[-x,y,z])];
+ return [
+  [-right[0][0],right[0][1],right[0][2]],
+  ...right,
+  ...right.slice(1).reverse().map(([x,y,z])=>[-x,y,z])
+ ];
 }
-
-// El punt central es duplica entre costats? NO: cada secció inclou
-// vèrtexs ±.18 a la quilla, que creen un pis central real, no solapat.
-export function createBtr82HullV3Geometry(){
- const rings=BTR82_HULL_V3_STATIONS.map(section);
- const n=rings[0].length,vertices=rings.flat(2),indices=[];
+function closedMesh(rings){
+ const n=rings[0].length,positions=rings.flat(2),indices=[];
+ if(!rings.every(r=>r.length===n))throw Error('El casc té perfils incompatibles');
  for(let r=0;r<rings.length-1;r++)for(let k=0;k<n;k++){
   const a=r*n+k,b=r*n+(k+1)%n,c=(r+1)*n+(k+1)%n,d=(r+1)*n+k;
   indices.push(a,c,b,a,d,c);
  }
  for(let k=1;k<n-1;k++){
   indices.push(0,k,k+1);
-  const end=(rings.length-1)*n;
-  indices.push(end,end+k+1,end+k);
- }
- const geometry=new THREE.BufferGeometry();
- geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
- geometry.setIndex(indices);
- geometry.computeVertexNormals();
- geometry.computeBoundingBox();geometry.computeBoundingSphere();
- geometry.userData.candidateSimplified=true;
- return geometry;
-}
-
-function createTurretGeometry(){
- // Una torreta prismàtica simple, més baixa i amb cares facetades.
- // Alçada de la base per sota de la coberta (1.68 m) perquè s'encasti.
- // El canó original a y=2.69 es manté i travessa la paret frontal.
- const profile=[[-.53,-1.59],[.53,-1.59],[.95,-1.14],[.95,-.43],
-                [.66,.18],[-.66,.18],[-.95,-.43],[-.95,-1.14]];
- const zCenter=-.69;
- const rings=[
-  {y:1.56,x:1.08,z:1.06},
-  {y:2.13,x:1.01,z:1.00},
-  {y:2.77,x:.72,z:.81},
-  {y:2.87,x:.67,z:.76}
- ].map(level=>profile.map(([x,z])=>[x*level.x,level.y,zCenter+(z-zCenter)*level.z]));
- const n=profile.length,positions=rings.flat(2),indices=[];
- for(let r=0;r<rings.length-1;r++)for(let k=0;k<n;k++){
-  const a=r*n+k,b=r*n+(k+1)%n,c=(r+1)*n+(k+1)%n,d=(r+1)*n+k;
-  indices.push(a,c,b,a,d,c);
- }
- for(let k=1;k<n-1;k++){
-  indices.push(0,k,k+1);
-  const end=(rings.length-1)*n;
-  indices.push(end,end+k+1,end+k);
+  const last=(rings.length-1)*n;
+  indices.push(last,last+k+1,last+k);
  }
  const geometry=new THREE.BufferGeometry();
  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
- geometry.setIndex(indices);geometry.computeVertexNormals();
- geometry.computeBoundingBox();geometry.computeBoundingSphere();
+ geometry.setIndex(indices);
+ geometry.computeVertexNormals();geometry.computeBoundingBox();geometry.computeBoundingSphere();
  geometry.userData.candidateSimplified=true;
  return geometry;
 }
 
-// Assaig de la hipòtesi d'orientació: antic lateral -> nova proa.
-// Cal fer DUES operacions: gir Y +90° i intercanvi de dimensions X/Z.
-// Un gir sol deixaria un casc 11 m d'ample i 4 m de llarg.
-// La geometria original roman disponible per comparar instantàniament.
+// Gir històric +90 graus, més intercanvi proporcional d'ample/llarg.
+// Definim la carcassa en el sistema FINAL i codifiquem la seva preimatge
+// en les coordenades anteriors al gir. Aquesta operació es conserva
+// explícitament, no es torna a construir el casc amb eixos invertits.
+export function createBtr82HullV3Geometry(){
+ const finalRings=BTR82_HULL_V3_STATIONS.map(section);
+ const finalWidth=3.82,finalLength=10.85,ratio=finalWidth/finalLength;
+ // Inversa de (x,z) -> (z*ratio,-x/ratio).
+ const beforeRings=finalRings.map(ring=>ring.map(([x,y,z])=>[-z*ratio,y,x/ratio]));
+ return closedMesh(beforeRings);
+}
+
 export function createBtr82HullV3AxisSwapGeometry(original){
  const source=original.getAttribute('position');
  if(!source)throw Error('La v3 no té vèrtexs de posició');
@@ -102,33 +111,29 @@ export function createBtr82HullV3AxisSwapGeometry(original){
  const centerZ=(bounds.min.z+bounds.max.z)*.5;
  const result=original.clone(),position=result.getAttribute('position');
  for(let i=0;i<position.count;i++){
-  const x=source.getX(i)-centerX;
-  const y=source.getY(i);
-  const z=source.getZ(i)-centerZ;
-  // Gir Y +90: (x,z)->(z,-x). Escalat posterior:
-  // X torna a la mateixa amplada, Z a la mateixa llargada.
+  const x=source.getX(i)-centerX,y=source.getY(i),z=source.getZ(i)-centerZ;
   position.setXYZ(i,centerX+z*(width/length),y,centerZ-x*(length/width));
  }
  position.needsUpdate=true;
- result.computeVertexNormals();
- result.computeBoundingBox();result.computeBoundingSphere();
+ result.computeVertexNormals();result.computeBoundingBox();result.computeBoundingSphere();
  result.userData.candidateSimplified=true;
  result.userData.btr82AxisSwap=true;
  return result;
 }
 
-const hullAxisCache=new WeakMap();
-export function setBtr82HullV3AxisSwap(root,enabled){
- const mesh=root.getObjectByName('BTR82_v3_lowered_centre_hull');
- if(!mesh?.isMesh) return false;
- let pair=hullAxisCache.get(mesh);
- if(!pair){
-  pair={original:mesh.geometry,swapped:createBtr82HullV3AxisSwapGeometry(mesh.geometry)};
-  hullAxisCache.set(mesh,pair);
- }
- mesh.geometry=enabled?pair.swapped:pair.original;
- mesh.userData.btr82AxisSwap=!!enabled;
- return true;
+function createTurretGeometry(){
+ // Torreta angular centrada en X=0, dirigida endavant (-Z).
+ // Es conserva el canó existent a x=-.06, y=2.69.
+ const profile=[[-.53,-1.59],[.53,-1.59],[.95,-1.14],[.95,-.43],
+                [.66,.18],[-.66,.18],[-.95,-.43],[-.95,-1.14]];
+ const zCenter=-.69;
+ const rings=[
+  {y:1.55,x:1.08,z:1.06},
+  {y:2.13,x:1.01,z:1.00},
+  {y:2.77,x:.72,z:.81},
+  {y:2.87,x:.67,z:.76}
+ ].map(r=>profile.map(([x,z])=>[x*r.x,r.y,zCenter+(z-zCenter)*r.z]));
+ return closedMesh(rings);
 }
 
 const KEEP=/^BTR82_(?:truck_A43_wheel_[0-9]+|new_black_(?:barrel|muzzle))$/;
@@ -141,7 +146,7 @@ export function makeBtr82HullV3(baseline){
  }
  scene.traverse(object=>{if(object.isMesh&&!preserved(object))discard.push(object)});
  for(const object of discard)object.parent?.remove(object);
- const hull=new THREE.Mesh(createBtr82HullV3Geometry(),
+ const hull=new THREE.Mesh(createBtr82HullV3AxisSwapGeometry(createBtr82HullV3Geometry()),
   new THREE.MeshStandardMaterial({color:0x5f6c53,roughness:.93,metalness:.04,
    side:THREE.DoubleSide,flatShading:true}));
  hull.name='BTR82_v3_lowered_centre_hull';
@@ -157,14 +162,14 @@ export function makeBtr82HullV3(baseline){
   if(/^BTR82_new_black_(?:barrel|muzzle)$/.test(object.name))barrel++;
  });
  if(wheels!==8||barrel!==2)throw Error('Casc v3: falten les 8 rodes o les 2 peces del canó');
- const report={
-  version:3,closed:true,symmetrical:true,
+ scene.userData.btr82HullV3={
+  version:3,closed:true,symmetricalX:true,axisRotationDegrees:90,
   hullTriangles:hull.geometry.index.count/3,
   turretTriangles:turret.geometry.index.count/3,
-  hullBottom:.15,roofHeight:1.68,
+  hullBottom:-.28,roofHeight:1.65,
+  wheelStepHeight:.92,lowerBellyHalfWidth:1.15,
   retainedWheels:wheels,retainedGunParts:barrel,
   discardedReferenceMeshes:discard.length
  };
- scene.userData.btr82HullV3=report;
  return scene;
 }
