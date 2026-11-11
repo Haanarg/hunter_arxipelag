@@ -92,7 +92,7 @@ const currentRender=btr.slice(btr.indexOf('async function renderFromSource'),btr
 assert(html.includes('casc v3')&&html.includes('tres targetes'));
 assert(html.includes('popa xata')&&html.includes('esglaons'));
 
-assert(html.includes('ventre central')||html.includes('part central inferior'));
+assert(html.includes('ventre central'));
 
 
 assert(html.includes('Editor de marques 3D')&&html.includes('btrSelectGroup')&&html.includes('btrCopySelection')&&html.includes('btrSelectMode'));
