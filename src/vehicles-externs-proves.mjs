@@ -286,8 +286,7 @@ async function choose(config){
   document.querySelector('#btrPartTool').hidden=false;
  const token=generation;
  nameOut.textContent=config.name;
- warning.textContent=(config.note?config.note+' ':'')+
-   'Comparació visual: la física, les hitboxes i les animacions pròpies dels vehicles no s’han transferit.';
+ warning.textContent=config.note||'';
  for(const b of list.querySelectorAll('button'))b.classList.toggle('active',b.dataset.type===config.id);
  const marine=config.kind==='mar';
  grid.classList.remove('featured');
