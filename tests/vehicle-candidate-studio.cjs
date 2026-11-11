@@ -6,12 +6,12 @@ const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const manifest=JSON.parse(read('assets/vehicle-candidates/manifest.json'));
-const excluded=['camio','barca_rems','windsurf','moto_aquatica','moto','heli','heli_combat'];
+const excluded=['bici','cotxe_civil','camio','barca_rems','windsurf','moto_aquatica','moto','heli','heli_combat'];
 const catalog=read('src/vehicle-candidate-catalog.mjs');
 const studio=read('src/vehicles-externs-proves.mjs');
 const html=read('vehicles-externs-proves.html');
 const types=[...catalog.matchAll(/\{id:'([^']+)'/g)].map(m=>m[1]);
-assert.equal(types.length,7,'Catàleg: set vehicles pendents després d’aprovar Huey i Apache');
+assert.equal(types.length,5,'Catàleg: cinc vehicles pendents; bicicleta i cotxe civil definitius');
 for(const id of excluded){
  assert(!types.includes(id),'Vehicle definitivament decidit encara al catàleg: '+id);
  assert(!(id in manifest.models),'Vehicle acceptat encara al manifest: '+id);
@@ -24,9 +24,9 @@ assert(fs.existsSync(path.join(root,'src/streetfighter-25-geometry.mjs')),'Falta
 assert(!studio.includes('FEATURED'),'El banc de proves no ha de calcular LOD de motos acceptades');
 assert(!studio.includes('SimplifyModifier'),'No cal simplificar els candidats acceptats al banc');
 assert(!html.includes('id="steeringControl"'),'La pestanya de moto i els seus controls s’han retirat');
-assert(html.includes('7 tipus de vehicles'),'El text del catàleg ha d’estar actualitzat');
+assert(!html.includes('7 tipus de vehicles'),'El text del catàleg ha d’estar actualitzat');
 const files=Object.values(manifest.models).flat();
-assert.equal(files.length,11,'Els candidats CC0 locals vigents són onze; el BTR-82 es compta a part');
+assert.equal(files.length,8,'Els candidats CC0 locals vigents són vuit; el BTR-82 es compta a part');
 assert.deepEqual(manifest.models.tanc,[],'Els antics tancs genèrics han desaparegut');
 assert.deepEqual(manifest.models.tanqueta,[],'Els antics APC genèrics han desaparegut');
 assert(manifest.limits.maxFileBytes>=32*1024*1024,'Cal admetre GLB més grans per als blindats');
@@ -117,7 +117,7 @@ assert(html.includes('id="btrSelectEnabled"')&&!html.includes('id="btrSelectEnab
 
 assert(html.includes('id="btrLargeHoleMode"')&&html.includes('Forats grans (contorn tancat)'));
 assert(html.includes('max="2.50"'));
-assert(studio.includes('vehicle-annotation-editor.mjs?rev=surface-paint-v12'));
+assert(studio.includes('vehicle-annotation-editor.mjs?rev=editor-no-armour-v13'));
 assert(html.includes('id="btrRepairLiveStatus"')&&html.includes('id="btrRepairLiveCount"'));
 assert(html.includes('superfície exacta')&&html.includes('el comptador de triangles'));
 assert(studio.includes('btr82-tapered-ends-v3g'));
