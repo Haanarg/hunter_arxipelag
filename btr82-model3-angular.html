@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ca" data-btr82-angular="true"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Hunter · BTR-82 3B amb detalls: banc de proves</title>
-<meta name="description" content="Comparació del model 3 original i dues simplificacions angulars del BTR-82.">
+<meta name="description" content="Banc de proves del model BTR-82 3B revisat.">
 <style>
 :root{color-scheme:dark;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;--bg:#122327;--panel:#1b3235;--border:#4e6868;--ink:#eef5ed;--muted:#b5cac5;--gold:#f2d69c}
 *{box-sizing:border-box}
@@ -23,12 +23,12 @@ main{padding:12px clamp(8px,1.5vw,24px) 40px}
 .control-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:8px 0 13px;font-size:12px;color:var(--muted)}
 .control-row label{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
 .control-row input{accent-color:#d8efb6}
-#grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+#grid{display:grid;grid-template-columns:minmax(0,1fr);gap:11px;max-width:1150px;margin:0 auto}
 .panel{min-width:0;border:1px solid #577471;border-radius:10px;overflow:hidden;background:var(--panel);display:flex;flex-direction:column}
 .panel header{position:relative;z-index:8;background:#253e40;border:0;border-bottom:1px solid #4b6463;padding:9px 12px;min-height:69px}
 .panel h2{font-size:14px;line-height:1.25;margin:0 0 4px}
 .panel .tag{color:var(--gold);font-size:11px;font-weight:650}
-.viewport{position:relative;z-index:5;height:clamp(215px,24vw,330px);touch-action:none;cursor:grab;background:transparent}
+.viewport{position:relative;z-index:5;height:min(65vh,650px);min-height:350px;touch-action:none;cursor:grab;background:transparent}
 .viewport:active{cursor:grabbing}
 .panel footer{position:relative;z-index:8;padding:9px 11px 11px;min-height:93px;background:#1a3034}
 .panel footer p{font-size:12px;color:#d5e1d7;margin:0 0 6px;line-height:1.4}
@@ -52,8 +52,8 @@ main{padding:12px clamp(8px,1.5vw,24px) 40px}
 </head><body>
 <header>
  <div class="kicker">HUNTER: ARXIPÈLAG · EXPERIMENT DE GEOMETRIA</div>
- <h1>Model 3 · dues variants més angulars</h1>
- <p>Compara els models 3, 3A i <strong>3B revisat</strong>. El 3B incorpora defenses posteriors, trapes i reixetes al darrere, mirilles i quatre focus davanters, i una torreta més baixa amb el voladís superior escurçat. Són canvis del visor de proves, encara no incorporats al joc. Al joc s’ha corregit per separat la compressió longitudinal que feia tocar les rodes.</p>
+ <h1>BTR-82 · model 3B</h1>
+ <p>Model 3B revisat: defenses posteriors, trapes i ventilació, mirilles, quatre focus i torreta més compacta. Aquests detalls són exclusius del banc de proves.</p>
  <nav aria-label="Càmera sincronitzada">
   <button data-view="quarter" class="active">3/4 frontal</button>
   <button data-view="front">Frontal</button>
@@ -73,18 +73,11 @@ main{padding:12px clamp(8px,1.5vw,24px) 40px}
 <main>
  <div id="notice" role="status" aria-live="polite">Carregant el model 3 i les variants angulars…</div>
  <div class="control-row">
-  <label><input type="checkbox" id="reference"> Mostra també l'original de referència (no compta com a candidat)</label>
   <label><input type="checkbox" id="gridToggle" checked> Graella i terra</label>
-  <span>Arrossega per girar · Majúscules + arrossegar per moure · Alt + roda per apropar · «Ampliar» per estudiar-ne un</span>
+  <span>Arrossega per girar · Majúscules + arrossegar per moure · Alt + roda per apropar</span>
  </div>
- <section id="grid" aria-label="Comparació de tres graus d’angularitat del model 3">
-  <article id="referenceCard" class="panel" data-id="reference">
-   <header><h2>Referència · GLB original</h2><span class="tag">Només per comparar formes</span></header>
-   <div class="viewport" aria-label="Visor 3D de l'original"></div>
-   <footer><p>Geometria original de SIpriv, amb rodes i canó de la base del laboratori.</p><div class="stats">Esperant el model…</div></footer>
-  </article>
- </section>
+ <section id="grid" aria-label="Model BTR-82 3B"></section>
  <p class="note"><strong>3B de proves:</strong> el casc conserva les set seccions, l’escala original i l’espai entre les vuit rodes. La torreta té la mateixa corba frontal i el canó continua abaixat 33 cm, però hem escurçat i rebaixat el coronament. Els accessoris nous —defenses i enganxalls de remolc, panells i ventilació posteriors, mirilles i focus— són peces independents, fàcils de revisar o eliminar. <strong>Aquests accessoris i la torreta revisada encara no s’han implementat al joc.</strong></p>
 </main>
-<script type="module" src="./src/btr82-six-nose-lab.mjs?rev=model3-angular-20261111-a6"></script>
+<script type="module" src="./src/btr82-six-nose-lab.mjs?rev=model3-angular-20261111-a7"></script>
 </body></html>
