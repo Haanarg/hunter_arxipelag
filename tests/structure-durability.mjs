@@ -60,7 +60,7 @@ for(const doorSide of [0,1]){
  assert.equal(wall.door,false);
  assert.equal(wall.weakWood,false);
  assert.equal(canLightDamageWall(wall),false);
- assert.equal(wallBlastDamage(wall,0,0,0,8,10),10,
+ assert.equal(wallBlastDamage(wall,0,0,wall.cz,8,10),10,
   'un impacte pesat directe ha de destruir la paret posterior');
 }
 const reinforced={hp:10,door:false,weakWood:false},
