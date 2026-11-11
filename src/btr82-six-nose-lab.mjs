@@ -2,7 +2,10 @@ import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {makeBtr82LabBaseline} from './btr82-lod-studio.mjs';
 import {BTR82_NOSE_CANDIDATES,BTR82_NOSE_ASSET,extractBtr82SourceTriangles,buildBtr82NoseCandidate} from './btr82-nose-candidates.mjs';
+import {BTR82_ANGULAR_VARIANTS,buildBtr82AngularCandidate} from './btr82-angular-facets.mjs?rev=model3-angular-a1';
 
+const angularMode=document.documentElement.dataset.btr82Angular==='true';
+const methods=angularMode?BTR82_ANGULAR_VARIANTS:BTR82_NOSE_CANDIDATES;
 const notice=document.querySelector('#notice'),grid=document.querySelector('#grid');
 const referenceCard=document.querySelector('#referenceCard');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -48,7 +51,7 @@ function createSlot(card,id){
  return slot;
 }
 createSlot(referenceCard,'reference');
-for(const method of BTR82_NOSE_CANDIDATES){
+for(const method of methods){
  const card=document.createElement('article');
  card.className='panel';card.dataset.id=method.id;
  const head=document.createElement('header');
@@ -194,7 +197,12 @@ function present(slot,model,details={}){
  wrapped.position.copy(baseOffset);
  slot.scene.add(wrapped);
  slot.model=wrapped;
- slot.output.textContent=stats(wrapped)+(details.openSeam?' · unió oberta':' · prototip');
+ const hullInfo=Number.isFinite(details.hullTriangles)
+  ?'Casc '+details.hullTriangles.toLocaleString('ca')+' △ · '+details.stations+
+    ' seccions × '+details.profiles+' perfils'+
+    (details.reductionPercent>0?' · −'+details.reductionPercent+'%':' · control')
+  :stats(wrapped)+(details.openSeam?' · unió oberta':' · prototip');
+ slot.output.textContent=hullInfo;
  if(details.openSeam)slot.card.dataset.openSeam='true';
  schedule();
 }
@@ -207,13 +215,15 @@ async function load(){
   const bbox=new THREE.Box3().setFromObject(baseline);
   const center=bbox.getCenter(new THREE.Vector3());
   baseOffset=new THREE.Vector3(-center.x,-bbox.min.y,-center.z);
-  const originalTriangles=extractBtr82SourceTriangles(baseline);
+  const originalTriangles=angularMode?null:extractBtr82SourceTriangles(baseline);
   present(slotById.get('reference'),baseline.clone(true));
   let succeeded=0;
-  for(const method of BTR82_NOSE_CANDIDATES){
+  for(const method of methods){
    const slot=slotById.get(method.id);
    try{
-    const {scene,details}=buildBtr82NoseCandidate(method.id,baseline,originalTriangles);
+    const {scene,details}=angularMode
+     ?buildBtr82AngularCandidate(method.id,baseline)
+     :buildBtr82NoseCandidate(method.id,baseline,originalTriangles);
     present(slot,scene,details);
     succeeded++;
    }catch(error){
@@ -224,13 +234,17 @@ async function load(){
    // Yield between builds so partial candidates appear immediately.
    await new Promise(resolve=>requestAnimationFrame(resolve));
   }
-  notice.textContent='Carregats '+succeeded+' de 6 candidats, des de la mateixa base GLB amb rodes i canó comuns. '+(succeeded===6?'Compara les proes des de sota, de costat i frontalment.':'Els errors de candidats estan identificats a les seves targetes.');
-  if(succeeded!==6)notice.dataset.error='true';
+  notice.textContent='Carregats '+succeeded+' de '+methods.length+
+   (angularMode?' graus d’angularitat del model 3':' candidats del morro')+
+   ', des de la mateixa base GLB amb les mateixes vuit rodes i el canó.'+
+   (succeeded===methods.length?' Compara les superfícies des de sota, lateralment i frontalment.':
+    ' Els errors es mostren a les targetes.');
+  if(succeeded!==methods.length)notice.dataset.error='true';
   updateCameras();schedule();
  }catch(error){
   notice.dataset.error='true';
   notice.textContent='No s’ha pogut carregar la comparació: '+(error?.message||String(error));
-  console.error('BTR-82 laboratori de sis candidats',error);
+  console.error('BTR-82 laboratori de models',error);
  }
 }
 load();
