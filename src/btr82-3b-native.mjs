@@ -1,0 +1,161 @@
+// BTR-82 model 3B definitiu: mateixa geometria que el comparador,
+// però amb rodes i canó animables i ajust visual al volum de la tanqueta
+// existent. Cap geometria GLB ni càrrega de xarxa durant la partida.
+import {createBtr82AngularGeometry,BTR82_3B_TURRET_PIVOT_Z,
+  BTR82_3B_BARREL_LOWERING_Y} from './btr82-angular-facets.mjs';
+import {createBtr82TurretV3Geometry,BTR82_CABIN_SHIFT_Z} from './btr82-hull-v3.mjs';
+import {vehicleSpecs} from './vehicle-specs.mjs';
+
+// El casc original és molt més llarg que el vehicle procedural del joc.
+// L'ajust és exclusivament visual: no altera ni la hitbox ni la física.
+// L'eix Y i X s'ajusten per conservar les rodes circulars i l'altura;
+// Z s'adapta a la longitud de la tanqueta substituïda.
+export const BTR82_3B_GAME_FIT=Object.freeze({
+ x:.65,y:.65,z:.46,bodyDrop:.18,groundMargin:.10,
+ sourceTireRadius:.8125,sourceWheelHalfWidth:.25
+});
+const WHEEL_Z=Object.freeze([-2.938,-.938,1.7505,3.585]);
+const cache=new WeakMap();
+const GUN_REAR_Z=-1.91+BTR82_CABIN_SHIFT_Z+2.90/2;
+const BARREL_CENTER_Z=-1.91+BTR82_CABIN_SHIFT_Z;
+const MUZZLE_CENTER_Z=-3.47+BTR82_CABIN_SHIFT_Z;
+const MUZZLE_TIP_Z=MUZZLE_CENTER_Z-.28/2;
+const GUN_SOURCE_Y=2.69-BTR82_3B_BARREL_LOWERING_Y;
+
+function makeCombinedWheelGeometry(THREE,radius,width){
+ const positions=[],normals=[],colors=[];
+ for(const [r,depth,hex,segments] of [
+  [radius,width,0x242924,12],
+  [radius*(.46/.80),width*1.03,0x717b70,10],
+  [radius*(.20/.80),width*1.06,0x303930,8]
+ ]){
+  const geometry=new THREE.CylinderGeometry(r,r,depth,segments);
+  geometry.rotateZ(Math.PI/2);
+  const flat=geometry.index?geometry.toNonIndexed():geometry;
+  const xyz=flat.getAttribute('position'),normal=flat.getAttribute('normal'),
+        color=new THREE.Color(hex);
+  for(let i=0;i<xyz.count;i++){
+   positions.push(xyz.getX(i),xyz.getY(i),xyz.getZ(i));
+   normals.push(normal.getX(i),normal.getY(i),normal.getZ(i));
+   colors.push(color.r,color.g,color.b);
+  }
+  if(flat!==geometry)flat.dispose();
+  geometry.dispose();
+ }
+ const merged=new THREE.BufferGeometry();
+ merged.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+ merged.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));
+ merged.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+ merged.computeBoundingSphere();
+ return merged;
+}
+
+function shared(THREE){
+ if(cache.has(THREE))return cache.get(THREE);
+ const {x:sx,y:sy,z:sz,bodyDrop,groundMargin,sourceTireRadius,
+   sourceWheelHalfWidth}=BTR82_3B_GAME_FIT;
+ const tireRadius=sourceTireRadius*sy;
+ const wheelCentreY=tireRadius+groundMargin;
+ const hullGeometry=createBtr82AngularGeometry('angular-strong');
+ hullGeometry.scale(sx,sy,sz);
+ hullGeometry.translate(0,wheelCentreY-bodyDrop*sy,0);
+
+ // El cos del 3B fa el mateix gir de 180° del comparador:
+ // Z' = 2*pivotZ-Z, X'=-X. La torreta resta simètrica en X.
+ const turretGeometry=createBtr82TurretV3Geometry();
+ const attr=turretGeometry.getAttribute('position');
+ for(let i=0;i<attr.count;i++)
+  attr.setXYZ(i,-attr.getX(i),attr.getY(i),
+    2*BTR82_3B_TURRET_PIVOT_Z-attr.getZ(i));
+ attr.needsUpdate=true;
+ turretGeometry.scale(sx,sy,sz);
+ const turretPivotY=wheelCentreY+(2.14-bodyDrop)*sy;
+ const turretPivotZ=BTR82_3B_TURRET_PIVOT_Z*sz;
+ turretGeometry.translate(0,wheelCentreY-bodyDrop*sy-turretPivotY,-turretPivotZ);
+ turretGeometry.computeVertexNormals();
+ turretGeometry.computeBoundingSphere();
+
+ const hullMaterial=new THREE.MeshStandardMaterial({
+  color:0x5f6c53,roughness:.93,metalness:.04,
+  side:THREE.DoubleSide,flatShading:true
+ });
+ const turretMaterial=new THREE.MeshStandardMaterial({
+  color:0x56624d,roughness:.93,metalness:.04,
+  side:THREE.DoubleSide,flatShading:true
+ });
+ const gunMaterial=new THREE.MeshStandardMaterial({
+  color:0x101010,roughness:.78,metalness:.20
+ });
+ const wheelMaterial=new THREE.MeshStandardMaterial({
+  vertexColors:true,roughness:.86,metalness:.12,flatShading:true
+ });
+ const barrelGeometry=new THREE.CylinderGeometry(
+  .085*sx,.085*sx,2.90*sz,12);
+ const muzzleGeometry=new THREE.CylinderGeometry(
+  .115*sx,.115*sx,.28*sz,12);
+ const wheelGeometry=makeCombinedWheelGeometry(THREE,tireRadius,
+  sourceWheelHalfWidth*2*sx);
+ const result={hullGeometry,turretGeometry,hullMaterial,turretMaterial,
+  gunMaterial,wheelMaterial,barrelGeometry,muzzleGeometry,wheelGeometry,
+  turretPivotY,turretPivotZ,wheelCentreY,tireRadius,sz};
+ cache.set(THREE,result);
+ return result;
+}
+
+// Retorna un rig amb els mateixos contractes que la tanqueta original:
+// g.userData.wheels, turretPivot, turretPitch i turretMuzzle.
+export function installBtr82Model3B(THREE,g,{resources=null}={}){
+ const p=shared(THREE);
+ if(resources)for(const item of Object.values(p))
+  if(item?.isBufferGeometry||item?.isMaterial)resources.retain(item);
+ const hull=new THREE.Mesh(p.hullGeometry,p.hullMaterial);
+ hull.name='BTR82_3B_hull';
+ g.add(hull);
+ for(const z of WHEEL_Z)for(const side of [-1,1]){
+  const w=new THREE.Group();
+  w.position.set(side*1.688*BTR82_3B_GAME_FIT.x,
+    p.wheelCentreY,z*p.sz);
+  w.name='BTR82_3B_wheel';
+  const mesh=new THREE.Mesh(p.wheelGeometry,p.wheelMaterial);
+  w.add(mesh);g.add(w);
+  w.userData.radius=p.tireRadius*vehicleSpecs.scales.tanqueta;
+  (g.userData.wheels||(g.userData.wheels=[])).push(w);
+ }
+ const pivot=new THREE.Group();
+ pivot.name='BTR82_3B_turret_yaw';
+ pivot.position.set(0,p.turretPivotY,p.turretPivotZ);
+ g.add(pivot);
+ const turret=new THREE.Mesh(p.turretGeometry,p.turretMaterial);
+ turret.name='BTR82_3B_curved_turret';
+ pivot.add(turret);
+
+ // El pivot de capcineig és a la culata, dins la part endinsada
+ // de la corba frontal. Les dues peces mantenen el solapament de 3 cm.
+ const pitch=new THREE.Group();
+ pitch.name='BTR82_3B_gun_pitch';
+ pitch.position.set(0,p.wheelCentreY+
+  (GUN_SOURCE_Y-BTR82_3B_GAME_FIT.bodyDrop)*BTR82_3B_GAME_FIT.y-
+  p.turretPivotY,GUN_REAR_Z*p.sz-p.turretPivotZ);
+ pivot.add(pitch);
+ const barrel=new THREE.Mesh(p.barrelGeometry,p.gunMaterial);
+ barrel.name='BTR82_3B_black_barrel';
+ barrel.rotation.x=Math.PI/2;
+ barrel.position.z=(BARREL_CENTER_Z-GUN_REAR_Z)*p.sz;
+ pitch.add(barrel);
+ const muzzleRing=new THREE.Mesh(p.muzzleGeometry,p.gunMaterial);
+ muzzleRing.name='BTR82_3B_black_muzzle';
+ muzzleRing.rotation.x=Math.PI/2;
+ muzzleRing.position.z=(MUZZLE_CENTER_Z-GUN_REAR_Z)*p.sz;
+ pitch.add(muzzleRing);
+ const shot=new THREE.Object3D();
+ shot.position.z=(MUZZLE_TIP_Z-GUN_REAR_Z)*p.sz;
+ pitch.add(shot);
+ g.userData.turretPivot=pivot;
+ g.userData.turretPitch=pitch;
+ g.userData.turretMuzzle=shot;
+ g.userData.btr82Model='3B';
+ g.userData.btr82WheelCount=8;
+ g.userData.btr82HullTriangles=p.hullGeometry.index.count/3;
+ g.userData.btr82BarrelLowering=BTR82_3B_BARREL_LOWERING_Y;
+ return g;
+}
