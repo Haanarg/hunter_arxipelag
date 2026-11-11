@@ -1,8 +1,12 @@
 name: Hunter - comprovacions bàsiques i runtime
-# Execució NOMÉS manual: cap push al repositori inicia aquest workflow.
-# GitHub > Actions > Hunter - comprovacions bàsiques i runtime > Run workflow.
+# Execució puntual de release 0.6.205; després es restaura el mode manual.
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/version.mjs'
+      - '.github/workflows/rebuild-runtime.yml'
 permissions:
   contents: write
 concurrency:
