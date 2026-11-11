@@ -94,5 +94,5 @@ const page=readFileSync(new URL('../vehicles-externs-proves.html',import.meta.ur
 assert(file.includes('createBtr823BPreview()'),'El banc principal no construeix el 3B');
 assert(file.includes("slot.outer.hidden=btrStudy?slots.indexOf(slot)>0:slots.indexOf(slot)>3"));
 assert(!file.includes('studio.load(token)'),'No s’han de carregar els antics GLB');
-assert(page.includes('compact-lab-v22-btr82-3b-front-turret'),'Revisió de memòria cau');
+assert(page.includes('compact-lab-v23-btr82-visor-front'),'Revisió de memòria cau');
 console.log('PASS 3B preview: torreta 25% més petita, base centrada, canó connectat, rodes i detalls intactes');
