@@ -109,7 +109,7 @@ function installFourHeadlights(scene){
  return scene;
 }
 
-function makeBaseline(original){
+export function makeBtr82LabBaseline(original){
  const base=installFourHeadlights(replaceBarrelWithCylinders(withTruckWheels(original)));
  const lights=[];
  base.traverse(o=>{if(o.name.endsWith('_lens')&&o.name.startsWith('BTR82_front_headlight_'))lights.push(o)});
@@ -233,7 +233,7 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
  }
  let baselineTriangles=0;
  async function renderFromSource(source,token,run,local=false){
-  const baseline=makeBaseline(source);
+  const baseline=makeBtr82LabBaseline(source);
   baselineTriangles=inspect(baseline).triangles;
   if(!alive(token,run))return;
   present(PASSES[0],baseline,local);

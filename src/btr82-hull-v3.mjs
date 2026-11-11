@@ -73,7 +73,7 @@ function section(station){
  const lowerNames=new Set(['lip','shelf','wheelWell','stepFoot','belly','keel']);
  const right=PROFILE_ORDER.map(name=>{
   const [x,y,dz]=station[name];
-  if(lowerNames.has(name)&&dz!==0&&station!==BTR82_HULL_V3_STATIONS[0]&&station!==BTR82_HULL_V3_STATIONS[BTR82_HULL_V3_STATIONS.length-1])
+  if(lowerNames.has(name)&&dz!==0&&Math.abs(station.z+5.425)>1e-6&&Math.abs(station.z-5.425)>1e-6)
    throw Error('Eix longitudinal incorrecte a '+name+' z='+station.z);
   return [x,y,station.z+dz];
  });
@@ -148,8 +148,12 @@ function closedMesh(rings){
 // L'antiga parella preimatge+gir s'anul·lava matemàticament i feia
 // impossible distingir els rails inferiors dels panells transposats.
 // La coberta i les espatlles conserven EXACTAMENT els seus punts v3c.
+export function createBtr82HullGeometryFromStations(stations){
+ if(!Array.isArray(stations)||stations.length<3)throw Error('Calen tres seccions com a mínim');
+ return closedMesh(stations.map(section));
+}
 export function createBtr82HullV3Geometry(){
- return closedMesh(BTR82_HULL_V3_STATIONS.map(section));
+ return createBtr82HullGeometryFromStations(BTR82_HULL_V3_STATIONS);
 }
 
 // Shorter faceted turret, sloping nose and shoulders similar to source BTR.
