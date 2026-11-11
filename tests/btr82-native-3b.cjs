@@ -23,7 +23,7 @@ const factorySource=read('src/vehicle-model-core.mjs');
 const specsSource=read('src/vehicle-turret-core.mjs');
 assert(factorySource.includes("import {installBtr82Model3B} from './btr82-3b-native.mjs';"));
 assert(factorySource.includes("installBtr82Model3B(THREE,g,{resources})"));
-assert(factorySource.includes('tanqueta:.18'),'El gir visual màxim ha de ser de 0,18 rad');
+assert(factorySource.includes('tanqueta:25*Math.PI/180'),'El gir visual màxim ha de ser de 25 graus');
 assert(!factorySource.includes("for(const x of[-1.42,1.42])for(const z of[-1.55,0,1.55])"));
 class Attr {
  constructor(array,size){this.array=array;this.itemSize=size;this.count=array.length/size}
