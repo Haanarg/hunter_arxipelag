@@ -5,6 +5,7 @@ import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
 import {createVehicleAnnotationEditor} from './vehicle-annotation-editor.mjs?rev=editor-no-armour-v13';
+import {createBtr823BPreview} from './btr82-3b-preview.mjs?rev=btr82-3b-standalone-v1';
 
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
@@ -65,7 +66,7 @@ for(let i=0;i<5;i++){
  const downloadBtr=document.createElement('button');downloadBtr.type='button';downloadBtr.textContent='Desa GLB';downloadBtr.hidden=true;
  const fileLabel=document.createElement('label');fileLabel.textContent='Importa GLB';
  const upload=document.createElement('input');upload.type='file';upload.accept='.glb,model/gltf-binary';
- fileLabel.append(upload);if(i)actions.append(source,fileLabel,downloadBtr);
+ fileLabel.append(upload);if(i)actions.append(source,fileLabel,downloadBtr);else actions.append(source);
  meta.append(status,actions);outer.append(label,viewport,meta);grid.append(outer);
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x354b4c);
  scene.add(new THREE.HemisphereLight(0xddeefa,0x566152,2.15));
@@ -92,11 +93,6 @@ for(let i=0;i<5;i++){
    const current=generation;
    status.textContent='Important '+file.name+'…';
    try{
-     if(currentType.id==='tanqueta'){
-       const studio=await getBtrStudio();
-       if(current===generation)await studio.importGlb(file,current,slots.indexOf(slot));
-       return;
-     }
      const gltf=await loadUploadedGlb(file);
      if(current!==generation)return;
      setModel(slot,gltf.scene,false,gltf.animations);
@@ -112,14 +108,6 @@ let currentType=CATALOG[0],generation=0,originalDims=new THREE.Vector3(3,2,5);
 const vehicleEditor=createVehicleAnnotationEditor({slots,getType:()=>currentType.id});
 let yaw=.60,elev=.32,zoom=1,lookY=.6,defaultLookY=.6,panScreenX=0;
 let prev=performance.now();
-let btrStudioPromise=null;
-function getBtrStudio(){
- return btrStudioPromise??=import('./btr82-lod-studio.mjs?rev=btr82-continuous-forewheel-wedge-v3k').then(module=>module.createBtr82Studio({
-   slots,loadUploadedGlb,setModel,metrics,
-   isCurrent:token=>token===generation&&currentType.id==='tanqueta',
-   notice:warning
- }));
-}
 const packCache=new Map(),searchCache=new Map();
 let savedManifest=null;
 const canonical=(x)=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
@@ -292,8 +280,9 @@ async function choose(config){
  grid.classList.remove('featured');
  const btrStudy=config.id==='tanqueta';
  grid.classList.toggle('btr-study',btrStudy);
+ document.querySelector('#fitScale').closest('label').hidden=btrStudy;
  for(const slot of slots){
-   slot.outer.hidden=btrStudy?slots.indexOf(slot)>1:slots.indexOf(slot)>3;
+   slot.outer.hidden=btrStudy?slots.indexOf(slot)>0:slots.indexOf(slot)>3;
    dropPrevious(slot);
    slot.kind=config.kind;
    slot.ground.material.color.setHex(marine?0x285f65:config.kind==='aire'?0x6a7b67:0x69735e);
@@ -302,18 +291,25 @@ async function choose(config){
    slot.status.textContent='Carregant…';slot.bold.textContent=slots.indexOf(slot)?'Alternativa '+slots.indexOf(slot):'Actual · '+config.name;
    const isSource=slots.indexOf(slot)===0;
    const fileLabel=slot.upload.parentNode;
-   if(fileLabel&&fileLabel.tagName==='LABEL')fileLabel.firstChild.textContent=btrStudy?
-     'Importa GLB base 25% (recalcula el low-poly)':'Importa GLB';
+   if(fileLabel&&fileLabel.tagName==='LABEL')fileLabel.firstChild.textContent='Importa GLB';
    slot.sub.textContent=slots.indexOf(slot)?'Preparant candidat…':'Model real del joc';
    slot.source.hidden=true;
  }
  try{
-   const model=makeOriginal(config.id,{color:0x4b9fd1});
-   setModel(slots[0],model,true);
+   const model=btrStudy?createBtr823BPreview():makeOriginal(config.id,{color:0x4b9fd1});
+   setModel(slots[0],model,true,[],btrStudy);
    originalDims=dimsOf(slots[0].model);
    slots[0].status.textContent=metrics(slots[0].model);
    slots[0].person.position.x=originalDims.x*.62+1.0;
-   slots[0].sub.textContent='Fàbrica original · Three.js r186';
+   slots[0].sub.textContent=btrStudy?
+     'Casc i torreta 3B, defenses i visors · SIpriv · CC BY 4.0':
+     'Fàbrica original · Three.js r186';
+   if(btrStudy){
+     slots[0].bold.textContent='BTR-82 · model 3B revisat';
+     slots[0].source.href='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
+     slots[0].source.hidden=false;
+     slots[0].status.textContent+=' · 8 rodes · detalls de prova';
+   }
  }catch(e){
    console.error('Original no disponible',config.id,e);
    slots[0].status.textContent='Error en el model original: '+e.message;
@@ -324,10 +320,7 @@ async function choose(config){
  defaultLookY=lookY;
  panScreenX=0;
  zoom=1;updateCamera();
- if(btrStudy){
-   const studio=await getBtrStudio();
-   if(token===generation)await studio.load(token);
- }else{
+ if(!btrStudy){
    const used=new Set();
    await Promise.all(config.options.map((entry,i)=>loadExternal(slots[i+1],entry,used,token)));
  }
@@ -466,7 +459,7 @@ const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.textContent=config.name;
- const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'original + low-poly · editor 3D':config.id==='ferry'?'2–3 alternatives':'3 alternatives');
+ const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3B revisat · únic model':config.id==='ferry'?'2–3 alternatives':'3 alternatives');
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }
