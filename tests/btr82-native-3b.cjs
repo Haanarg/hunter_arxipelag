@@ -113,6 +113,16 @@ for(const [i,coordinate] of ['x','y','z'].entries()){
 const [xFit,yFit,zFit]=[sceneApi.BTR82_3B_GAME_FIT.x,sceneApi.BTR82_3B_GAME_FIT.y,sceneApi.BTR82_3B_GAME_FIT.z];
 assert(xFit>0&&yFit>0&&zFit>0);
 assert.equal(sceneApi.BTR82_3B_GAME_FIT.sizeMultiplier,1.5);
+assert.equal(xFit,yFit,'El model no pot quedar comprimit transversalment');
+assert.equal(zFit,xFit,'La longitud ha de mantenir la mateixa escala que les rodes');
+const sourceAxles=[-2.938,-.938,1.7505,3.585];
+const renderedTireDiameter=2*.8125*yFit*1.5;
+for(let index=1;index<sourceAxles.length;index++){
+ const gap=(sourceAxles[index]-sourceAxles[index-1])*zFit*1.5-renderedTireDiameter;
+ assert(gap>.10,'Els pneumàtics no s’han de tocar entre els eixos '+index+' i '+(index+1));
+}
+assert(dimensions.includes('tanqueta:6.25'),'Ampliar el radi físic de la tanqueta');
+assert(Math.hypot(width/2,depth/2)<6.25,'El radi de col·lisió ha de cobrir la nova hitbox');
 assert(Math.abs(first.children[0].geometry.getAttribute('position').getX(0)+xFit*1.5)<1e-8);
 assert(Math.abs(first.children[0].geometry.getAttribute('position').getZ(0)+zFit*1.5)<1e-8);
 const oldWheelRadius=.8125*yFit*1.8125;
