@@ -13,7 +13,7 @@ assert(hb,'Falta la caixa física de la tanqueta');
 const [width,depth]=hb.slice(1).map(Number);
 const tanketteWorldScale=1.8125;
 const modelWidth=2*(1.688+.25*1.06)*(.65*1.5)*tanketteWorldScale;
-const modelLength=2*5.425*(.46*1.5)*tanketteWorldScale;
+const modelLength=2*5.425*(.65*1.5)*tanketteWorldScale;
 assert(width*tanketteWorldScale>=modelWidth,
  'La hitbox ha de cobrir els laterals exteriors de les vuit rodes');
 assert(depth*tanketteWorldScale>=modelLength,
