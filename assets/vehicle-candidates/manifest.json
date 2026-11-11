@@ -8,41 +8,6 @@
     "maxTotalBytes": 134217728
   },
   "models": {
-    "cotxe_civil": [
-      {
-        "slot": 1,
-        "id": "18681",
-        "title": "Grand touring coupe (Vehicle Collection HD: Cars, Planes and Boats)",
-        "bytes": 356660,
-        "triangles": 9586,
-        "file": "cotxe_civil/1-transport-collection-hd-grand-touring-coupe-b6a2a438.glb",
-        "url": "https://3dassets.dev/assets/transport-collection-hd-grand-touring-coupe-b6a2a438",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/18681/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 2,
-        "id": "18684",
-        "title": "Executive sedan (Vehicle Collection HD: Cars, Planes and Boats)",
-        "bytes": 383416,
-        "triangles": 10578,
-        "file": "cotxe_civil/2-transport-collection-hd-executive-sedan-cfa7dfcf.glb",
-        "url": "https://3dassets.dev/assets/transport-collection-hd-executive-sedan-cfa7dfcf",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/18684/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 3,
-        "id": "18686",
-        "title": "Touring SUV (Vehicle Collection HD: Cars, Planes and Boats)",
-        "bytes": 366076,
-        "triangles": 9834,
-        "file": "cotxe_civil/3-transport-collection-hd-touring-suv-f8566c14.glb",
-        "url": "https://3dassets.dev/assets/transport-collection-hd-touring-suv-f8566c14",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/18686/v1/model.glb",
-        "license": "CC0-1.0"
-      }
-    ],
     "tanqueta": [],
     "tanc": [],
     "llanxa": [
