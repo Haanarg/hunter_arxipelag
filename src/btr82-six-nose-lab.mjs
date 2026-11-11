@@ -105,6 +105,12 @@ function render(){
  if(width<1||height<1)return;
  renderer.setPixelRatio(Math.min(1.5,window.devicePixelRatio||1));
  renderer.setSize(width,height,false);
+ // Esborra les regions antigues abans de canviar de targeta/fer scroll,
+ // sense pintar un rectangle opac damunt dels controls de la pàgina.
+ renderer.setScissorTest(false);
+ renderer.setClearColor(0x354b4c,0);
+ renderer.clear(true,true,true);
+ renderer.setClearColor(0x354b4c,1);
  renderer.setScissorTest(true);
  for(const slot of slots){
   if(!slot.model||slot.card.hidden||getComputedStyle(slot.card).display==='none')continue;

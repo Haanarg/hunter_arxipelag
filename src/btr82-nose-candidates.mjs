@@ -115,7 +115,7 @@ function boundsAt(tris,z){
 function fromSilhouettes(tris){
  const front=[];
  for(const z of [-5.425,-5.04,-4.75,-4.48,-4.21,-3.97,-3.76]){
-  const b=boundsAt(tris,Math.max(-5.04,z));
+  const b=boundsAt(tris,Math.max(-4.97,z));
   if(!b)throw Error('Sense silueta del GLB a Z='+z);
   const w=limit(b.halfWidth,.83,1.91);
   const roof=limit(b.roof,1.07,1.76);
@@ -139,7 +139,7 @@ function envelopeAtX(lines,x){
 function fromSections(tris){
  const front=[];
  for(const z of [-5.425,-5.04,-4.76,-4.50,-4.24,-3.99,-3.76]){
-  const b=boundsAt(tris,Math.max(-5.04,z));
+  const b=boundsAt(tris,Math.max(-4.97,z));
   if(!b)throw Error('Sense tall transversal del GLB a Z='+z);
   const w=limit(b.halfWidth,.84,1.91),roof=limit(b.roof,1.1,1.77),bottom=limit(b.belly,-.17,roof-.36);
   const ring=constructStation(z,w,roof,bottom);
