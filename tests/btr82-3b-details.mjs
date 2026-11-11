@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as THREE from '../vendor/three-r186.module.mjs';
-import {applyBtr823BDetails} from '../src/btr82-3b-details.mjs';
+import {applyBtr823BDetails,createBtr823BHardwareBatch} from '../src/btr82-3b-details.mjs';
 import {createBtr82TurretV3Geometry} from '../src/btr82-hull-v3.mjs';
 import {compactBtr823BTurret,BTR82_3B_TURRET_PIVOT_Z} from '../src/btr82-angular-facets.mjs';
 
@@ -10,7 +10,7 @@ const scene=new THREE.Group();
 const group=applyBtr823BDetails(scene);
 assert.equal(group.name,'BTR82_3B_hardware');
 assert.equal(group.position.y,-.18);
-assert.equal(scene.userData.btr82Details3B.previewOnly,true);
+assert.equal(scene.userData.btr82Details3B.visorHorizontal,true);
 assert.deepEqual([scene.userData.btr82Details3B.rearGuards,
  scene.userData.btr82Details3B.roofHatches,
  scene.userData.btr82Details3B.roofVents,
@@ -23,6 +23,25 @@ assert.equal(count('BTR82_3B_rear_hatch_'),4,'dues trapes i marcs');
 assert.equal(count('BTR82_3B_vent_slit_'),10,'reixetes de ventilació');
 assert.equal(count('BTR82_3B_front_vision_glass_'),2,'dues mirilles davanteres');
 assert.equal(count('BTR82_3B_front_headlight_'),8,'quatre focus amb caixa i lent');
+for(const side of ['left','right']){
+ const frame=scene.getObjectByName('BTR82_3B_front_vision_frame_'+side);
+ const glass=scene.getObjectByName('BTR82_3B_front_vision_glass_'+side);
+ assert.equal(frame.rotation.x,0,'La mirilla ha de ser horitzontal');
+ assert.equal(glass.rotation.x,0,'El vidre de la mirilla ha de ser horitzontal');
+ assert.equal(frame.material.color.getHex(),0x5f6c53,
+  'La carcassa no pot continuar grisa; ha de ser verd xassís');
+ assert(frame.geometry.parameters.depth>=.80,
+  'El blindatge s’ha d’allargar dins del xassís');
+ assert(frame.position.z+frame.geometry.parameters.depth/2>-3.7,
+  'L’extrem posterior del blindatge ha de penetrar al casc');
+ assert(glass.position.z<frame.position.z,'El vidre ha d’apuntar cap endavant (-Z)');
+}
+const batch=createBtr823BHardwareBatch(THREE);
+assert(batch.userData.btr82HardwareBatch);
+assert.equal(batch.index,null,'El lot ha d’estar sense índex per als colors compartits');
+assert(batch.getAttribute('position').count>1000);
+assert.equal(batch.getAttribute('color').count,batch.getAttribute('position').count);
+assert.equal(batch.getAttribute('normal').count,batch.getAttribute('position').count);
 for(const mesh of group.children.filter(node=>node.isMesh)){
  assert(mesh.geometry.getAttribute('position')?.count>0,'geometria buida: '+mesh.name);
  const p=mesh.geometry.getAttribute('position');
@@ -50,4 +69,4 @@ const page=readFileSync(new URL('../btr82-model3-angular.html',import.meta.url),
 assert(viewer.includes("if(angularMode&&method.id==='angular-strong')applyBtr823BDetails(scene)"));
 assert(page.includes('model3-angular-20261111-a7'));
 assert(page.includes('defenses posteriors'));
-console.log('PASS model 3B Paradoxa: defenses i coberta posterior, mirilles, 4 focus i torreta compacta');
+console.log('PASS model 3B: mirilles horitzontals verdes, defenses i 4 focus, detalls en una sola malla al joc');
