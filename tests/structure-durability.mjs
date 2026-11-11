@@ -42,6 +42,27 @@ for(const c of cases){
  assert.equal(canLightDamageRoof({rhp:c.roof,weakWood:!armor}),!armor,
   c.name+' resistència sostre');
 }
+// L'hangar no tenia paret de fons: ha de ser una sola peça de 10 PV
+// i existir amb la mateixa geometria a SOLO i al servidor COOP.
+for(const doorSide of [0,1]){
+ const opt={hangar:true,doorSide,doorWidth:30,openDoor:true,noPartitions:true};
+ const plan=planBuildingShell(40,30,12,opt,()=>.1);
+ const rear=plan.segments.filter(s=>s.hangarRearWall);
+ assert.equal(rear.length,1,'hangar amb una sola paret posterior');
+ assert.equal(rear[0].lx,0);
+ assert.equal(rear[0].lz,doorSide===0?-14.6:14.6);
+ assert.equal(rear[0].sx,40);
+ assert.equal(rear[0].sz,.8);
+ const colliders=shellColliders(0,0,0,40,30,12,opt,()=>.1);
+ const wall=colliders.walls.find(w=>Math.abs(w.cz-rear[0].lz)<1e-8&&Math.abs(w.cx)<1e-8);
+ assert(wall,'la paret posterior ha de col·lisionar al servidor COOP');
+ assert.equal(wall.hp,10,'la paret posterior ha de tenir exactament 10 PV');
+ assert.equal(wall.door,false);
+ assert.equal(wall.weakWood,false);
+ assert.equal(canLightDamageWall(wall),false);
+ assert.equal(wallBlastDamage(wall,0,0,0,8,10),10,
+  'un impacte pesat directe ha de destruir la paret posterior');
+}
 const reinforced={hp:10,door:false,weakWood:false},
  wood={hp:4,door:false,weakWood:true},
  door={hp:4,door:true,woodenDoor:false};
