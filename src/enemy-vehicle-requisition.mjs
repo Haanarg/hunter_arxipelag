@@ -12,7 +12,8 @@ export const REQUISITION=Object.freeze({
   boardingDistance:3.1, passengerWaitSeconds:6,
   chaseMemorySeconds:12, maxChaseDistance:180, fleeingChaseDistance:260,
   fleeingSpeed:6, fleeingRadialSpeed:4, fleeingMemorySeconds:2.5,
-  retrySeconds:3
+  retrySeconds:3,
+  tankettePursuitSpeed:14, tanketteCornerSpeed:10
 });
 // El «dubte» és el temps fins al PRIMER intent i entre els següents.
 // Els 3 segons existents són el nivell difícil. La possibilitat d'èxit
@@ -130,6 +131,21 @@ export function pursuitInput(v,target,{passenger=false,distance=Infinity}={}){
   const forward=d<brakeAt&&passenger?-.20:
     d<3&&passenger?0:Math.abs(error)>2.4?.38:Math.abs(error)>1.3?.58:1;
   return{forward,turn:clamp(error*1.25,-1,1),distance:d};
+}
+// Governador exclusiu del BTR-82 requisat. El jugador conserva els 24
+// punts de velocitat màxima originals; la IA accelera fins a 14 i baixa a
+// 10 en corbes tancades. Manté el mateix stepV/física que el jugador.
+export function governedRequisitionInput(v,input){
+ if(!input||v?.t!=='tanqueta')return input;
+ const steering=clamp(Math.abs(input.turn||0),0,1),
+   limit=REQUISITION.tankettePursuitSpeed-
+     (REQUISITION.tankettePursuitSpeed-REQUISITION.tanketteCornerSpeed)*steering,
+   current=Math.max(0,v.v||0),c=vehicleDynamics.types.tanqueta,
+   hold=limit*c.dr*.86/c.a,
+   forward=(input.forward||0)>0?
+     Math.min(input.forward,clamp(hold+(limit-current)*.32,-1,1)):
+     input.forward;
+ return {...input,forward,vehicleSpeedLimit:limit};
 }
 // Una moto requisada no ha d'envestir un vehicle ocupat. Anticipam la
 // frenada segons la velocitat de tancament REAL (també en sentits oposats).
