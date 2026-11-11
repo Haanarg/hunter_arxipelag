@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 
-// BTR-82 v3j: eixos definitius X transversal / Z longitudinal del canó.
+// BTR-82 v3k: eixos definitius X transversal / Z longitudinal del canó.
 // Les estacions descriuen el casc FINAL (proa=-Z, popa=+Z) i són
 // simètriques NOMÉS en X, paral·lelament al canó. Proa i popa diferents.
 // Tota la geometria és una sola closca manifold en eixos finals, sense girs inversos.
@@ -17,10 +17,17 @@ export const BTR82_HULL_V3_STATIONS=Object.freeze([
   belt:[1.34,.91,0],lip:[1.27,.87,.035],shelf:[1.18,.82,.065],
   wheelWell:[1.07,.78,.085],stepFoot:[.96,.76,.10],
   belly:[.79,.78,.105],keel:[.30,.82,.11]},
+ // Connexió de la falca superior amb els baixos davant de la roda
+ // davantera. La primera roda comença aproximadament a Z=-3.75.
  {z:-4.36,roof:[1.14,1.41,.55],brow:[1.43,1.45,.35],shoulder:[1.70,1.30,.17],
-  belt:[1.76,1.06,0],lip:[1.76,.94,0],shelf:[1.54,.96,0],
-  wheelWell:[1.20,.96,0],stepFoot:[1.11,-.08,0],
-  belly:[.99,-.26,0],keel:[.32,-.32,0]},
+  belt:[1.76,1.06,0],lip:[1.54,.95,0],shelf:[1.34,.85,0],
+  wheelWell:[1.14,.77,0],stepFoot:[1.04,.60,0],
+  belly:[.83,.53,0],keel:[.30,.50,0]},
+ // El ventre recupera la profunditat normal abans del pneumàtic.
+ {z:-3.95,roof:[1.21,1.69,.02],brow:[1.55,1.60,.02],shoulder:[1.86,1.40,.01],
+  belt:[1.84,1.07,0],lip:[1.83,.94,0],shelf:[1.54,.96,0],
+  wheelWell:[1.20,.96,0],stepFoot:[1.11,-.01,0],
+  belly:[.99,-.16,0],keel:[.32,-.20,0]},
  {z:-3.23,roof:[1.24,1.77,.08],brow:[1.58,1.66,.06],shoulder:[1.91,1.42,.04],
   belt:[1.89,1.08,0],lip:[1.89,.94,0],shelf:[1.54,.96,0],
   wheelWell:[1.20,.96,0],stepFoot:[1.11,-.08,0],
@@ -211,6 +218,8 @@ export function makeBtr82HullV3(baseline){
   cabinShiftZ:BTR82_CABIN_SHIFT_Z,turretRearCut:'half-moon',
   turretRearMaxRecess:.37,frontDeck:'extended-flat-nose',
   noseKeelHeight:.82,noseTipZ:-5.425,
+  frontJoinZ:-4.36,frontBlendZ:-3.95,frontWheelLeadingEdgeZ:-3.7505,
+  frontLowerProfile:'continuous-wedge-before-wheel',
   wheelStepHeight:.96,lowerBellyHalfWidth:1.11,
   gunAxis:'-Z',transverseMirrorAxis:'X',frontClosure:'symmetric-centerline',
   noseProfile:'full-depth-converging-wedge',rearProfile:'raised-hexagonal-rear',turretProfile:'rear-crescent-cut',

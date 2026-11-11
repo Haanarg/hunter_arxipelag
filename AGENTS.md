@@ -2,6 +2,8 @@
 
 ## GitHub access — verify before claiming unavailability
 
+**Verificació d’accés a GitHub obligatòria:** abans de dir que no tinc accés al repositori, he de descobrir les accions `mcp__GitHub__*` via `functions.exec` / `ALL_TOOLS` i provar de llegir `Haanarg/hunter_arxipelag` amb `mcp__GitHub__fetch_file`. Els canvis al repositori s’han fet moltes vegades amb aquest connector. No assumir que no hi ha accés ni demanar a l’usuari que enganxi pedaços sense haver-ne comprovat la connexió real; si el connector funciona, implementar i publicar els canvis directament.
+
 This project repository is `Haanarg/hunter_arxipelag`. Connected GitHub tools
 have been used successfully to read, modify and publish code directly. **Before
 telling the user GitHub is unavailable, discover the tools for this session

@@ -57,8 +57,8 @@ const code=source.replace(/^import .*$/gm,'').replace(/^export /gm,'');
 const api=new Function('THREE',code+';return {createBtr82HullV3Geometry,createBtr82TurretV3Geometry,makeBtr82HullV3,BTR82_HULL_V3_STATIONS,BTR82_TURRET_CRESCENT_LEVELS,BTR82_CABIN_SHIFT_Z}')(THREE);
 const hull=api.createBtr82HullV3Geometry();
 const position=hull.getAttribute('position'),ids=hull.index.array;
-assert.equal(ids.length/3,428);
-assert.equal(position.count,216);
+assert.equal(ids.length/3,468);
+assert.equal(position.count,236);
 const coords=Array.from({length:position.count},(_,i)=>[position.getX(i),position.getY(i),position.getZ(i)]);
 const edges=new Map();
 let minArea=Infinity,signedVolume=0;
@@ -95,10 +95,10 @@ const stations=api.BTR82_HULL_V3_STATIONS,front=stations[0],rear=stations.at(-1)
 assert(front.roof[2]>.6,'Proa insuficientment inclinada');
 assert(front.roof[2]>=1.20&&stations[1].roof[2]>=.50,
  'El davant de la cabina no ha reculat');
-assert(stations[2].roof[2]>.05,'Transicio massa brusca a la coberta');
-const capStart=9*20*6,capIds=ids.slice(capStart);
+assert(stations.find(s=>s.z===-3.23).roof[2]>.05,'Transicio massa brusca a la coberta');
+const capStart=(api.BTR82_HULL_V3_STATIONS.length-1)*20*6,capIds=ids.slice(capStart);
 assert.equal(capIds.length/3,68,'Tapes fetes amb dues meitats');
-for(let i=0;i<16;i++)assert.equal(coords[200+i][0],0,'Eix central del morro fora de X=0');
+for(let i=0;i<16;i++)assert.equal(coords[api.BTR82_HULL_V3_STATIONS.length*20+i][0],0,'Eix central del morro fora de X=0');
 const caps=[];
 for(let i=0;i<capIds.length;i+=3)caps.push(capIds.slice(i,i+3));
 for(const face of caps){
@@ -117,6 +117,20 @@ assert(stations[stations.length-2].keel[1]>stations[stations.length-3].keel[1]+.
  'La quilla ha de començar a pujar abans de la popa');
 assert(rear.roof[2]<0,'Popa amb bisell superior');
 assert(rear.roof[1]>front.roof[1]+.3,'La proa no es distingeix prou de la popa');
+const join=stations.find(s=>s.z===-4.36),blend=stations.find(s=>s.z===-3.95);
+assert(join&&blend&&join.z<blend.z&&blend.z<-2.938-.8125,
+ 'La falca ha de connectar abans del pneumàtic davanter');
+assert(join.belt[0]===1.76&&join.shoulder[0]===1.70,
+ "No s'han de deformar les arestes del blindatge superior");
+assert(join.keel[1]>.45&&join.belly[1]>.48&&join.stepFoot[1]>.55,
+ 'Els baixos han de pujar a trobar el blindatge superior');
+assert(join.belt[1]-join.keel[1]<.60,
+ 'El frontal ha de formar una falca, no una paret vertical');
+assert(blend.keel[1]<0&&blend.stepFoot[1]<.05,
+ 'El ventre ha de recuperar la profunditat abans de la roda');
+assert(blend.wheelWell[1]>=.94,
+ "S'ha de conservar el perfil superior del pas de roda");
+
 assert(middle.wheelWell[0]<1.438&&middle.wheelWell[1]>=.94,'Escaló de les rodes incorrecte');
 assert(middle.stepFoot[1]<0&&middle.belly[1]<-.2&&middle.belly[0]>.9,'Ventre massa estret o massa alt');
 for(const station of stations.slice(1,-1))for(const part of ['lip','shelf','wheelWell','stepFoot','belly','keel'])
@@ -129,7 +143,7 @@ assert(nose.keel[2]>nose.stepFoot[2]&&nose.stepFoot[2]>nose.wheelWell[2],
 assert(nose.keel[1]>stations[1].keel[1], "The nose underside should rise");
 assert(nose.belt[0]<stations[1].belt[0]-.35,'Proa mes estreta');
 assert(nose.shoulder[0]<stations[1].shoulder[0]-.35,'Espatlles del morro en cunya');
-assert(nose.keel[1]>stations[1].keel[1]+1.0,'El ventre frontal ha de pujar fins a la proa');
+assert(nose.keel[1]>join.keel[1]+.25&&join.keel[1]>blend.keel[1]+.5,'La quilla ha de baixar gradualment abans del primer pneumàtic');
 assert(Math.abs(nose.belt[1]-nose.keel[1])<.12,'Els baixos no convergeixen amb la punta');
 assert(nose.keel[2]<.2&&nose.stepFoot[2]<.2,'La cunya no pot recular darrere la punta');
 const turret=api.createBtr82TurretV3Geometry();
@@ -176,6 +190,9 @@ assert.equal(report.axisRotationDegrees,90);
 assert.equal(report.symmetricalX,true);
 assert.equal(report.hullBottom,-.32);
 assert.equal(report.noseKeelHeight,.82);
+assert.equal(report.frontJoinZ,-4.36);
+assert.equal(report.frontBlendZ,-3.95);
+assert.equal(report.frontLowerProfile,'continuous-wedge-before-wheel');
 assert.equal(report.rearKeelHeight,.51);
 assert.equal(report.rearOutline,'raised-hex-bevel');
 assert.equal(report.turretBaseHeight,1.71);
@@ -197,4 +214,4 @@ for(const name of ['BTR82_new_black_barrel','BTR82_new_black_muzzle']){
  assert(Math.abs(moved.position.z-original.position.z-.38)<1e-8,
   'El cano ha de moure-se sense deformacio');
 }
-console.log('PASS BTR v3j: crescent turret, aft-shift cabin/gun, preserved wheels');
+console.log('PASS BTR v3k: unified front wedge before wheel, X symmetry and sealed geometry');
