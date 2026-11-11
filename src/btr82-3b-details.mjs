@@ -1,8 +1,9 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 
-// Peces exclusives del candidat 3B del banc de proves. Cap geometria del
-// joc ni dels models 3/3A canvia abans d'aprovar aquest redisseny.
+// Peces del BTR-82 3B compartides pel banc de proves i el joc.
+// Al joc se'n fa una sola malla amb colors de vèrtex per estalviar draw calls.
 const armour=new THREE.MeshStandardMaterial({color:0x59684f,flatShading:true,roughness:.94});
+const visionArmour=new THREE.MeshStandardMaterial({color:0x5f6c53,flatShading:true,roughness:.93});
 const hatch=new THREE.MeshStandardMaterial({color:0x485741,flatShading:true,roughness:.95});
 const trim=new THREE.MeshStandardMaterial({color:0x29342e,roughness:.82,metalness:.20});
 const steel=new THREE.MeshStandardMaterial({color:0x747d70,roughness:.78,metalness:.23});
@@ -89,13 +90,15 @@ export function applyBtr823BDetails(scene){
  }
  slab(group,'BTR82_3B_rear_access_latch',.36,.055,.18,0,1.855,4.08,steel);
 
- // Mirilles/periscopis blindats encaixats en el pendent del frontal.
+ // Mirilles horitzontals apuntant endavant, paral·leles al terra.
+ // La caixa de blindatge penetra cap endins del xassís fins a Z=-3.66,
+ // tapant la separació que deixaven les antigues peces inclinades.
  for(const side of [-1,1]){
   const label=side<0?'left':'right';
-  slab(group,'BTR82_3B_front_vision_frame_'+label,.58,.12,.26,
-   side*.60,1.67,-4.09,steel,-.22);
-  slab(group,'BTR82_3B_front_vision_glass_'+label,.49,.055,.17,
-   side*.60,1.744,-4.09,glass,-.22);
+  slab(group,'BTR82_3B_front_vision_frame_'+label,.60,.21,.82,
+   side*.60,1.62,-4.07,visionArmour);
+  slab(group,'BTR82_3B_front_vision_glass_'+label,.48,.024,.16,
+   side*.60,1.737,-4.36,glass);
  }
  // Dos parells de focus amb carcassa negra i lent clara.
  for(const [index,x] of [-1.35,-.96,.96,1.35].entries()){
@@ -106,6 +109,38 @@ export function applyBtr823BDetails(scene){
    x,1.18,z-.10,lamp,.213,.065);
  }
  scene.userData.btr82Details3B={rearGuards:2,roofHatches:2,roofVents:2,
-  frontVisors:2,headlights:4,previewOnly:true};
+  frontVisors:2,headlights:4,visorHorizontal:true};
  return group;
+}
+
+// Agrupa les 53 peces de detalls en una sola geometria compartida pel joc.
+// Cada peça conserva la seva orientació i color; cap GLB ni textura externa.
+export function createBtr823BHardwareBatch(THREE){
+ const root=new THREE.Group();
+ applyBtr823BDetails(root);
+ root.updateMatrixWorld(true);
+ const positions=[],normals=[],colors=[];
+ root.traverse(mesh=>{
+  if(!mesh.isMesh)return;
+  const transformed=mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
+  const expanded=transformed.index?transformed.toNonIndexed():transformed;
+  const xyz=expanded.getAttribute('position'),norm=expanded.getAttribute('normal');
+  const color=mesh.material.color;
+  for(let i=0;i<xyz.count;i++){
+   positions.push(xyz.getX(i),xyz.getY(i),xyz.getZ(i));
+   normals.push(norm.getX(i),norm.getY(i),norm.getZ(i));
+   colors.push(color.r,color.g,color.b);
+  }
+  if(expanded!==transformed)expanded.dispose();
+  transformed.dispose();
+  mesh.geometry.dispose();
+ });
+ const geometry=new THREE.BufferGeometry();
+ geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+ geometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));
+ geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+ geometry.computeBoundingSphere();
+ geometry.userData.btr82HardwareBatch=true;
+ geometry.userData.previewDetailCount=53;
+ return geometry;
 }
