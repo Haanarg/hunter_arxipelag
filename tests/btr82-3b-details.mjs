@@ -35,6 +35,14 @@ for(const side of ['left','right']){
  assert(frame.position.z+frame.geometry.parameters.depth/2>-3.7,
   'L’extrem posterior del blindatge ha de penetrar al casc');
  assert(glass.position.z<frame.position.z,'El vidre ha d’apuntar cap endavant (-Z)');
+ assert(glass.geometry.parameters.height>=.10,
+  'La superfície negra ha de ser frontal i vertical, no plana damunt del casc');
+ assert(glass.geometry.parameters.depth<.06,'La lent és una làmina prima frontal');
+ assert(Math.abs(glass.position.y-frame.position.y)<.06,
+  'La lent ha d’anar al davant de la carcassa, no damunt');
+ assert(glass.position.z+glass.geometry.parameters.depth/2<
+    frame.position.z-frame.geometry.parameters.depth/2+.025,
+  'La cara negra ha de quedar just al frontal i penetrar-hi un poc');
 }
 const batch=createBtr823BHardwareBatch(THREE);
 assert(batch.userData.btr82HardwareBatch);
