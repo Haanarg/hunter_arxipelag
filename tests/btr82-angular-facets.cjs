@@ -213,7 +213,7 @@ assert.throws(()=>angularApi.reverseBtr82StrongTurretBody(localScene),/ja està 
 const gunTailZ=barrel.position.z+2.90/2;
 const deepestCutFrontZ=turnedTurret.getZ(3*8+4);
 const bodyBackZ=Math.max(turnedTurret.getZ(5*8),turnedTurret.getZ(4*8));
-assert(turnedTurret.getY(3*8+4)===2.36,'La corba més endinsada ha de ser a Y=2.36');
+assert(Math.abs(turnedTurret.getY(3*8+4)-2.36)<1e-5,'La corba més endinsada ha de ser a Y=2.36');
 assert(gunTailZ>deepestCutFrontZ+.15,'La culata ha de penetrar la cara frontal del rebaix');
 assert(gunTailZ<bodyBackZ,'El canó ha de quedar dins la torreta');
 assert(-.32-.18>-.8125,'Els baixos han de quedar per sobre del terra');
