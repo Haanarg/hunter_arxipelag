@@ -97,8 +97,10 @@ export function applyBtr823BDetails(scene){
   const label=side<0?'left':'right';
   slab(group,'BTR82_3B_front_vision_frame_'+label,.60,.21,.82,
    side*.60,1.62,-4.07,visionArmour);
-  slab(group,'BTR82_3B_front_vision_glass_'+label,.48,.024,.16,
-   side*.60,1.737,-4.36,glass);
+  // Vidre negre a la cara DAVANTERA (-Z), no a la tapa superior.
+  // La lent entra lleugerament dins la carcassa per evitar una junta oberta.
+  slab(group,'BTR82_3B_front_vision_glass_'+label,.48,.13,.045,
+   side*.60,1.63,-4.495,glass);
  }
  // Dos parells de focus amb carcassa negra i lent clara.
  for(const [index,x] of [-1.35,-.96,.96,1.35].entries()){
