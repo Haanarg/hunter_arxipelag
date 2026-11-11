@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 
-// BTR-82 v3e: eixos definitius X transversal / Z longitudinal del canó.
+// BTR-82 v3f: eixos definitius X transversal / Z longitudinal del canó.
 // Les estacions descriuen el casc FINAL (proa=-Z, popa=+Z) i són
 // simètriques NOMÉS en X, paral·lelament al canó. Proa i popa diferents.
 // Tota la geometria és una sola closca manifold en eixos finals, sense girs inversos.
@@ -12,9 +12,10 @@ import * as THREE from '../vendor/three-r186.module.mjs';
 // Les rodes tenen centre X aproximadament ±1.69, radi ~0.81 i no es toquen.
 export const BTR82_HULL_V3_STATIONS=Object.freeze([
  {z:-5.425,roof:[1.04,1.12,.72],brow:[1.36,1.14,.51],shoulder:[1.65,1.06,.21],
-  belt:[1.75,.91,0],lip:[1.75,.85,0],shelf:[1.50,.94,0],
-  wheelWell:[1.18,.94,0],stepFoot:[1.10,-.05,0],
-  belly:[.95,-.23,0],keel:[.32,-.30,0]},
+  // Sharp nose: the high prow leads, underside withdraws rearward.
+  belt:[1.75,.91,0],lip:[1.63,.88,.22],shelf:[1.40,.84,.53],
+  wheelWell:[1.17,.80,.73],stepFoot:[1.07,.06,.93],
+  belly:[.92,-.10,1.03],keel:[.30,-.14,1.13]},
  {z:-4.36,roof:[1.16,1.44,.20],brow:[1.50,1.43,.11],shoulder:[1.83,1.29,.03],
   belt:[1.88,1.06,0],lip:[1.88,.94,0],shelf:[1.54,.96,0],
   wheelWell:[1.20,.96,0],stepFoot:[1.11,-.08,0],
@@ -62,7 +63,7 @@ function section(station){
  const lowerNames=new Set(['lip','shelf','wheelWell','stepFoot','belly','keel']);
  const right=PROFILE_ORDER.map(name=>{
   const [x,y,dz]=station[name];
-  if(lowerNames.has(name)&&dz!==0)
+  if(lowerNames.has(name)&&dz!==0&&station.z!==BTR82_HULL_V3_STATIONS[0].z)
    throw Error('Eix longitudinal incorrecte a '+name+' z='+station.z);
   return [x,y,station.z+dz];
  });
@@ -141,18 +142,20 @@ export function createBtr82HullV3Geometry(){
  return closedMesh(BTR82_HULL_V3_STATIONS.map(section));
 }
 
-function createTurretGeometry(){
- // Torreta angular centrada en X=0, dirigida endavant (-Z).
- // Es conserva el canó existent a x=-.06, y=2.69.
- const profile=[[-.53,-1.59],[.53,-1.59],[.95,-1.14],[.95,-.43],
-                [.66,.18],[-.66,.18],[-.95,-.43],[-.95,-1.14]];
- const zCenter=-.69;
- const rings=[
-  {y:1.55,x:1.08,z:1.06},
-  {y:2.13,x:1.01,z:1.00},
-  {y:2.77,x:.72,z:.81},
-  {y:2.87,x:.67,z:.76}
- ].map(r=>profile.map(([x,z])=>[x*r.x,r.y,zCenter+(z-zCenter)*r.z]));
+// Shorter faceted turret, sloping nose and shoulders similar to source BTR.
+// Cannon is a preserved original part and runs along -Z.
+export function createBtr82TurretV3Geometry(){
+ const outline=[[-.54,-1.60],[.54,-1.60],[.95,-1.13],[.95,-.43],
+                [.66,.20],[-.66,.20],[-.95,-.43],[-.95,-1.13]];
+ const cz=-.69;
+ const levels=[
+  {y:1.55,rx:1.07,rz:1.06,dz:0},
+  {y:1.77,rx:1.01,rz:1.03,dz:-.02},
+  {y:2.20,rx:.85,rz:.94,dz:.03},
+  {y:2.54,rx:.66,rz:.79,dz:.12},
+  {y:2.79,rx:.58,rz:.70,dz:.19}
+ ];
+ const rings=levels.map(p=>outline.map(([x,z])=>[x*p.rx,p.y,cz+(z-cz)*p.rz+p.dz]));
  return closedMesh(rings);
 }
 
@@ -171,7 +174,7 @@ export function makeBtr82HullV3(baseline){
    side:THREE.DoubleSide,flatShading:true}));
  hull.name='BTR82_v3_lowered_centre_hull';
  hull.castShadow=true;hull.receiveShadow=true;scene.add(hull);
- const turret=new THREE.Mesh(createTurretGeometry(),
+ const turret=new THREE.Mesh(createBtr82TurretV3Geometry(),
   new THREE.MeshStandardMaterial({color:0x56624d,roughness:.93,metalness:.04,
    side:THREE.DoubleSide,flatShading:true}));
  turret.name='BTR82_v3_low_angular_turret';
@@ -189,6 +192,7 @@ export function makeBtr82HullV3(baseline){
   hullBottom:-.32,roofHeight:1.65,
   wheelStepHeight:.96,lowerBellyHalfWidth:1.11,
   gunAxis:'-Z',transverseMirrorAxis:'X',frontClosure:'symmetric-centerline',
+  noseProfile:'sloped-back-underside',turretProfile:'low-faceted-sloping',
   retainedWheels:wheels,retainedGunParts:barrel,
   discardedReferenceMeshes:discard.length
  };

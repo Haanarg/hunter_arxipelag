@@ -86,6 +86,9 @@ assert(!studio.includes('setHullAxisSwap')&&!html.includes('btrAxisSwapHull'));
 assert(hullV3.includes('const lowerNames=new Set(')&&hullV3.includes('dz!==0'));
 assert(hullV3.includes('closeEnd(0,true)')&&hullV3.includes('closeEnd(rings.length-1,false)'));
 assert(hullV3.includes("frontClosure:'symmetric-centerline'"));
+assert(hullV3.includes("noseProfile:'sloped-back-underside'"));
+assert(hullV3.includes("turretProfile:'low-faceted-sloping'"));
+assert(hullV3.includes('createBtr82TurretV3Geometry'));
 
 
 assert(btr.includes('const previous=makeBtr82HullV2(baseline)'));
@@ -101,7 +104,7 @@ assert(html.includes('panells mitjans')&&html.includes('baixos'));
 assert(html.includes('Editor de marques 3D')&&html.includes('btrSelectGroup')&&html.includes('btrCopySelection')&&html.includes('btrSelectMode'));
 assert(html.includes('Tapar forats (clic)')&&html.includes('Eliminar peces'));
 assert(html.includes('Verd')&&html.includes('blau')&&html.includes('Desfer última acció'));
-assert(html.includes('btr82-symmetric-wedge-front-v3e'));
+assert(html.includes('btr82-sloped-nose-turret-v3f'));
 assert(!html.includes('casc v1'));
 assert(html.includes('panells mitjans')&&html.includes('casc v2'));
 assert(html.includes('tres targetes'));
@@ -120,14 +123,14 @@ assert(html.includes('max="2.50"'));
 assert(studio.includes('vehicle-annotation-editor.mjs?rev=surface-paint-v12'));
 assert(html.includes('id="btrRepairLiveStatus"')&&html.includes('id="btrRepairLiveCount"'));
 assert(html.includes('superfície exacta')&&html.includes('el comptador de triangles'));
-assert(studio.includes('btr82-symmetric-wedge-front-v3e'));
+assert(studio.includes('btr82-sloped-nose-turret-v3f'));
 assert(!studio.includes('btr82-angular-low-hull-v2'));
 assert(!currentRender.includes('reduceSurfaces('),'La v2 no ha de passar per SimplifyModifier');
 const confirmed=read('src/btr82-confirmed-repairs.mjs');
 assert(confirmed.includes('BTR82_CONFIRMED_REPAIRS')&&confirmed.includes('applyBtr82ConfirmedRepairs'));
 assert(!currentRender.includes('applyBtr82ConfirmedRepairs('),'La v2 no hereta reparacions antigues');
 
-assert(btr.includes("BTR82_VERSION='btr82-symmetric-wedge-front-v3e'"));
+assert(btr.includes("BTR82_VERSION='btr82-sloped-nose-turret-v3f'"));
 const holeBrush=read('src/vehicle-hole-brush.mjs');
 assert(holeBrush.includes('getHoleBrushTarget')&&holeBrush.includes('closeHoleUnderBrush'));
 assert(holeBrush.includes('boundaries(mesh)')&&holeBrush.includes('ShapeUtils.triangulateShape'));

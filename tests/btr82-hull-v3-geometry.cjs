@@ -54,7 +54,7 @@ const THREE={
  DoubleSide:2
 };
 const code=source.replace(/^import .*$/gm,'').replace(/^export /gm,'');
-const api=new Function('THREE',code+';return {createBtr82HullV3Geometry,makeBtr82HullV3,BTR82_HULL_V3_STATIONS}')(THREE);
+const api=new Function('THREE',code+';return {createBtr82HullV3Geometry,createBtr82TurretV3Geometry,makeBtr82HullV3,BTR82_HULL_V3_STATIONS}')(THREE);
 const hull=api.createBtr82HullV3Geometry();
 const position=hull.getAttribute('position'),ids=hull.index.array;
 assert.equal(ids.length/3,428);
@@ -110,11 +110,28 @@ for(const name of ['roof','brow','shoulder','belt','lip','shelf','wheelWell','st
 assert(rear.roof[1]>front.roof[1]+.3,'La proa no es distingeix prou de la popa');
 assert(middle.wheelWell[0]<1.438&&middle.wheelWell[1]>=.94,'Escaló de les rodes incorrecte');
 assert(middle.stepFoot[1]<0&&middle.belly[1]<-.2&&middle.belly[0]>.9,'Ventre massa estret o massa alt');
-for(const station of stations)for(const part of ['lip','shelf','wheelWell','stepFoot','belly','keel'])
+for(const station of stations.slice(1))for(const part of ['lip','shelf','wheelWell','stepFoot','belly','keel'])
  assert.equal(station[part][2],0,'Baixos girats en Z al tram '+station.z+' / '+part);
+const nose=stations[0];
+assert.equal(nose.belt[2],0);
+assert(nose.lip[2]>nose.belt[2]);
+assert(nose.keel[2]>nose.stepFoot[2]&&nose.stepFoot[2]>nose.wheelWell[2],
+ "The lower prow should taper towards the back");
+assert(nose.keel[1]>stations[1].keel[1], "The nose underside should rise");
+const turret=api.createBtr82TurretV3Geometry();
+const tp=turret.getAttribute('position');
+assert.equal(turret.index.count/3,76);
+assert.equal(tp.count,40);
+const baseX=Math.max(...Array.from({length:8},(_,i)=>tp.getX(i)));
+const topX=Math.max(...Array.from({length:8},(_,i)=>tp.getX(32+i)));
+const baseZ=Math.min(...Array.from({length:8},(_,i)=>tp.getZ(i)));
+const topZ=Math.min(...Array.from({length:8},(_,i)=>tp.getZ(32+i)));
+assert(topX<baseX-.3, "Turret shoulders need taper");
+assert(topZ>baseZ+.2, "Turret upper prow must slope rearward");
+assert(tp.getY(32)<2.85);
 // La meitat inferior de CADA secció segueix el mateix Z que l'eix del canó.
 const vertexCountPerSection=20;
-for(let i=0;i<stations.length;i++)for(let k=5;k<=10;k++)
+for(let i=1;i<stations.length;i++)for(let k=5;k<=10;k++)
  assert(Math.abs(coords[i*vertexCountPerSection+k][2]-stations[i].z)<1e-8,
   'Perfil inferior desalineat al canó a la secció '+i+' vèrtex '+k);
 const base=new Group();
@@ -141,4 +158,4 @@ assert.equal(rebuilt.children.filter(n=>n.name.startsWith('BTR82_truck_A43_wheel
 assert(!rebuilt.children.some(n=>n.name==='hull_material_0'));
 assert.deepEqual(rebuilt.getObjectByName('BTR82_v3_lowered_centre_hull').geometry.getAttribute('position').array,position.array);
 assert.equal(rebuilt.getObjectByName('BTR82_new_black_barrel').geometry,base.getObjectByName('BTR82_new_black_barrel').geometry);
-console.log('PASS BTR v3e: symmetric front wedge faces and roof preserved; sealed hull');
+console.log('PASS BTR v3f: sloping nose, symmetric X, tapered turret, closed geometry');
