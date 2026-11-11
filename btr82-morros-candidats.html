@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hunter · Sis mètodes de construcció del morro BTR-82</title>
+<meta name="description" content="Comparador 3D de sis reconstruccions experimentals del morro de la tanqueta BTR-82.">
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;--bg:#122327;--panel:#1b3235;--border:#4e6868;--ink:#eef5ed;--muted:#b5cac5;--gold:#f2d69c}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);overflow-x:hidden}
+body{overscroll-behavior-y:auto}
+a{color:#e1eeba;text-decoration-thickness:1px}
+header{position:relative;z-index:12;background:linear-gradient(110deg,#294848,#203537);border-bottom:1px solid var(--border);padding:14px clamp(12px,3vw,42px)}
+.kicker{font-size:11px;letter-spacing:.14em;color:var(--gold);font-weight:750}
+h1{font-size:clamp(20px,2.4vw,31px);line-height:1.16;margin:7px 0}
+header p{max-width:980px;margin:6px 0 12px;color:#d9e4d8;line-height:1.4;font-size:13px}
+nav{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+button,nav a,.toggle{border:1px solid #718b86;color:var(--ink);background:#2b4345;border-radius:8px;padding:8px 11px;cursor:pointer;font:650 12px system-ui;text-decoration:none}
+button:hover,nav a:hover{background:#3f5a58}
+button.active{color:#152a26;background:#d8efb6;border-color:#d8efb6}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+main{padding:12px clamp(8px,1.5vw,24px) 40px}
+#notice{color:#d7e7d7;background:#1b3336;border:1px solid #4b6b6c;border-radius:8px;padding:9px 12px;font-size:12px;line-height:1.5;margin-bottom:11px}
+#notice[data-error]{border-color:#d69b8d;color:#ffe6df}
+.control-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:8px 0 13px;font-size:12px;color:var(--muted)}
+.control-row label{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.control-row input{accent-color:#d8efb6}
+#grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.panel{min-width:0;border:1px solid #577471;border-radius:10px;overflow:hidden;background:var(--panel);display:flex;flex-direction:column}
+.panel header{position:relative;z-index:8;background:#253e40;border:0;border-bottom:1px solid #4b6463;padding:9px 12px;min-height:69px}
+.panel h2{font-size:14px;line-height:1.25;margin:0 0 4px}
+.panel .tag{color:var(--gold);font-size:11px;font-weight:650}
+.viewport{position:relative;z-index:5;height:clamp(215px,24vw,330px);touch-action:none;cursor:grab;background:transparent}
+.viewport:active{cursor:grabbing}
+.panel footer{position:relative;z-index:8;padding:9px 11px 11px;min-height:93px;background:#1a3034}
+.panel footer p{font-size:12px;color:#d5e1d7;margin:0 0 6px;line-height:1.4}
+.panel .stats{font:11px ui-monospace,monospace;color:#c9d9c8;min-height:16px}
+.panel .actions{display:flex;gap:6px;margin-top:8px}
+.panel .actions button{padding:5px 9px;font-size:11px}
+.panel.selected{border-color:#e8cd92;box-shadow:0 0 0 1px #e8cd92}
+.panel.error .stats{color:#ffc6bc}
+#referenceCard{display:none}
+#referenceCard.visible{display:flex}
+#grid.solo{grid-template-columns:minmax(0,1fr)}
+#grid.solo .panel:not(.selected){display:none}
+#grid.solo .viewport{height:min(65vh,650px)}
+.note{font-size:12px;line-height:1.5;color:#c0d3cb;max-width:1080px;margin:12px 2px}
+.note strong{color:#f5dfb9}
+#draw{position:fixed;inset:0;z-index:3;pointer-events:none}
+@media(max-width:1100px){#grid{grid-template-columns:repeat(2,minmax(0,1fr))}.viewport{height:clamp(260px,37vw,380px)}}
+@media(max-width:640px){#grid{grid-template-columns:1fr}.viewport{height:350px}.panel header{min-height:62px}header p{font-size:12px}}
+</style>
+<script type="importmap">{"imports":{"three":"./vendor/three-r186.module.mjs","three/addons/":"./vendor/three-addons/"}}</script>
+</head><body>
+<header>
+ <div class="kicker">HUNTER: ARXIPÈLAG · EXPERIMENT DE GEOMETRIA</div>
+ <h1>Els sis morros de la tanqueta</h1>
+ <p>Mateix casc posterior, torreta, canó i vuit rodes; sis mètodes diferents per resoldre el frontal. Cap d'aquests experiments modifica la tanqueta del joc ni la v3k del laboratori principal.</p>
+ <nav aria-label="Càmera sincronitzada">
+  <button data-view="quarter" class="active">3/4 frontal</button>
+  <button data-view="front">Frontal</button>
+  <button data-view="side">Lateral</button>
+  <button data-view="top">Zenital</button>
+  <button data-view="bottom">Inferior</button>
+  <button data-view="rear">Posterior</button>
+  <button id="zoomIn">＋ Zoom</button><button id="zoomOut">－ Zoom</button>
+  <button id="panLeft">←</button><button id="panRight">→</button>
+  <button id="panUp">↑</button><button id="panDown">↓</button>
+  <button id="fit">Enquadra</button>
+  <a href="vehicles-externs-proves.html">Laboratori principal</a>
+  <a href="index.html">Jugar</a>
+ </nav>
+</header>
+<main>
+ <div id="notice" role="status" aria-live="polite">Carregant el GLB original i generant els sis candidats…</div>
+ <div class="control-row">
+  <label><input type="checkbox" id="reference"> Mostra també l'original de referència (no compta com a candidat)</label>
+  <label><input type="checkbox" id="gridToggle" checked> Graella i terra</label>
+  <span>Arrossega per girar · Majúscules + arrossegar per moure · Alt + roda per apropar · «Ampliar» per estudiar-ne un</span>
+ </div>
+ <section id="grid" aria-label="Comparació de sis models 3D">
+  <article id="referenceCard" class="panel" data-id="reference">
+   <header><h2>Referència · GLB original</h2><span class="tag">Només per comparar formes</span></header>
+   <div class="viewport" aria-label="Visor 3D de l'original"></div>
+   <footer><p>Geometria original de SIpriv, amb rodes i canó de la base del laboratori.</p><div class="stats">Esperant el model…</div></footer>
+  </article>
+ </section>
+ <p class="note"><strong>Estat dels prototips:</strong> els mètodes 2–5 construeixen una closca nova a partir d'estacions o de mesures del GLB. El mètode 6 conserva triangles originals del morro i els connecta provisionalment amb el darrere low-poly: <strong>la costura encara és oberta</strong> i no s'ha d'incorporar al joc. Tots sis són proves reversibles.</p>
+</main>
+<script type="module" src="./src/btr82-six-nose-lab.mjs?rev=first-six-20261111"></script>
+</body></html>
