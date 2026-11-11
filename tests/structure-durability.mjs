@@ -57,6 +57,8 @@ for(const doorSide of [0,1]){
  const wall=colliders.walls.find(w=>Math.abs(w.cz-rear[0].lz)<1e-8&&Math.abs(w.cx)<1e-8);
  assert(wall,'la paret posterior ha de col·lisionar al servidor COOP');
  assert.equal(wall.hp,10,'la paret posterior ha de tenir exactament 10 PV');
+ assert.equal(wall.hangarRearWall,true);
+ assert.equal(wall.y1,20.12,'El límit superior del collider segueix l’alçada de la volta');
  assert.equal(wall.door,false);
  assert.equal(wall.weakWood,false);
  assert.equal(canLightDamageWall(wall),false);
@@ -94,6 +96,11 @@ assert(game.includes("if(shotClass==='light'&&!window.HUNTER_SHARED_COMBAT.canLi
 const server=readFileSync(new URL('../server/coop-mission.mjs',import.meta.url),'utf8');
 assert(server.includes('canLightDamageWall(w)')&&server.includes('canLightDamageRoof(building)'));
 assert(game.includes('y0:fy-1,y1:fy+sh,hp:10,m,door:false'));
+assert(game.includes('buildingVisual.addHangarRearWall(g,{lx,lz,sx,sz,material:wm})'));
+assert(game.includes('y0:fy-1,y1:fy+archHeight,hp:wallHp,m'));
+const visuals=readFileSync(new URL('../src/buildings.js',import.meta.url),'utf8');
+assert(visuals.includes('new THREE.ExtrudeGeometry(outline')&&visuals.includes('hunter-hangar-arched-rear-wall'));
+
 assert(game.includes('BUNKER_STRUCTURE_HP'));
 assert(game.includes('BUNKER_DOOR_HP'));
 const adapter=readFileSync(new URL('../src/world-adapter.mjs',import.meta.url),'utf8');
