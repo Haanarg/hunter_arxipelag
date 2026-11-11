@@ -9,7 +9,7 @@ export const BTR82_NOSE_CANDIDATES=Object.freeze([
  {id:'facets',title:'03 · Plans blindats',tag:'Poliedre',description:'Morro de grans superfícies planes, amb poques seccions i una punta explícita.'},
  {id:'silhouette',title:'04 · Tres siluetes',tag:'Projeccions del GLB',description:'Amplada, sostre i fons deduïts dels perfils projectats del model original.'},
  {id:'slices',title:'05 · Seccions transversals',tag:'Talls del GLB',description:'Altures dels panells calculades a partir de talls geomètrics del casc original.'},
- {id:'original',title:'06 · Morro original retallat',tag:'Conservació i simplificació',description:'Geometria real del morro amb el darrere low-poly. Unió provisional, encara oberta.'}
+ {id:'original',title:'06 · Morro original retallat',tag:'Retall original · simplificació pendent',description:'Proa original retallada i casc posterior low-poly; la costura és oberta i encara falta simplificar aquesta peça.'}
 ]);
 export const BTR82_NOSE_ASSET='./assets/vehicle-candidates/tanqueta/btr82-base-100.glb';
 const ORDER=['roof','brow','shoulder','belt','lip','shelf','wheelWell','stepFoot','belly','keel'];
