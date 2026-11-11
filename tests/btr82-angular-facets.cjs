@@ -12,11 +12,13 @@ const six=read('btr82-morros-candidats.html'),page=read('btr82-model3-angular.ht
 const lab=read('vehicles-externs-proves.html');
 const wf=read('.github/workflows/rebuild-runtime.yml');
 assert(page.includes('data-btr82-angular="true"'));
-assert(page.includes('Model 3 · dues variants més angulars'));
+assert(page.includes('BTR-82 · model 3B'));
+assert(!page.includes('id="referenceCard"'));
+assert(!page.includes('id="reference"'));
 assert(page.includes('href="btr82-morros-candidats.html"'));
 assert(six.includes('href="btr82-model3-angular.html"'));
 assert(lab.includes('href="btr82-model3-angular.html"'));
-assert(viewer.includes('angularMode?BTR82_ANGULAR_VARIANTS:BTR82_NOSE_CANDIDATES'));
+assert(viewer.includes("BTR82_ANGULAR_VARIANTS.filter(candidate=>candidate.id==='angular-strong')"));
 assert(viewer.includes('buildBtr82AngularCandidate(method.id,baseline)'));
 // El workflow torna a ser manual després de regenerar el paquet de producció.
 assert(/workflow_dispatch:/.test(wf));
