@@ -2,13 +2,17 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {Box3,Vector3} from '../vendor/three-r186.module.mjs';
-import {createBtr823BPreview} from '../src/btr82-3b-preview.mjs';
+import {createBtr823BPreview,BTR82_3B_PREVIEW_TURRET_SCALE} from '../src/btr82-3b-preview.mjs';
+import {createBtr82TurretV3Geometry} from '../src/btr82-hull-v3.mjs';
+import {compactBtr823BTurret,BTR82_3B_TURRET_PIVOT_Z} from '../src/btr82-angular-facets.mjs';
 
 const model=createBtr823BPreview();
 assert.equal(model.name,'BTR82_3B_revised_preview');
 assert.equal(model.userData.btr82Preview,'3B-revised');
 assert.equal(model.userData.btr82WheelCount,8);
 assert.equal(model.userData.previewOnly,true);
+assert.equal(BTR82_3B_PREVIEW_TURRET_SCALE,.75);
+assert.equal(model.userData.btr82TurretBodyScale,.75);
 const wheels=model.children.filter(o=>/^BTR82_3B_preview_wheel_\d+_[LR]$/.test(o.name));
 assert.equal(wheels.length,8,'Hi ha d’haver 8 rodes independents');
 for(const z of [-2.938,-.938,1.7505,3.585]){
@@ -35,8 +39,46 @@ for(const side of ['left','right'])
 
 assert.equal(byName('BTR82_v3_lowered_centre_hull').position.y,-.18);
 assert.equal(byName('BTR82_v3_low_angular_turret').position.y,-.18);
-assert(Math.abs(byName('BTR82_new_black_barrel').position.y-2.18)<1e-9);
+const expectedGunY=1.71+(2.36-1.71)*.75-.18;
+assert(Math.abs(byName('BTR82_new_black_barrel').position.y-expectedGunY)<1e-9);
+assert(Math.abs(byName('BTR82_new_black_muzzle').position.y-expectedGunY)<1e-9,
+ 'El canó i la boca de foc han de baixar junts');
 assert(Math.abs(byName('BTR82_new_black_barrel').position.z-(-1.53))<1e-9);
+
+// La reducció ha de ser uniforme, ancorada al centre X/Z original i a
+// la base Y, i no pot modificar la geometria de la resta del vehicle.
+const sourceTurret=createBtr82TurretV3Geometry();
+const original=sourceTurret.getAttribute('position');
+for(let i=0;i<original.count;i++)
+ original.setXYZ(i,-original.getX(i),original.getY(i),
+  2*BTR82_3B_TURRET_PIVOT_Z-original.getZ(i));
+compactBtr823BTurret(sourceTurret);
+sourceTurret.computeBoundingBox();
+const revisedTurret=byName('BTR82_v3_low_angular_turret');
+const measured=revisedTurret.geometry;
+measured.computeBoundingBox();
+const a=sourceTurret.boundingBox,b=measured.boundingBox;
+for(const dimension of ['x','y','z']){
+ const oldSpan=a.max[dimension]-a.min[dimension];
+ const newSpan=b.max[dimension]-b.min[dimension];
+ assert(Math.abs(newSpan/oldSpan-.75)<2e-5,
+  'La torreta ha de ser 25% més petita en '+dimension);
+}
+assert(Math.abs(a.min.y-b.min.y)<1e-6,'La base de la torreta no es pot alçar');
+const centre=(bbox,key)=>(bbox.min[key]+bbox.max[key])/2;
+assert(Math.abs(centre(a,'x')-centre(b,'x'))<1e-6,
+ 'La torreta no pot moure’s lateralment');
+assert(Math.abs(centre(b,'z')-(BTR82_3B_TURRET_PIVOT_Z+
+ (centre(a,'z')-BTR82_3B_TURRET_PIVOT_Z)*.75))<1e-6,
+ 'La torreta ha de seguir centrada sobre el mateix eix longitudinal');
+const gunTail=byName('BTR82_new_black_barrel').position.z+2.90/2;
+const ring=3*8,compactPos=measured.getAttribute('position');
+const front=Math.min(...[...Array(8).keys()].map(i=>compactPos.getZ(ring+i)));
+const rear=Math.max(...[...Array(8).keys()].map(i=>compactPos.getZ(ring+i)));
+assert(gunTail>front+.15&&gunTail<rear,
+ 'La culata del canó ha de penetrar dins la nova torreta');
+assert(Math.abs(compactPos.getY(ring)- (expectedGunY+.18))<1e-6,
+ 'El canó ha de conservar el contacte amb el rebaix més profund');
 model.updateWorldMatrix(true,true);
 const bounds=new Box3().setFromObject(model);
 const size=bounds.getSize(new Vector3());
@@ -48,5 +90,5 @@ const page=readFileSync(new URL('../vehicles-externs-proves.html',import.meta.ur
 assert(file.includes('createBtr823BPreview()'),'El banc principal no construeix el 3B');
 assert(file.includes("slot.outer.hidden=btrStudy?slots.indexOf(slot)>0:slots.indexOf(slot)>3"));
 assert(!file.includes('studio.load(token)'),'No s’han de carregar els antics GLB');
-assert(page.includes('compact-lab-v20-btr82-3b-revised'),'Revisió de memòria cau');
-console.log('PASS 3B preview: model autònom visible, 8 rodes separades, coronament compacte, detalls i només una targeta');
+assert(page.includes('compact-lab-v21-btr82-3b-smaller-turret'),'Revisió de memòria cau');
+console.log('PASS 3B preview: torreta 25% més petita, base centrada, canó connectat, rodes i detalls intactes');
