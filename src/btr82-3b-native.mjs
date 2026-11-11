@@ -1,8 +1,11 @@
 // BTR-82 model 3B definitiu: mateixa geometria que el comparador,
 // però amb rodes i canó animables i ajust visual al volum de la tanqueta
 // existent. Cap geometria GLB ni càrrega de xarxa durant la partida.
-import {createBtr82AngularGeometry,BTR82_3B_TURRET_PIVOT_Z,
-  BTR82_3B_BARREL_LOWERING_Y} from './btr82-angular-facets.mjs';
+import {createBtr82AngularGeometry,BTR82_3B_BARREL_LOWERING_Y} from './btr82-angular-facets.mjs';
+import {shapeBtr823BTurret,BTR82_3B_TURRET_FORWARD_Z,
+ BTR82_3B_TURRET_AXIS_Z,BTR82_3B_GUN_Y,BTR82_3B_YAW_Y,
+ BTR82_3B_TURRET_SCALE} from './btr82-3b-geometry.mjs';
+import {createBtr823BHardwareBatch} from './btr82-3b-details.mjs';
 import {createBtr82TurretV3Geometry,BTR82_CABIN_SHIFT_Z} from './btr82-hull-v3.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
 
@@ -16,11 +19,11 @@ export const BTR82_3B_GAME_FIT=Object.freeze({
 });
 const WHEEL_Z=Object.freeze([-2.938,-.938,1.7505,3.585]);
 const cache=new WeakMap();
-const GUN_REAR_Z=-1.91+BTR82_CABIN_SHIFT_Z+2.90/2;
-const BARREL_CENTER_Z=-1.91+BTR82_CABIN_SHIFT_Z;
-const MUZZLE_CENTER_Z=-3.47+BTR82_CABIN_SHIFT_Z;
+const GUN_REAR_Z=-1.91+BTR82_CABIN_SHIFT_Z+2.90/2+BTR82_3B_TURRET_FORWARD_Z;
+const BARREL_CENTER_Z=-1.91+BTR82_CABIN_SHIFT_Z+BTR82_3B_TURRET_FORWARD_Z;
+const MUZZLE_CENTER_Z=-3.47+BTR82_CABIN_SHIFT_Z+BTR82_3B_TURRET_FORWARD_Z;
 const MUZZLE_TIP_Z=MUZZLE_CENTER_Z-.28/2;
-const GUN_SOURCE_Y=2.69-BTR82_3B_BARREL_LOWERING_Y;
+const GUN_SOURCE_Y=BTR82_3B_GUN_Y;
 
 function makeCombinedWheelGeometry(THREE,radius,width){
  const positions=[],normals=[],colors=[];
@@ -62,20 +65,20 @@ function shared(THREE){
  hullGeometry.scale(sx,sy,sz);
  hullGeometry.translate(0,wheelCentreY-bodyDrop*sy,0);
 
- // El cos del 3B fa el mateix gir de 180° del comparador:
- // Z' = 2*pivotZ-Z, X'=-X. La torreta resta simètrica en X.
- const turretGeometry=createBtr82TurretV3Geometry();
- const attr=turretGeometry.getAttribute('position');
- for(let i=0;i<attr.count;i++)
-  attr.setXYZ(i,-attr.getX(i),attr.getY(i),
-    2*BTR82_3B_TURRET_PIVOT_Z-attr.getZ(i));
- attr.needsUpdate=true;
+ // Geometria idèntica al visor: torreta compacta (75%) i desplaçada
+ // endavant fins al segon eix; el canó i el pivot giren amb ella.
+ const turretGeometry=shapeBtr823BTurret(createBtr82TurretV3Geometry());
  turretGeometry.scale(sx,sy,sz);
- const turretPivotY=wheelCentreY+(2.14-bodyDrop)*sy;
- const turretPivotZ=BTR82_3B_TURRET_PIVOT_Z*sz;
+ const turretPivotY=wheelCentreY+(BTR82_3B_YAW_Y-bodyDrop)*sy;
+ const turretPivotZ=BTR82_3B_TURRET_AXIS_Z*sz;
  turretGeometry.translate(0,wheelCentreY-bodyDrop*sy-turretPivotY,-turretPivotZ);
- turretGeometry.computeVertexNormals();
  turretGeometry.computeBoundingSphere();
+
+ // Trapes, defenses, mirilles horitzontals i focus: una sola malla
+ // estàtica compartida entre totes les tanquetes (evita 53 draw calls/vehicle).
+ const hardwareGeometry=createBtr823BHardwareBatch(THREE);
+ hardwareGeometry.scale(sx,sy,sz);
+ hardwareGeometry.translate(0,wheelCentreY,0);
 
  const hullMaterial=new THREE.MeshStandardMaterial({
   color:0x5f6c53,roughness:.93,metalness:.04,
@@ -91,14 +94,17 @@ function shared(THREE){
  const wheelMaterial=new THREE.MeshStandardMaterial({
   vertexColors:true,roughness:.86,metalness:.12,flatShading:true
  });
+ const hardwareMaterial=new THREE.MeshStandardMaterial({
+  vertexColors:true,roughness:.88,metalness:.12,flatShading:true
+ });
  const barrelGeometry=new THREE.CylinderGeometry(
   .085*sx,.085*sx,2.90*sz,12);
  const muzzleGeometry=new THREE.CylinderGeometry(
   .115*sx,.115*sx,.28*sz,12);
  const wheelGeometry=makeCombinedWheelGeometry(THREE,tireRadius,
   sourceWheelHalfWidth*2*sx);
- const result={hullGeometry,turretGeometry,hullMaterial,turretMaterial,
-  gunMaterial,wheelMaterial,barrelGeometry,muzzleGeometry,wheelGeometry,
+ const result={hullGeometry,turretGeometry,hardwareGeometry,hullMaterial,turretMaterial,
+  hardwareMaterial,gunMaterial,wheelMaterial,barrelGeometry,muzzleGeometry,wheelGeometry,
   turretPivotY,turretPivotZ,wheelCentreY,tireRadius,sx,sy,sz};
  cache.set(THREE,result);
  return result;
@@ -113,6 +119,9 @@ export function installBtr82Model3B(THREE,g,{resources=null}={}){
  const hull=new THREE.Mesh(p.hullGeometry,p.hullMaterial);
  hull.name='BTR82_3B_hull';
  g.add(hull);
+ const hardware=new THREE.Mesh(p.hardwareGeometry,p.hardwareMaterial);
+ hardware.name='BTR82_3B_batched_hardware';
+ g.add(hardware);
  for(const z of WHEEL_Z)for(const side of [-1,1]){
   const front=z===WHEEL_Z[0];
   // La mangueta gira suaument sobre Y al primer eix; la roda interior
@@ -172,5 +181,8 @@ export function installBtr82Model3B(THREE,g,{resources=null}={}){
  g.userData.btr82FrontSteerCount=g.userData.steeringPivots.length;
  g.userData.btr82HullTriangles=p.hullGeometry.index.count/3;
  g.userData.btr82BarrelLowering=BTR82_3B_BARREL_LOWERING_Y;
+ g.userData.btr82TurretBodyScale=BTR82_3B_TURRET_SCALE;
+ g.userData.btr82TurretForwardZ=BTR82_3B_TURRET_FORWARD_Z;
+ g.userData.btr82HardwareBatched=true;
  return g;
 }
