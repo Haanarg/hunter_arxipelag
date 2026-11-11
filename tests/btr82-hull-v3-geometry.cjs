@@ -54,9 +54,8 @@ const THREE={
  DoubleSide:2
 };
 const code=source.replace(/^import .*$/gm,'').replace(/^export /gm,'');
-const api=new Function('THREE',code+';return {createBtr82HullV3Geometry,createBtr82HullV3AxisSwapGeometry,makeBtr82HullV3,BTR82_HULL_V3_STATIONS}')(THREE);
-const model=api.createBtr82HullV3Geometry();
-const hull=api.createBtr82HullV3AxisSwapGeometry(model);
+const api=new Function('THREE',code+';return {createBtr82HullV3Geometry,makeBtr82HullV3,BTR82_HULL_V3_STATIONS}')(THREE);
+const hull=api.createBtr82HullV3Geometry();
 const position=hull.getAttribute('position'),ids=hull.index.array;
 assert.equal(ids.length/3,396);
 assert.equal(position.count,200);
@@ -88,18 +87,24 @@ const bounds=g=>{
  }
  return {width:ranges.x[1]-ranges.x[0],length:ranges.z[1]-ranges.z[0],bottom:ranges.y[0],top:ranges.y[1]};
 };
-const before=bounds(model),after=bounds(hull);
-assert(Math.abs(before.width-after.width)<1e-8&&Math.abs(before.length-after.length)<1e-8);
+const after=bounds(hull);
 assert(Math.abs(after.width-3.82)<1e-8&&Math.abs(after.length-10.85)<1e-8);
-assert.equal(after.bottom,-.28);
+assert.equal(after.bottom,-.32);
 assert.equal(after.top,1.65);
 const stations=api.BTR82_HULL_V3_STATIONS,front=stations[0],rear=stations.at(-1),middle=stations[5];
 assert(front.roof[2]>.6,'Proa insuficientment inclinada');
 for(const name of ['roof','brow','shoulder','belt','lip','shelf','wheelWell','stepFoot','belly','keel'])
  assert.equal(rear[name][2],0,'Popa no plana: '+name);
 assert(rear.roof[1]>front.roof[1]+.3,'La proa no es distingeix prou de la popa');
-assert(middle.wheelWell[0]<1.438&&middle.wheelWell[1]>=.9,'Escaló de les rodes incorrecte');
+assert(middle.wheelWell[0]<1.438&&middle.wheelWell[1]>=.94,'Escaló de les rodes incorrecte');
 assert(middle.stepFoot[1]<0&&middle.belly[1]<-.2&&middle.belly[0]>.9,'Ventre massa estret o massa alt');
+for(const station of stations)for(const part of ['lip','shelf','wheelWell','stepFoot','belly','keel'])
+ assert.equal(station[part][2],0,'Baixos girats en Z al tram '+station.z+' / '+part);
+// La meitat inferior de CADA secció segueix el mateix Z que l'eix del canó.
+const vertexCountPerSection=20;
+for(let i=0;i<stations.length;i++)for(let k=5;k<=10;k++)
+ assert(Math.abs(coords[i*vertexCountPerSection+k][2]-stations[i].z)<1e-8,
+  'Perfil inferior desalineat al canó a la secció '+i+' vèrtex '+k);
 const base=new Group();
 for(let i=0;i<8;i++){
  const wheel=new Group();wheel.name='BTR82_truck_A43_wheel_'+i;
@@ -113,12 +118,14 @@ const old=new Node(new BufferGeometry(),null);old.name='hull_material_0';base.ad
 const rebuilt=api.makeBtr82HullV3(base),report=rebuilt.userData.btr82HullV3;
 assert.equal(report.axisRotationDegrees,90);
 assert.equal(report.symmetricalX,true);
-assert.equal(report.hullBottom,-.28);
-assert.equal(report.wheelStepHeight,.92);
+assert.equal(report.hullBottom,-.32);
+assert.equal(report.gunAxis,'-Z');
+assert.equal(report.transverseMirrorAxis,'X');
+assert.equal(report.wheelStepHeight,.96);
 assert.equal(report.retainedWheels,8);
 assert.equal(report.retainedGunParts,2);
 assert.equal(rebuilt.children.filter(n=>n.name.startsWith('BTR82_truck_A43_wheel_')).reduce((n,w)=>n+w.children.length,0),24);
 assert(!rebuilt.children.some(n=>n.name==='hull_material_0'));
 assert.deepEqual(rebuilt.getObjectByName('BTR82_v3_lowered_centre_hull').geometry.getAttribute('position').array,position.array);
 assert.equal(rebuilt.getObjectByName('BTR82_new_black_barrel').geometry,base.getObjectByName('BTR82_new_black_barrel').geometry);
-console.log('PASS BTR v3c: symmetric X, distinct blunt rear, enlarged lowered belly and wheels under ledges');
+console.log('PASS BTR v3d: direct gun-aligned Z geometry; mirrored X; roof retained; low rails and rear');
