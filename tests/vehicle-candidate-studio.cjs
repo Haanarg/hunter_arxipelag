@@ -70,28 +70,35 @@ const hullV3=read('src/btr82-hull-v3.mjs');
 assert(hullV3.includes('BTR82_HULL_V3_STATIONS')&&hullV3.includes('createBtr82HullV3Geometry'));
 assert(hullV3.includes('makeBtr82HullV3')&&hullV3.includes('BTR82_v3_lowered_centre_hull'));
 assert(hullV3.includes('BTR82_v3_low_angular_turret')&&hullV3.includes('preserved(mesh)'));
-assert(hullV3.includes('hullBottom:.15')&&hullV3.includes('roofHeight:1.68'));
+assert(hullV3.includes('hullBottom:-.28')&&hullV3.includes('roofHeight:1.65'));
+assert(hullV3.includes('wheelStepHeight:.92')&&hullV3.includes('lowerBellyHalfWidth:1.15'));
+assert(hullV3.includes('symmetricalX:true')&&hullV3.includes('axisRotationDegrees:90'));
+assert(hullV3.includes('createBtr82HullV3AxisSwapGeometry(createBtr82HullV3Geometry())'));
+assert(hullV3.includes('stepFoot:')&&hullV3.includes('wheelWell:')&&hullV3.includes('shelf:'));
+assert(hullV3.includes('z:5.425')&&hullV3.includes('z:-5.425'));
+
 assert(hullV3.includes('wheels!==8||barrel!==2'),'La v3 manté rodes i canó originals');
 assert(btr.includes('const clean=makeBtr82HullV3(baseline)'));
-assert(btr.includes('setBtr82HullV3AxisSwap(mesh,axisSwapEnabled)'));
-assert(btr.includes('return {load,importGlb,setHullAxisSwap}'));
-assert(html.includes('id="btrAxisSwapHull"')&&html.includes('ample/llarg intercanviats'));
-assert(studio.includes("editor.setHullAxisSwap(event.target.checked)"));
-assert(hullV3.includes('createBtr82HullV3AxisSwapGeometry')&&hullV3.includes('setBtr82HullV3AxisSwap'));
+assert(!btr.includes('setHullAxisSwap')&&!btr.includes('setBtr82HullV3AxisSwap'));
+assert(!studio.includes('setHullAxisSwap')&&!html.includes('btrAxisSwapHull'));
+assert(hullV3.includes('createBtr82HullV3AxisSwapGeometry'));
 assert(hullV3.includes('width/length')&&hullV3.includes('length/width'));
+
 
 assert(btr.includes('const previous=makeBtr82HullV2(baseline)'));
 assert(btr.includes('present(PASSES[1],clean,local)')&&btr.includes('present(PASSES[2],previous,local)'));
 assert(!btr.includes('makeBtr82HullV1'),'La v1 no es carrega');
 const currentRender=btr.slice(btr.indexOf('async function renderFromSource'),btr.indexOf('async function load'));
 assert(html.includes('casc v3')&&html.includes('tres targetes'));
+assert(html.includes('popa xata')&&html.includes('esglaons'));
+
 assert(html.includes('ventre central')||html.includes('part central inferior'));
 
 
 assert(html.includes('Editor de marques 3D')&&html.includes('btrSelectGroup')&&html.includes('btrCopySelection')&&html.includes('btrSelectMode'));
 assert(html.includes('Tapar forats (clic)')&&html.includes('Eliminar peces'));
 assert(html.includes('Verd')&&html.includes('blau')&&html.includes('Desfer última acció'));
-assert(html.includes('btr82-rotate-rescale-test-v3b'));
+assert(html.includes('btr82-symmetric-well-hull-v3c'));
 assert(!html.includes('casc v1'));
 assert(html.includes('part central inferior')&&html.includes('casc v2'));
 assert(html.includes('tres targetes'));
@@ -110,14 +117,14 @@ assert(html.includes('max="2.50"'));
 assert(studio.includes('vehicle-annotation-editor.mjs?rev=surface-paint-v12'));
 assert(html.includes('id="btrRepairLiveStatus"')&&html.includes('id="btrRepairLiveCount"'));
 assert(html.includes('superfície exacta')&&html.includes('el comptador de triangles'));
-assert(studio.includes('btr82-rotate-rescale-test-v3b'));
+assert(studio.includes('btr82-symmetric-well-hull-v3c'));
 assert(!studio.includes('btr82-angular-low-hull-v2'));
 assert(!currentRender.includes('reduceSurfaces('),'La v2 no ha de passar per SimplifyModifier');
 const confirmed=read('src/btr82-confirmed-repairs.mjs');
 assert(confirmed.includes('BTR82_CONFIRMED_REPAIRS')&&confirmed.includes('applyBtr82ConfirmedRepairs'));
 assert(!currentRender.includes('applyBtr82ConfirmedRepairs('),'La v2 no hereta reparacions antigues');
 
-assert(btr.includes("BTR82_VERSION='btr82-rotate-rescale-test-v3b'"));
+assert(btr.includes("BTR82_VERSION='btr82-symmetric-well-hull-v3c'"));
 const holeBrush=read('src/vehicle-hole-brush.mjs');
 assert(holeBrush.includes('getHoleBrushTarget')&&holeBrush.includes('closeHoleUnderBrush'));
 assert(holeBrush.includes('boundaries(mesh)')&&holeBrush.includes('ShapeUtils.triangulateShape'));
