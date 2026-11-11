@@ -6,7 +6,7 @@ import {BTR82_ANGULAR_VARIANTS,buildBtr82AngularCandidate} from './btr82-angular
 import {applyBtr823BDetails} from './btr82-3b-details.mjs?rev=model3-angular-a6';
 
 const angularMode=document.documentElement.dataset.btr82Angular==='true';
-const methods=angularMode?BTR82_ANGULAR_VARIANTS:BTR82_NOSE_CANDIDATES;
+const methods=angularMode?BTR82_ANGULAR_VARIANTS.filter(candidate=>candidate.id==='angular-strong'):BTR82_NOSE_CANDIDATES;
 const notice=document.querySelector('#notice'),grid=document.querySelector('#grid');
 const referenceCard=document.querySelector('#referenceCard');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -51,7 +51,7 @@ function createSlot(card,id){
  slots.push(slot);slotById.set(id,slot);
  return slot;
 }
-createSlot(referenceCard,'reference');
+if(referenceCard)createSlot(referenceCard,'reference');
 for(const method of methods){
  const card=document.createElement('article');
  card.className='panel';card.dataset.id=method.id;
@@ -72,7 +72,7 @@ for(const method of methods){
    selected=method.id;grid.classList.add('solo');
    for(const c of grid.querySelectorAll('.panel'))c.classList.toggle('selected',c===card);
    for(const button of grid.querySelectorAll('.actions button'))button.textContent='Ampliar';
-   focus.textContent='Tots sis';
+   focus.textContent='Tots els models';
    card.scrollIntoView({behavior:'smooth',block:'start'});
   }
   updateCameras();schedule();
@@ -148,7 +148,7 @@ document.querySelector('#panDown').addEventListener('click',()=>{cameraState.y-=
 document.querySelector('#fit').addEventListener('click',()=>{
  cameraState.zoom=1;cameraState.offset=0;cameraState.y=1.35;updateCameras();schedule();
 });
-document.querySelector('#reference').addEventListener('change',event=>{
+document.querySelector('#reference')?.addEventListener('change',event=>{
  referenceCard.classList.toggle('visible',event.target.checked);
  updateCameras();schedule();
 });
@@ -219,7 +219,7 @@ async function load(){
   const center=bbox.getCenter(new THREE.Vector3());
   baseOffset=new THREE.Vector3(-center.x,-bbox.min.y,-center.z);
   const originalTriangles=angularMode?null:extractBtr82SourceTriangles(baseline);
-  present(slotById.get('reference'),baseline.clone(true));
+  if(referenceCard)present(slotById.get('reference'),baseline.clone(true));
   let succeeded=0;
   for(const method of methods){
    const slot=slotById.get(method.id);
@@ -240,7 +240,7 @@ async function load(){
    await new Promise(resolve=>requestAnimationFrame(resolve));
   }
   notice.textContent='Carregats '+succeeded+' de '+methods.length+
-   (angularMode?' graus d’angularitat del model 3':' candidats del morro')+
+   (angularMode?' models 3B':' candidats del morro')+
    ', des de la mateixa base GLB amb les mateixes vuit rodes i el canó.'+
    (succeeded===methods.length?' Compara les superfícies des de sota, lateralment i frontalment.':
     ' Els errors es mostren a les targetes.');
