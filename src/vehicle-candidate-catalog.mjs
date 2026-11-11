@@ -8,7 +8,7 @@ const Q=(query)=>({query});
 const S=(modelId,url,title,author,triangles,license,note)=>({provider:'sketchfab',modelId,url,title,author,triangles,license,note});
 export const CATALOG=[
  {id:'tanqueta',name:'Tanqueta · BTR-82 3B',kind:'terra',
-   note:'Model 3B de proves: cos de la torreta reduït un 25%, centrat sobre el mateix eix i amb la base a la mateixa altura; canó abaixat per encaixar al rebaix frontal. Conserva les vuit rodes separades, defenses posteriors, trapes, mirilles i quatre focus. No modifica el model del joc.',
+   note:'Model 3B actualitzat al joc: torreta 25% més petita i centrada longitudinalment sobre el segon eix, amb el canó alineat; mirilles horitzontals amb carcassa verda encastada al casc. Conserva les vuit rodes, defenses posteriors, trapes, ventilació i quatre focus.',
    options:[]},
  {id:'tanc',name:'Tanc · estil M1A1 Abrams',kind:'terra',
    note:'Substituïts els tres GLB genèrics per candidats M1A1/M1 amb llicència Creative Commons identificada. Cal verificar les peces mòbils i adaptar els models abans d’usar-los al joc.',
