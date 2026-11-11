@@ -121,6 +121,9 @@ assert(nose.keel[2]>nose.stepFoot[2]&&nose.stepFoot[2]>nose.wheelWell[2],
 assert(nose.keel[1]>stations[1].keel[1], "The nose underside should rise");
 assert(nose.belt[0]<stations[1].belt[0]-.35,'Proa mes estreta');
 assert(nose.shoulder[0]<stations[1].shoulder[0]-.35,'Espatlles del morro en cunya');
+assert(nose.keel[1]>stations[1].keel[1]+1.0,'El ventre frontal ha de pujar fins a la proa');
+assert(Math.abs(nose.belt[1]-nose.keel[1])<.12,'Els baixos no convergeixen amb la punta');
+assert(nose.keel[2]<.2&&nose.stepFoot[2]<.2,'La cunya no pot recular darrere la punta');
 const turret=api.createBtr82TurretV3Geometry();
 const tp=turret.getAttribute('position');
 assert.equal(turret.index.count/3,76);
@@ -151,6 +154,7 @@ const rebuilt=api.makeBtr82HullV3(base),report=rebuilt.userData.btr82HullV3;
 assert.equal(report.axisRotationDegrees,90);
 assert.equal(report.symmetricalX,true);
 assert.equal(report.hullBottom,-.32);
+assert.equal(report.noseKeelHeight,.82);
 assert.equal(report.gunAxis,'-Z');
 assert.equal(report.transverseMirrorAxis,'X');
 assert.equal(report.wheelStepHeight,.96);

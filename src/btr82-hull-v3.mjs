@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 
-// BTR-82 v3g: eixos definitius X transversal / Z longitudinal del canó.
+// BTR-82 v3h: eixos definitius X transversal / Z longitudinal del canó.
 // Les estacions descriuen el casc FINAL (proa=-Z, popa=+Z) i són
 // simètriques NOMÉS en X, paral·lelament al canó. Proa i popa diferents.
 // Tota la geometria és una sola closca manifold en eixos finals, sense girs inversos.
@@ -12,10 +12,11 @@ import * as THREE from '../vendor/three-r186.module.mjs';
 // Les rodes tenen centre X aproximadament ±1.69, radi ~0.81 i no es toquen.
 export const BTR82_HULL_V3_STATIONS=Object.freeze([
  {z:-5.425,roof:[.84,1.12,.86],brow:[1.08,1.14,.68],shoulder:[1.24,1.06,.42],
-  // Estret en planta, espatlles en cunya i baixos reculats.
-  belt:[1.34,.91,0],lip:[1.28,.85,.18],shelf:[1.22,.79,.52],
-  wheelWell:[1.13,.76,.72],stepFoot:[1.04,.06,.93],
-  belly:[.91,-.10,1.03],keel:[.30,-.14,1.13]},
+  // Cunya completa: els baixos pugen fins a la punta, abans de les rodes.
+  // Els tres punts superiors es conserven intactes.
+  belt:[1.34,.91,0],lip:[1.27,.87,.035],shelf:[1.18,.82,.065],
+  wheelWell:[1.07,.78,.085],stepFoot:[.96,.76,.10],
+  belly:[.79,.78,.105],keel:[.30,.82,.11]},
  {z:-4.36,roof:[1.14,1.44,.25],brow:[1.43,1.43,.15],shoulder:[1.70,1.29,.06],
   belt:[1.76,1.06,0],lip:[1.76,.94,0],shelf:[1.54,.96,0],
   wheelWell:[1.20,.96,0],stepFoot:[1.11,-.08,0],
@@ -190,9 +191,10 @@ export function makeBtr82HullV3(baseline){
   hullTriangles:hull.geometry.index.count/3,
   turretTriangles:turret.geometry.index.count/3,
   hullBottom:-.32,roofHeight:1.65,
+  noseKeelHeight:.82,noseTipZ:-5.425,
   wheelStepHeight:.96,lowerBellyHalfWidth:1.11,
   gunAxis:'-Z',transverseMirrorAxis:'X',frontClosure:'symmetric-centerline',
-  noseProfile:'narrow-plan-wedge',rearProfile:'blunt-beveled-underside',turretProfile:'low-faceted-sloping',
+  noseProfile:'full-depth-converging-wedge',rearProfile:'blunt-beveled-underside',turretProfile:'low-faceted-sloping',
   retainedWheels:wheels,retainedGunParts:barrel,
   discardedReferenceMeshes:discard.length
  };
