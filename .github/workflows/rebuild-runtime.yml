@@ -1,17 +1,7 @@
 name: Hunter - comprovacions bàsiques i runtime
+# Execució NOMÉS manual: cap push al repositori inicia aquest workflow.
+# GitHub > Actions > Hunter - comprovacions bàsiques i runtime > Run workflow.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - '!src/runtime-bundle.mjs'
-      - 'server/**'
-      - 'tools/build-runtime.cjs'
-      - 'tools/sync-version.cjs'
-      - 'tests/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/rebuild-runtime.yml'
   workflow_dispatch:
 permissions:
   contents: write
@@ -29,18 +19,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Arxivar els models CC0 provisionals (única execució sol·licitada)
-        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[vehicles-download]') }}
-        run: |
-          node tools/fetch-vehicle-candidates.mjs
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A assets/vehicle-candidates
-          if ! git diff --cached --quiet; then
-            git commit -m "assets: cache CC0 vehicle candidates for visual review"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
       - name: Instal·lar dependències
         run: npm ci --ignore-scripts
       - name: Executar proves bàsiques
