@@ -48,6 +48,6 @@ assert([...Array(attr.count).keys()].some(i=>Math.abs(attr.getY(i)-2.36)<1e-6),
 const viewer=readFileSync(new URL('../src/btr82-six-nose-lab.mjs',import.meta.url),'utf8');
 const page=readFileSync(new URL('../btr82-model3-angular.html',import.meta.url),'utf8');
 assert(viewer.includes("if(angularMode&&method.id==='angular-strong')applyBtr823BDetails(scene)"));
-assert(page.includes('model3-angular-20261111-a6'));
+assert(page.includes('model3-angular-20261111-a7'));
 assert(page.includes('defenses posteriors'));
 console.log('PASS model 3B Paradoxa: defenses i coberta posterior, mirilles, 4 focus i torreta compacta');
