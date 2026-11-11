@@ -2,7 +2,8 @@ import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {makeBtr82LabBaseline} from './btr82-lod-studio.mjs';
 import {BTR82_NOSE_CANDIDATES,BTR82_NOSE_ASSET,extractBtr82SourceTriangles,buildBtr82NoseCandidate} from './btr82-nose-candidates.mjs?rev=model3-angular-a4';
-import {BTR82_ANGULAR_VARIANTS,buildBtr82AngularCandidate} from './btr82-angular-facets.mjs?rev=model3-angular-a5';
+import {BTR82_ANGULAR_VARIANTS,buildBtr82AngularCandidate} from './btr82-angular-facets.mjs?rev=model3-angular-a6';
+import {applyBtr823BDetails} from './btr82-3b-details.mjs?rev=model3-angular-a6';
 
 const angularMode=document.documentElement.dataset.btr82Angular==='true';
 const methods=angularMode?BTR82_ANGULAR_VARIANTS:BTR82_NOSE_CANDIDATES;
@@ -226,6 +227,8 @@ async function load(){
     const {scene,details}=angularMode
      ?buildBtr82AngularCandidate(method.id,baseline)
      :buildBtr82NoseCandidate(method.id,baseline,originalTriangles);
+    // Els accessoris nous són només del 3B del visor, no del joc.
+    if(angularMode&&method.id==='angular-strong')applyBtr823BDetails(scene);
     present(slot,scene,details);
     succeeded++;
    }catch(error){
