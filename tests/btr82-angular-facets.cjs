@@ -48,7 +48,7 @@ const noseApi=new Function('THREE','makeBtr82HullV3','BTR82_HULL_V3_STATIONS','c
  removeImports(source)+';return {fromFacets,BTR82_NOSE_CANDIDATES};'
  )(three,()=>{},stationApi.BTR82_HULL_V3_STATIONS,stationApi.createBtr82HullGeometryFromStations);
 const angularApi=new Function('THREE','fromFacets','buildBtr82NoseCandidate','BTR82_CABIN_SHIFT_Z',
- removeImports(angularSource)+';return {BTR82_ANGULAR_VARIANTS,createBtr82AngularGeometry,centreBtr82AngularHardware,reverseBtr82StrongTurretBody,BTR82_3B_TURRET_PIVOT_Z,BTR82_3B_BARREL_RETRACTION_Z};'
+ removeImports(angularSource)+';return {BTR82_ANGULAR_VARIANTS,createBtr82AngularGeometry,centreBtr82AngularHardware,reverseBtr82StrongTurretBody,BTR82_3B_TURRET_PIVOT_Z,BTR82_3B_BARREL_LOWERING_Y,BTR82_3B_BARREL_RETRACTION_Z};'
  )(three,noseApi.fromFacets,()=>{},stationApi.BTR82_CABIN_SHIFT_Z);
 assert.equal(noseApi.BTR82_NOSE_CANDIDATES.length,6,'Els sis experiments originals han de romandre');
 assert.deepEqual(angularApi.BTR82_ANGULAR_VARIANTS.map(a=>a.id),
@@ -165,6 +165,7 @@ const barrel=nodes.get('BTR82_new_black_barrel');
 const muzzle=nodes.get('BTR82_new_black_muzzle');
 barrel.isMesh=true;muzzle.isMesh=true;
 barrel.position.z=-1.91+.38;muzzle.position.z=-3.47+.38;
+barrel.position.y=2.69-.18;muzzle.position.y=2.69-.18;
 const gunBefore={barrel:{...barrel.position},muzzle:{...muzzle.position}};
 const wheelsBefore=Array.from({length:8},(_,i)=>(
  {...nodes.get('BTR82_truck_A43_wheel_'+i).position}));
@@ -173,7 +174,9 @@ const localScene={userData:{},getObjectByName:name=>
 angularApi.reverseBtr82StrongTurretBody(localScene);
 assert.notEqual(testTurret.geometry,originalTurret,'Cal girar una còpia de la malla');
 assert(Math.abs(angularApi.BTR82_3B_TURRET_PIVOT_Z+.31)<1e-9,'Pivot incorrecte');
+assert.equal(angularApi.BTR82_3B_BARREL_LOWERING_Y,.33);
 assert.equal(angularApi.BTR82_3B_BARREL_RETRACTION_Z,0);
+assert.equal(localScene.userData.btr82StrongTurret.barrelLoweringY,.33);
 assert.equal(localScene.userData.btr82StrongTurret.bodyRotationY,180);
 const sourceTurret=originalTurret.getAttribute('position');
 const turnedTurret=testTurret.geometry.getAttribute('position');
@@ -191,20 +194,29 @@ assert.deepEqual(originalTurret.getAttribute('position').array,originalXYZ,
 for(let ring=0;ring<6;ring++)assert(
  turnedTurret.getZ(ring*8+4)<turnedTurret.getZ(ring*8),
  'La corba posterior original ha de mirar a -Z després de girar');
-assert.deepEqual(barrel.position,gunBefore.barrel,'El cos del canó no es pot moure');
-assert.deepEqual(muzzle.position,gunBefore.muzzle,'La boca de foc no es pot moure');
+for(const [part,before] of [[barrel,gunBefore.barrel],[muzzle,gunBefore.muzzle]]){
+ assert(Math.abs(part.position.y-(before.y-.33))<1e-9,
+  'El canó 3B ha de baixar 33 cm ambdues peces juntes');
+ assert(Math.abs(part.position.y-(2.36-.18))<1e-9,
+  'El centre del canó ha de quedar a l’altura del rebaix màxim de la torreta');
+ assert.equal(part.position.x,before.x,'El canó ha de seguir a X=0');
+ assert.equal(part.position.z,before.z,'El canó ja està encastat: no cal moure Z');
+}
 for(let i=0;i<8;i++)assert.deepEqual(
  nodes.get('BTR82_truck_A43_wheel_'+i).position,wheelsBefore[i],
  'Gir de torreta ha mogut una roda');
 assert(angularSource.includes("if(method==='angular-strong')reverseBtr82StrongTurretBody(scene)"),
  'El gir només ha d’afectar la 3B');
 assert.throws(()=>angularApi.reverseBtr82StrongTurretBody(localScene),/ja està girada/);
-// A la part alta, l'extrem posterior del canó ja queda dins el
-// cos de la torreta girat; no cal escurçar-ne la part visible.
-const gunTailZ=gunBefore.barrel.z+2.90/2;
+// A l'altura de la corba més endinsada (anella 3), el canó travessa
+// la cara frontal i entra suficientment al cos: no queda volant.
+const gunTailZ=barrel.position.z+2.90/2;
+const deepestCutFrontZ=turnedTurret.getZ(3*8+4);
 const bodyBackZ=Math.max(turnedTurret.getZ(5*8),turnedTurret.getZ(4*8));
-assert(gunTailZ<bodyBackZ,'El canó no penetra dins la torreta girada');
+assert(turnedTurret.getY(3*8+4)===2.36,'La corba més endinsada ha de ser a Y=2.36');
+assert(gunTailZ>deepestCutFrontZ+.15,'La culata ha de penetrar la cara frontal del rebaix');
+assert(gunTailZ<bodyBackZ,'El canó ha de quedar dins la torreta');
 assert(-.32-.18>-.8125,'Els baixos han de quedar per sobre del terra');
 assert.equal(JSON.stringify(Array.from(baseline.getAttribute('position').array)),originalData,
  'La versió original no s’ha d’alterar en crear variants');
-console.log('PASS BTR 3B: torreta 180º corba cap al davant, canó immòbil, 3/3A intactes');
+console.log('PASS BTR 3B: torreta girada 180º, canó 33 cm més baix i encastat, 3/3A intactes');
