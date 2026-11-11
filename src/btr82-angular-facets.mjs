@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {fromFacets,buildBtr82NoseCandidate} from './btr82-nose-candidates.mjs?rev=model3-angular-a3';
+import {BTR82_CABIN_SHIFT_Z} from './btr82-hull-v3.mjs';
 
 // Alternativa aprovada per l'usuari: candidat 3 (plans blindats).
 // Les variants són malles REALMENT diferents, no sols shading:
@@ -8,8 +9,8 @@ export const BTR82_ANGULAR_VARIANTS=Object.freeze([
   description:'Morro de plans blindats amb els baixos ampliats fins a les rodes i triangles reflectits a esquerra i dreta.'},
  {id:'angular-mild',title:'Model 3A · angular moderat',tag:'Menys arestes · mateix volum',
   description:'Elimina perfils redundants, però manté el tall del sostre, les espatlles, el passamans de les rodes i la quilla.'},
- {id:'angular-strong',title:'Model 3B · angular fort',tag:'Quilla ampla · simetria axial',
-  description:'Quilla ampla i plana entre rodes, amb lleixa superior protectora i paret interior marcada. Set seccions longitudinals.'}
+ {id:'angular-strong',title:'Model 3B · angular fort',tag:'Torreta invertida · corba al davant',
+  description:'Quilla ampla, escaló protector i cos de la torreta girat 180°: el retall corb mira cap al morro. El canó continua endavant.'}
 ]);
 
 // 14 punts per secció: al 3B conservem la lleixa i el mur protector.
@@ -129,6 +130,41 @@ export function centreBtr82AngularHardware(scene){
   left.position.z=z;right.position.z=z;
  }
 }
+// GIR NOMÉS DE LA TORRETA 3B: el corbat posterior passa a mirar -Z.
+// Pivot sobre l'eix longitudinal original (cz=-.69 + setback de .38).
+// Les peces del canó continuen orientades a -Z i mantenen la llargada.
+export const BTR82_3B_TURRET_PIVOT_Z=BTR82_CABIN_SHIFT_Z-.69;
+export const BTR82_3B_TURRET_ROTATION_DEGREES=180;
+export const BTR82_3B_BARREL_RETRACTION_Z=0;
+// El canó actual, llarg 2.90 m, queda de Z=-2.98 a Z=-.08;
+// després de girar la torreta encara hi entra pel davant i per tant
+// no cal fer retrocedir la seva boca de foc.
+export function reverseBtr82StrongTurretBody(scene){
+ const body=scene.getObjectByName('BTR82_v3_low_angular_turret');
+ if(!body?.isMesh||!body.geometry?.getAttribute)throw Error('No es troba la torreta');
+ if(body.userData?.rotated180)throw Error('La torreta ja està girada');
+ // Clonem, per no alterar ni la geometria compartida ni els models 3/3A.
+ const turned=body.geometry.clone();
+ const pos=turned.getAttribute('position'),pivot=BTR82_3B_TURRET_PIVOT_Z;
+ for(let i=0;i<pos.count;i++){
+  const x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);
+  pos.setXYZ(i,-x,y,2*pivot-z); // gir 180º sobre l'eix Y pel pivot
+ }
+ pos.needsUpdate=true;
+ turned.computeVertexNormals();turned.computeBoundingBox();turned.computeBoundingSphere();
+ // Abans de mutar el cos, garantim que el canó separat encara existeix.
+ for(const name of ['BTR82_new_black_barrel','BTR82_new_black_muzzle']){
+  const part=scene.getObjectByName(name);
+  if(!part?.isMesh||!part.position)throw Error('Falta canó: '+name);
+ }
+ body.geometry=turned;
+ body.userData={...body.userData,rotated180:true,pivotZ:pivot};
+ if(scene.userData)scene.userData.btr82StrongTurret={
+  bodyRotationY:180,pivotZ:pivot,barrelRetractionZ:0,gunAxis:'-Z'
+ };
+ return body;
+}
+
 export function buildBtr82AngularCandidate(method,baseline){
  if(!BTR82_ANGULAR_VARIANTS.some(v=>v.id===method))throw Error('Variant desconeguda');
  const {scene,details:baseDetails}=buildBtr82NoseCandidate('facets',baseline,null);
@@ -137,10 +173,14 @@ export function buildBtr82AngularCandidate(method,baseline){
  hull.geometry.dispose();hull.geometry=geometry;
  hull.material=hull.material.clone();hull.material.flatShading=true;hull.material.needsUpdate=true;
  centreBtr82AngularHardware(scene);
+ // Els dos altres candidats no giren la torreta; 3B sí.
+ if(method==='angular-strong')reverseBtr82StrongTurretBody(scene);
  const referenceTriangles=createBtr82AngularGeometry('facets').index.count/3;
  const hullTriangles=geometry.index.count/3;
  return {scene,details:{hullTriangles,
   reductionPercent:Math.round((1-hullTriangles/referenceTriangles)*100),
   profiles:PROFILES[method].length,stations:geometry.userData.angularStations,
-  bodyLowering:baseDetails.bodyLowering}};
+  bodyLowering:baseDetails.bodyLowering,
+  turretBodyRotationY:method==='angular-strong'?180:0,
+  barrelRetractionZ:BTR82_3B_BARREL_RETRACTION_Z}};
 }

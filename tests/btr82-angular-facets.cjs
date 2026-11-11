@@ -25,12 +25,17 @@ class Attribute{
  getX(i){return this.array[i*this.itemSize]}
  getY(i){return this.array[i*this.itemSize+1]}
  getZ(i){return this.array[i*this.itemSize+2]}
+ setXYZ(i,x,y,z){this.array[i*this.itemSize]=x;
+  this.array[i*this.itemSize+1]=y;this.array[i*this.itemSize+2]=z}
 }
 class Geometry{
  constructor(){this.userData={}}
  setAttribute(k,v){this[k]=v}
  getAttribute(k){return this[k]}
  setIndex(values){this.index={count:values.length,array:values,getX:i=>values[i]}}
+ clone(){const g=new Geometry();g.userData={...this.userData};
+  g.setAttribute('position',new Attribute([...this.getAttribute('position').array],3));
+  if(this.index)g.setIndex([...this.index.array]);return g}
  computeVertexNormals(){}
  computeBoundingSphere(){}
  computeBoundingBox(){}
@@ -38,13 +43,13 @@ class Geometry{
 const three={BufferGeometry:Geometry,Float32BufferAttribute:Attribute};
 const removeImports=code=>code.replace(/^import .*$/gm,'').replace(/^export /gm,'');
 const stationApi=new Function('THREE',removeImports(baseSource)+
- ';return {BTR82_HULL_V3_STATIONS,createBtr82HullGeometryFromStations};')(three);
+ ';return {BTR82_HULL_V3_STATIONS,createBtr82HullGeometryFromStations,createBtr82TurretV3Geometry,BTR82_CABIN_SHIFT_Z};')(three);
 const noseApi=new Function('THREE','makeBtr82HullV3','BTR82_HULL_V3_STATIONS','createBtr82HullGeometryFromStations',
  removeImports(source)+';return {fromFacets,BTR82_NOSE_CANDIDATES};'
  )(three,()=>{},stationApi.BTR82_HULL_V3_STATIONS,stationApi.createBtr82HullGeometryFromStations);
-const angularApi=new Function('THREE','fromFacets','buildBtr82NoseCandidate',
- removeImports(angularSource)+';return {BTR82_ANGULAR_VARIANTS,createBtr82AngularGeometry,centreBtr82AngularHardware};'
- )(three,noseApi.fromFacets,()=>{});
+const angularApi=new Function('THREE','fromFacets','buildBtr82NoseCandidate','BTR82_CABIN_SHIFT_Z',
+ removeImports(angularSource)+';return {BTR82_ANGULAR_VARIANTS,createBtr82AngularGeometry,centreBtr82AngularHardware,reverseBtr82StrongTurretBody,BTR82_3B_TURRET_PIVOT_Z,BTR82_3B_BARREL_RETRACTION_Z};'
+ )(three,noseApi.fromFacets,()=>{},stationApi.BTR82_CABIN_SHIFT_Z);
 assert.equal(noseApi.BTR82_NOSE_CANDIDATES.length,6,'Els sis experiments originals han de romandre');
 assert.deepEqual(angularApi.BTR82_ANGULAR_VARIANTS.map(a=>a.id),
  ['facets','angular-mild','angular-strong']);
@@ -151,7 +156,55 @@ for(const [l,r] of [[0,1],[3,2],[5,4],[6,7]]){
  assert.equal(a.x,-b.x);assert.equal(a.z,b.z);
  assert.equal(a.y,0);assert.equal(b.y,0);
 }
+// Les dades de la torreta que ja tenim defineixen sis anelles de vuit punts.
+const originalTurret=stationApi.createBtr82TurretV3Geometry();
+const originalXYZ=[...originalTurret.getAttribute('position').array];
+const testTurret={name:'BTR82_v3_low_angular_turret',isMesh:true,
+ geometry:originalTurret,userData:{},position:{x:0,y:-.18,z:0}};
+const barrel=nodes.get('BTR82_new_black_barrel');
+const muzzle=nodes.get('BTR82_new_black_muzzle');
+barrel.isMesh=true;muzzle.isMesh=true;
+barrel.position.z=-1.91+.38;muzzle.position.z=-3.47+.38;
+const gunBefore={barrel:{...barrel.position},muzzle:{...muzzle.position}};
+const wheelsBefore=Array.from({length:8},(_,i)=>(
+ {...nodes.get('BTR82_truck_A43_wheel_'+i).position}));
+const localScene={userData:{},getObjectByName:name=>
+ name==='BTR82_v3_low_angular_turret'?testTurret:nodes.get(name)};
+angularApi.reverseBtr82StrongTurretBody(localScene);
+assert.notEqual(testTurret.geometry,originalTurret,'Cal girar una còpia de la malla');
+assert(Math.abs(angularApi.BTR82_3B_TURRET_PIVOT_Z+.31)<1e-9,'Pivot incorrecte');
+assert.equal(angularApi.BTR82_3B_BARREL_RETRACTION_Z,0);
+assert.equal(localScene.userData.btr82StrongTurret.bodyRotationY,180);
+const sourceTurret=originalTurret.getAttribute('position');
+const turnedTurret=testTurret.geometry.getAttribute('position');
+for(let i=0;i<sourceTurret.count;i++){
+ assert(Math.abs(sourceTurret.getX(i)+turnedTurret.getX(i))<1e-9,
+  'Rotació 180º sobre Y: X incorrecte');
+ assert.equal(sourceTurret.getY(i),turnedTurret.getY(i),
+  'El gir no ha de canviar l’altura');
+ assert(Math.abs(sourceTurret.getZ(i)+turnedTurret.getZ(i)-
+  2*angularApi.BTR82_3B_TURRET_PIVOT_Z)<1e-9,
+  'La torreta no ha girat exactament sobre el pivot longitudinal');
+}
+assert.deepEqual(originalTurret.getAttribute('position').array,originalXYZ,
+ 'La torreta dels models 3/3A no ha de quedar modificada');
+for(let ring=0;ring<6;ring++)assert(
+ turnedTurret.getZ(ring*8+4)<turnedTurret.getZ(ring*8),
+ 'La corba posterior original ha de mirar a -Z després de girar');
+assert.deepEqual(barrel.position,gunBefore.barrel,'El cos del canó no es pot moure');
+assert.deepEqual(muzzle.position,gunBefore.muzzle,'La boca de foc no es pot moure');
+for(let i=0;i<8;i++)assert.deepEqual(
+ nodes.get('BTR82_truck_A43_wheel_'+i).position,wheelsBefore[i],
+ 'Gir de torreta ha mogut una roda');
+assert(angularSource.includes("if(method==='angular-strong')reverseBtr82StrongTurretBody(scene)"),
+ 'El gir només ha d’afectar la 3B');
+assert.throws(()=>angularApi.reverseBtr82StrongTurretBody(localScene),/ja està girada/);
+// A la part alta, l'extrem posterior del canó ja queda dins el
+// cos de la torreta girat; no cal escurçar-ne la part visible.
+const gunTailZ=gunBefore.barrel.z+2.90/2;
+const bodyBackZ=Math.max(turnedTurret.getZ(5*8),turnedTurret.getZ(4*8));
+assert(gunTailZ<bodyBackZ,'El canó no penetra dins la torreta girada');
 assert(-.32-.18>-.8125,'Els baixos han de quedar per sobre del terra');
 assert.equal(JSON.stringify(Array.from(baseline.getAttribute('position').array)),originalData,
  'La versió original no s’ha d’alterar en crear variants');
-console.log('PASS BTR 3 / 3A / 3B: 556 / 336 / 240 triangles, triangles reflectits, baixos eixamplats i parelles de rodes alineades');
+console.log('PASS BTR 3B: torreta 180º corba cap al davant, canó immòbil, 3/3A intactes');
