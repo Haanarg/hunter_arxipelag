@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
-import {fromFacets,buildBtr82NoseCandidate} from './btr82-nose-candidates.mjs?rev=model3-angular-a1';
+import {fromFacets,buildBtr82NoseCandidate} from './btr82-nose-candidates.mjs?rev=model3-angular-a2';
 
 // Alternativa aprovada per l'usuari: candidat 3 (plans blindats).
 // Les variants són malles REALMENT diferents, no sols shading:
@@ -8,15 +8,16 @@ export const BTR82_ANGULAR_VARIANTS=Object.freeze([
   description:'El morro de plans blindats escollit. Cap vèrtex ni cara retocats.'},
  {id:'angular-mild',title:'Model 3A · angular moderat',tag:'Menys arestes · mateix volum',
   description:'Elimina perfils redundants, però manté el tall del sostre, les espatlles, el passamans de les rodes i la quilla.'},
- {id:'angular-strong',title:'Model 3B · angular fort',tag:'Plans grans · molt low-poly',
-  description:'Només cinc nivells per perfil i set seccions longitudinals. Falca i panxa amb arestes molt més contundents.'}
+ {id:'angular-strong',title:'Model 3B · angular fort',tag:'Quilla quadrada · escaló protector',
+  description:'Quilla ampla i plana entre rodes, amb lleixa superior protectora i paret interior marcada. Set seccions longitudinals.'}
 ]);
 
-// Dels 20 punts de secció de l'original, en queden 14 o 10.
+// 14 punts per secció: al 3B conservem la lleixa i el mur protector.
+// Menys seccions en Z mantenen els plans laterals grans i angulars.
 // El pla longitudinal del canó és X=0, sense simetria davant/darrere.
 const PROFILES=Object.freeze({
  'angular-mild':['roof','brow','shoulder','belt','wheelWell','stepFoot','keel'],
- 'angular-strong':['roof','shoulder','belt','stepFoot','keel']
+ 'angular-strong':['roof','shoulder','belt','shelf','wheelWell','stepFoot','keel']
 });
 const LONGITUDES=Object.freeze({
  'angular-mild':[-5.425,-4.77,-4.18,-3.74,-3.23,-2.15,.85,3.54,4.58,5.425],
@@ -33,11 +34,22 @@ function snapStations(method){
   return source;
  });
 }
-function makeRing(station,names){
+// Quilla en forma de caixa, ajustada al corredor interior entre rodes.
+// Pneumàtic interior a |X|=1.4375; la quilla arriba a |X|=.98.
+export function btr82StrongKeelHalfWidth(z){
+ if(z<=-5.425||z>=5.425)return null;
+ if(z<-3.74)return .82;
+ if(z<-3.23)return .94;
+ if(z<=4.58)return .98;
+ return null;
+}
+function makeRing(station,names,method){
  const right=names.map(key=>{
   const p=station[key];
   if(!p||p.length!==3)throw Error('Perfil inexistent: '+key);
-  return [p[0],p[1],station.z+p[2]];
+  const half=(method==='angular-strong'&&key==='keel')
+   ?btr82StrongKeelHalfWidth(station.z):null;
+  return [half??p[0],p[1],station.z+p[2]];
  });
  // 0 = roof left, 1 = roof right, then right flank, then mirrored left.
  return [
@@ -50,7 +62,7 @@ function makeRing(station,names){
 export function createBtr82AngularGeometry(method){
  const levels=PROFILES[method];
  if(!levels)throw Error('Cal triar angular-mild o angular-strong');
- const rings=snapStations(method).map(st=>makeRing(st,levels));
+ const rings=snapStations(method).map(st=>makeRing(st,levels,method));
  const num=rings[0].length,steps=levels.length;
  const vertices=rings.flat(2),faces=[];
  // Same winding convention as the approved v3k hull.
@@ -103,12 +115,12 @@ export function createBtr82AngularGeometry(method){
 export function buildBtr82AngularCandidate(method,baseline){
  if(!BTR82_ANGULAR_VARIANTS.some(v=>v.id===method))
   throw Error('Candidat angular desconegut: '+method);
- const {scene}=buildBtr82NoseCandidate('facets',baseline,null);
+ const {scene,details:baseDetails}=buildBtr82NoseCandidate('facets',baseline,null);
  const hull=scene.getObjectByName('BTR82_v3_lowered_centre_hull');
  const referenceTriangles=hull.geometry.index.count/3;
  if(method==='facets')
   return {scene,details:{hullTriangles:referenceTriangles,reductionPercent:0,
-   profiles:10,stations:fromFacets().length}};
+   profiles:10,stations:fromFacets().length,bodyLowering:baseDetails.bodyLowering}};
  const geometry=createBtr82AngularGeometry(method);
  hull.geometry.dispose();
  hull.geometry=geometry;
@@ -124,5 +136,6 @@ export function buildBtr82AngularCandidate(method,baseline){
  for(const name of ['BTR82_new_black_barrel','BTR82_new_black_muzzle'])
   if(!scene.getObjectByName(name))throw Error('Falta una part del canó: '+name);
  return {scene,details:{hullTriangles,reductionPercent,
-  profiles:PROFILES[method].length,stations:LONGITUDES[method].length}};
+  profiles:PROFILES[method].length,stations:LONGITUDES[method].length,
+  bodyLowering:baseDetails.bodyLowering}};
 }

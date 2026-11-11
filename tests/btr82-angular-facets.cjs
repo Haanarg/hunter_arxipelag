@@ -89,10 +89,37 @@ const strong=checkManifold(angularApi.createBtr82AngularGeometry('angular-strong
 assert.equal(mild.triangles,296);
 assert.equal(mild.stations,10);
 assert.equal(mild.profiles,7);
-assert.equal(strong.triangles,148);
+assert.equal(strong.triangles,212);
 assert.equal(strong.stations,7);
-assert.equal(strong.profiles,5);
+assert.equal(strong.profiles,7);
 assert(strong.triangles<mild.triangles&&mild.triangles<508);
+const strongGeo=angularApi.createBtr82AngularGeometry('angular-strong');
+const p=strongGeo.getAttribute('position'),at=3*14;
+assert.equal(p.getZ(at+7),-3.23);
+assert.equal(p.getX(at+7),.98,'La quilla ha de ser ampla');
+assert(p.getX(at+4)>p.getX(at+5)&&p.getX(at+5)>p.getX(at+6),
+ 'Cal preservar la lleixa de les rodes i la paret interior');
+assert(Math.abs(p.getY(at+4)-p.getY(at+5))<.04,
+ 'La lleixa protectora ha de ser quasi plana');
+assert(p.getY(at+6)-p.getY(at+7)>.2,'El ventre ha de tenir una cantonada marcada');
+const lower=new Function('THREE','makeBtr82HullV3','BTR82_HULL_V3_STATIONS',
+ 'createBtr82HullGeometryFromStations',removeImports(source)+
+ ';return {lowerBtr82LabBody,BTR82_LAB_BODY_DROP};'
+ )(three,()=>{},stationApi.BTR82_HULL_V3_STATIONS,()=>{});
+assert.equal(lower.BTR82_LAB_BODY_DROP,.18);
+const nodes=new Map();
+for(const name of ['BTR82_v3_lowered_centre_hull','BTR82_v3_low_angular_turret',
+ 'BTR82_new_black_barrel','BTR82_new_black_muzzle'])
+ nodes.set(name,{isMesh:true,position:{y:1}});
+for(let i=0;i<8;i++)nodes.set('BTR82_truck_A43_wheel_'+i,{position:{y:0}});
+const fake={userData:{},getObjectByName:name=>nodes.get(name)};
+assert.equal(lower.lowerBtr82LabBody(fake),.18);
+for(const name of ['BTR82_v3_lowered_centre_hull','BTR82_v3_low_angular_turret',
+ 'BTR82_new_black_barrel','BTR82_new_black_muzzle'])
+ assert(Math.abs(nodes.get(name).position.y-.82)<1e-9,'Cos/torreta/canó desalineats');
+for(let i=0;i<8;i++)assert.equal(nodes.get('BTR82_truck_A43_wheel_'+i).position.y,0);
+assert.throws(()=>lower.lowerBtr82LabBody(fake),/Ja s’ha abaixat/);
+assert(-.32-.18>-.8125,'Els baixos han de quedar per sobre del terra');
 assert.equal(JSON.stringify(Array.from(baseline.getAttribute('position').array)),originalData,
  'La versió original no s’ha d’alterar en crear variants');
-console.log('PASS angular BTR model 3: 508 -> 296 / 148 triangles; tancament, simetria i original intacte');
+console.log('PASS angular BTR 3B: 508 -> 296 / 212 triangles; quilla ampla, escaló i carrosseria −18 cm');

@@ -45,6 +45,8 @@ wellOrdered(api.fromSilhouettes(triangles));wellOrdered(api.fromSections(triangl
 assert(api.clipBtr82Triangles(triangles,-4.5,true).length>0);
 assert(api.clipBtr82Triangles(triangles,-4.5,false).length>0);
 assert(impl.includes("openSeam:true"),'La costura del candidat 6 ha de constar oberta');
+assert(impl.includes('lowerBtr82LabBody(scene)'),'Els sis morros han de tenir el cos abaixat');
+assert(viewer.includes('heightNote'),'Cal mostrar el desplaçament de carrosseria');
 for(const file of ['src/btr82-nose-candidates.mjs','src/btr82-six-nose-lab.mjs','src/btr82-hull-v3.mjs'])
  new Function(read(file).replace(/^import .*$/gm,'').replace(/^export /gm,''));
 console.log('PASS laboratori sis morros: 6 mètodes, seccions, retalls i visor sincronitzat');

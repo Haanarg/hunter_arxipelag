@@ -1,8 +1,8 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {makeBtr82LabBaseline} from './btr82-lod-studio.mjs';
-import {BTR82_NOSE_CANDIDATES,BTR82_NOSE_ASSET,extractBtr82SourceTriangles,buildBtr82NoseCandidate} from './btr82-nose-candidates.mjs?rev=model3-angular-a1';
-import {BTR82_ANGULAR_VARIANTS,buildBtr82AngularCandidate} from './btr82-angular-facets.mjs?rev=model3-angular-a1';
+import {BTR82_NOSE_CANDIDATES,BTR82_NOSE_ASSET,extractBtr82SourceTriangles,buildBtr82NoseCandidate} from './btr82-nose-candidates.mjs?rev=model3-angular-a2';
+import {BTR82_ANGULAR_VARIANTS,buildBtr82AngularCandidate} from './btr82-angular-facets.mjs?rev=model3-angular-a2';
 
 const angularMode=document.documentElement.dataset.btr82Angular==='true';
 const methods=angularMode?BTR82_ANGULAR_VARIANTS:BTR82_NOSE_CANDIDATES;
@@ -202,7 +202,9 @@ function present(slot,model,details={}){
     ' seccions × '+details.profiles+' perfils'+
     (details.reductionPercent>0?' · −'+details.reductionPercent+'%':' · control')
   :stats(wrapped)+(details.openSeam?' · unió oberta':' · prototip');
- slot.output.textContent=hullInfo;
+ const heightNote=Number.isFinite(details.bodyLowering)
+  ?' · carrosseria −'+Math.round(details.bodyLowering*100)+' cm':'';
+ slot.output.textContent=hullInfo+heightNote;
  if(details.openSeam)slot.card.dataset.openSeam='true';
  schedule();
 }

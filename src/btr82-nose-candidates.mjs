@@ -12,6 +12,27 @@ export const BTR82_NOSE_CANDIDATES=Object.freeze([
  {id:'original',title:'06 · Morro original retallat',tag:'Retall original · simplificació pendent',description:'Proa original retallada i casc posterior low-poly; la costura és oberta i encara falta simplificar aquesta peça.'}
 ]);
 export const BTR82_NOSE_ASSET='./assets/vehicle-candidates/tanqueta/btr82-base-100.glb';
+// Només al laboratori: abaixem 18 cm el casc, torreta i canó, mai les rodes.
+// Amb el centre de pneumàtics a Y=0, radi .8125 i quilla -0.32, els
+// baixos encara deixen ~31 cm de llum lliure després de baixar-los.
+export const BTR82_LAB_BODY_DROP=.18;
+export function lowerBtr82LabBody(scene,drop=BTR82_LAB_BODY_DROP){
+ if(!Number.isFinite(drop)||drop<0||drop>.32)throw Error('Baixada insegura');
+ if(scene.userData?.btr82LabBodyDrop)throw Error('Ja s’ha abaixat aquest model');
+ const names=['BTR82_v3_lowered_centre_hull','BTR82_v3_low_angular_turret',
+  'BTR82_new_black_barrel','BTR82_new_black_muzzle'];
+ if(scene.getObjectByName('BTR82_original_nose_clip'))names.push('BTR82_original_nose_clip');
+ const parts=names.map(name=>{
+  const obj=scene.getObjectByName(name);
+  if(!obj?.isMesh||!obj.position)throw Error('Falta una peça: '+name);
+  return obj;
+ });
+ const wheels=Array.from({length:8},(_,i)=>scene.getObjectByName('BTR82_truck_A43_wheel_'+i));
+ if(wheels.some(w=>!w?.position))throw Error('Falten les vuit rodes');
+ for(const obj of parts)obj.position.y-=drop;
+ scene.userData.btr82LabBodyDrop=drop;
+ return drop;
+}
 const ORDER=['roof','brow','shoulder','belt','lip','shelf','wheelWell','stepFoot','belly','keel'];
 const limit=(x,a,b)=>Math.max(a,Math.min(b,x));
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -219,8 +240,10 @@ export function buildBtr82NoseCandidate(id,baseline,originalTriangles){
  if(id==='slices')geometry=createBtr82HullGeometryFromStations(fromSections(originalTriangles));
  if(id==='original')details=originalNose(scene,originalTriangles);
  if(geometry){hull.geometry.dispose();hull.geometry=geometry;}
+ // El fragment del morro original també acompanya la carrosseria.
+ const bodyLowering=lowerBtr82LabBody(scene);
  if(!scene.getObjectByName('BTR82_new_black_barrel')||
     !Array.from({length:8},(_,i)=>scene.getObjectByName('BTR82_truck_A43_wheel_'+i)).every(Boolean))
   throw Error('El candidat no conserva el canó i les vuit rodes');
- return {scene,details:{...details,triangles:(hull.geometry.index?.count??hull.geometry.getAttribute('position').count)/3}};
+ return {scene,details:{...details,bodyLowering,triangles:(hull.geometry.index?.count??hull.geometry.getAttribute('position').count)/3}};
 }
