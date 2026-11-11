@@ -15,6 +15,29 @@ window.HUNTER_BUILDINGS??=Object.freeze({
       mesh.position.set(lx,y,lz);group.add(mesh);return mesh
     };
 
+    // Paret posterior dels hangars: mateix perfil semicircular que la
+    // volta, sense el rectangle que abans tapava les cantonades superiors.
+    // Una sola malla destructible = un únic comptador de 10 PV.
+    const addHangarRearWall=(group,{lx,lz,sx,sz,material:mat})=>{
+      const radius=sx/2,spring=.12,sections=10;
+      const outline=new THREE.Shape();
+      outline.moveTo(-radius,0);
+      outline.lineTo(radius,0);
+      outline.lineTo(radius,spring);
+      for(let i=1;i<=sections;i++){
+        const angle=Math.PI*i/sections;
+        outline.lineTo(Math.cos(angle)*radius,spring+Math.sin(angle)*radius);
+      }
+      outline.lineTo(-radius,0);
+      const geometry=new THREE.ExtrudeGeometry(outline,{
+        depth:sz,bevelEnabled:false,steps:1,curveSegments:1
+      });
+      const mesh=new THREE.Mesh(geometry,mat);
+      mesh.name='hunter-hangar-arched-rear-wall';
+      mesh.position.set(lx,0,lz-sz/2);
+      group.add(mesh);return mesh;
+    };
+
     // Unifica només decoració immòbil dins el mateix grup de coberta.
     // Els murs, les portes, els graons i les peces destructibles continuen independents.
     const batchStaticRoof=(roof,parts)=>{
@@ -280,7 +303,7 @@ window.HUNTER_BUILDINGS??=Object.freeze({
       pole.position.set(0,7,0);cloth.position.set(2.65,12,0);
       group.position.set(x,y,z);group.add(pole,cloth);return group
     };
-    return {createShell,createHangarShell,addWall,addDoor,addWindowedWall,addRamp,addStep,createFlag};
+    return {createShell,createHangarShell,addWall,addHangarRearWall,addDoor,addWindowedWall,addRamp,addStep,createFlag};
   }
 });
 
