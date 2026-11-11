@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
-import {fromFacets,buildBtr82NoseCandidate} from './btr82-nose-candidates.mjs';
+import {fromFacets,buildBtr82NoseCandidate} from './btr82-nose-candidates.mjs?rev=model3-angular-a1';
 
 // Alternativa aprovada per l'usuari: candidat 3 (plans blindats).
 // Les variants són malles REALMENT diferents, no sols shading:
