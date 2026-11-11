@@ -7,6 +7,18 @@ const root=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const strip=s=>s.replace(/^import[\s\S]*?from\s*['"][^'"]+['"];\s*/gm,'').replace(/^export /gm,'');
 const source=read('src/btr82-3b-native.mjs');
+const dimensions=read('src/vehicle-specs.mjs');
+const hb=dimensions.match(/tanqueta:\[([0-9.]+),([0-9.]+)\]/);
+assert(hb,'Falta la caixa física de la tanqueta');
+const [width,depth]=hb.slice(1).map(Number);
+const tanketteWorldScale=1.8125;
+const modelWidth=2*(1.688+.25*1.06)*(.65*1.5)*tanketteWorldScale;
+const modelLength=2*5.425*(.46*1.5)*tanketteWorldScale;
+assert(width*tanketteWorldScale>=modelWidth,
+ 'La hitbox ha de cobrir els laterals exteriors de les vuit rodes');
+assert(depth*tanketteWorldScale>=modelLength,
+ 'La hitbox ha de cobrir la longitud completa del casc angular');
+
 const factorySource=read('src/vehicle-model-core.mjs');
 const specsSource=read('src/vehicle-turret-core.mjs');
 assert(factorySource.includes("import {installBtr82Model3B} from './btr82-3b-native.mjs';"));
