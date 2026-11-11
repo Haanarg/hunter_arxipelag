@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 
-// BTR-82 v3d: eixos definitius X transversal / Z longitudinal del canó.
+// BTR-82 v3e: eixos definitius X transversal / Z longitudinal del canó.
 // Les estacions descriuen el casc FINAL (proa=-Z, popa=+Z) i són
 // simètriques NOMÉS en X, paral·lelament al canó. Proa i popa diferents.
 // Tota la geometria és una sola closca manifold en eixos finals, sense girs inversos.
@@ -79,10 +79,50 @@ function closedMesh(rings){
   const a=r*n+k,b=r*n+(k+1)%n,c=(r+1)*n+(k+1)%n,d=(r+1)*n+k;
   indices.push(a,c,b,a,d,c);
  }
- for(let k=1;k<n-1;k++){
-  indices.push(0,k,k+1);
-  const last=(rings.length-1)*n;
-  indices.push(last,last+k+1,last+k);
+ if(n!==PROFILE_ORDER.length*2){
+  // La torreta té vuit costats i no fa servir la secció transversal
+  // del casc. Conservem aquí el tancament simple que ja funcionava.
+  for(let k=1;k<n-1;k++){
+   indices.push(0,k,k+1);
+   const last=(rings.length-1)*n;
+   indices.push(last,last+k+1,last+k);
+  }
+ }else{
+  // El morro havia estat un ventall des de la cantonada esquerra.
+  // La diagonal resultant creava una falca visualment asimètrica.
+  // Triangulació frontal en dues meitats exactes sobre el pla X=0.
+  const closeEnd=(end,front)=>{
+   const offset=end*n;
+   const right=level=>offset+1+level;
+   const left=level=>offset+(level===0?0:n-level);
+   const middle=new Map();
+   for(let level=1;level<PROFILE_ORDER.length-1;level++){
+    const vertex=rings[end][1+level],index=positions.length/3;
+    // Alguns graons de la popa són collineals: un rebaix simètric
+    // interior evita triangles degenerats sense tocar les vores.
+    const inset=(level===4?.04:level===5?.09:level===6?.16:level===8?.08:0)*(front?1:-1);
+    positions.push(0,vertex[1],vertex[2]+inset);
+    middle.set(level,index);
+   }
+   const tri=(a,b,c)=>front?indices.push(a,b,c):indices.push(a,c,b);
+   const top=middle.get(1);
+   tri(left(0),right(0),top);
+   tri(left(0),top,left(1));
+   tri(right(0),right(1),top);
+   for(let level=1;level<PROFILE_ORDER.length-2;level++){
+    const a=middle.get(level),b=middle.get(level+1);
+    tri(left(level),a,left(level+1));
+    tri(a,b,left(level+1));
+    tri(a,right(level),right(level+1));
+    tri(a,right(level+1),b);
+   }
+   const last=PROFILE_ORDER.length-1,low=middle.get(last-1);
+   tri(left(last-1),low,left(last));
+   tri(low,right(last-1),right(last));
+   tri(low,right(last),left(last));
+  };
+  closeEnd(0,true);
+  closeEnd(rings.length-1,false);
  }
  const geometry=new THREE.BufferGeometry();
  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
@@ -148,7 +188,7 @@ export function makeBtr82HullV3(baseline){
   turretTriangles:turret.geometry.index.count/3,
   hullBottom:-.32,roofHeight:1.65,
   wheelStepHeight:.96,lowerBellyHalfWidth:1.11,
-  gunAxis:'-Z',transverseMirrorAxis:'X',
+  gunAxis:'-Z',transverseMirrorAxis:'X',frontClosure:'symmetric-centerline',
   retainedWheels:wheels,retainedGunParts:barrel,
   discardedReferenceMeshes:discard.length
  };

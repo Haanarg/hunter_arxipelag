@@ -57,8 +57,8 @@ const code=source.replace(/^import .*$/gm,'').replace(/^export /gm,'');
 const api=new Function('THREE',code+';return {createBtr82HullV3Geometry,makeBtr82HullV3,BTR82_HULL_V3_STATIONS}')(THREE);
 const hull=api.createBtr82HullV3Geometry();
 const position=hull.getAttribute('position'),ids=hull.index.array;
-assert.equal(ids.length/3,396);
-assert.equal(position.count,200);
+assert.equal(ids.length/3,428);
+assert.equal(position.count,216);
 const coords=Array.from({length:position.count},(_,i)=>[position.getX(i),position.getY(i),position.getZ(i)]);
 const edges=new Map();
 let minArea=Infinity,signedVolume=0;
@@ -93,6 +93,18 @@ assert.equal(after.bottom,-.32);
 assert.equal(after.top,1.65);
 const stations=api.BTR82_HULL_V3_STATIONS,front=stations[0],rear=stations.at(-1),middle=stations[5];
 assert(front.roof[2]>.6,'Proa insuficientment inclinada');
+const capStart=9*20*6,capIds=ids.slice(capStart);
+assert.equal(capIds.length/3,68,'Tapes fetes amb dues meitats');
+for(let i=0;i<16;i++)assert.equal(coords[200+i][0],0,'Eix central del morro fora de X=0');
+const caps=[];
+for(let i=0;i<capIds.length;i+=3)caps.push(capIds.slice(i,i+3));
+for(const face of caps){
+ const points=face.map(id=>[-coords[id][0],coords[id][1],coords[id][2]]);
+ assert(caps.some(other=>points.every(p=>other.some(id=>
+  coords[id].every((v,j)=>Math.abs(v-p[j])<1e-8)))),
+  'Hi ha un triangle frontal/posterior sense reflex exacte');
+}
+
 for(const name of ['roof','brow','shoulder','belt','lip','shelf','wheelWell','stepFoot','belly','keel'])
  assert.equal(rear[name][2],0,'Popa no plana: '+name);
 assert(rear.roof[1]>front.roof[1]+.3,'La proa no es distingeix prou de la popa');
@@ -122,10 +134,11 @@ assert.equal(report.hullBottom,-.32);
 assert.equal(report.gunAxis,'-Z');
 assert.equal(report.transverseMirrorAxis,'X');
 assert.equal(report.wheelStepHeight,.96);
+assert.equal(report.frontClosure,'symmetric-centerline');
 assert.equal(report.retainedWheels,8);
 assert.equal(report.retainedGunParts,2);
 assert.equal(rebuilt.children.filter(n=>n.name.startsWith('BTR82_truck_A43_wheel_')).reduce((n,w)=>n+w.children.length,0),24);
 assert(!rebuilt.children.some(n=>n.name==='hull_material_0'));
 assert.deepEqual(rebuilt.getObjectByName('BTR82_v3_lowered_centre_hull').geometry.getAttribute('position').array,position.array);
 assert.equal(rebuilt.getObjectByName('BTR82_new_black_barrel').geometry,base.getObjectByName('BTR82_new_black_barrel').geometry);
-console.log('PASS BTR v3d: direct gun-aligned Z geometry; mirrored X; roof retained; low rails and rear');
+console.log('PASS BTR v3e: symmetric front wedge faces and roof preserved; sealed hull');
