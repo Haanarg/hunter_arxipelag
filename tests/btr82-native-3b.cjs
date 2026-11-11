@@ -62,9 +62,13 @@ const THREE={Group,Mesh,Object3D:Node,CylinderGeometry:Cylinder,BufferGeometry:G
 const fakeGeometry=()=>new Geo().setAttribute('position',
  new Attr([-1,1,-1,1,2,1,-1,3,1],3));
 const sceneApi=new Function('THREE','createBtr82AngularGeometry','createBtr82TurretV3Geometry',
- 'BTR82_3B_TURRET_PIVOT_Z','BTR82_3B_BARREL_LOWERING_Y','BTR82_CABIN_SHIFT_Z','vehicleSpecs',
+ 'shapeBtr823BTurret','createBtr823BHardwareBatch','BTR82_3B_TURRET_FORWARD_Z',
+ 'BTR82_3B_TURRET_AXIS_Z','BTR82_3B_GUN_Y','BTR82_3B_YAW_Y',
+ 'BTR82_3B_TURRET_SCALE','BTR82_3B_BARREL_LOWERING_Y',
+ 'BTR82_CABIN_SHIFT_Z','vehicleSpecs',
  strip(source)+';return {installBtr82Model3B,BTR82_3B_GAME_FIT};')
- (THREE,()=>fakeGeometry(),()=>fakeGeometry(),-.31,.33,.38,{scales:{tanqueta:1.8125}});
+ (THREE,()=>fakeGeometry(),()=>fakeGeometry(),g=>g,()=>fakeGeometry(),
+ -.65,-.96,2.1975,2.0325,.75,.33,.38,{scales:{tanqueta:1.8125}});
 const specApi=new Function('vehicleSpecs',strip(specsSource)+';return {turretSpecs,vehicleGunPose};')
  ({scales:{tanqueta:1.8125,tanc:2.25}});
 const first=new Group();
@@ -76,6 +80,11 @@ assert.equal(first.userData.btr82FrontSteerCount,2,'Només l’eix davanter gira
 assert.equal(first.userData.steeringPivots.length,2);
 assert.equal(first.userData.wheels.length,8);
 assert.equal(first.userData.btr82BarrelLowering,.33);
+assert.equal(first.userData.btr82TurretBodyScale,.75);
+assert.equal(first.userData.btr82TurretForwardZ,-.65);
+assert.equal(first.userData.btr82HardwareBatched,true);
+assert.equal(first.children.filter(child=>child.name==='BTR82_3B_batched_hardware').length,1,
+ 'Els detalls s’han d’agrupar en una única malla compartida');
 assert.equal(first.userData.btr82HullTriangles,240);
 assert(first.userData.wheels.every(w=>w.children.length===1));
 const frontWheels=first.userData.wheels.slice(0,2);
@@ -136,4 +145,9 @@ assert.notEqual(first.userData.turretPivot,second.userData.turretPivot,'Les torr
 assert.notEqual(first.userData.steeringPivots[0],second.userData.steeringPivots[0],
  'Les manguetes han de ser independents entre vehicles');
 assert.equal(first.children[0].geometry,second.children[0].geometry,'Geometria compartida per rendiment');
-console.log('PASS BTR-82 3B: +50%, gir de tota la torreta, canó vertical, dues rodes directrius i trets SOLO/COOP');
+assert.equal(first.children[1].geometry,second.children[1].geometry,'Detalls compartits per rendiment');
+assert(Math.abs(first.userData.turretPivot.position.z-(-.96*.975))<1e-9,
+ 'El pivot de la torreta ha d’estar a l’alçada del segon eix');
+assert(Math.abs(first.userData.turretPitch.position.y-.160875)<1e-9,
+ 'El canó ha de quedar connectat a la nova torreta');
+console.log('PASS BTR-82 3B: torreta 75% i 2n eix, detalls en 1 malla, canó alineat SOLO/COOP');
