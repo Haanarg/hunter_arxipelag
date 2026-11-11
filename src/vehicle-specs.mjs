@@ -3,7 +3,7 @@ export const vehicleSpecs=Object.freeze({
   radii:Object.freeze({llanxa:8.25,llanxa_coets:8.6,moto_aquatica:2.1,barca_rems:3.25,windsurf:2.3,hover:4.8,ferry:35,cotxe:3.8,cotxe_civil:3.35,moto:2.3,bici:1.9,camio:4.8,tanqueta:4.5,tanc:5.6,heli:8.8,heli_combat:12.6}),
   hitboxes:Object.freeze({
     llanxa:[6.6,15.9],llanxa_coets:[6.8,16.1],moto_aquatica:[1.7,3.8],barca_rems:[2.7,6.1],windsurf:[1.9,4.3],hover:[4.2,7.4],ferry:[32,63],
-    cotxe:[4.10,6.45],cotxe_civil:[3.2,5.85],moto:[1.65,4.25],bici:[1.15,2.4],camio:[3.6,7.8],tanqueta:[3.15,5.1],tanc:[4.2,7.1],
+    cotxe:[4.10,6.45],cotxe_civil:[3.2,5.85],moto:[1.65,4.25],bici:[1.15,2.4],camio:[3.6,7.8],tanqueta:[3.8,7.5],tanc:[4.2,7.1],
     heli:[3.74,12.32],heli_combat:[4.2,17.7]
   }),
   // Capacitat autoritativa: la resta de vehicles admeten pilot i passatger.
