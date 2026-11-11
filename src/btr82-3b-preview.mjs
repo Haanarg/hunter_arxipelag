@@ -1,7 +1,8 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
-import {createBtr82AngularGeometry,compactBtr823BTurret,
- BTR82_3B_TURRET_PIVOT_Z,BTR82_3B_BARREL_LOWERING_Y} from './btr82-angular-facets.mjs';
+import {createBtr82AngularGeometry} from './btr82-angular-facets.mjs';
 import {createBtr82TurretV3Geometry,BTR82_CABIN_SHIFT_Z} from './btr82-hull-v3.mjs';
+import {shapeBtr823BTurret,BTR82_3B_TURRET_SCALE,
+ BTR82_3B_TURRET_FORWARD_Z,BTR82_3B_GUN_Y} from './btr82-3b-geometry.mjs';
 import {applyBtr823BDetails} from './btr82-3b-details.mjs';
 
 // El candidat de prova 3B és completament procedimental: no depèn del GLB
@@ -12,13 +13,9 @@ const TIRE_RADIUS=.8125;
 const TIRE_WIDTH=.50;
 const BODY_DROP=.18;
 const WHEEL_X=1.688;
-// Escala EXCLUSIVA del cos de la torreta del banc de proves.
-// X/Z giren al voltant de l'eix original de la torreta i la base es manté
-// recolzada sobre el sostre del casc en Y=1.71 (abans del bodyDrop).
-export const BTR82_3B_PREVIEW_TURRET_SCALE=.75;
-const TURRET_BASE_Y=1.71;
-const GUN_RECESS_Y=2.69-BTR82_3B_BARREL_LOWERING_Y;
-const GUN_PREVIEW_Y=TURRET_BASE_Y+(GUN_RECESS_Y-TURRET_BASE_Y)*BTR82_3B_PREVIEW_TURRET_SCALE-BODY_DROP;
+// Alias del contracte de proves existent. La geometria és comuna amb el joc.
+export const BTR82_3B_PREVIEW_TURRET_SCALE=BTR82_3B_TURRET_SCALE;
+const GUN_PREVIEW_Y=BTR82_3B_GUN_Y-BODY_DROP;
 
 function rimmedWheel(){
  const group=new THREE.Group();
@@ -43,7 +40,7 @@ function gunCylinder(name,radius,length,z,material){
  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,length,12),material);
  mesh.name=name;
  mesh.rotation.x=Math.PI/2;
- mesh.position.set(0,GUN_PREVIEW_Y,z+BTR82_CABIN_SHIFT_Z);
+ mesh.position.set(0,GUN_PREVIEW_Y,z+BTR82_CABIN_SHIFT_Z+BTR82_3B_TURRET_FORWARD_Z);
  mesh.castShadow=true;mesh.receiveShadow=true;
  return mesh;
 }
@@ -65,27 +62,7 @@ export function createBtr823BPreview(){
  hull.castShadow=true;hull.receiveShadow=true;
  model.add(hull);
 
- const geometry=createBtr82TurretV3Geometry();
- const position=geometry.getAttribute('position');
- for(let i=0;i<position.count;i++){
-  position.setXYZ(i,-position.getX(i),position.getY(i),
-   2*BTR82_3B_TURRET_PIVOT_Z-position.getZ(i));
- }
- position.needsUpdate=true;
- compactBtr823BTurret(geometry);
- // Reducció uniforme del 25% SENSE moure el centre X/Z ni aixecar la base.
- // Geometria, no transform del vehicle: la resta del 3B queda intacta.
- for(let i=0;i<position.count;i++){
-  const x=position.getX(i),y=position.getY(i),z=position.getZ(i);
-  position.setXYZ(i,
-   x*BTR82_3B_PREVIEW_TURRET_SCALE,
-   TURRET_BASE_Y+(y-TURRET_BASE_Y)*BTR82_3B_PREVIEW_TURRET_SCALE,
-   BTR82_3B_TURRET_PIVOT_Z+(z-BTR82_3B_TURRET_PIVOT_Z)*BTR82_3B_PREVIEW_TURRET_SCALE);
- }
- position.needsUpdate=true;
- geometry.computeVertexNormals();
- geometry.computeBoundingBox();
- geometry.computeBoundingSphere();
+ const geometry=shapeBtr823BTurret(createBtr82TurretV3Geometry());
  const turret=new THREE.Mesh(geometry,turretMat);
  turret.name='BTR82_v3_low_angular_turret';
  turret.position.y=-BODY_DROP;
@@ -107,6 +84,7 @@ export function createBtr823BPreview(){
  model.userData.previewOnly=true;
  model.userData.btr82WheelCount=8;
  model.userData.btr82TurretBodyScale=BTR82_3B_PREVIEW_TURRET_SCALE;
+ model.userData.btr82TurretForwardZ=BTR82_3B_TURRET_FORWARD_Z;
  model.userData.btr82GunCenterY=GUN_PREVIEW_Y;
  model.userData.btr82Source='SIpriv · Low Poly BTR-82 · CC BY 4.0';
  return model;
