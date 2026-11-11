@@ -64,8 +64,6 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 #btrRepairLiveCount{font-weight:750;color:#bcf3da;font-variant-numeric:tabular-nums}
 #btrRepairLiveStatus{color:#c6e5e3}
 .btr-part-tool.selecting~#grid .viewport{cursor:crosshair}
-.explainer{padding:13px 17px;border:1px solid #42645f;border-radius:11px;background:#152a2d;font-size:12px;line-height:1.6;color:#c6dbd0;margin-top:16px}
-.explainer strong{color:#eef2d1}.explainer a{color:#daebac}
 footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-height:1.6}
 @media(min-width:1650px){#grid{grid-template-columns:repeat(4,minmax(0,1fr))}#grid.btr-study{grid-template-columns:repeat(2,minmax(0,1fr))}.panel{height:450px}}
 @media(max-width:1050px){#grid.btr-study{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -76,7 +74,6 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </head><body>
 <header><div class="kicker">HUNTER: ARXIPÈLAG · LABORATORI DE MODELS</div>
 <h1>Flota · Models i simplificació</h1>
-<p>Els models definitius del cotxe civil, dels helicòpters Huey i Apache, de la bicicleta, de la moto i de la moto aquàtica ja no són al banc. A l'esquerra, el vehicle actual; a la dreta, tres alternatives. El tanc conserva els tres models de referència M1A1 Abrams. La tanqueta torna a la base aprovada sense els tancaments artificials dels laterals i de la part posterior. Es conserva únicament el canó allargat fins a la torreta. Es mostren dos models: l'original de treball i el casc v3g amb una proa estreta de falca i una popa xata amb bisell inferior. El casc nou conserva les vuit rodes i el canó negre; la v1 s'ha retirat i els detalls es recuperaran en iteracions futures. La v2 s'ha retirat del banc per tenir mes espai de treball. L'eina de selecció permet indicar les correccions següents. </p>
 <nav aria-label="Vistes">
 <button id="view-quarter" data-view="quarter" class="active">3/4</button><button data-view="front" id="view-front">Frontal</button>
 <button data-view="side" id="view-side">Lateral</button><button data-view="rear" id="view-rear">Posterior</button>
@@ -93,7 +90,6 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </div></section>
 <section id="btrPartTool" class="btr-part-tool" aria-label="Editor de marques 3D del laboratori de vehicles">
  <div class="btr-part-header"><h2>Editor de marques 3D</h2><span>Per a tots els vehicles · Anotacions no destructives</span></div>
- <p><strong>Unir peces:</strong> clica diverses superfícies del mateix grup. <strong>Tapar forats:</strong> mou el cercle sobre el model: si el contorn és compatible, es veu <strong>en verd la superfície exacta que s'afegirà</strong> abans de clicar. En clicar s'actualitza immediatament el 3D i el comptador de triangles; pots girar el model per comprovar el resultat i desfer-lo. <strong>Verd</strong> vol dir que hi ha un contorn obert petit detectable i es pot intentar tancar; <strong>blau</strong> vol dir que encara no s’hi ha trobat un contorn compatible. Per a les obertures de lateral, darrere o sostre activa <strong>Forats grans (contorn tancat)</strong> i prova un pinzell de 1–2 m; només funciona si encara existeix tot el perímetre de vores. Si el perímetre està incomplet, cal una reconstrucció manual, no un clic automàtic. Les reparacions són reals i es poden desfer. <strong>Eliminar peces:</strong> arrossega per pintar les cares sobrants. Les marques d’unió i eliminació no canvien el model. Amb l’editor actiu, usa <strong>Alt + arrossegar</strong> per girar, <strong>Majúscules + arrossegar</strong> (o botó dret) per pujar i baixar la vista i <strong>Alt + roda</strong> per fer zoom de precisió. També tens els botons ↑ Pujar i ↓ Baixar.</p>
  <div class="btr-part-controls">
  <label class="btr-option"><input type="checkbox" id="btrSelectEnabled"> Editor actiu</label>
  <label>Eina <select id="btrSelectMode"><option value="join">Unir peces</option><option value="fill">Tapar forats (clic)</option><option value="remove">Eliminar peces</option></select></label>
@@ -110,8 +106,6 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
  <div class="btr-part-footer"><button id="btrCopySelection" type="button">Copiar marques i explicació</button><span id="btrSelectFeedback" role="status">Marca les peces del model per indicar quines han d'anar juntes.</span></div>
 </section>
 <section id="grid" aria-label="Comparativa de models 3D"></section>
-<div class="explainer">
-<strong>Com funciona:</strong> el banc mostra el model del joc i tres alternatives per a cada vehicle pendent. Els visors Sketchfab del tanc es manipulen individualment. L'original i el low-poly del BTR-82 comparteixen càmera i escala. Arrossega per girar la vista, utilitza <strong>Majúscules + arrossegar</strong> per desplaçar-la verticalment i <strong>Alt + roda</strong> o ＋ / － per apropar-te molt als detalls. Per a la tanqueta hi ha dues targetes: original de treball i casc v3g. La coberta superior es conserva; els panells mitjans i els baixos s'han refet en el mateix eix longitudinal Z del canó, sense cap gir compensatori, amb simetria esquerra/dreta X. La proa es mes estreta i en falca; la popa te un bisell inferior, en lloc d'una caixa, mentre la torreta manté els laterals inclinats i els graons laterals allotgen les rodes sota el xassís. La v3 conserva les rodes i el canó; els fars i altres detalls s'afegiran posteriorment. No s’ha implementat encara al joc. L'editor 3D permet unir peces, indicar cares per eliminar i intentar reparar petits forats delimitats per vores reals. El cercle del mode Tapar forats segueix el model: verd quan ha trobat un contorn reparable i blau en cas contrari. Un clic verd afegeix triangles a la geometria d'aquesta variant; «Desfer» restaura el retall. Les altres marques continuen sent anotacions no destructives. Les variants intermèdies ja no ocupen espai; es mantenen els crèdits SIpriv / CC BY 4.0. Cal adaptar física, seients i col·lisions abans de substituir un model.</div>
-</main><footer>Prova independent · Three.js r186 (el mateix del joc) · GLTFLoader · models originals importats de la fàbrica del joc · cap canvi a la física, combat o desament. Algunes fonts externes poden no permetre carregar fitxers des d'un altre domini; en aquest cas, utilitza la importació local.</footer>
-<script type="module" src="./src/vehicles-externs-proves.mjs?rev=retire-civilian-editor-v13"></script>
+</main>
+<script type="module" src="./src/vehicles-externs-proves.mjs?rev=compact-lab-v14"></script>
 </body></html>
