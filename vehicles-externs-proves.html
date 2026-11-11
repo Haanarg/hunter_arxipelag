@@ -19,7 +19,8 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 #info{display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:10px;margin:0 0 11px}
 #warning{color:#f0d9a8;font-size:12px;line-height:1.5;max-width:900px}
 #grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;position:relative}
-#grid.btr-study{grid-template-columns:repeat(2,minmax(0,1fr))}
+#grid.btr-study{grid-template-columns:minmax(0,1fr);max-width:1120px;margin:0 auto}
+#grid.btr-study .panel{height:clamp(440px,67vh,720px)}
 .panel[hidden]{display:none!important}
 .panel{min-width:0;height:clamp(350px,40vw,470px);position:relative;border:1px solid #54736e;border-radius:12px;overflow:hidden;background:linear-gradient(#314c52,#142c34);touch-action:pan-y}
 .panel:first-child{border-color:#d6c089}#grid.btr-study .panel:first-child{border-color:#d6c089}#grid.btr-study .panel:nth-child(3){border-color:#54736e}
@@ -65,8 +66,8 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 #btrRepairLiveStatus{color:#c6e5e3}
 .btr-part-tool.selecting~#grid .viewport{cursor:crosshair}
 footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-height:1.6}
-@media(min-width:1650px){#grid{grid-template-columns:repeat(4,minmax(0,1fr))}#grid.btr-study{grid-template-columns:repeat(2,minmax(0,1fr))}.panel{height:450px}}
-@media(max-width:1050px){#grid.btr-study{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:1650px){#grid{grid-template-columns:repeat(4,minmax(0,1fr))}#grid.btr-study{grid-template-columns:minmax(0,1fr);max-width:1120px;margin:0 auto}.panel{height:450px}}
+@media(max-width:1050px){#grid.btr-study{grid-template-columns:minmax(0,1fr);max-width:1120px;margin:0 auto}}
 @media(max-width:650px){#grid,#grid.btr-study{grid-template-columns:1fr}.panel{height:420px}.panel .status{min-height:16px}#vehicleList button{min-width:130px;flex-basis:130px}}
 
 </style>
@@ -79,7 +80,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <button data-view="side" id="view-side">Lateral</button><button data-view="rear" id="view-rear">Posterior</button>
 <button data-view="top" id="view-top">Zenital</button>
 <button id="zoom-in" title="Apropar més el model">＋</button><button id="zoom-out" title="Allunyar el model">－</button><button id="pan-up" title="Desplaçar la vista cap amunt">↑ Pujar</button><button id="pan-down" title="Desplaçar la vista cap avall">↓ Baixar</button><button id="pan-left" title="Moure el model cap a l'esquerra dins la vista">← Esquerra</button><button id="pan-right" title="Moure el model cap a la dreta dins la vista">Dreta →</button><button id="zoom-reset" title="Restablir zoom i centrar la vista">Enquadra</button>
-<a href="btr82-morros-candidats.html" style="color:#f3dc9d;font-weight:800">Comparar sis morros BTR-82</a><a href="btr82-model3-angular.html" style="color:#f3dc9d;font-weight:800">Model 3 angular (3 versions)</a><a href="helicopters-engine-compare.html" style="color:#f3dc9d;font-weight:800">Comparar Huey / Apache: GLB vs motor</a><a href="vehicle-mides-proves.html">Mides del joc</a><a href="index.html">Jugar</a>
+<a href="helicopters-engine-compare.html" style="color:#f3dc9d;font-weight:800">Comparar Huey / Apache: GLB vs motor</a><a href="vehicle-mides-proves.html">Mides del joc</a><a href="index.html">Jugar</a>
 </nav></header>
 <main><div id="vehicleList" aria-label="Tria vehicle"></div>
 <section id="info"><div><h2 id="vehicleName">Carregant el taller…</h2><div id="warning"></div></div>
@@ -107,5 +108,5 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </section>
 <section id="grid" aria-label="Comparativa de models 3D"></section>
 </main>
-<script type="module" src="./src/vehicles-externs-proves.mjs?rev=compact-lab-v19-forewheel-wedge-v3k"></script>
+<script type="module" src="./src/vehicles-externs-proves.mjs?rev=compact-lab-v20-btr82-3b-revised"></script>
 </body></html>
