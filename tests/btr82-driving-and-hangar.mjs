@@ -52,6 +52,8 @@ assert(nav.includes("const car=u.t==='jeep'||u.t==='tanqueta'"));
 assert(nav.includes("radius:u.t==='tanqueta'?14:undefined"));
 assert(ai.includes('enemyRequisition.governedRequisitionInput(v,attack)'));
 assert(ai.includes("&&u.t!=='tanqueta')"),'No s’ha de forçar el rumb de la tanqueta cap al jugador');
+assert(ai.includes("if(u.t!=='tanqueta')u.hd=Math.atan2(u.x-u.tx,u.z-u.tz);"),
+ 'El canvi de punt de patrulla no pot fer girar la tanqueta sobre el lloc');
 
 const shell=planBuildingShell(36,38,18,
  {hangar:true,doorSide:0,doorWidth:30,openDoor:true,noPartitions:true},()=>.25);
