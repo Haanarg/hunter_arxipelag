@@ -28,7 +28,7 @@ class BufferGeometry {
  computeBoundingSphere(){}
 }
 class Node {
- constructor(geometry,material){this.geometry=geometry;this.material=material;this.name='';this.isMesh=true;this.children=[];this.userData={}}
+ constructor(geometry,material){this.geometry=geometry;this.material=material;this.name='';this.isMesh=true;this.children=[];this.userData={};this.position={x:0,y:0,z:0}}
  add(node){node.parent=this;this.children.push(node)}
  remove(node){this.children=this.children.filter(child=>child!==node);node.parent=null}
  traverse(fn){fn(this);for(const child of this.children)child.traverse(fn)}
@@ -54,7 +54,7 @@ const THREE={
  DoubleSide:2
 };
 const code=source.replace(/^import .*$/gm,'').replace(/^export /gm,'');
-const api=new Function('THREE',code+';return {createBtr82HullV3Geometry,createBtr82TurretV3Geometry,makeBtr82HullV3,BTR82_HULL_V3_STATIONS}')(THREE);
+const api=new Function('THREE',code+';return {createBtr82HullV3Geometry,createBtr82TurretV3Geometry,makeBtr82HullV3,BTR82_HULL_V3_STATIONS,BTR82_TURRET_CRESCENT_LEVELS,BTR82_CABIN_SHIFT_Z}')(THREE);
 const hull=api.createBtr82HullV3Geometry();
 const position=hull.getAttribute('position'),ids=hull.index.array;
 assert.equal(ids.length/3,428);
@@ -93,6 +93,9 @@ assert.equal(after.bottom,-.32);
 assert.equal(after.top,1.78);
 const stations=api.BTR82_HULL_V3_STATIONS,front=stations[0],rear=stations.at(-1),middle=stations[5];
 assert(front.roof[2]>.6,'Proa insuficientment inclinada');
+assert(front.roof[2]>=1.20&&stations[1].roof[2]>=.50,
+ 'El davant de la cabina no ha reculat');
+assert(stations[2].roof[2]>.05,'Transicio massa brusca a la coberta');
 const capStart=9*20*6,capIds=ids.slice(capStart);
 assert.equal(capIds.length/3,68,'Tapes fetes amb dues meitats');
 for(let i=0;i<16;i++)assert.equal(coords[200+i][0],0,'Eix central del morro fora de X=0');
@@ -131,17 +134,28 @@ assert(Math.abs(nose.belt[1]-nose.keel[1])<.12,'Els baixos no convergeixen amb l
 assert(nose.keel[2]<.2&&nose.stepFoot[2]<.2,'La cunya no pot recular darrere la punta');
 const turret=api.createBtr82TurretV3Geometry();
 const tp=turret.getAttribute('position');
-assert.equal(turret.index.count/3,76);
-assert.equal(tp.count,40);
+assert.equal(turret.index.count/3,92);
+assert.equal(tp.count,48);
 const baseX=Math.max(...Array.from({length:8},(_,i)=>tp.getX(i)));
-const topX=Math.max(...Array.from({length:8},(_,i)=>tp.getX(32+i)));
+const topX=Math.max(...Array.from({length:8},(_,i)=>tp.getX(40+i)));
 const baseZ=Math.min(...Array.from({length:8},(_,i)=>tp.getZ(i)));
-const topZ=Math.min(...Array.from({length:8},(_,i)=>tp.getZ(32+i)));
+const topZ=Math.min(...Array.from({length:8},(_,i)=>tp.getZ(40+i)));
 assert(topX<baseX-.3, "Turret shoulders need taper");
 assert(topZ>baseZ+.2, "Turret upper prow must slope rearward");
-assert(tp.getY(32)<2.85);
+assert(tp.getY(40)<2.85);
 assert.equal(tp.getY(0),1.71,'Cal retallar la base inferior de la torreta');
-assert.equal(tp.getY(8),1.90,'El segon anell ha de quedar per sobre la coberta');
+assert.equal(api.BTR82_CABIN_SHIFT_Z,.38);
+const crescent=api.BTR82_TURRET_CRESCENT_LEVELS;
+assert.equal(crescent.length,6);
+assert(crescent[3].rearCut>crescent[2].rearCut&&crescent[3].rearCut>crescent[4].rearCut);
+for(let i=0;i<crescent.length;i++){
+ const right=8*i+4,left=8*i+5;
+ assert.equal(tp.getX(right),-tp.getX(left));
+ assert.equal(tp.getZ(right),tp.getZ(left));
+}
+assert(tp.getZ(3*8+4)<tp.getZ(1*8+4)-.20,
+ 'La mitja lluna no te entrada concava al darrere');
+assert.equal(tp.getY(8),1.91,'El segon anell ha de quedar per sobre la coberta');
 // La meitat inferior de CADA secció segueix el mateix Z que l'eix del canó.
 const vertexCountPerSection=20;
 for(let i=1;i<stations.length-1;i++)for(let k=5;k<=10;k++)
@@ -165,6 +179,9 @@ assert.equal(report.noseKeelHeight,.82);
 assert.equal(report.rearKeelHeight,.51);
 assert.equal(report.rearOutline,'raised-hex-bevel');
 assert.equal(report.turretBaseHeight,1.71);
+assert.equal(report.cabinShiftZ,.38);
+assert.equal(report.turretRearCut,'half-moon');
+assert.equal(report.frontDeck,'extended-flat-nose');
 assert.equal(report.gunAxis,'-Z');
 assert.equal(report.transverseMirrorAxis,'X');
 assert.equal(report.wheelStepHeight,.96);
@@ -175,4 +192,9 @@ assert.equal(rebuilt.children.filter(n=>n.name.startsWith('BTR82_truck_A43_wheel
 assert(!rebuilt.children.some(n=>n.name==='hull_material_0'));
 assert.deepEqual(rebuilt.getObjectByName('BTR82_v3_lowered_centre_hull').geometry.getAttribute('position').array,position.array);
 assert.equal(rebuilt.getObjectByName('BTR82_new_black_barrel').geometry,base.getObjectByName('BTR82_new_black_barrel').geometry);
-console.log('PASS BTR v3i: raised hexagonal deck, beveled stern and shortened turret foot');
+for(const name of ['BTR82_new_black_barrel','BTR82_new_black_muzzle']){
+ const moved=rebuilt.getObjectByName(name),original=base.getObjectByName(name);
+ assert(Math.abs(moved.position.z-original.position.z-.38)<1e-8,
+  'El cano ha de moure-se sense deformacio');
+}
+console.log('PASS BTR v3j: crescent turret, aft-shift cabin/gun, preserved wheels');

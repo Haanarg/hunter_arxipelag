@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 
-// BTR-82 v3i: eixos definitius X transversal / Z longitudinal del canó.
+// BTR-82 v3j: eixos definitius X transversal / Z longitudinal del canó.
 // Les estacions descriuen el casc FINAL (proa=-Z, popa=+Z) i són
 // simètriques NOMÉS en X, paral·lelament al canó. Proa i popa diferents.
 // Tota la geometria és una sola closca manifold en eixos finals, sense girs inversos.
@@ -11,17 +11,17 @@ import * as THREE from '../vendor/three-r186.module.mjs';
 // mentre que "stepFoot" baixa la panxa entre les dues fileres de rodes.
 // Les rodes tenen centre X aproximadament ±1.69, radi ~0.81 i no es toquen.
 export const BTR82_HULL_V3_STATIONS=Object.freeze([
- {z:-5.425,roof:[.84,1.12,.86],brow:[1.08,1.14,.68],shoulder:[1.24,1.06,.42],
+ {z:-5.425,roof:[.84,1.12,1.22],brow:[1.08,1.14,.98],shoulder:[1.24,1.06,.72],
   // Cunya completa: els baixos pugen fins a la punta, abans de les rodes.
   // Els tres punts superiors es conserven intactes.
   belt:[1.34,.91,0],lip:[1.27,.87,.035],shelf:[1.18,.82,.065],
   wheelWell:[1.07,.78,.085],stepFoot:[.96,.76,.10],
   belly:[.79,.78,.105],keel:[.30,.82,.11]},
- {z:-4.36,roof:[1.14,1.52,.25],brow:[1.43,1.50,.15],shoulder:[1.70,1.34,.06],
+ {z:-4.36,roof:[1.14,1.41,.55],brow:[1.43,1.45,.35],shoulder:[1.70,1.30,.17],
   belt:[1.76,1.06,0],lip:[1.76,.94,0],shelf:[1.54,.96,0],
   wheelWell:[1.20,.96,0],stepFoot:[1.11,-.08,0],
   belly:[.99,-.26,0],keel:[.32,-.32,0]},
- {z:-3.23,roof:[1.24,1.77,0],brow:[1.58,1.66,0],shoulder:[1.91,1.42,0],
+ {z:-3.23,roof:[1.24,1.77,.08],brow:[1.58,1.66,.06],shoulder:[1.91,1.42,.04],
   belt:[1.89,1.08,0],lip:[1.89,.94,0],shelf:[1.54,.96,0],
   wheelWell:[1.20,.96,0],stepFoot:[1.11,-.08,0],
   belly:[.99,-.26,0],keel:[.32,-.32,0]},
@@ -147,19 +147,26 @@ export function createBtr82HullV3Geometry(){
 
 // Shorter faceted turret, sloping nose and shoulders similar to source BTR.
 // Cannon is a preserved original part and runs along -Z.
+export const BTR82_CABIN_SHIFT_Z=.38;
+// Mitja lluna vista lateral: el darrere entra al mig i reapareix
+// cap a la base i la coberta. Només varia la part posterior (punts 4 i 5).
+export const BTR82_TURRET_CRESCENT_LEVELS=Object.freeze([
+ {y:1.71,rx:1.07,rz:1.06,dz:0,rearCut:0},
+ {y:1.91,rx:1.01,rz:1.03,dz:-.02,rearCut:0},
+ {y:2.14,rx:.91,rz:.97,dz:0,rearCut:.22},
+ {y:2.36,rx:.79,rz:.88,dz:.06,rearCut:.37},
+ {y:2.57,rx:.66,rz:.77,dz:.11,rearCut:.21},
+ {y:2.79,rx:.58,rz:.70,dz:.19,rearCut:.04}
+]);
 export function createBtr82TurretV3Geometry(){
  const outline=[[-.54,-1.60],[.54,-1.60],[.95,-1.13],[.95,-.43],
                 [.66,.20],[-.66,.20],[-.95,-.43],[-.95,-1.13]];
  const cz=-.69;
- const levels=[
-  // Retallada només la base de la torreta, per assentar-la al nou sostre.
-  {y:1.71,rx:1.07,rz:1.06,dz:0},
-  {y:1.90,rx:1.01,rz:1.03,dz:-.02},
-  {y:2.20,rx:.85,rz:.94,dz:.03},
-  {y:2.54,rx:.66,rz:.79,dz:.12},
-  {y:2.79,rx:.58,rz:.70,dz:.19}
- ];
- const rings=levels.map(p=>outline.map(([x,z])=>[x*p.rx,p.y,cz+(z-cz)*p.rz+p.dz]));
+ const rings=BTR82_TURRET_CRESCENT_LEVELS.map(level=>outline.map(([x,z],i)=>{
+  const rear=i===4||i===5;
+  return [x*level.rx,level.y,
+   cz+(z-cz)*level.rz+level.dz+BTR82_CABIN_SHIFT_Z-(rear?level.rearCut:0)];
+ }));
  return closedMesh(rings);
 }
 
@@ -183,6 +190,12 @@ export function makeBtr82HullV3(baseline){
    side:THREE.DoubleSide,flatShading:true}));
  turret.name='BTR82_v3_low_angular_turret';
  turret.castShadow=true;turret.receiveShadow=true;scene.add(turret);
+ // Les dues parts del canó acompanyen la torreta. No es retoca la malla.
+ for(const name of ['BTR82_new_black_barrel','BTR82_new_black_muzzle']){
+  const part=scene.getObjectByName(name);
+  if(!part?.isMesh||!part.position)throw Error('Falta la peça del canó: '+name);
+  part.position.z+=BTR82_CABIN_SHIFT_Z;
+ }
  let wheels=0,barrel=0;
  scene.traverse(object=>{
   if(/^BTR82_truck_A43_wheel_[0-9]+$/.test(object.name))wheels++;
@@ -195,10 +208,12 @@ export function makeBtr82HullV3(baseline){
   turretTriangles:turret.geometry.index.count/3,
   hullBottom:-.32,roofHeight:1.78,
   rearKeelHeight:.51,rearOutline:'raised-hex-bevel',turretBaseHeight:1.71,
+  cabinShiftZ:BTR82_CABIN_SHIFT_Z,turretRearCut:'half-moon',
+  turretRearMaxRecess:.37,frontDeck:'extended-flat-nose',
   noseKeelHeight:.82,noseTipZ:-5.425,
   wheelStepHeight:.96,lowerBellyHalfWidth:1.11,
   gunAxis:'-Z',transverseMirrorAxis:'X',frontClosure:'symmetric-centerline',
-  noseProfile:'full-depth-converging-wedge',rearProfile:'raised-hexagonal-rear',turretProfile:'low-faceted-sloping',
+  noseProfile:'full-depth-converging-wedge',rearProfile:'raised-hexagonal-rear',turretProfile:'rear-crescent-cut',
   retainedWheels:wheels,retainedGunParts:barrel,
   discardedReferenceMeshes:discard.length
  };

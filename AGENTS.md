@@ -1,5 +1,24 @@
 # Hunter: Arxipèlag
 
+## GitHub access — verify before claiming unavailability
+
+This project repository is `Haanarg/hunter_arxipelag`. Connected GitHub tools
+have been used successfully to read, modify and publish code directly. **Before
+telling the user GitHub is unavailable, discover the tools for this session
+and actually attempt to read a repository file** (for example,
+`src/btr82-hull-v3.mjs`). Tool access can vary between chats; test it
+rather than assuming a previous refusal was correct. When access is working
+and the user has authorized an implementation, make and publish the edits
+directly. Do not repeatedly ask the user to copy code or reconfirm permission.
+
+For model-lab iterations, keep the approved original beside the candidate,
+retain the original wheels and barrel geometries, and avoid modifying the
+gameplay model until the user approves it. Group related changes in one
+commit. The runtime workflow `.github/workflows/rebuild-runtime.yml` is
+manual-only: do not re-enable automatic Actions for push events, and do not
+run the complete suite for every lab adjustment. Run focused geometry checks.
+
+
 ## Multiplayer direction
 
 The user requires an adaptation of the existing single-player game, with the same full-viewport interface, original controls and HUD, and the original third-person camera behind each client's own player. The separate orthographic `coop.html` / `coop-play` client is a technical prototype, not the intended multiplayer game.
