@@ -6,18 +6,16 @@ import {removeBtr82AnnotatedDetails} from './btr82-annotated-detail-removal.mjs'
 import {applyBtr82PaintAnnotations} from './btr82-painted-hole-repair.mjs';
 import {applyBtr82ConfirmedRepairs} from './btr82-confirmed-repairs.mjs';
 import {makeBtr82HullV3} from './btr82-hull-v3.mjs';
-import {makeBtr82HullV2} from './btr82-hull-v2.mjs';
 // Low Poly BTR-82 by SIpriv (CC BY 4.0): base Three.js al 25%.
  // El punt de partida de les quatre reduccions és la variant actual amb
  // vuit rodes del camió A4.3 i canó negre cilíndric, NO el GLB original.
-export const BTR82_VERSION='btr82-sloped-nose-turret-v3f';
+export const BTR82_VERSION='btr82-tapered-ends-v3g';
 const ASSET_DIR='./assets/vehicle-candidates/tanqueta/';
 const BASE_FILE='btr82-base-100.glb';
 const CREDIT='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
 const PASSES=Object.freeze([
  {slot:0,level:0,title:'Original · base aprovada',ratio:0},
- {slot:1,level:3,title:'Casc v3f · morro inclinat i torreta perfilada',ratio:0},
- {slot:2,level:2,title:'Casc v2 · referència',ratio:0}
+ {slot:1,level:3,title:'Casc v3g · proa estreta i popa bisellada',ratio:0}
 ]);
 const LOD_RATIOS=[.18,.22,.27,.32];
 // Les primeres vuit malles de la base 25% són les rodes, separades de la carrosseria.
@@ -222,10 +220,6 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
    if(!stats.names.has('BTR82_v3_lowered_centre_hull')||
       !stats.names.has('BTR82_v3_low_angular_turret'))
     throw Error('El casc v3 o la torreta nova estan incomplets');
-  }else if(spec.level===2){
-   if(!stats.names.has('BTR82_v2_aggressive_symmetric_hull')||
-      !stats.names.has('BTR82_v2_angular_turret'))
-    throw Error('El casc angular v2 no està complet');
   }else if(![1,2,3,4].every(i=>stats.names.has('BTR82_front_headlight_'+i+'_lens')))
    throw Error('Falten els fars de la base');
   setModel(slot,scene,false,[],true);
@@ -243,26 +237,21 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
   baselineTriangles=inspect(baseline).triangles;
   if(!alive(token,run))return;
   present(PASSES[0],baseline,local);
-  // Construïm v2 i v3 de manera independent, sempre des de la mateixa
-  // base amb les rodes i el canó aprovats. No reutilitzem pedaços antics.
-  const previous=makeBtr82HullV2(baseline);
-  if(!alive(token,run))return;
-  present(PASSES[2],previous,local);
+  // Només original i v3: s'omet la v2 per ampliar els visors.
   const clean=makeBtr82HullV3(baseline);
   if(!alive(token,run))return;
   present(PASSES[1],clean,local);
-  const v3=clean.userData.btr82HullV3,v2=previous.userData.btr82HullV2;
+  const v3=clean.userData.btr82HullV3;
   slots[1].status.textContent+=' · casc '+v3.hullTriangles+' △ · torreta '+v3.turretTriangles+
    ' △ · ventre a '+v3.hullBottom.toFixed(2)+' m · escalons a '+v3.wheelStepHeight.toFixed(2)+' m · 8 rodes + canó';
-  slots[2].status.textContent+=' · casc '+v2.hullTriangles+' △ · torreta '+v2.turretTriangles+' △ · comparació v2';
   if(alive(token,run))notice.textContent=
-   'BTR-82 · CASC V3F: els eixos corregits són definitius. Casc generat directament en X transversal i Z longitudinal del canó, sense girs inversos. '
+   'BTR-82 · CASC V3G: els eixos corregits són definitius. Casc generat directament en X transversal i Z longitudinal del canó, sense girs inversos. '
    +'El casc és matemàticament simètric només a esquerra/dreta (pla X=0, eix del canó cap a -Z). '
-   +'La proa ara té una aresta avançada i la panxa retirada cap enrere, com al model original; simetria només esquerra/dreta. La popa continua xata. '
+   +'La proa es fa estreta en planta i els baixos reculen en falca; la popa queda xata, amb la part inferior bisellada. Simetria nomes esquerra/dreta. '
    +'La coberta superior no s’ha modificat; els perfils del ventre segueixen longitudinals fins a -0,32 m i a cada costat hi ha graons '
    +'a 0,96 m per allotjar les rodes sota el xassís, amb simetria X comprovada a cada secció. '
    +'El casc es genera com una única malla tancada, sense planxes flotants; '
-   +'les vuit rodes i el canó originals es conserven. V2 continua a la dreta com a referència. '
+   +'les vuit rodes i el canó originals es conserven. '
    +'Torreta més baixa i amb cares inclinades, mantenint el canó original. Detalls petits pendents; no està integrat al joc.';
  }
  async function load(token){

@@ -105,12 +105,13 @@ for(const face of caps){
   'Hi ha un triangle frontal/posterior sense reflex exacte');
 }
 
-for(const name of ['roof','brow','shoulder','belt','lip','shelf','wheelWell','stepFoot','belly','keel'])
- assert.equal(rear[name][2],0,'Popa no plana: '+name);
+assert.equal(rear.belt[2],0,'Popa xata');
+assert(rear.keel[2]<-.4,'Popa amb baixos recollits');
+assert(rear.roof[2]<0,'Popa amb bisell superior');
 assert(rear.roof[1]>front.roof[1]+.3,'La proa no es distingeix prou de la popa');
 assert(middle.wheelWell[0]<1.438&&middle.wheelWell[1]>=.94,'Escaló de les rodes incorrecte');
 assert(middle.stepFoot[1]<0&&middle.belly[1]<-.2&&middle.belly[0]>.9,'Ventre massa estret o massa alt');
-for(const station of stations.slice(1))for(const part of ['lip','shelf','wheelWell','stepFoot','belly','keel'])
+for(const station of stations.slice(1,-1))for(const part of ['lip','shelf','wheelWell','stepFoot','belly','keel'])
  assert.equal(station[part][2],0,'Baixos girats en Z al tram '+station.z+' / '+part);
 const nose=stations[0];
 assert.equal(nose.belt[2],0);
@@ -118,6 +119,8 @@ assert(nose.lip[2]>nose.belt[2]);
 assert(nose.keel[2]>nose.stepFoot[2]&&nose.stepFoot[2]>nose.wheelWell[2],
  "The lower prow should taper towards the back");
 assert(nose.keel[1]>stations[1].keel[1], "The nose underside should rise");
+assert(nose.belt[0]<stations[1].belt[0]-.35,'Proa mes estreta');
+assert(nose.shoulder[0]<stations[1].shoulder[0]-.35,'Espatlles del morro en cunya');
 const turret=api.createBtr82TurretV3Geometry();
 const tp=turret.getAttribute('position');
 assert.equal(turret.index.count/3,76);
@@ -131,7 +134,7 @@ assert(topZ>baseZ+.2, "Turret upper prow must slope rearward");
 assert(tp.getY(32)<2.85);
 // La meitat inferior de CADA secció segueix el mateix Z que l'eix del canó.
 const vertexCountPerSection=20;
-for(let i=1;i<stations.length;i++)for(let k=5;k<=10;k++)
+for(let i=1;i<stations.length-1;i++)for(let k=5;k<=10;k++)
  assert(Math.abs(coords[i*vertexCountPerSection+k][2]-stations[i].z)<1e-8,
   'Perfil inferior desalineat al canó a la secció '+i+' vèrtex '+k);
 const base=new Group();

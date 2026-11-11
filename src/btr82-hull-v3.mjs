@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 
-// BTR-82 v3f: eixos definitius X transversal / Z longitudinal del canó.
+// BTR-82 v3g: eixos definitius X transversal / Z longitudinal del canó.
 // Les estacions descriuen el casc FINAL (proa=-Z, popa=+Z) i són
 // simètriques NOMÉS en X, paral·lelament al canó. Proa i popa diferents.
 // Tota la geometria és una sola closca manifold en eixos finals, sense girs inversos.
@@ -11,13 +11,13 @@ import * as THREE from '../vendor/three-r186.module.mjs';
 // mentre que "stepFoot" baixa la panxa entre les dues fileres de rodes.
 // Les rodes tenen centre X aproximadament ±1.69, radi ~0.81 i no es toquen.
 export const BTR82_HULL_V3_STATIONS=Object.freeze([
- {z:-5.425,roof:[1.04,1.12,.72],brow:[1.36,1.14,.51],shoulder:[1.65,1.06,.21],
-  // Sharp nose: the high prow leads, underside withdraws rearward.
-  belt:[1.75,.91,0],lip:[1.63,.88,.22],shelf:[1.40,.84,.53],
-  wheelWell:[1.17,.80,.73],stepFoot:[1.07,.06,.93],
-  belly:[.92,-.10,1.03],keel:[.30,-.14,1.13]},
- {z:-4.36,roof:[1.16,1.44,.20],brow:[1.50,1.43,.11],shoulder:[1.83,1.29,.03],
-  belt:[1.88,1.06,0],lip:[1.88,.94,0],shelf:[1.54,.96,0],
+ {z:-5.425,roof:[.84,1.12,.86],brow:[1.08,1.14,.68],shoulder:[1.24,1.06,.42],
+  // Estret en planta, espatlles en cunya i baixos reculats.
+  belt:[1.34,.91,0],lip:[1.28,.85,.18],shelf:[1.22,.79,.52],
+  wheelWell:[1.13,.76,.72],stepFoot:[1.04,.06,.93],
+  belly:[.91,-.10,1.03],keel:[.30,-.14,1.13]},
+ {z:-4.36,roof:[1.14,1.44,.25],brow:[1.43,1.43,.15],shoulder:[1.70,1.29,.06],
+  belt:[1.76,1.06,0],lip:[1.76,.94,0],shelf:[1.54,.96,0],
   wheelWell:[1.20,.96,0],stepFoot:[1.11,-.08,0],
   belly:[.99,-.26,0],keel:[.32,-.32,0]},
  {z:-3.23,roof:[1.24,1.65,0],brow:[1.58,1.55,0],shoulder:[1.91,1.35,0],
@@ -44,15 +44,15 @@ export const BTR82_HULL_V3_STATIONS=Object.freeze([
   belt:[1.89,1.08,0],lip:[1.89,.94,0],shelf:[1.54,.96,0],
   wheelWell:[1.20,.96,0],stepFoot:[1.11,-.08,0],
   belly:[.99,-.26,0],keel:[.32,-.32,0]},
- {z:4.58,roof:[1.24,1.62,0],brow:[1.57,1.51,0],shoulder:[1.82,1.34,0],
-  belt:[1.81,1.07,0],lip:[1.81,.93,0],shelf:[1.51,.96,0],
+ {z:4.58,roof:[1.24,1.62,0],brow:[1.56,1.51,0],shoulder:[1.77,1.34,0],
+  belt:[1.77,1.07,0],lip:[1.74,.93,0],shelf:[1.49,.96,0],
   wheelWell:[1.20,.96,0],stepFoot:[1.11,-.08,0],
   belly:[.99,-.25,0],keel:[.32,-.30,0]},
- // Popa XATA: gairebé la mateixa amplada, tots els punts al mateix Z.
- {z:5.425,roof:[1.26,1.56,0],brow:[1.55,1.48,0],shoulder:[1.74,1.32,0],
-  belt:[1.74,1.04,0],lip:[1.73,.94,0],shelf:[1.47,.94,0],
-  wheelWell:[1.19,.94,0],stepFoot:[1.10,-.07,0],
-  belly:[.98,-.22,0],keel:[.30,-.22,0]}
+ // Popa xata en planta, però bisellada per sota.
+ {z:5.425,roof:[1.18,1.54,-.16],brow:[1.43,1.45,-.04],shoulder:[1.65,1.29,0],
+  belt:[1.68,1.03,0],lip:[1.65,.91,-.06],shelf:[1.43,.89,-.16],
+  wheelWell:[1.16,.88,-.22],stepFoot:[1.08,.12,-.42],
+  belly:[.94,-.09,-.49],keel:[.30,-.12,-.54]}
 ]);
 
 const PROFILE_ORDER=['roof','brow','shoulder','belt','lip','shelf',
@@ -63,7 +63,7 @@ function section(station){
  const lowerNames=new Set(['lip','shelf','wheelWell','stepFoot','belly','keel']);
  const right=PROFILE_ORDER.map(name=>{
   const [x,y,dz]=station[name];
-  if(lowerNames.has(name)&&dz!==0&&station.z!==BTR82_HULL_V3_STATIONS[0].z)
+  if(lowerNames.has(name)&&dz!==0&&station!==BTR82_HULL_V3_STATIONS[0]&&station!==BTR82_HULL_V3_STATIONS[BTR82_HULL_V3_STATIONS.length-1])
    throw Error('Eix longitudinal incorrecte a '+name+' z='+station.z);
   return [x,y,station.z+dz];
  });
@@ -192,7 +192,7 @@ export function makeBtr82HullV3(baseline){
   hullBottom:-.32,roofHeight:1.65,
   wheelStepHeight:.96,lowerBellyHalfWidth:1.11,
   gunAxis:'-Z',transverseMirrorAxis:'X',frontClosure:'symmetric-centerline',
-  noseProfile:'sloped-back-underside',turretProfile:'low-faceted-sloping',
+  noseProfile:'narrow-plan-wedge',rearProfile:'blunt-beveled-underside',turretProfile:'low-faceted-sloping',
   retainedWheels:wheels,retainedGunParts:barrel,
   discardedReferenceMeshes:discard.length
  };
