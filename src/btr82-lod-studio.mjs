@@ -5,18 +5,18 @@ import {repairMarkedRearSeams} from './btr82-rear-seam-repair.mjs';
 import {removeBtr82AnnotatedDetails} from './btr82-annotated-detail-removal.mjs';
 import {applyBtr82PaintAnnotations} from './btr82-painted-hole-repair.mjs';
 import {applyBtr82ConfirmedRepairs} from './btr82-confirmed-repairs.mjs';
-import {makeBtr82HullV3,setBtr82HullV3AxisSwap} from './btr82-hull-v3.mjs';
+import {makeBtr82HullV3} from './btr82-hull-v3.mjs';
 import {makeBtr82HullV2} from './btr82-hull-v2.mjs';
 // Low Poly BTR-82 by SIpriv (CC BY 4.0): base Three.js al 25%.
  // El punt de partida de les quatre reduccions és la variant actual amb
  // vuit rodes del camió A4.3 i canó negre cilíndric, NO el GLB original.
-export const BTR82_VERSION='btr82-rotate-rescale-test-v3b';
+export const BTR82_VERSION='btr82-symmetric-well-hull-v3c';
 const ASSET_DIR='./assets/vehicle-candidates/tanqueta/';
 const BASE_FILE='btr82-base-100.glb';
 const CREDIT='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
 const PASSES=Object.freeze([
  {slot:0,level:0,title:'Original · base aprovada',ratio:0},
- {slot:1,level:3,title:'Casc v3 · ventre central baix',ratio:0},
+ {slot:1,level:3,title:'Casc v3 · graons sobre rodes',ratio:0},
  {slot:2,level:2,title:'Casc v2 · referència',ratio:0}
 ]);
 const LOD_RATIOS=[.18,.22,.27,.32];
@@ -212,17 +212,6 @@ function download(blob,name){
 }
 export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurrent,notice}){
  let revision=0;
- let axisSwapEnabled=true;
- function setHullAxisSwap(enabled){
-  axisSwapEnabled=!!enabled;
-  const mesh=slots[1]?.model;
-  const changed=mesh?setBtr82HullV3AxisSwap(mesh,axisSwapEnabled):false;
-  if(changed){
-   const suffix=' · '+(axisSwapEnabled?'GIR +90° i ample/llarg reajustats':'EIXOS ORIGINALS');
-   slots[1].status.textContent=slots[1].status.textContent.replace(/ · (GIR \+90° i ample\/llarg reajustats|EIXOS ORIGINALS)$/,'')+suffix;
-  }
-  return changed;
- }
  const alive=(token,run)=>isCurrent(token)&&revision===run;
  function present(spec,scene,local=false){
   const slot=slots[spec.slot],stats=inspect(scene);
@@ -264,17 +253,17 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
   present(PASSES[1],clean,local);
   const v3=clean.userData.btr82HullV3,v2=previous.userData.btr82HullV2;
   slots[1].status.textContent+=' · casc '+v3.hullTriangles+' △ · torreta '+v3.turretTriangles+
-   ' △ · ventre central a '+v3.hullBottom.toFixed(2)+' m · sostre '+v3.roofHeight.toFixed(2)+' m · 8 rodes + canó';
-  setHullAxisSwap(axisSwapEnabled);
+   ' △ · ventre a '+v3.hullBottom.toFixed(2)+' m · escalons a '+v3.wheelStepHeight.toFixed(2)+' m · 8 rodes + canó';
   slots[2].status.textContent+=' · casc '+v2.hullTriangles+' △ · torreta '+v2.turretTriangles+' △ · comparació v2';
   if(alive(token,run))notice.textContent=
-   'BTR-82 · CASC V3: prototip de silueta més fidel amb frontal afilat i coberta rebaixada. '
-   +'La nova part inferior central baixa entre les dues columnes de rodes, '
-   +'fins a 0,15 m en la zona mitjana, mentre les espatlles laterals continuen angulars. '
-   +'Les malles originals de la v3 són tancades i simètriques; el gir experimental del casc en conserva les cares, però pot traslladar diferències entre morro i popa als costats. Rodes i canó originals preservats. '
-   +'A la v3 es pot activar o desactivar la prova de gir de 90° amb reajustament ample/llarg; '+
-   'les rodes i el canó no es mouen. La v2 queda a la dreta per comparar. '
-   +'Sense fars ni detalls petits: encara no és el model del joc.';
+   'BTR-82 · CASC V3C: mantenim permanentment el gir de 90° i el reajustament d’amplada/llargada. '
+   +'El casc és matemàticament simètric només a esquerra/dreta (pla X=0, eix del canó cap a -Z). '
+   +'El frontal s’inclina cap enrere, mentre que la popa és xata i força vertical. '
+   +'El ventre central és més ample i baixa fins a -0,28 m; a tots dos costats hi ha escalons '
+   +'horitzontals a 0,92 m per allotjar les rodes per sota del xassís. '
+   +'El casc es genera com una única malla tancada, sense planxes flotants; '
+   +'les vuit rodes i el canó originals es conserven. V2 continua a la dreta com a referència. '
+   +'Detalls petits pendents; no està integrat al joc.';
  }
  async function load(token){
   const run=++revision;
@@ -305,5 +294,5 @@ export function createBtr82Studio({slots,loadUploadedGlb,setModel,metrics,isCurr
    if(alive(token,run))notice.textContent='Error en importar la base: '+(e?.message||String(e));
   }
  }
- return {load,importGlb,setHullAxisSwap};
+ return {load,importGlb};
 }
