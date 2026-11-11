@@ -1174,6 +1174,16 @@ for(const part of shell.segments){
    m=seedSearchMode?new THREE.Object3D():buildingVisual.addWall(g,{lx,lz,sx,sz,height:sh,material:wm}),
    o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy-1,y1:fy+sh,hp:10,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz};
    Wl.push(o);created.push(o);
+ }else if(part.hangarRearWall){
+   // Un sol objectiu de 10 PV, però amb contorn semicircular com la volta.
+   const {lx,lz,sx,sz}=part,
+     archHeight=.12+sx/2,
+     m=seedSearchMode?new THREE.Object3D():
+       buildingVisual.addHangarRearWall(g,{lx,lz,sx,sz,material:wm}),
+     o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,
+       y0:fy-1,y1:fy+archHeight,hp:wallHp,m,door:false,open:false,
+       rammable:true,cx:x+lx,cz:z+lz,hangarRearWall:true};
+   Wl.push(o);created.push(o);
  }else created.push(seg(part.lx,part.lz,part.sx,part.sz,part.door,part.windows,part.supportSide,part.supportWeight,part.level));
 }
 for(const indices of shell.assemblies){
