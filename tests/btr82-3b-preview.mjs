@@ -5,6 +5,7 @@ import {Box3,Vector3} from '../vendor/three-r186.module.mjs';
 import {createBtr823BPreview,BTR82_3B_PREVIEW_TURRET_SCALE} from '../src/btr82-3b-preview.mjs';
 import {createBtr82TurretV3Geometry} from '../src/btr82-hull-v3.mjs';
 import {compactBtr823BTurret,BTR82_3B_TURRET_PIVOT_Z} from '../src/btr82-angular-facets.mjs';
+import {BTR82_3B_TURRET_FORWARD_Z,BTR82_3B_TURRET_AXIS_Z} from '../src/btr82-3b-geometry.mjs';
 
 const model=createBtr823BPreview();
 assert.equal(model.name,'BTR82_3B_revised_preview');
@@ -13,6 +14,9 @@ assert.equal(model.userData.btr82WheelCount,8);
 assert.equal(model.userData.previewOnly,true);
 assert.equal(BTR82_3B_PREVIEW_TURRET_SCALE,.75);
 assert.equal(model.userData.btr82TurretBodyScale,.75);
+assert.equal(model.userData.btr82TurretForwardZ,-.65);
+assert(Math.abs(BTR82_3B_TURRET_AXIS_Z-(-.938))<.04,
+ 'La torreta ha d’estar gairebé damunt del segon eix de rodes');
 const wheels=model.children.filter(o=>/^BTR82_3B_preview_wheel_\d+_[LR]$/.test(o.name));
 assert.equal(wheels.length,8,'Hi ha d’haver 8 rodes independents');
 for(const z of [-2.938,-.938,1.7505,3.585]){
@@ -43,7 +47,7 @@ const expectedGunY=1.71+(2.36-1.71)*.75-.18;
 assert(Math.abs(byName('BTR82_new_black_barrel').position.y-expectedGunY)<1e-9);
 assert(Math.abs(byName('BTR82_new_black_muzzle').position.y-expectedGunY)<1e-9,
  'El canó i la boca de foc han de baixar junts');
-assert(Math.abs(byName('BTR82_new_black_barrel').position.z-(-1.53))<1e-9);
+assert(Math.abs(byName('BTR82_new_black_barrel').position.z-(-1.53+BTR82_3B_TURRET_FORWARD_Z))<1e-9);
 
 // La reducció ha de ser uniforme, ancorada al centre X/Z original i a
 // la base Y, i no pot modificar la geometria de la resta del vehicle.
@@ -69,7 +73,7 @@ const centre=(bbox,key)=>(bbox.min[key]+bbox.max[key])/2;
 assert(Math.abs(centre(a,'x')-centre(b,'x'))<1e-6,
  'La torreta no pot moure’s lateralment');
 assert(Math.abs(centre(b,'z')-(BTR82_3B_TURRET_PIVOT_Z+
- (centre(a,'z')-BTR82_3B_TURRET_PIVOT_Z)*.75))<1e-6,
+ (centre(a,'z')-BTR82_3B_TURRET_PIVOT_Z)*.75+BTR82_3B_TURRET_FORWARD_Z))<1e-6,
  'La torreta ha de seguir centrada sobre el mateix eix longitudinal');
 const gunTail=byName('BTR82_new_black_barrel').position.z+2.90/2;
 const ring=3*8,compactPos=measured.getAttribute('position');
@@ -90,5 +94,5 @@ const page=readFileSync(new URL('../vehicles-externs-proves.html',import.meta.ur
 assert(file.includes('createBtr823BPreview()'),'El banc principal no construeix el 3B');
 assert(file.includes("slot.outer.hidden=btrStudy?slots.indexOf(slot)>0:slots.indexOf(slot)>3"));
 assert(!file.includes('studio.load(token)'),'No s’han de carregar els antics GLB');
-assert(page.includes('compact-lab-v21-btr82-3b-smaller-turret'),'Revisió de memòria cau');
+assert(page.includes('compact-lab-v22-btr82-3b-front-turret'),'Revisió de memòria cau');
 console.log('PASS 3B preview: torreta 25% més petita, base centrada, canó connectat, rodes i detalls intactes');
