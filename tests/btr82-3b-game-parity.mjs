@@ -41,6 +41,9 @@ for(let i=0;i<a.count;i++){
 
 const hardware=rig.getObjectByName('BTR82_3B_batched_hardware');
 assert(hardware?.isMesh&&hardware.geometry.userData.btr82HardwareBatch);
+assert.equal(preview.userData.btr82Details3B.sideAccessDoors,2);
+assert.equal(hardware.geometry.userData.previewDetailCount,65,
+ 'Les dues comportes han de figurar també a la malla del joc');
 assert.equal(rig.children.filter(o=>o.name==='BTR82_3B_batched_hardware').length,1);
 const batchXYZ=hardware.geometry.getAttribute('position');
 const batchColor=hardware.geometry.getAttribute('color');
