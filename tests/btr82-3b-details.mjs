@@ -89,6 +89,12 @@ for(const side of ['left','right']){
  assert(Math.abs(p.getY(0)-(-.285))<1e-6,
   'La placa verda ha de baixar fins gairebé la quilla');
  assert(f.getX(4)!==f.getX(6),'Conservar l’esglaó del lateral a Y=.96');
+ const idx=frame.geometry.index,shelf=12, // banda 2: Y=.96 → Y=.96
+  ia=idx.getX(shelf),ib=idx.getX(shelf+1),ic=idx.getX(shelf+2),
+  ux=f.getX(ib)-f.getX(ia),uz=f.getZ(ib)-f.getZ(ia),
+  vx=f.getX(ic)-f.getX(ia),vz=f.getZ(ic)-f.getZ(ia);
+ assert(uz*vx-ux*vz>.01,
+  'El llavi de la comporta ha de mirar amunt, no tenir normals invertides');
  assert.equal(leaf.material.color.getHex(),0x59684f);
  assert.equal(frame.material.color.getHex(),0x29342e);
  for(const part of [frame,leaf]){
