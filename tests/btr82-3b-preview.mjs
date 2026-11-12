@@ -14,6 +14,11 @@ assert.equal(model.userData.btr82WheelCount,8);
 assert.equal(model.userData.previewOnly,true);
 assert.equal(model.userData.btr82Details3B.sideAccessToKeel,true,
  'La comporta que mostra el visor ha d’arribar fins a la quilla');
+assert.equal(model.userData.btr82Details3B.rearSidePanels,4);
+for(const side of ['left','right'])for(const i of [0,1]){
+ assert(model.getObjectByName('BTR82_3B_rear_side_'+side+'_panel_'+i+'_seam')?.isMesh);
+ assert(model.getObjectByName('BTR82_3B_rear_side_'+side+'_panel_'+i+'_armour')?.isMesh);
+}
 for(const side of ['left','right']){
  const frame=model.getObjectByName('BTR82_3B_side_access_'+side+'_outline');
  const position=frame.geometry.getAttribute('position');
