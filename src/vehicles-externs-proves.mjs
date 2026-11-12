@@ -6,7 +6,7 @@ import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
 import {createVehicleAnnotationEditor} from './vehicle-annotation-editor.mjs?rev=live-editor-20261112-1';
-import {createBtr823BPreview} from './btr82-3b-preview.mjs?rev=btr82-3b-black-front-visor-v4';
+import {createBtr823BPreview} from './btr82-3b-preview.mjs?rev=btr82-3b-side-access-v5';
 
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
