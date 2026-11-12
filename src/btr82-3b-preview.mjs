@@ -48,8 +48,8 @@ function gunCylinder(name,radius,length,z,material){
  return mesh;
 }
 
-// Reconstrueix EXACTAMENT el casc 3B low-poly i la torreta del comparador,
-// inclòs el retall de mitja lluna girat 180º, abans d'afegir els nous detalls.
+// Construeix el casc 3B low-poly amb el morro escurçat just darrere
+// dels fars i conserva intacta la torreta de mitja lluna girada 180º.
 export function createBtr823BPreview(){
  const model=new THREE.Group();
  model.name='BTR82_3B_revised_preview';
