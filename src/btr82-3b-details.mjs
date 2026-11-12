@@ -40,6 +40,67 @@ function light(group,name,x,y,z,mat,diameter,depth){
  return mesh;
 }
 
+// El BTR-82 3B porta 4 eixos: el buit entre el segon (-.938) i
+// el tercer (+1.7505) queda centrat a Z=.40625. La comporta s'adapta
+// als dos pendents del blindatge lateral, sense quedar flotant sobre el casc.
+export const BTR82_3B_SIDE_ACCESS=Object.freeze({
+ centreZ:(-.938+1.7505)/2,frameHalfLength:.47,leafHalfLength:.405,
+ frameBottom:1.025,frameShoulder:1.37,frameTop:1.59
+});
+function sideAccessProfileX(y){
+ // Pla angular fort: falda (1.80), espatlla (1.95), bisell (1.63).
+ const profile=[[1.025,1.80],[1.37,1.952],[1.59,1.632]];
+ for(let i=1;i<profile.length;i++){
+  if(y<=profile[i][0]){
+   const [ya,xa]=profile[i-1],[yb,xb]=profile[i];
+   return xa+(xb-xa)*(y-ya)/(yb-ya);
+  }
+ }
+ return profile.at(-1)[1];
+}
+function sideAccessPanel(group,name,side,ys,halfLength,outset,mat){
+ const {centreZ}=BTR82_3B_SIDE_ACCESS,positions=[];
+ for(const y of ys)for(const z of [centreZ-halfLength,centreZ+halfLength])
+  positions.push(side*(sideAccessProfileX(y)+outset),y,z);
+ const indices=[];
+ for(let band=0;band<ys.length-1;band++){
+  const a=band*2;
+  // Normals cap a fora del blindatge, també per al costat esquerre.
+  if(side>0)indices.push(a,a+2,a+1,a+1,a+2,a+3);
+  else indices.push(a,a+1,a+2,a+1,a+3,a+2);
+ }
+ const geometry=new THREE.BufferGeometry();
+ geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+ geometry.setIndex(indices);
+ geometry.computeVertexNormals();geometry.computeBoundingSphere();
+ const mesh=new THREE.Mesh(geometry,mat);
+ mesh.name=name;mesh.castShadow=true;mesh.receiveShadow=true;
+ group.add(mesh);return mesh;
+}
+function addSideAccessDoor(group,side){
+ const label=side<0?'left':'right',
+  z=BTR82_3B_SIDE_ACCESS.centreZ;
+ // Borda fosca estreta i placa blindada del mateix verd de la carrosseria.
+ sideAccessPanel(group,'BTR82_3B_side_access_'+label+'_outline',side,
+  [1.025,1.37,1.59],BTR82_3B_SIDE_ACCESS.frameHalfLength,.048,trim);
+ sideAccessPanel(group,'BTR82_3B_side_access_'+label+'_leaf',side,
+  [1.067,1.37,1.548],BTR82_3B_SIDE_ACCESS.leafHalfLength,.066,armour);
+ // Dues frontisses a la vora davantera (-Z), una nansa a la posterior.
+ const hingeZ=z-.424;
+ for(const [i,y] of [1.155,1.45].entries()){
+  const x=side*(sideAccessProfileX(y)+.094);
+  rail(group,'BTR82_3B_side_access_'+label+'_hinge_'+i,
+   [x,y-.055,hingeZ],[x,y+.055,hingeZ],.030);
+ }
+ const handleY=1.255,handleZ=z+.286,
+   handleX=side*(sideAccessProfileX(handleY)+.096);
+ slab(group,'BTR82_3B_side_access_'+label+'_latch',.060,.15,.15,
+  handleX,handleY,handleZ,trim);
+ rail(group,'BTR82_3B_side_access_'+label+'_handle',
+  [handleX+side*.045,handleY-.048,handleZ],
+  [handleX+side*.045,handleY+.048,handleZ],.020);
+}
+
 export function applyBtr823BDetails(scene){
  if(scene.getObjectByName('BTR82_3B_hardware'))throw new Error('Detalls 3B duplicats');
  const group=new THREE.Group();
@@ -90,6 +151,9 @@ export function applyBtr823BDetails(scene){
  }
  slab(group,'BTR82_3B_rear_access_latch',.36,.055,.18,0,1.855,4.08,steel);
 
+ // Una comporta d'accés a cada lateral, només entre els eixos 2 i 3.
+ for(const side of [-1,1])addSideAccessDoor(group,side);
+
  // Mirilles horitzontals apuntant endavant, paral·leles al terra.
  // La caixa de blindatge penetra cap endins del xassís fins a Z=-3.66,
  // tapant la separació que deixaven les antigues peces inclinades.
@@ -111,18 +175,19 @@ export function applyBtr823BDetails(scene){
    x,1.18,z-.10,lamp,.213,.065);
  }
  scene.userData.btr82Details3B={rearGuards:2,roofHatches:2,roofVents:2,
-  frontVisors:2,headlights:4,visorHorizontal:true};
+  frontVisors:2,headlights:4,sideAccessDoors:2,visorHorizontal:true};
  return group;
 }
 
-// Agrupa les 53 peces de detalls en una sola geometria compartida pel joc.
+// Agrupa tots els detalls en una sola geometria compartida pel joc.
 // Cada peça conserva la seva orientació i color; cap GLB ni textura externa.
 export function createBtr823BHardwareBatch(THREE){
  const root=new THREE.Group();
  applyBtr823BDetails(root);
  root.updateMatrixWorld(true);
- const positions=[],normals=[],colors=[];
+ const positions=[],normals=[],colors=[];let detailCount=0;
  root.traverse(mesh=>{
+  if(mesh.isMesh)detailCount++;
   if(!mesh.isMesh)return;
   const transformed=mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
   const expanded=transformed.index?transformed.toNonIndexed():transformed;
@@ -143,6 +208,6 @@ export function createBtr823BHardwareBatch(THREE){
  geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
  geometry.computeBoundingSphere();
  geometry.userData.btr82HardwareBatch=true;
- geometry.userData.previewDetailCount=53;
+ geometry.userData.previewDetailCount=detailCount;
  return geometry;
 }
