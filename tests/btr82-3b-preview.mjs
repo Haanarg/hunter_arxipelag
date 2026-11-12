@@ -109,5 +109,5 @@ const page=readFileSync(new URL('../vehicles-externs-proves.html',import.meta.ur
 assert(file.includes('createBtr823BPreview()'),'El banc principal no construeix el 3B');
 assert(file.includes("slot.outer.hidden=btrStudy?slots.indexOf(slot)>0:slots.indexOf(slot)>3"));
 assert(!file.includes('studio.load(token)'),'No s’han de carregar els antics GLB');
-assert(page.includes('live-editor-20261112-side-access-keel-3'),'Revisió de memòria cau');
+assert(page.includes('live-editor-20261112-btr82-rear-symmetry-4'),'Revisió de memòria cau');
 console.log('PASS 3B preview: comportes fins a la quilla, torreta i canó conservats, 8 rodes separades');
