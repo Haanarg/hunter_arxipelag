@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {applyBtr823BDetails,createBtr823BHardwareBatch,
- BTR82_3B_SIDE_ACCESS} from '../src/btr82-3b-details.mjs';
+ BTR82_3B_SIDE_ACCESS,BTR82_3B_REAR_SIDE} from '../src/btr82-3b-details.mjs';
 import {createBtr82TurretV3Geometry} from '../src/btr82-hull-v3.mjs';
 import {compactBtr823BTurret,BTR82_3B_TURRET_PIVOT_Z} from '../src/btr82-angular-facets.mjs';
 
@@ -12,6 +12,8 @@ const group=applyBtr823BDetails(scene);
 assert.equal(group.name,'BTR82_3B_hardware');
 assert.equal(group.position.y,-.18);
 assert.equal(scene.userData.btr82Details3B.visorHorizontal,true);
+assert.equal(scene.userData.btr82Details3B.rearSidePanels,4);
+assert.equal(scene.userData.btr82Details3B.rearSideSymmetricX,true);
 assert.deepEqual([scene.userData.btr82Details3B.rearGuards,
  scene.userData.btr82Details3B.roofHatches,
  scene.userData.btr82Details3B.roofVents,
@@ -62,7 +64,7 @@ const keelScene=new THREE.Group();
 const keelGroup=applyBtr823BDetails(keelScene,{extendSideAccessToKeel:true});
 assert.equal(keelScene.userData.btr82Details3B.sideAccessToKeel,true);
 assert.equal(scene.userData.btr82Details3B.sideAccessToKeel,false,
- 'El joc conserva la comporta anterior fins que el candidat sigui aprovat');
+ 'El visor antic conserva el perfil curt si no es demana el model complet');
 assert.equal(keelGroup.children.length,group.children.length,
  'No s’hi afegeixen malles: s’allarguen les dues comportes existents');
 for(const side of ['left','right']){
@@ -72,7 +74,7 @@ for(const side of ['left','right']){
  const leaf=keelScene.getObjectByName('BTR82_3B_side_access_'+side+'_leaf');
  const oldY=prev.geometry.getAttribute('position');
  const f=frame.geometry.getAttribute('position'),p=leaf.geometry.getAttribute('position');
- assert.equal(oldY.count,6,'El model del joc manté el perfil curt de 3 nivells');
+ assert.equal(oldY.count,6,'La variant antiga manté el perfil curt de 3 nivells');
  assert.equal(f.count,14,'El contorn nou segueix 7 nivells reals del lateral');
  assert.equal(p.count,14,'La fulla ha de seguir també els plecs del casc');
  const levels=[
@@ -109,6 +111,35 @@ for(const side of ['left','right']){
  }
 }
 
+// Registres i proteccions posteriors: geometria estrictament mirall en X.
+assert.equal(BTR82_3B_REAR_SIDE.panels.length,2);
+const rearLeft=keelGroup.children.filter(o=>o.name?.startsWith('BTR82_3B_rear_side_left_'));
+const rearRight=keelGroup.children.filter(o=>o.name?.startsWith('BTR82_3B_rear_side_right_'));
+assert.equal(rearLeft.length,16,'El costat esquerre necessita dos registres i les subjeccions');
+assert.equal(rearRight.length,rearLeft.length,'El lateral dret ha de ser simètric');
+for(const left of rearLeft){
+ const right=keelScene.getObjectByName(left.name.replace('_left_','_right_'));
+ assert(right?.isMesh,'Falta el detall reflectit: '+left.name);
+ assert.equal(left.material.color.getHex(),right.material.color.getHex());
+ assert(Math.abs(left.position.x+right.position.x)<1e-6,'X no reflectida: '+left.name);
+ assert(Math.abs(left.position.y-right.position.y)<1e-6);
+ assert(Math.abs(left.position.z-right.position.z)<1e-6);
+ if(left.name.endsWith('_seam')||left.name.endsWith('_armour')){
+  const a=left.geometry.getAttribute('position'),
+   b=right.geometry.getAttribute('position');
+  assert.equal(a.count,b.count);
+  assert.equal(a.count,6,'Cada registre té tres fileres');
+  for(let i=0;i<a.count;i++){
+   assert(Math.abs(a.getX(i)+b.getX(i))<1e-6,'Cares no reflectides: '+left.name);
+   assert(Math.abs(a.getY(i)-b.getY(i))<1e-6);
+   assert(Math.abs(a.getZ(i)-b.getZ(i))<1e-6);
+   assert(a.getZ(i)>=2.10&&a.getZ(i)<=4.78,
+    'Els registres han d’estar a la meitat posterior del casc');
+   assert(a.getY(i)>1.12&&a.getY(i)<1.65,
+    'Els registres posteriors han de quedar sobre els pneumàtics');
+  }
+ }
+}
 for(const side of ['left','right']){
  const frame=scene.getObjectByName('BTR82_3B_front_vision_frame_'+side);
  const glass=scene.getObjectByName('BTR82_3B_front_vision_glass_'+side);
@@ -132,8 +163,8 @@ for(const side of ['left','right']){
 }
 const batch=createBtr823BHardwareBatch(THREE);
 assert(batch.userData.btr82HardwareBatch);
-assert.equal(batch.userData.previewDetailCount,65,
- 'Les 12 peces de les dues comportes s’afegeixen als 53 detalls originals');
+assert.equal(batch.userData.previewDetailCount,97,
+ 'Els 32 detalls posteriors se sumen als 65, sense canviar el nombre de draw calls');
 assert.equal(batch.index,null,'El lot ha d’estar sense índex per als colors compartits');
 assert(batch.getAttribute('position').count>1000);
 assert.equal(batch.getAttribute('color').count,batch.getAttribute('position').count);
@@ -165,4 +196,4 @@ const page=readFileSync(new URL('../btr82-model3-angular.html',import.meta.url),
 assert(viewer.includes("if(angularMode&&method.id==='angular-strong')applyBtr823BDetails(scene)"));
 assert(page.includes('model3-angular-20261111-a7'));
 assert(page.includes('defenses posteriors'));
-console.log('PASS model 3B: dues comportes fins a la quilla al visor, eixos lliures, joc original i lot de detalls intactes');
+console.log('PASS model 3B: registres posteriors simètrics, comportes a quilla, 97 peces en un sol lot');
