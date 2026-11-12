@@ -6,7 +6,8 @@
 - [x] Recàrrega i detecció de nova revisió cada 15 s, conservant càmera i esborranys; workflow de desplegament existent activat pel manifest del laboratori, sense activar rebuild-runtime.
 - [x] Proves Node de simetria en sis direccions, transformacions, atributs, BTR, serialització, errors atòmics i permisos/caducitat de la cua. Corregides dues expectatives obsoletes del test del comparador (GLB antic / dos visors).
 - [ ] Validació visual 3D pendent: el navegador remot de la sessió té WebGL desactivat; no s'ha pogut comprovar el render ni interactuar amb els models.
-- [ ] Verificar desplegament real i compartir la cua amb una sessió administrador a Paradoxa.
+- [x] Compilació local Worker i `check:build` correctes; implementació publicada a `c9b8c585`.
+- [ ] **Desplegament bloquejat:** Actions [43209641224](https://github.com/Haanarg/hunter_arxipelag/actions/runs/43209641224) falla perquè falten `CLOUDFLARE_ACCOUNT_ID` i `CLOUDFLARE_API_TOKEN`. El manifest del laboratori encara retorna 404 a Paradoxa. Cal configurar aquests secrets i tornar a executar el workflow; després validar cua amb sessió administrador.
 
 **P1 · 2026-11-10 · BTR-82: reparar forats reals i arribar amb el canó a la torreta:**
 - [x] Detectada la causa de la regressió: la versió de 5.371 triangles ja tenia el buit frontal; simplement conservar tots els triangles no el tapava.
