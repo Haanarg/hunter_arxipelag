@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
-import {createBtr82AngularGeometry} from './btr82-angular-facets.mjs';
+import {createBtr82AngularGeometry} from './btr82-angular-facets.mjs?rev=front-nose-cut-20261112';
 import {createBtr82TurretV3Geometry,BTR82_CABIN_SHIFT_Z} from './btr82-hull-v3.mjs';
 import {shapeBtr823BTurret,BTR82_3B_TURRET_SCALE,
  BTR82_3B_TURRET_FORWARD_Z,BTR82_3B_GUN_Y} from './btr82-3b-geometry.mjs';
@@ -13,6 +13,9 @@ const TIRE_RADIUS=.8125;
 const TIRE_WIDTH=.50;
 const BODY_DROP=.18;
 const WHEEL_X=1.688;
+// El tall és a l'alçada del dors dels fars (els llums mateixos conserven Z).
+// Només s'aplica al candidat del laboratori: el joc continua amb el morro aprovat.
+export const BTR82_3B_PREVIEW_FRONT_CUT_Z=-4.50;
 // Alias del contracte de proves existent. La geometria és comuna amb el joc.
 export const BTR82_3B_PREVIEW_TURRET_SCALE=BTR82_3B_TURRET_SCALE;
 const GUN_PREVIEW_Y=BTR82_3B_GUN_Y-BODY_DROP;
@@ -56,7 +59,9 @@ export function createBtr823BPreview(){
   metalness:.04,flatShading:true,side:THREE.DoubleSide});
  const gunMat=new THREE.MeshStandardMaterial({color:0x101010,roughness:.78,metalness:.20});
 
- const hull=new THREE.Mesh(createBtr82AngularGeometry('angular-strong'),hullMat);
+ const hull=new THREE.Mesh(createBtr82AngularGeometry('angular-strong',{
+  frontCutZ:BTR82_3B_PREVIEW_FRONT_CUT_Z
+ }),hullMat);
  hull.name='BTR82_v3_lowered_centre_hull';
  hull.position.y=-BODY_DROP;
  hull.castShadow=true;hull.receiveShadow=true;
@@ -81,6 +86,7 @@ export function createBtr823BPreview(){
 
  applyBtr823BDetails(model,{extendSideAccessToKeel:true});
  model.userData.btr82Preview='3B-revised';
+ model.userData.btr82FrontCutZ=BTR82_3B_PREVIEW_FRONT_CUT_Z;
  model.userData.previewOnly=true;
  model.userData.btr82WheelCount=8;
  model.userData.btr82TurretBodyScale=BTR82_3B_PREVIEW_TURRET_SCALE;
