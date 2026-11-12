@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
-import {createBtr82AngularGeometry} from './btr82-angular-facets.mjs?rev=front-nose-cut-20261112';
+import {createBtr82AngularGeometry} from './btr82-angular-facets.mjs';
 import {createBtr82TurretV3Geometry,BTR82_CABIN_SHIFT_Z} from './btr82-hull-v3.mjs';
 import {shapeBtr823BTurret,BTR82_3B_TURRET_SCALE,
  BTR82_3B_TURRET_FORWARD_Z,BTR82_3B_GUN_Y} from './btr82-3b-geometry.mjs';
@@ -13,9 +13,6 @@ const TIRE_RADIUS=.8125;
 const TIRE_WIDTH=.50;
 const BODY_DROP=.18;
 const WHEEL_X=1.688;
-// El tall és a l'alçada del dors dels fars (els llums mateixos conserven Z).
-// Només s'aplica al candidat del laboratori: el joc continua amb el morro aprovat.
-export const BTR82_3B_PREVIEW_FRONT_CUT_Z=-4.54;
 // Alias del contracte de proves existent. La geometria és comuna amb el joc.
 export const BTR82_3B_PREVIEW_TURRET_SCALE=BTR82_3B_TURRET_SCALE;
 const GUN_PREVIEW_Y=BTR82_3B_GUN_Y-BODY_DROP;
@@ -48,8 +45,8 @@ function gunCylinder(name,radius,length,z,material){
  return mesh;
 }
 
-// Construeix el casc 3B low-poly amb el morro escurçat just darrere
-// dels fars i conserva intacta la torreta de mitja lluna girada 180º.
+// Construeix el casc complet 3B low-poly, sense retallar el morro,
+// i conserva intacta la torreta de mitja lluna girada 180º.
 export function createBtr823BPreview(){
  const model=new THREE.Group();
  model.name='BTR82_3B_revised_preview';
@@ -59,9 +56,7 @@ export function createBtr823BPreview(){
   metalness:.04,flatShading:true,side:THREE.DoubleSide});
  const gunMat=new THREE.MeshStandardMaterial({color:0x101010,roughness:.78,metalness:.20});
 
- const hull=new THREE.Mesh(createBtr82AngularGeometry('angular-strong',{
-  frontCutZ:BTR82_3B_PREVIEW_FRONT_CUT_Z
- }),hullMat);
+ const hull=new THREE.Mesh(createBtr82AngularGeometry('angular-strong'),hullMat);
  hull.name='BTR82_v3_lowered_centre_hull';
  hull.position.y=-BODY_DROP;
  hull.castShadow=true;hull.receiveShadow=true;
@@ -86,7 +81,6 @@ export function createBtr823BPreview(){
 
  applyBtr823BDetails(model,{extendSideAccessToKeel:true});
  model.userData.btr82Preview='3B-revised';
- model.userData.btr82FrontCutZ=BTR82_3B_PREVIEW_FRONT_CUT_Z;
  model.userData.previewOnly=true;
  model.userData.btr82WheelCount=8;
  model.userData.btr82TurretBodyScale=BTR82_3B_PREVIEW_TURRET_SCALE;
