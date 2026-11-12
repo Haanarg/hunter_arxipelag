@@ -90,9 +90,14 @@ function sideAccessPanel(group,name,side,ys,halfLength,outset,mat){
  }
  const indices=[];
  for(let band=0;band<ys.length-1;band++){
-  const a=band*2;
-  // Normals cap a fora del blindatge, també per al costat esquerre.
-  if(side>0)indices.push(a,a+2,a+1,a+1,a+2,a+3);
+  const a=band*2,
+   y0=Array.isArray(ys[band])?ys[band][0]:ys[band],
+   y1=Array.isArray(ys[band+1])?ys[band+1][0]:ys[band+1],
+   flatShelf=Math.abs(y1-y0)<1e-8;
+  // El llavi horitzontal a Y=.96 necessita la normal cap a dalt.
+  // A les cares inclinades, les normals surten lateralment cap a fora.
+  const winding=side*(flatShelf?-1:1);
+  if(winding>0)indices.push(a,a+2,a+1,a+1,a+2,a+3);
   else indices.push(a,a+1,a+2,a+1,a+3,a+2);
  }
  const geometry=new THREE.BufferGeometry();
