@@ -3,7 +3,7 @@ import {createBtr82AngularGeometry} from './btr82-angular-facets.mjs';
 import {createBtr82TurretV3Geometry,BTR82_CABIN_SHIFT_Z} from './btr82-hull-v3.mjs';
 import {shapeBtr823BTurret,BTR82_3B_TURRET_SCALE,
  BTR82_3B_TURRET_FORWARD_Z,BTR82_3B_GUN_Y} from './btr82-3b-geometry.mjs';
-import {applyBtr823BDetails} from './btr82-3b-details.mjs?rev=front-glass-v2';
+import {applyBtr823BDetails} from './btr82-3b-details.mjs?rev=side-access-v3';
 
 // El candidat de prova 3B és completament procedimental: no depèn del GLB
 // antic ni de la càrrega de cap alternativa. Les dimensions són les originals
