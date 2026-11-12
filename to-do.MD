@@ -6,6 +6,8 @@
 - [x] Recàrrega i detecció de nova revisió cada 15 s, conservant càmera i esborranys; workflow de desplegament existent activat pel manifest del laboratori, sense activar rebuild-runtime.
 - [x] Proves Node de simetria en sis direccions, transformacions, atributs, BTR, serialització, errors atòmics i permisos/caducitat de la cua. Corregides dues expectatives obsoletes del test del comparador (GLB antic / dos visors).
 - [x] **BTR-82 3B, 2026-11-12:** afegides dues comportes laterals entre els eixos 2/3, conformades al blindatge i amb perfil de junta, frontisses i nansa. Geometria comuna amb el joc en un únic lot de detalls; revisió de laboratori `live-editor-20261112-side-access-2` i manifest sincronitzats.
+- [x] **Petició de model 86d1ad00 · 2026-11-12:** candidat de laboratori amb comportes BTR-82 allargades fins a la quilla (Y=-0,32), resseguint la falda inferior, l'esglaó del lateral i l'espatlla als dos costats; model aprovat del joc conservat amb les comportes curtes fins a acceptació visual. Revisió de laboratori `live-editor-20261112-side-access-keel-3`.
+- [ ] **Validació del candidat fins a quilla:** inspeccionar amb WebGL els dos costats i autoritzar explícitament la substitució de les comportes del joc abans d'integrar la nova forma.
 - [ ] **Comportes laterals BTR-82:** verificar visualment els dos costats, l'encaix amb el blindatge i el marge de les rodes en WebGL/Android, i la seva presència efectiva a Paradoxa quan el desplegament torni a funcionar.
 - [ ] Validació visual 3D pendent: el navegador remot de la sessió té WebGL desactivat; no s'ha pogut comprovar el render ni interactuar amb els models.
 - [x] Compilació local Worker i `check:build` correctes; implementació publicada a `c9b8c585`.
