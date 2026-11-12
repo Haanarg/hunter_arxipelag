@@ -7,7 +7,8 @@
 - [x] Rampes articulades al ferri: col·lisió de coberta/rampa segons l'angle, suport del moll/platja a l'aturada i elevació en moviment; representació compatible amb superfície de ferri COOP.
 - [x] Dalla de la Mort col·locada dins el puny dret a l'escena de mort.
 - [x] Sortida de vehicles per la dreta, amb alternatives a la mateixa banda i, només si està bloquejada per parets, filferrades o altres obstacles, provar l'esquerra (individual i COOP).
-- [ ] Validació al navegador amb llavor 148, proves de còpia de partida COOP, ferri estacionat/embarcant/navegant i reconstrucció manual del runtime; el codi font no constitueix per si sol un desplegament.
+- [x] Runtime reconstruït manualment el 2026-11-12 amb 70 mòduls; sintaxi validada i manifest actualitzat. Sense activar el workflow d'Actions.
+- [ ] Validació al navegador amb llavor 148, proves de còpia de partida COOP i ferri estacionat/embarcant/navegant; la reconstrucció del runtime no és una prova de desplegament.
 
 **2026-11-12 · Refinat interactiu de models (tots els vehicles editables):**
 - [x] Controls de posició, rotació, escala i color per peça/grup/model; selecció amb clic o arbre; comparació amb original; 20 passos de desfer/refer.

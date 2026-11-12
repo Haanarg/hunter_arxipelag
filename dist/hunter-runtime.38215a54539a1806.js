@@ -2837,7 +2837,7 @@ window.HUNTER_RIDER=Object.freeze({
     };
     const vec=(x,y,z)=>new THREE.Vector3(x,y,z);
     const shoulderAt=side=>vec(side*.57,1.17,0).applyQuaternion(torso.quaternion).add(torso.position);
-    const muzzleLocal=new THREE.Vector3(0,.183,-.84),
+    const muzzleLocal=new THREE.Vector3(0,.183,-1.47),
           forward=new THREE.Vector3(0,0,-1);
     // Animació superposada després de la postura de conducció: la mà
     // esquerra continua al manillar, rem o botavara; la dreta apunta.
@@ -2898,7 +2898,7 @@ window.HUNTER_RIDER=Object.freeze({
       pistol.quaternion.identity();
       if(u.pistolAim)pistol.quaternion.setFromUnitVectors(forward,u.pistolAim);
       pistolParts.slide.position.z=recoil*.65;
-      pistolParts.flash.visible=u.shotAge<.055;
+      pistolParts.flash.visible=false; // Pistola silenciada.
     };
     // Retorna el tret des de la boca REAL de la pistola, i orienta
     // l'arma segons l'autoapuntat del sistema existent.
@@ -3260,7 +3260,7 @@ window.HUNTER_VEGETATION??=Object.freeze({
             const len=radius*v,w=Math.sin(v*Math.PI)*.68*side;
             return [
               Math.cos(a)*len-Math.sin(a)*w,
-              6.35+rise+Math.sin(v*Math.PI)*1.05-v*v*1.75,
+              6.12+rise*.12+Math.sin(v*Math.PI)*1.05-v*v*1.75,
               Math.sin(a)*len+Math.cos(a)*w
             ]
           };
@@ -3313,7 +3313,7 @@ window.HUNTER_VEGETATION??=Object.freeze({
         const a=j*Math.PI*2/fronds,tint=frondColor(j,fronds);
         const point=(v,side)=>{
           const len=radius*v,width=Math.sin(v*Math.PI)*.62*side;
-          const y=6.35+Math.sin(v*Math.PI)*.7-v*v*1.65;
+          const y=6.12+Math.sin(v*Math.PI)*.7-v*v*1.65;
           return [Math.cos(a)*len-Math.sin(a)*width,y,
                   Math.sin(a)*len+Math.cos(a)*width];
         };
@@ -3343,7 +3343,7 @@ window.HUNTER_VEGETATION??=Object.freeze({
               right=[dx*r+wx,4.95,dz*r+wz],
               left2=[-dx*r-wx,4.95,-dz*r-wz],
               right2=[dx*r-wx,4.95,dz*r-wz],
-              middle=[0,6.6,0];
+              middle=[0,6.12,0];
         pos.push(...left,...middle,...left2,...right2,...middle,...right);
         paintFrond(colors,tint,6);
       }
@@ -4392,6 +4392,13 @@ function createPlayerPistol(T,gun){
   part(gun,.034,.115,.028,black,0,-.07,-.185).rotation.x=-.23;
   part(gun,.092,.060,.078,black,0,.286,.063).rotation.x=-.3;
   part(gun,.045,.033,.072,edge,.123,.055,.007);
+  // Silenciador permanent a la boca de la pistola.
+  const silencer=new T.Mesh(new T.CylinderGeometry(.079,.079,.64,12),dark);
+  silencer.rotation.x=Math.PI/2;silencer.position.set(0,.183,-1.12);slide.add(silencer);
+  const cap=new T.Mesh(new T.CylinderGeometry(.083,.083,.055,12),edge);
+  cap.rotation.x=Math.PI/2;cap.position.set(0,.183,-1.43);slide.add(cap);
+  const boreSuppressed=new T.Mesh(new T.CylinderGeometry(.035,.035,.007,12),black);
+  boreSuppressed.rotation.x=Math.PI/2;boreSuppressed.position.set(0,.183,-1.46);slide.add(boreSuppressed);
 
   const flash=new T.Group(),flashMat=new T.MeshBasicMaterial({color:0xffd76d,depthWrite:false});
   const cone=new T.Mesh(new T.ConeGeometry(.13,.41,6),flashMat);
@@ -5159,7 +5166,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.gun.position.copy(rig.idle).lerp(rig.aim,blend);
     u.gun.quaternion.copy(rig.idleQ).slerp(rig.aimQ,blend);
     u.pistolSlide.position.z=kick*.065;
-    u.pistolFlash.visible=targetBlend>0&&u.pistolShotAge<.055;
+    u.pistolFlash.visible=false; // Pistola silenciada.
     if(move>.02)player.position.y+=Math.abs(Math.sin(ph))*(.085+.065*run)*move;
     else player.position.y+=breath*.012;
   }
@@ -7507,10 +7514,13 @@ function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc,audioSource=null,mountedCann
   const shotClass=shotClassFromSplash(spl),speed=sp*(shotClass==='heavy'?HEAVY_SHOT_SPEED_FACTOR:1),
         power=wholeDamage(dmg);
   if(own==='p'||own==='pb'){
-    const sound=spl?'bazooka':!cv&&sniperEquipped?'sniper':cv?'rifle':'pistol';
+    const suppressed=!spl&&(!cv&&!sniperEquipped&&!assaultRifleEquipped||cv&&OPEN_RIDER_PISTOL.has(cv.t));
+    const sound=spl?'bazooka':suppressed?'suppressedPistol':!cv&&sniperEquipped?'sniper':cv?'rifle':'pistol';
     window.HUNTER_STEALTH.emit(sound,x,y,z);
   }
-  snd(spl?'cannon':'shot',own==='e'?.6:1,{x,y,z},audioSource||((own==='p'||own==='pb')?P:null));
+  const playerSilenced=(own==='p'||own==='pb')&&!spl&&
+    (!cv&&!sniperEquipped&&!assaultRifleEquipped||cv&&OPEN_RIDER_PISTOL.has(cv.t));
+  snd(playerSilenced?'suppressedShot':spl?'cannon':'shot',own==='e'?.6:1,{x,y,z},audioSource||((own==='p'||own==='pb')?P:null));
   // Tots els projectils tenen l'eix longitudinal -Z: cilindres fins per
   // a les bales lleugeres i ojives per a les pesades. S'orienten en 3D,
   // també en tirs ascendents, descendents i diagonals.
@@ -7970,6 +7980,42 @@ function enemyProjectileContactT(x0,y0,z0,x1,y1,z1,e){
     upperY=base+(e.towerGuard?2.9:2.35),
     head=segmentSphereT(x0,y0,z0,x1,y1,z1,e.x,upperY,e.z,.38);
   return body==null?head:head==null?body:Math.min(body,head);
+}
+// Cobertura balística 3D de les roques grosses per a totes les armes.
+// Test continu sobre cada tram: els coets no travessen roques entre fotogrames.
+function rockProjectileT(from,to,rock){
+ const dx=to.x-from.x,dz=to.z-from.z,dy=to.y-from.y,
+   ox=from.x-rock.x,oz=from.z-rock.z,r=rock.r*.88,
+   a=dx*dx+dz*dz,b=2*(ox*dx+oz*dz),c=ox*ox+oz*oz-r*r;
+ let enter=0,leave=1;
+ if(a<1e-10){if(c>0)return null}
+ else{
+   const disc=b*b-4*a*c;if(disc<0)return null;
+   const root=Math.sqrt(disc),t0=(-b-root)/(2*a),t1=(-b+root)/(2*a);
+   enter=Math.max(enter,t0);leave=Math.min(leave,t1);
+ }
+ const bottom=rock.bottomY??rock.y-rock.s,top=rock.topY??rock.y+rock.s;
+ if(Math.abs(dy)<1e-10){if(from.y<bottom||from.y>top)return null}
+ else{
+   const y0=(bottom-from.y)/dy,y1=(top-from.y)/dy;
+   enter=Math.max(enter,Math.min(y0,y1));
+   leave=Math.min(leave,Math.max(y0,y1));
+ }
+ return enter<=leave&&leave>=0&&enter<=1?Math.max(0,enter):null;
+}
+function rockShotIntersections(from,to,visit){
+ const pad=10,minX=Math.floor((Math.min(from.x,to.x)-pad)/16),
+   maxX=Math.floor((Math.max(from.x,to.x)+pad)/16),
+   minZ=Math.floor((Math.min(from.z,to.z)-pad)/16),
+   maxZ=Math.floor((Math.max(from.z,to.z)+pad)/16);
+ for(let a=minX;a<=maxX;a++)for(let b=minZ;b<=maxZ;b++){
+   const bucket=TG.get(a+','+b);if(!bucket)continue;
+   for(const rock of bucket){
+     if(!rock.rock||(rock.r<=2.5&&rock.s<=1.7))continue;
+     const t=rockProjectileT(from,to,rock);
+     if(t!==null)visit(t,rock);
+   }
+ }
 }
 // Les bales lleugeres travessen la filferrada. Només els obstacles
 // sòlids bloquegen l'apuntat assistit.
@@ -8649,6 +8695,9 @@ function updPj(dt){
       consider(bt,'building',b)
     }
 
+    // Les roques grosses detenen bales i coets abans d'arribar a la diana.
+    rockShotIntersections(from,to,(t,rock)=>consider(t,'rock',rock));
+
     // Personatges i vehicles: intersecció contínua amb volum esfèric aproximat.
     // Neutrals share the nearest-hit comparison with cover and other bodies.
     // They are deliberately absent from all auto-aim candidate sets.
@@ -8751,7 +8800,7 @@ function updPj(dt){
     if(!p.spl){
       // La mateixa detecció de col·lisions dona feedback en ambdós sentits.
       // Soldats/general/jugador: sang discreta; altres dianes: espurnes.
-      const solid=kind==='wall'||kind==='building'||kind==='vehicle'||kind==='enemy';
+      const solid=kind==='wall'||kind==='building'||kind==='rock'||kind==='vehicle'||kind==='enemy';
       if(ineffective)spawnBulletImpact('ricochet',p.x,p.y,p.z,p);
       else if(solid&&!(kind==='enemy'&&(target.t==='soldat'||target.t==='general')))spawnBulletImpact('spark',p.x,p.y,p.z,p);
       if(kind==='wall'){if(!ineffective)dmgW(target,p.dmg,'light')}
@@ -10983,6 +11032,7 @@ return u}
 // Els buffers es comparteixen; cada reproducció té una font i nodes propis.
 const AUDIO_SOUNDS=Object.freeze({
  shot:{duration:.12,filter:'highpass',frequency:1200,gain:.5,range:140},
+ suppressedShot:{duration:.07,filter:'lowpass',frequency:530,gain:.14,range:32},
  cannon:{duration:.35,frequency:600,gain:.5,range:140},
  boom:{duration:.7,frequency:300,gain:.5,range:200,priority:2},
  hurt:{duration:.15,frequency:600,gain:.5},
@@ -12037,22 +12087,27 @@ function deathBuildReaper(THREE){
   sleeve.rotation.z=side*.42;
   part(new THREE.SphereGeometry(.13,8,6),bone,side*.95,1.46,.27);
  }
- const shaft=part(new THREE.CylinderGeometry(.065,.085,4.45,8),trim,1.45,2.395,.3);
+ // La dalla queda subjectada físicament pel puny dret.
+ const shaft=part(new THREE.CylinderGeometry(.065,.085,4.45,8),trim,1.01,2.395,.3);
  shaft.rotation.z=0;
+ for(const offset of[-.06,.035]){
+  const finger=part(new THREE.TorusGeometry(.105,.033,6,10),bone,1.01,1.46+offset,.3);
+  finger.rotation.x=Math.PI/2;
+ }
  // Fulla plana i corbada com la referència: NOMÉS el perfil de la
  // fulla, no el mànec de la fotografia. La silueta afuada no és un tub.
  const blade=new THREE.Shape();
  // El tall apunta cap a fora (dreta) en lloc de travessar el cap.
  // Mirall del perfil original respecte a l'eix vertical del mànec.
- blade.moveTo(1.45,4.62);
- blade.bezierCurveTo(2.02,4.83,3.15,4.70,3.73,2.96);
- blade.bezierCurveTo(3.78,3.77,3.16,4.40,1.45,4.62);
+ blade.moveTo(1.01,4.62);
+ blade.bezierCurveTo(1.58,4.83,2.71,4.70,3.29,2.96);
+ blade.bezierCurveTo(3.34,3.77,2.72,4.40,1.01,4.62);
  const bladeMesh=part(new THREE.ShapeGeometry(blade,22),steel,0,0,.30);
  bladeMesh.material.side=THREE.DoubleSide;
  // Un fil clar al tall interior, en el mateix pla, sense gruix cilíndric.
  const cuttingEdge=new THREE.CubicBezierCurve3(
-  new THREE.Vector3(3.73,2.96,.32),new THREE.Vector3(3.78,3.77,.32),
-  new THREE.Vector3(3.16,4.40,.32),new THREE.Vector3(1.45,4.62,.32));
+  new THREE.Vector3(3.29,2.96,.32),new THREE.Vector3(3.34,3.77,.32),
+  new THREE.Vector3(2.72,4.40,.32),new THREE.Vector3(1.01,4.62,.32));
  const edgeGeometry=new THREE.BufferGeometry().setFromPoints(cuttingEdge.getPoints(22));
  const edgeMaterial=new THREE.LineBasicMaterial({color:0xe1e5e3,transparent:true,opacity:.85});
  owned.push(edgeGeometry,edgeMaterial);
@@ -12624,7 +12679,13 @@ function* buildApprovedCompoundSteps(layout,q,{path,pier,prop,vehicles,rocketAss
     const footing={x0:x-4*(a.scale||1),x1:x+4*(a.scale||1),z0:z-4*(a.scale||1),z1:z+4*(a.scale||1),y0:height,y1:height+1.3,
       hp:24,m:seedSearchMode?null:g.children[0],parts:seedSearchMode?[]:g.children.slice(),door:false,open:false,
       rammable:true,cx:x,cz:z};
-    Wl.push(footing);record.antennaFooting=footing;
+    // L'entramat superior també rep impactes, amb volum propi més estret.
+    const scale=a.scale||1,upper={x0:x-1.75*scale,x1:x+1.75*scale,
+      z0:z-1.75*scale,z1:z+1.75*scale,y0:height+1.3,
+      y1:height+Math.max(a.height,31*scale),hp:24,m:null,parts:[],
+      antennaRoot:footing,door:false,open:false,rammable:false,cx:x,cz:z};
+    footing.antennaMembers=[footing,upper];
+    Wl.push(footing,upper);record.antennaFooting=footing;
     if(!seedSearchMode)window.HUNTER_AIR_OBSTACLES.registerAntenna(world,g,a,footing);
   }
   if(layout.helipad&&!seedSearchMode){const p=layout.helipad,[x,z]=tr(p.x,p.z),g=new THREE.Group();g.position.set(x,height+.04,z);g.rotation.y=-angle;world.add(g);
@@ -17280,6 +17341,8 @@ function collapseCivicProp(w,effects=true){
  return true;
 }
 function dmgW(w,d,shotClass='heavy'){
+ // La peanya i el cos superior de l'antena comparteixen la vida.
+ if(w.antennaRoot)w=w.antennaRoot;
  if(w.civicRubble)return;
  if(w.civicFurniture){
   if(w.civicFurniture==='well'&&shotClass==='light')return;
@@ -17291,7 +17354,7 @@ function dmgW(w,d,shotClass='heavy'){
   return;
  }
  if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}
- if(shotClass==='light'&&!window.HUNTER_SHARED_COMBAT.canLightDamageWall(w))return;
+ if(shotClass==='light'&&!w.antennaMembers&&!window.HUNTER_SHARED_COMBAT.canLightDamageWall(w))return;
  const amount=wholeDamage(d);
  if(!amount||!Number.isFinite(w.hp)||w.hp<=0)return;
  if(w.owner?.civilianHut&&amount>=COMBAT_BALANCE.weapons.bazooka){
@@ -17301,7 +17364,7 @@ function dmgW(w,d,shotClass='heavy'){
  if(w.hp>0)return;
  // Destrucció atòmica de tota l'obertura: cap porta o llinda invisible
  // pot conservar la col·lisió després de caure un dels dos brancals.
- const members=w.woodenDoor?[w]:(w.doorAssembly||[w]);
+ const members=w.antennaMembers||(w.woodenDoor?[w]:(w.doorAssembly||[w]));
  for(const piece of members){
   if(!piece||piece.destroyedWall)continue;
   piece.destroyedWall=true;piece.hp=0;piece.open=true;piece.playerBlock=false;
@@ -18095,7 +18158,9 @@ const ferryLocalSurfaceY=(f,lz)=>{
   const az=Math.abs(lz),deck=d.y*sc,edge=d.halfL*sc,ramp=d.ramp*sc;
   if(az<=edge)return f.o.position.y+deck;
   const q=Math.max(0,Math.min(1,(az-edge)/Math.max(.01,ramp)));
-  return f.o.position.y+(deck+(d.rampY*sc-deck)*q)
+  const hinge=f.o?.userData?.ferryRamps?.find(a=>a.side===Math.sign(lz))?.hinge;
+  const tip=hinge?deck-Math.sin(hinge.rotation.x)*Math.sign(lz)*ramp:d.rampY*sc;
+  return f.o.position.y+deck+(tip-deck)*q
 };
 function ferryForVehicle(v,x=v.x,z=v.z,includeRamp=true){
   if(!FERRY_DECK||v.t==='ferry')return null;
@@ -18111,7 +18176,8 @@ function ferryForVehicle(v,x=v.x,z=v.z,includeRamp=true){
     const ax=Math.abs(q.x),az=Math.abs(q.z),rampHalf=FERRY_DECK.rampHalfW*sc;
     if(ax+ex>fw-.18)continue;
     if(az+ez<=fl)return f;
-    if(includeRamp&&az-ez<=fl+r+.65&&az<=fl+r+ez+.65&&
+    if(includeRamp&&Math.abs(f.v||0)<.8&&Math.abs(f.driveInput||0)<.2&&
+       az-ez<=fl+r+.65&&az<=fl+r+ez+.65&&
        ax+ex<=rampHalf+.45)return f
   }
   return null
@@ -18643,7 +18709,11 @@ function parachuteRoofLanding(x0,z0,y0,x1,z1,y1){
 // La caiguda conserva l'altura i la inèrcia; el dany es calcula en aterrar.
 function ejectFromHelicopter(v){
   resetCameraState();
-  const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),side=rn(-1,1)<0?-1:1,
+  const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),
+        exitRightX=v.x+Math.cos(v.hd)*1.8,exitRightZ=v.z-Math.sin(v.hd)*1.8,
+        blockedRight=wallCandidates(exitRightX,exitRightZ,1).some(w=>!w.open&&
+          exitRightX>w.x0-.8&&exitRightX<w.x1+.8&&exitRightZ>w.z0-.8&&exitRightZ<w.z1+.8),
+        side=blockedRight?-1:1,
         ground=Math.max(0,hAt(v.x,v.z)),
         altitude=Number.isFinite(v.alt)?v.alt:(v.o?.position?.y??ground);
   P.x=v.x+Math.cos(v.hd)*side*1.8;
@@ -18675,7 +18745,7 @@ function truckExitCandidate(v,side,index){
 function escapeSubmergedVehicle(v){
   if(cv!==v)return;
   resetCameraState();
-  const distance=vehicleBox(v).w/2+2.1,side=rn(-1,1)<0?-1:1;
+  const distance=vehicleBox(v).w/2+2.1,side=1;
   P.x=Math.max(-H+4,Math.min(H-4,v.x+Math.cos(v.hd)*side*distance));
   P.z=Math.max(-H+4,Math.min(H-4,v.z-Math.sin(v.hd)*side*distance));
   P.hd=v.hd;P.y=wy(P.x,P.z,elapsed)-1.9;
@@ -18725,24 +18795,39 @@ if(isAir&&height>4&&!ferry){
   leaving.crashing=true;leaving.crashT=0;leaving.crashSpin=rn(-1,1)<0?-1:1;leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;
   msg=playerFall.parachute?'Paracaigudes desplegat!':'Has saltat! L’helicòpter està fora de control!';msgT=3;return
 }
-const moving=speed>3&&!ferry,side=rn(-1,1)<0?-1:1,rrad=vehicleRadius(leaving.t)+2.2,
+const moving=speed>3&&!ferry,box=vehicleBox(leaving),
       safeMovingRoadExit=moving&&['camio','cotxe','cotxe_civil'].includes(leaving.t);let spot=null;
-for(let i=0;i<16;i++){
-  const a=leaving.hd+side*Math.PI/2+i*Math.PI/8,
-        localFerryExit=leaving.t==='ferry'?[0,-5,5,-10,10,-15,15,-20,20][i%9]:null,
-        candidate=localFerryExit!==null?{...ferryWorld(ferry,0,localFerryExit),side}:
-          safeMovingRoadExit?truckExitCandidate(leaving,side,i):
-          {x:leaving.x+Math.cos(a)*rrad,z:leaving.z+Math.sin(a)*rrad,side},
-        {x,z}=candidate;
-  if(ferry){const q=ferryLocal(ferry,x,z);
-    if(!ferryWalkable(q.x,q.z,1.15)||ferryCabinContains(q.x,q.z,1.15))continue;
+// Sempre dreta primer; l'esquerra només quan cap posició dreta és segura.
+for(const side of[1,-1]){
+  const backs=[0,-1.7,1.7,-3.4,3.4,-5.1,5.1,-6.8];
+  for(let i=0;i<backs.length;i++){
+    const front=backs[i],lateral=box.w/2+1.55;
+    const localFerryExit=leaving.t==='ferry'?[-5,6,-10,10,-15,15,-20,20][i]:null,
+      candidate=localFerryExit!==null?{...ferryWorld(ferry,side*8,localFerryExit),side}:
+        safeMovingRoadExit?truckExitCandidate(leaving,side,i):
+        {x:leaving.x+Math.cos(leaving.hd)*side*lateral-Math.sin(leaving.hd)*front,
+         z:leaving.z-Math.sin(leaving.hd)*side*lateral-Math.cos(leaving.hd)*front,side},
+      {x,z}=candidate;
+    if(ferry){const q=ferryLocal(ferry,x,z);
+      if(!ferryWalkable(q.x,q.z,1.15)||ferryCabinContains(q.x,q.z,1.15))continue;
+    }
+    if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||
+      (leaving!==ferry&&circleVehicleOverlap(x,z,1.1,leaving))||
+      vehicleCandidatesAt(x,z,40).some(u=>u!==leaving&&u!==ferry&&!u.destroyed&&circleVehicleOverlap(x,z,1.1,u))||
+      wallCandidates(x,z,1).some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;
+    // No travessam parets ni filferrada entre la porta i el punt d'eixida.
+    const doorDistance=box.w/2+.15,
+      doorX=leaving.x+Math.cos(leaving.hd)*side*doorDistance-Math.sin(leaving.hd)*front,
+      doorZ=leaving.z-Math.sin(leaving.hd)*side*doorDistance-Math.cos(leaving.hd)*front,
+      dx=x-doorX,dz=z-doorZ;
+    if(wallCandidates((x+doorX)/2,(z+doorZ)/2,Math.hypot(dx,dz)/2+2).some(w=>
+      !w.open&&segmentAabbT(doorX,P.y+1,doorZ,x,groundAt(x,z)+1,z,
+        w.x0-.6,w.x1+.6,w.y0,w.y1,w.z0-.6,w.z1+.6)!==null))continue;
+    if(safeMovingRoadExit&&hAt(x,z)<=0&&hAt(leaving.x,leaving.z)>0)continue;
+    if(hAt(x,z)<=0&&VT[leaving.t].m!=='w'&&!ferry)continue;
+    spot=candidate;break;
   }
-  if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||
-    (leaving!==ferry&&circleVehicleOverlap(x,z,1.1,leaving))||
-    vehicleCandidatesAt(x,z,40).some(u=>u!==leaving&&u!==ferry&&!u.destroyed&&circleVehicleOverlap(x,z,1.1,u))||
-    wallCandidates(x,z,1).some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;
-  if(safeMovingRoadExit&&hAt(x,z)<=0&&hAt(leaving.x,leaving.z)>0)continue;
-  spot=candidate;if(ferry||hAt(x,z)>0||VT[leaving.t].m==='w')break;
+  if(spot)break;
 }
 if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}
 P.x=spot.x;P.z=spot.z;P.hd=leaving.hd;
@@ -19643,6 +19728,24 @@ else{
   }
 }
 if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.rotation.set(pi,v.hd,ro);
+// Les rampes del ferri reposen sobre el moll o la platja quan s'atura.
+// La superfície física empra el mateix angle que les peces animades.
+if(v.t==='ferry'&&o.userData.ferryRamps){
+  const deck=FERRY_DECK,sc=VS.ferry||1,length=deck.ramp*sc,
+    deckY=y+deck.y*sc,moving=Math.abs(v.v)>.8||Math.abs(v.driveInput||0)>.2;
+  for(const ramp of o.userData.ferryRamps){
+    const side=ramp.side,tip=ferryWorld(v,0,side*(deck.halfL+deck.ramp)*sc);
+    const supportGround=window.HUNTER_WALK_SURFACES.walkingHeightAt({
+      physical:hAt(tip.x,tip.z),visible:null,stairs:[],piers,buildings:[]
+    },tip.x,tip.z);
+    let support=Math.max(wy(tip.x,tip.z,t),supportGround);
+    const bridge=terminalRampHeight(tip.x,tip.z);
+    if(bridge!==null)support=Math.max(support,bridge);
+    const down=Math.max(-.16,Math.min(.58,Math.atan2(deckY-support,length))),
+      target=side*(moving?-.88:down),blend=1-Math.exp(-5*Math.max(0,dt));
+    ramp.hinge.rotation.x+=(target-ramp.hinge.rotation.x)*blend;
+  }
+}
 // Direcció visual a l'eix davant (-Z): independent del rodament en X.
 window.HUNTER_VEHICLES.animateSteering(o,v.t,tr,dt);
 v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})
@@ -20155,7 +20258,7 @@ if(worldVisualTick<=0){
 updateDoors(dt);
 items.forEach(it=>{const dx=it.x-P.x,dz=it.z-P.z;if(dx*dx+dz*dz<ITEM_ANIM2){it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25}});
 if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-it.z;if(dx*dx+dz*dz<4.84&&Math.abs(P.y-it.y)<3){let mapMessage=null;
-  if(it.t==='arma'){ammo+=12;sniperAmmo+=3;bazookaAmmo+=2;}
+  if(it.t==='arma'){ammo+=12;sniperAmmo+=2;bazookaAmmo+=1;}
   else if(it.t==='mapa'||it.t==='mapa_heli'||it.t==='mapa_tanc'){
     mapMessage=revealMapPickup(it.t,false,MAP_SCALE===2?mapSector(it.x,it.z):null);
     mini(); // la informació apareix de seguida, sense entrar a cap menú
@@ -20164,7 +20267,7 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-i
   else if(it.t==='bazooka'){inv.bazooka=1;bazookaAmmo+=3}
   else inv[it.t]=(inv[it.t]||0)+(it.t==='granada'?5:1);
   world.remove(it.o);items.splice(k,1);requestOperationAutosave('equipment');recordOperationMetric('pickups');
-  msg=mapMessage||'Has trobat: '+IT[it.t].n+(it.t==='arma'?' · +12 bales, +3 rifle, +2 coets':it.t==='granada'?' ×5':it.t==='bazooka'?' +3 coets':it.t==='franctirador'?' +6 cartutxos':'');
+  msg=mapMessage||'Has trobat: '+IT[it.t].n+(it.t==='arma'?' · +12 bales, +2 rifle, +1 coet':it.t==='granada'?' ×5':it.t==='bazooka'?' +3 coets':it.t==='franctirador'?' +6 cartutxos':'');
   msgT=3;snd('pick')}}
 msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
 // Strafe independent: gir visual de la cintura i les cames, no de P.hd.
