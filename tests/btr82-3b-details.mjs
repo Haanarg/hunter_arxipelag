@@ -57,6 +57,52 @@ for(const side of ['left','right']){
  assert(Math.abs(a.getX(2)-a.getX(4))>.20);
 }
 
+
+const keelScene=new THREE.Group();
+const keelGroup=applyBtr823BDetails(keelScene,{extendSideAccessToKeel:true});
+assert.equal(keelScene.userData.btr82Details3B.sideAccessToKeel,true);
+assert.equal(scene.userData.btr82Details3B.sideAccessToKeel,false,
+ 'El joc conserva la comporta anterior fins que el candidat sigui aprovat');
+assert.equal(keelGroup.children.length,group.children.length,
+ 'No s’hi afegeixen malles: s’allarguen les dues comportes existents');
+for(const side of ['left','right']){
+ const sign=side==='left'?-1:1;
+ const prev=scene.getObjectByName('BTR82_3B_side_access_'+side+'_outline');
+ const frame=keelScene.getObjectByName('BTR82_3B_side_access_'+side+'_outline');
+ const leaf=keelScene.getObjectByName('BTR82_3B_side_access_'+side+'_leaf');
+ const oldY=prev.geometry.getAttribute('position');
+ const f=frame.geometry.getAttribute('position'),p=leaf.geometry.getAttribute('position');
+ assert.equal(oldY.count,6,'El model del joc manté el perfil curt de 3 nivells');
+ assert.equal(f.count,14,'El contorn nou segueix 7 nivells reals del lateral');
+ assert.equal(p.count,14,'La fulla ha de seguir també els plecs del casc');
+ const levels=[
+  [-.32,1.34],[-.08,1.405],[.96,1.47],[.96,1.59],
+  [1.08,1.89],[1.42,1.91]
+ ];
+ for(const [i,[height,halfWidth]] of levels.entries()){
+  assert(Math.abs(f.getY(i*2)-height)<1e-6,'Alçada de blindatge lateral incorrecta');
+  assert(Math.abs(f.getX(i*2)*sign-(halfWidth+.048))<1e-6,
+   'El contorn ha de seguir el pendent exacte del xassís');
+ }
+ assert(Math.abs(f.getY(0)-BTR82_3B_SIDE_ACCESS.keelY)<1e-6,
+  'La comporta ha d’arribar fins a la quilla');
+ assert(Math.abs(p.getY(0)-(-.285))<1e-6,
+  'La placa verda ha de baixar fins gairebé la quilla');
+ assert(f.getX(4)!==f.getX(6),'Conservar l’esglaó del lateral a Y=.96');
+ assert.equal(leaf.material.color.getHex(),0x59684f);
+ assert.equal(frame.material.color.getHex(),0x29342e);
+ for(const part of [frame,leaf]){
+  const arr=part.geometry.getAttribute('position');
+  for(let i=0;i<arr.count;i++){
+   const z=arr.getZ(i);
+   assert(z>wheelZ[0]+radius+.025&&z<wheelZ[1]-radius-.025,
+    'La comporta extensa no pot tocar les rodes');
+   assert(Math.sign(arr.getX(i))===sign,
+    'La comporta ha de romandre al seu costat de la tanqueta');
+  }
+ }
+}
+
 for(const side of ['left','right']){
  const frame=scene.getObjectByName('BTR82_3B_front_vision_frame_'+side);
  const glass=scene.getObjectByName('BTR82_3B_front_vision_glass_'+side);
@@ -113,4 +159,4 @@ const page=readFileSync(new URL('../btr82-model3-angular.html',import.meta.url),
 assert(viewer.includes("if(angularMode&&method.id==='angular-strong')applyBtr823BDetails(scene)"));
 assert(page.includes('model3-angular-20261111-a7'));
 assert(page.includes('defenses posteriors'));
-console.log('PASS model 3B: dues comportes laterals entre eixos 2–3, mirilles, focus i un sol lot de detalls');
+console.log('PASS model 3B: dues comportes fins a la quilla al visor, eixos lliures, joc original i lot de detalls intactes');
