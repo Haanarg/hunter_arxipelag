@@ -59,10 +59,27 @@ function makeRing(station,names){
 
 // Reflex de CADA cara a X=0; no només els seus vèrtexs.
 // La triangulació anterior dibuixava diagonals desiguals als costats.
-export function createBtr82AngularGeometry(method){
+export function createBtr82AngularGeometry(method,{frontCutZ=null}={}){
  const levels=PROFILES[method];if(!levels)throw Error('Variant desconeguda');
  const rings=(method==='facets'?fromFacets():snapStations(method))
   .map(st=>makeRing(st,levels));
+ // Retall opcional i només per al candidat 3B del visor. La proa original
+ // avançava fins a Z=-5.425 i tapava els fars (Z≈-4.5). Substituïm la
+ // primera secció per la intersecció amb el pla de tall, interpolant
+ // els VÈRTEXS ja generats: les cares laterals no canvien de pendent.
+ // La triangulació de la tapa frontal es reconstrueix més avall, així
+ // no hi ha superfície antiga, costura oberta ni triangles degenerats.
+ if(frontCutZ!==null){
+  if(method!=='angular-strong'||!Number.isFinite(frontCutZ))
+   throw new RangeError('Retall frontal només disponible per al 3B');
+  const first=rings[0],second=rings[1];
+  const from=first[0][2],to=second[0][2];
+  if(!(frontCutZ>from+.02&&frontCutZ<to-.02))
+   throw new RangeError('El pla frontal ha de quedar entre les dues primeres seccions');
+  const ratio=(frontCutZ-from)/(to-from);
+  rings[0]=first.map((point,i)=>point.map((v,j)=>
+   v+(second[i][j]-v)*ratio));
+ }
  const n=levels.length*2,steps=levels.length,positions=rings.flat(2),indices=[],mirror=[];
  const refl=i=>i===0?1:i===1?0:n+1-i;
  for(let r=0;r<rings.length;r++)for(let i=0;i<n;i++)
@@ -110,6 +127,7 @@ export function createBtr82AngularGeometry(method){
  g.userData.candidateSimplified=true;g.userData.angularVariant=method;
  g.userData.angularStations=rings.length;g.userData.angularProfiles=steps;
  g.userData.mirroredFacePairs=true;
+ if(frontCutZ!==null)g.userData.frontCutZ=frontCutZ;
  return g;
 }
 
