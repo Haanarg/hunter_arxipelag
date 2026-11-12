@@ -15,6 +15,14 @@ const sy=BTR82_3B_GAME_FIT.y*BTR82_3B_GAME_FIT.sizeMultiplier;
 const sz=BTR82_3B_GAME_FIT.z*BTR82_3B_GAME_FIT.sizeMultiplier;
 const margin=.8125*sy+BTR82_3B_GAME_FIT.groundMargin;
 assert.equal(sx,sy);assert.equal(sy,sz);
+// Només el morro és candidat de laboratori. La malla jugable no es
+// retalla fins a aprovar explícitament el nou frontal.
+const labHull=preview.getObjectByName('BTR82_v3_lowered_centre_hull').geometry;
+const gameHull=rig.getObjectByName('BTR82_3B_hull').geometry;
+labHull.computeBoundingBox();gameHull.computeBoundingBox();
+assert(Math.abs(labHull.boundingBox.min.z-(-4.54))<1e-5);
+assert(Math.abs(gameHull.boundingBox.min.z-(-5.425*sz))<1e-5,
+ 'El morro original del joc s’ha de preservar');
 const p=preview.getObjectByName('BTR82_v3_low_angular_turret').geometry,
  g=rig.getObjectByName('BTR82_3B_curved_turret').geometry;
 const a=p.getAttribute('position'),b=g.getAttribute('position');
