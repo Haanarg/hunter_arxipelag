@@ -55,6 +55,10 @@ const version=btr.match(/export const BTR82_VERSION='([^']+)'/)?.[1];
 assert(version&&version.startsWith('btr82-'),'Falta la revisió del BTR-82');
 assert(studio.includes('btr82-3b-preview.mjs?rev='),'Falta el model de proves 3B vigent');
 assert(html.includes('src/vehicles-externs-proves.mjs?rev='));
+assert(studio.includes("vehicle-candidate-catalog.mjs?rev=lab-catalog-syntax-repair-1"),
+ 'Força la càrrega del catàleg corregit, sense reutilitzar la versió amb SyntaxError');
+assert(html.includes(".catch(error=>")&&html.includes("No s’ha pogut carregar el laboratori"),
+ 'Una fallada en carregar un mòdul no pot deixar el visor en blanc');
 assert(btr.includes("BASE_FILE='btr82-base-100.glb'"));
 assert(btr.includes('withTruckWheels')&&btr.includes('replaceBarrelWithCylinders'));
 assert.equal((btr.match(/\{slot:[01],level:[03],title:/g)||[]).length,2,'Calen dos visors BTR-82');
