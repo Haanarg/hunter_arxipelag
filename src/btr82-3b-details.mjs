@@ -138,6 +138,109 @@ function addSideAccessDoor(group,side,extendToKeel=false){
   [handleX+side*.045,handleY+.048,handleZ],.020);
 }
 
+// Blindatge lateral posterior inspirat en les portelles, registres i barres
+// dels BTR-80 de la fotografia. Només X canvia de signe entre els costats.
+// Els tres trams de Z reprodueixen el perfil real angular del casc 3B.
+export const BTR82_3B_REAR_SIDE=Object.freeze({
+ panels:Object.freeze([[2.10,3.42],[3.75,4.78]]),
+ railStartZ:1.96,railEndZ:4.91
+});
+const REAR_SIDE_STATIONS=Object.freeze([
+ {z:.85,section:[[.96,1.59],[1.08,1.89],[1.42,1.91],[1.77,1.24]]},
+ {z:4.58,section:[[.94,1.59],[1.09,1.76],[1.43,1.76],[1.78,1.23]]},
+ {z:5.425,section:[[.89,1.37],[1.10,1.67],[1.39,1.64],[1.73,1.14]]}
+]);
+function rearSideHullX(z,y){
+ const stations=REAR_SIDE_STATIONS;
+ let k=0;
+ while(k<stations.length-2&&z>stations[k+1].z)k++;
+ const a=stations[k],b=stations[k+1],
+  t=Math.max(0,Math.min(1,(z-a.z)/(b.z-a.z)));
+ function sectionX(station){
+  const p=station.section;
+  if(y<=p[0][0])return p[0][1];
+  for(let i=0;i<p.length-1;i++){
+   const [y0,x0]=p[i],[y1,x1]=p[i+1];
+   if(y<=y1)return x0+(x1-x0)*(y-y0)/(y1-y0);
+  }
+  return p.at(-1)[1];
+ }
+ return sectionX(a)*(1-t)+sectionX(b)*t;
+}
+function rearSideFacet(group,name,side,rows,outset,mat){
+ // Cada fila inclou els dos extrems longitudinals: els bisells de les
+ // portelles segueixen el perfil lateral i la planta del vehicle.
+ const verts=[];
+ for(const [y,z0,z1] of rows)
+  for(const z of [z0,z1])
+   verts.push(side*(rearSideHullX(z,y)+outset),y,z);
+ const tris=[];
+ for(let row=0;row<rows.length-1;row++){
+  const i=row*2;
+  if(side>0)tris.push(i,i+2,i+1,i+1,i+2,i+3);
+  else tris.push(i,i+1,i+2,i+1,i+3,i+2);
+ }
+ const geo=new THREE.BufferGeometry();
+ geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+ geo.setIndex(tris);
+ geo.computeVertexNormals();geo.computeBoundingSphere();
+ const mesh=new THREE.Mesh(geo,mat);
+ mesh.name=name;mesh.castShadow=true;mesh.receiveShadow=true;
+ group.add(mesh);
+ return mesh;
+}
+function addRearSideDetail(group,side){
+ const label=side<0?'left':'right';
+ // Dos registres amb cantonades bisellades; el contorn fosc continua
+ // al costat verd del xassís sense canviar-ne el volum ni la silueta.
+ BTR82_3B_REAR_SIDE.panels.forEach(([start,end],index)=>{
+  const prefix='BTR82_3B_rear_side_'+label+'_panel_'+index;
+  rearSideFacet(group,prefix+'_seam',side,[
+   [1.15,start+.10,end-.10],
+   [1.42,start,end],
+   [1.62,start+.13,end-.13]
+  ],.071,trim);
+  rearSideFacet(group,prefix+'_armour',side,[
+   [1.18,start+.15,end-.15],
+   [1.42,start+.045,end-.045],
+   [1.59,start+.165,end-.165]
+  ],.093,visionArmour);
+  // Grapes i subjeccions alineades amb les dues fulles, no flotant.
+  const centre=(start+end)/2;
+  const x=side*(rearSideHullX(centre,1.34)+.130);
+  slab(group,prefix+'_latch',.075,.13,.15,x,1.34,centre+.22,steel);
+  for(const [i,y] of [1.23,1.51].entries()){
+   const z=start+.13,
+    sx=side*(rearSideHullX(z,y)+.126);
+   rail(group,prefix+'_hinge_'+i,
+    [sx,y-.056,z],[sx,y+.056,z],.029);
+  }
+ });
+ // Barana metàl·lica sota les portelles, com a la fotografia. Està
+ // segmentada per seguir l'estrenyiment del xassís a la popa.
+ for(let i=0;i<3;i++){
+  const stations=[1.96,3.31,4.42,4.91],z0=stations[i],z1=stations[i+1],
+   y0=1.065+(i===2?.035:0),y1=1.065+(i===2?.10:0);
+  rail(group,'BTR82_3B_rear_side_'+label+'_rail_'+i,
+   [side*(rearSideHullX(z0,y0)+.135),y0,z0],
+   [side*(rearSideHullX(z1,y1)+.135),y1,z1],.026);
+ }
+ for(const z of [2.11,4.76]){
+  const y=.985,x=side*(rearSideHullX(z,y)+.11);
+  rail(group,'BTR82_3B_rear_side_'+label+'_rail_post_'+z,
+   [x,y,z],[side*(rearSideHullX(z,1.12)+.11),1.12,z],.026);
+ }
+ // Petit registre circular posterior: cara exterior sobre el panell,
+ // amb eix cap a X. Els dos costats comparteixen diàmetre i cota.
+ const z=4.35,y=1.54;
+ const access=new THREE.Mesh(new THREE.CylinderGeometry(.095,.095,.038,12),steel);
+ access.name='BTR82_3B_rear_side_'+label+'_round_cap';
+ access.rotation.z=Math.PI/2;
+ access.position.set(side*(rearSideHullX(z,y)+.128),y,z);
+ access.castShadow=true;
+ group.add(access);
+}
+
 export function applyBtr823BDetails(scene,{extendSideAccessToKeel=false}={}){
  if(scene.getObjectByName('BTR82_3B_hardware'))throw new Error('Detalls 3B duplicats');
  const group=new THREE.Group();
@@ -188,9 +291,11 @@ export function applyBtr823BDetails(scene,{extendSideAccessToKeel=false}={}){
  }
  slab(group,'BTR82_3B_rear_access_latch',.36,.055,.18,0,1.855,4.08,steel);
 
- // Una comporta a cada lateral, només entre els eixos 2 i 3.
- // L'extensió fins a la quilla és un candidat de visor fins a aprovar-la.
+ // Comportes entre els eixos 2–3 allargades fins a la quilla tant
+ // al visor com al joc, sense canviar la hitbox ni el moviment de rodes.
  for(const side of [-1,1])addSideAccessDoor(group,side,extendSideAccessToKeel);
+ // Registres i suports sobre les rodes posteriors; reflex exacta en X=0.
+ for(const side of [-1,1])addRearSideDetail(group,side);
 
  // Mirilles horitzontals apuntant endavant, paral·leles al terra.
  // La caixa de blindatge penetra cap endins del xassís fins a Z=-3.66,
@@ -214,15 +319,17 @@ export function applyBtr823BDetails(scene,{extendSideAccessToKeel=false}={}){
  }
  scene.userData.btr82Details3B={rearGuards:2,roofHatches:2,roofVents:2,
   frontVisors:2,headlights:4,sideAccessDoors:2,
-  sideAccessToKeel:!!extendSideAccessToKeel,visorHorizontal:true};
+  sideAccessToKeel:!!extendSideAccessToKeel,rearSidePanels:4,
+  rearSideSymmetricX:true,visorHorizontal:true};
  return group;
 }
 
 // Agrupa tots els detalls en una sola geometria compartida pel joc.
 // Cada peça conserva la seva orientació i color; cap GLB ni textura externa.
-export function createBtr823BHardwareBatch(THREE){
+export function createBtr823BHardwareBatch(THREE,{extendSideAccessToKeel=true}={}){
+
  const root=new THREE.Group();
- applyBtr823BDetails(root);
+ applyBtr823BDetails(root,{extendSideAccessToKeel});
  root.updateMatrixWorld(true);
  const positions=[],normals=[],colors=[];let detailCount=0;
  root.traverse(mesh=>{
