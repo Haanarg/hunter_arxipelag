@@ -2486,7 +2486,11 @@ function parachuteRoofLanding(x0,z0,y0,x1,z1,y1){
 // La caiguda conserva l'altura i la inèrcia; el dany es calcula en aterrar.
 function ejectFromHelicopter(v){
   resetCameraState();
-  const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),side=1,
+  const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),
+        exitRightX=v.x+Math.cos(v.hd)*1.8,exitRightZ=v.z-Math.sin(v.hd)*1.8,
+        blockedRight=wallCandidates(exitRightX,exitRightZ,1).some(w=>!w.open&&
+          exitRightX>w.x0-.8&&exitRightX<w.x1+.8&&exitRightZ>w.z0-.8&&exitRightZ<w.z1+.8),
+        side=blockedRight?-1:1,
         ground=Math.max(0,hAt(v.x,v.z)),
         altitude=Number.isFinite(v.alt)?v.alt:(v.o?.position?.y??ground);
   P.x=v.x+Math.cos(v.hd)*side*1.8;

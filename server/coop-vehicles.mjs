@@ -113,18 +113,23 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    // conservant la velocitat i desplegant el paracaigudes de l'inventari.
    const aircraft=vehicleDynamics.types[v.t]?.m==='a',
      ground=Math.max(0,world().heightAt(v.x,v.z));
+   // L'ejecció en vol també tria la dreta abans de la banda esquerra.
    if(meta.mode==='native'&&aircraft&&v.y-ground>4){
-     const side=1,
-       x=v.x+Math.cos(v.hd)*side*1.8,
-       z=v.z-Math.sin(v.hd)*side*1.8,hd=v.hd,
-       fx=-Math.sin(hd),fz=-Math.cos(hd);
-     if(x<meta.bounds.x0+1||x>meta.bounds.x1-1||
-        z<meta.bounds.z0+1||z>meta.bounds.z1-1)return null;
-     return {x,y:v.y,z,hd,fall:{kind:'air',y:v.y,vy:0,
-       vx:fx*(v.v||0)*.82+Math.cos(hd)*side*2.5,
-       vz:fz*(v.v||0)*.82-Math.sin(hd)*side*2.5,
-       startHeight:v.y-ground,t:0,leanF:0,leanS:0,
-       parachute:!!hasParachute(actor.id)}};
+     for(const side of [1,-1]){
+       const x=v.x+Math.cos(v.hd)*side*1.8,
+         z=v.z-Math.sin(v.hd)*side*1.8,hd=v.hd,
+         fx=-Math.sin(hd),fz=-Math.cos(hd);
+       if(x<meta.bounds.x0+1||x>meta.bounds.x1-1||
+          z<meta.bounds.z0+1||z>meta.bounds.z1-1)continue;
+       const target={x,y:v.y,z,hd},resolved=world().resolveBody(target,target);
+       if(Math.hypot(resolved.x-x,resolved.z-z)>.12)continue;
+       return {x,y:v.y,z,hd,fall:{kind:'air',y:v.y,vy:0,
+         vx:fx*(v.v||0)*.82+Math.cos(hd)*side*2.5,
+         vz:fz*(v.v||0)*.82-Math.sin(hd)*side*2.5,
+         startHeight:v.y-ground,t:0,leanF:0,leanS:0,
+         parachute:!!hasParachute(actor.id)}};
+     }
+     return null;
    }
    // Sortida segura: comprovar el lloc exterior al casc, no un recorregut
    // artificial des del CENTRE del vehicle, que travessa el seu propi volum.
