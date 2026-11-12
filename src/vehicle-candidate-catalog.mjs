@@ -10,13 +10,11 @@ export const CATALOG=[
  {id:'tanqueta',name:'Tanqueta · BTR-82 3B',kind:'terra',
    note:'Model 3B actualitzat al joc: torreta 25% més petita i centrada longitudinalment sobre el segon eix, amb el canó alineat; mirilles horitzontals amb carcassa verda encastada al casc. Conserva les vuit rodes i incorpora una comporta d’accés verda amb frontisses i nansa a cada lateral entre els eixos segon i tercer, a més de defenses posteriors, trapes, ventilació i quatre focus. Les dues comportes arriben fins a la quilla i els laterals posteriors tenen registres de blindatge, frontisses, barres i tapes simètriques, seguint la referència fotogràfica; canvis aplicats al laboratori i al joc. Al laboratori s’ha retallat la falca del morro que sobresortia davant dels quatre fars; el frontal retallat encara és un candidat de proves i no altera la tanqueta jugable.',
    options:[]},
- {id:'tanc',name:'Tanc · estil M1A1 Abrams',kind:'terra',
-   note:'Substituïts els tres GLB genèrics per candidats M1A1/M1 amb llicència Creative Commons identificada. Cal verificar les peces mòbils i adaptar els models abans d’usar-los al joc.',
+ {id:'tanc',name:'Tanc · T-90M',kind:'terra',
+   note:'Dos candidats T-90M russos amb llicència CC BY 4.0. Visors originals; importa el GLB descarregat de la font per editar-lo.',
    options:[
-    S('1b4a0b196df14e67bce38ed6fef7d944','https://sketchfab.com/3d-models/abrams-m1a1-free-1b4a0b196df14e67bce38ed6fef7d944','Abrams M1A1 [Free]','Quasar',29000,'CC BY 4.0','Abrams reconeixible, geometria moderada; prioritat per revisar la torreta i les textures.'),
-    S('eed14f42064e426eadda1e052b6f334b','https://sketchfab.com/3d-models/m1a1-abrams-eed14f42064e426eadda1e052b6f334b','M1A1 Abrams','Scril',12300,'CC BY 4.0','Model d\'un projecte de mod declarat per l\'autor, sense constància de ser un model extret d\'un joc. Menys triangles.'),
-    S('2577a4eccbc74b2da6dba5bfd09b7511','https://sketchfab.com/3d-models/m1-abrams-2577a4eccbc74b2da6dba5bfd09b7511','M1 Abrams','Artem Goyko',40200,'CC BY 4.0','Més detall de la família M1; validar armament, materials i pivot abans d\'usar-lo.')]},
-
+    S("c858e6ac0f3045d68f73681725351372","https://sketchfab.com/3d-models/t90m-proryv-low-poly-tank-c858e6ac0f3045d68f73681725351372","T90M PRORYV LOW-POLY TANK","PhoneModeler3D",1412,"CC BY 4.0","Molt lleuger · 1.412 triangles · candidat low poly per al joc."),
+    S("7d3a7cf685334f3da3005c559e2b1952","https://sketchfab.com/3d-models/t-90m-arena-m-stylised-7d3a7cf685334f3da3005c559e2b1952","T-90M Arena-M (Stylised)","Inmate",27718,"CC BY 4.0","Estilitzat · 27.718 triangles · més detall i protecció Arena-M.")]},
 
  {id:'llanxa',name:'Llanxa ràpida',kind:'mar',options:[
    P('transport-collection-hd','Open sport runabout'),

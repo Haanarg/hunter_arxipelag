@@ -112,37 +112,26 @@
   "externalModels": {
     "tanc": [
       {
-        "modelId": "1b4a0b196df14e67bce38ed6fef7d944",
-        "title": "Abrams M1A1 [Free]",
-        "author": "Quasar",
-        "triangles": 29000,
-        "license": "CC BY 4.0",
-        "url": "https://sketchfab.com/3d-models/abrams-m1a1-free-1b4a0b196df14e67bce38ed6fef7d944",
-        "note": "Abrams reconeixible, geometria moderada; prioritat per revisar la torreta i les textures.",
         "provider": "sketchfab",
+        "modelId": "c858e6ac0f3045d68f73681725351372",
+        "url": "https://sketchfab.com/3d-models/t90m-proryv-low-poly-tank-c858e6ac0f3045d68f73681725351372",
+        "title": "T90M PRORYV LOW-POLY TANK",
+        "author": "PhoneModeler3D",
+        "triangles": 1412,
+        "license": "CC BY 4.0",
+        "note": "Molt lleuger · 1.412 triangles · candidat low poly per al joc.",
         "slot": 1
       },
       {
-        "modelId": "eed14f42064e426eadda1e052b6f334b",
-        "title": "M1A1 Abrams",
-        "author": "Scril",
-        "triangles": 12300,
-        "license": "CC BY 4.0",
-        "url": "https://sketchfab.com/3d-models/m1a1-abrams-eed14f42064e426eadda1e052b6f334b",
-        "note": "Model d'un projecte de mod declarat per l'autor, sense constància de ser un model extret d'un joc. Menys triangles.",
         "provider": "sketchfab",
+        "modelId": "7d3a7cf685334f3da3005c559e2b1952",
+        "url": "https://sketchfab.com/3d-models/t-90m-arena-m-stylised-7d3a7cf685334f3da3005c559e2b1952",
+        "title": "T-90M Arena-M (Stylised)",
+        "author": "Inmate",
+        "triangles": 27718,
+        "license": "CC BY 4.0",
+        "note": "Estilitzat · 27.718 triangles · més detall i protecció Arena-M.",
         "slot": 2
-      },
-      {
-        "modelId": "2577a4eccbc74b2da6dba5bfd09b7511",
-        "title": "M1 Abrams",
-        "author": "Artem Goyko",
-        "triangles": 40200,
-        "license": "CC BY 4.0",
-        "url": "https://sketchfab.com/3d-models/m1-abrams-2577a4eccbc74b2da6dba5bfd09b7511",
-        "note": "Més detall de la família M1; validar armament, materials i pivot abans d'usar-lo.",
-        "provider": "sketchfab",
-        "slot": 3
       }
     ],
     "tanqueta": [

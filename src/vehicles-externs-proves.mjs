@@ -1,4 +1,4 @@
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261112-catalog-fix-6';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261112-t90m-7';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs';
@@ -307,7 +307,7 @@ async function choose(config){
  grid.classList.toggle('btr-study',btrStudy);
  document.querySelector('#fitScale').closest('label').hidden=btrStudy;
  for(const slot of slots){
-   slot.outer.hidden=btrStudy?slots.indexOf(slot)>0:slots.indexOf(slot)>3;
+   slot.outer.hidden=slots.indexOf(slot)>config.options.length;
    dropPrevious(slot);
    slot.kind=config.kind;
    slot.ground.material.color.setHex(marine?0x285f65:config.kind==='aire'?0x6a7b67:0x69735e);
@@ -493,7 +493,7 @@ const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.textContent=config.name;
- const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3B revisat · únic model':config.id==='ferry'?'2–3 alternatives':'3 alternatives');
+ const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3B revisat · únic model':config.options.length+' alternatives');
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }

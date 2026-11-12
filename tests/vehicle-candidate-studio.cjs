@@ -37,8 +37,11 @@ for(const item of files){
 assert.deepEqual(manifest.models.tanc,[]);
 assert.deepEqual(manifest.models.tanqueta,[]);
 assert(manifest.limits.maxFileBytes>=32*1024*1024);
-assert.equal(manifest.externalModels.tanc.length,3);
+assert.equal(manifest.externalModels.tanc.length,2);
 assert.equal(manifest.externalModels.tanqueta.length,1);
+assert.deepEqual(manifest.externalModels.tanc.map(m=>m.modelId),['c858e6ac0f3045d68f73681725351372','7d3a7cf685334f3da3005c559e2b1952']);
+assert(!/Abrams|M1A1/.test(catalog));
+for(const m of manifest.externalModels.tanc){assert(catalog.includes(m.modelId));assert(m.triangles<30000);}
 for(const id of ['tanc','tanqueta'])for(const candidate of manifest.externalModels[id]){
  assert.equal(candidate.provider,'sketchfab');
  assert.match(candidate.modelId,/^[0-9a-f]{32}$/);
@@ -57,7 +60,7 @@ assert(btr.includes('withTruckWheels')&&btr.includes('replaceBarrelWithCylinders
 assert.equal((btr.match(/\{slot:[01],level:[03],title:/g)||[]).length,2,'Calen dos visors BTR-82');
 assert(btr.includes('makeBtr82HullV3(baseline)')&&!btr.includes('makeBtr82HullV2('));
 assert(studio.includes("const btrStudy=config.id==='tanqueta'"));
-assert(studio.includes('slot.outer.hidden=btrStudy?slots.indexOf(slot)>0:slots.indexOf(slot)>3'));
+assert(studio.includes('slot.outer.hidden=slots.indexOf(slot)>config.options.length'));
 assert(studio.includes('previewFactory=createBtr823BPreview')&&studio.includes('previewFactory()'));
 assert(!studio.includes('studio.load(token)'),'Els antics GLB no han de carregar-se en triar la tanqueta');
 assert(html.includes('#grid.btr-study{grid-template-columns:minmax(0,1fr)'));
