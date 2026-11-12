@@ -45,8 +45,30 @@ function light(group,name,x,y,z,mat,diameter,depth){
 // als dos pendents del blindatge lateral, sense quedar flotant sobre el casc.
 export const BTR82_3B_SIDE_ACCESS=Object.freeze({
  centreZ:(-.938+1.7505)/2,frameHalfLength:.47,leafHalfLength:.405,
- frameBottom:1.025,frameShoulder:1.37,frameTop:1.59
+ frameBottom:1.025,frameShoulder:1.37,frameTop:1.59,
+ keelY:-.32
 });
+// Secció exacta del casc 3B entre els eixos centrals (z=.40625).
+// A Y=.96 hi ha dues arestes diferents: el llavi horitzontal que
+// separa el blindatge alt de la quilla inclinada. Cal conservar
+// les dues per evitar que la comporta travessi l'aire o el xassís.
+const SIDE_ACCESS_HULL_SECTION=Object.freeze([
+ [-.32,1.34],[-.08,1.405],[.96,1.47],[.96,1.59],
+ [1.08,1.89],[1.42,1.91],[1.77,1.24]
+].map(pair=>Object.freeze(pair)));
+function sideAccessHullX(y){
+ for(let i=0;i<SIDE_ACCESS_HULL_SECTION.length-1;i++){
+  const [ya,xa]=SIDE_ACCESS_HULL_SECTION[i],
+   [yb,xb]=SIDE_ACCESS_HULL_SECTION[i+1];
+  if(y>=ya&&y<=yb&&yb>ya)return xa+(xb-xa)*(y-ya)/(yb-ya);
+ }
+ throw new RangeError('Alçada fora de la secció lateral BTR-82: '+y);
+}
+function sideAccessHullRows(bottom,top){
+ return [[bottom,sideAccessHullX(bottom)],
+  ...SIDE_ACCESS_HULL_SECTION.filter(([y])=>y>bottom&&y<top),
+  [top,sideAccessHullX(top)]];
+}
 function sideAccessProfileX(y){
  // Pla angular fort: falda (1.80), espatlla (1.95), bisell (1.63).
  const profile=[[1.025,1.80],[1.37,1.952],[1.59,1.632]];
@@ -60,8 +82,12 @@ function sideAccessProfileX(y){
 }
 function sideAccessPanel(group,name,side,ys,halfLength,outset,mat){
  const {centreZ}=BTR82_3B_SIDE_ACCESS,positions=[];
- for(const y of ys)for(const z of [centreZ-halfLength,centreZ+halfLength])
-  positions.push(side*(sideAccessProfileX(y)+outset),y,z);
+ for(const level of ys){
+  const y=Array.isArray(level)?level[0]:level,
+    x=Array.isArray(level)?level[1]:sideAccessProfileX(y);
+  for(const z of [centreZ-halfLength,centreZ+halfLength])
+   positions.push(side*(x+outset),y,z);
+ }
  const indices=[];
  for(let band=0;band<ys.length-1;band++){
   const a=band*2;
@@ -77,14 +103,20 @@ function sideAccessPanel(group,name,side,ys,halfLength,outset,mat){
  mesh.name=name;mesh.castShadow=true;mesh.receiveShadow=true;
  group.add(mesh);return mesh;
 }
-function addSideAccessDoor(group,side){
+function addSideAccessDoor(group,side,extendToKeel=false){
  const label=side<0?'left':'right',
   z=BTR82_3B_SIDE_ACCESS.centreZ;
- // Borda fosca estreta i placa blindada del mateix verd de la carrosseria.
+ // La versió aprovada del joc conserva el perfil curt. El candidat del
+ // visor allarga les mateixes dues peces fins al vèrtex de la quilla.
+ // El nou perfil segueix els plecs reals, inclòs el llavi a Y=.96.
+ const frameRows=extendToKeel?sideAccessHullRows(-.32,1.59):
+   [1.025,1.37,1.59],
+   leafRows=extendToKeel?sideAccessHullRows(-.285,1.548):
+   [1.067,1.37,1.548];
  sideAccessPanel(group,'BTR82_3B_side_access_'+label+'_outline',side,
-  [1.025,1.37,1.59],BTR82_3B_SIDE_ACCESS.frameHalfLength,.048,trim);
+  frameRows,BTR82_3B_SIDE_ACCESS.frameHalfLength,.048,trim);
  sideAccessPanel(group,'BTR82_3B_side_access_'+label+'_leaf',side,
-  [1.067,1.37,1.548],BTR82_3B_SIDE_ACCESS.leafHalfLength,.066,armour);
+  leafRows,BTR82_3B_SIDE_ACCESS.leafHalfLength,.066,armour);
  // Dues frontisses a la vora davantera (-Z), una nansa a la posterior.
  const hingeZ=z-.424;
  for(const [i,y] of [1.155,1.45].entries()){
@@ -101,7 +133,7 @@ function addSideAccessDoor(group,side){
   [handleX+side*.045,handleY+.048,handleZ],.020);
 }
 
-export function applyBtr823BDetails(scene){
+export function applyBtr823BDetails(scene,{extendSideAccessToKeel=false}={}){
  if(scene.getObjectByName('BTR82_3B_hardware'))throw new Error('Detalls 3B duplicats');
  const group=new THREE.Group();
  group.name='BTR82_3B_hardware';
@@ -151,8 +183,9 @@ export function applyBtr823BDetails(scene){
  }
  slab(group,'BTR82_3B_rear_access_latch',.36,.055,.18,0,1.855,4.08,steel);
 
- // Una comporta d'accés a cada lateral, només entre els eixos 2 i 3.
- for(const side of [-1,1])addSideAccessDoor(group,side);
+ // Una comporta a cada lateral, només entre els eixos 2 i 3.
+ // L'extensió fins a la quilla és un candidat de visor fins a aprovar-la.
+ for(const side of [-1,1])addSideAccessDoor(group,side,extendSideAccessToKeel);
 
  // Mirilles horitzontals apuntant endavant, paral·leles al terra.
  // La caixa de blindatge penetra cap endins del xassís fins a Z=-3.66,
@@ -175,7 +208,8 @@ export function applyBtr823BDetails(scene){
    x,1.18,z-.10,lamp,.213,.065);
  }
  scene.userData.btr82Details3B={rearGuards:2,roofHatches:2,roofVents:2,
-  frontVisors:2,headlights:4,sideAccessDoors:2,visorHorizontal:true};
+  frontVisors:2,headlights:4,sideAccessDoors:2,
+  sideAccessToKeel:!!extendSideAccessToKeel,visorHorizontal:true};
  return group;
 }
 
