@@ -50,7 +50,7 @@ assert.equal(manifest.externalModels.tanqueta[0].modelId,'6226acae68424d99bf0388
 // Compara només l'original i la v3, amb coherència entre mòdul i revisió de cache.
 const version=btr.match(/export const BTR82_VERSION='([^']+)'/)?.[1];
 assert(version&&version.startsWith('btr82-'),'Falta la revisió del BTR-82');
-assert(studio.includes('btr82-lod-studio.mjs?rev='+version),'Revisions del BTR-82 desincronitzades');
+assert(studio.includes('btr82-3b-preview.mjs?rev='),'Falta el model de proves 3B vigent');
 assert(html.includes('src/vehicles-externs-proves.mjs?rev='));
 assert(btr.includes("BASE_FILE='btr82-base-100.glb'"));
 assert(btr.includes('withTruckWheels')&&btr.includes('replaceBarrelWithCylinders'));
@@ -58,10 +58,10 @@ assert.equal((btr.match(/\{slot:[01],level:[03],title:/g)||[]).length,2,'Calen d
 assert(btr.includes('makeBtr82HullV3(baseline)')&&!btr.includes('makeBtr82HullV2('));
 assert(studio.includes("const btrStudy=config.id==='tanqueta'"));
 assert(studio.includes('slot.outer.hidden=btrStudy?slots.indexOf(slot)>0:slots.indexOf(slot)>3'));
-assert(studio.includes('createBtr823BPreview()'));
+assert(studio.includes('previewFactory=createBtr823BPreview')&&studio.includes('previewFactory()'));
 assert(!studio.includes('studio.load(token)'),'Els antics GLB no han de carregar-se en triar la tanqueta');
 assert(html.includes('#grid.btr-study{grid-template-columns:minmax(0,1fr)'));
-assert(html.includes('#grid.btr-study{grid-template-columns:repeat(2'));
+assert(!html.includes('#grid.btr-study{grid-template-columns:repeat(2'),'La tanqueta aprovada té un únic visor');
 assert(hull.includes('BTR82_HULL_V3_STATIONS')&&hull.includes('createBtr82HullV3Geometry'));
 assert(hull.includes('createBtr82TurretV3Geometry')&&hull.includes('makeBtr82HullV3'));
 assert(hull.includes("frontClosure:'symmetric-centerline'"));
@@ -91,7 +91,8 @@ for(const file of [
  'tests/vehicle-candidate-studio.cjs','tests/btr82-hull-v3-geometry.cjs',
  'src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs',
  'src/btr82-lod-studio.mjs','src/btr82-hull-v3.mjs',
- 'src/vehicle-annotation-editor.mjs','src/vehicle-hole-brush.mjs'
+ 'src/vehicle-annotation-editor.mjs','src/vehicle-hole-brush.mjs',
+ 'src/vehicle-live-editor.mjs','src/vehicle-live-geometry.mjs','server/model-lab.mjs'
 ])execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
 execFileSync(process.execPath,[path.join(root,'tests/btr82-hull-v3-geometry.cjs')],{stdio:'pipe'});
 console.log('PASS vehicle candidate studio: catalog, manifest, BTR-82 v3, editor and syntax');

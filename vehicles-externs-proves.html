@@ -70,6 +70,11 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 @media(max-width:1050px){#grid.btr-study{grid-template-columns:minmax(0,1fr);max-width:1120px;margin:0 auto}}
 @media(max-width:650px){#grid,#grid.btr-study{grid-template-columns:1fr}.panel{height:420px}.panel .status{min-height:16px}#vehicleList button{min-width:130px;flex-basis:130px}}
 
+
+.live-transforms{display:flex;flex-wrap:wrap;gap:10px}.live-transforms fieldset{flex:1;min-width:220px}.live-transforms input{width:75px}#liveEditor fieldset{border:1px solid #677765;border-radius:8px;padding:10px;margin:8px 0}#liveEditor label{display:inline-flex;align-items:center;gap:6px;margin:4px}#liveEditor select{max-width:100%;min-width:0}#livePart{max-width:440px!important}#liveOffset{width:80px}#liveRequest{width:100%;box-sizing:border-box}#liveQueue>div{display:flex;justify-content:space-between;gap:12px;padding:8px;border-bottom:1px solid #677765}#liveQueue span{white-space:pre-wrap;overflow-wrap:anywhere}#liveStatus{color:#f3dc9d}button:disabled{opacity:.4;cursor:default}@media(max-width:600px){#livePart{max-width:240px!important}.live-transforms{display:block}}
+
+.annotation-tools{margin-bottom:12px}.annotation-tools summary{cursor:pointer;padding:10px;color:var(--gold)}
+@media(min-width:950px){#liveWorkspace{display:grid;grid-template-columns:350px minmax(0,1fr);gap:16px;align-items:start}#liveEditor{max-height:85vh;overflow:auto;position:sticky;top:10px}#liveWorkspace #grid{position:sticky;top:10px;width:100%;grid-template-columns:repeat(2,minmax(0,1fr))}#liveWorkspace #grid.btr-study{grid-template-columns:minmax(0,1fr)}.live-transforms{display:block}#livePart{max-width:290px!important}.live-transforms input{width:66px}#liveEditor{padding:12px}.live-transforms fieldset{min-width:0}#liveEditor label{font-size:12px}}
 </style>
 <script type="importmap">{"imports":{"three":"./vendor/three-r186.module.mjs","three/addons/":"./vendor/three-addons/"}}</script>
 </head><body>
@@ -89,7 +94,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <label><input id="showGrid" type="checkbox" checked> Graella i referència humana</label>
 
 </div></section>
-<section id="btrPartTool" class="btr-part-tool" aria-label="Editor de marques 3D del laboratori de vehicles">
+<details class="annotation-tools"><summary>Marques i reparació de forats</summary><section id="btrPartTool" class="btr-part-tool" aria-label="Editor de marques 3D del laboratori de vehicles">
  <div class="btr-part-header"><h2>Editor de marques 3D</h2><span>Per a tots els vehicles · Anotacions no destructives</span></div>
  <div class="btr-part-controls">
  <label class="btr-option"><input type="checkbox" id="btrSelectEnabled"> Editor actiu</label>
@@ -106,7 +111,33 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
  <textarea id="btrSelectNote" rows="3" placeholder="Ex.: les dues meitats de la coberta posterior han de formar una sola superfície contínua; els baixos dels dos costats també..."></textarea>
  <div class="btr-part-footer"><button id="btrCopySelection" type="button">Copiar marques i explicació</button><span id="btrSelectFeedback" role="status">Marca les peces del model per indicar quines han d'anar juntes.</span></div>
 </section>
-<section id="grid" aria-label="Comparativa de models 3D"></section>
+</details><div id="liveWorkspace"><section id="liveEditor" class="btr-part-tool" aria-label="Refinat en directe">
+ <h2>Refinat en directe</h2>
+ <div class="btr-part-controls"><label>Model <select id="liveModel"></select></label>
+ <label>Peça <select id="livePart"></select></label>
+ <label><input id="livePick" type="checkbox"> Seleccionar amb un clic</label>
+ <label><input id="liveOriginal" type="checkbox"> Veure original</label></div>
+ <div class="live-fields">
+ <div class="live-transforms"><fieldset><legend>Posició (m)</legend><label>X <input type="number" step="0.05" data-transform="position.x" aria-label="Posició (m) X"></label><label>Y <input type="number" step="0.05" data-transform="position.y" aria-label="Posició (m) Y"></label><label>Z <input type="number" step="0.05" data-transform="position.z" aria-label="Posició (m) Z"></label></fieldset><fieldset><legend>Rotació (°)</legend><label>X <input type="number" step="1" data-transform="rotation.x" aria-label="Rotació (°) X"></label><label>Y <input type="number" step="1" data-transform="rotation.y" aria-label="Rotació (°) Y"></label><label>Z <input type="number" step="1" data-transform="rotation.z" aria-label="Rotació (°) Z"></label></fieldset><fieldset><legend>Escala</legend><label>X <input type="number" step="0.05" data-transform="scale.x" aria-label="Escala X" min="0.001"></label><label>Y <input type="number" step="0.05" data-transform="scale.y" aria-label="Escala Y" min="0.001"></label><label>Z <input type="number" step="0.05" data-transform="scale.z" aria-label="Escala Z" min="0.001"></label></fieldset></div>
+ <div class="btr-part-controls"><label>Color <input type="color" id="liveColor"></label>
+ <button id="liveUndo">Desfer</button><button id="liveRedo">Refer</button></div>
+ <fieldset><legend>Simetria del model complet</legend>
+ <label>Pla <select id="livePlane"><option value="x">X · esquerra/dreta (eix longitudinal Z)</option><option value="z">Z · esquerra/dreta (eix longitudinal X)</option><option value="y">Y · superior/inferior</option></select></label>
+ <label>Conservar <select id="liveSide"><option value="1">Costat positiu (+)</option><option value="-1">Costat negatiu (−)</option></select></label>
+ <label>Centre <input id="liveOffset" type="number" value="0" step="0.05" aria-label="Posició del pla central"></label>
+ <button id="liveSymmetry">Fer simètric</button></fieldset>
+ <div class="btr-part-controls"><button id="liveApprove">Aprovar candidat</button><button id="liveExport">Exportar candidat</button>
+ <label>Importar candidat <input id="liveImport" type="file" accept=".json"></label></div>
+ </div>
+ <div class="btr-part-controls"><button id="liveReload">Recarregar model publicat</button><button id="liveRecover">Recuperar esborrany</button><label><input id="liveAutoReload" type="checkbox" checked> Actualitzar automàticament</label></div>
+ <p id="liveStatus" role="status" aria-live="polite">Tria una peça. Els canvis es desen com a esborrany local.</p>
+ <details><summary>Consola de peticions</summary>
+ <label for="liveRequest">Canvi que vols fer</label><textarea id="liveRequest" rows="3" placeholder="Ex.: allarga el canó fins que toqui la torreta"></textarea>
+ <div class="btr-part-controls"><button id="liveEnqueue">Afegir a la cua</button><button id="liveCopy">Copiar pendents al xat</button><button id="liveDownloadQueue">Exportar cua</button><button id="liveShare">Compartir / actualitzar cua</button></div>
+ <p id="liveSharedLink"></p><div id="liveQueue" aria-live="polite"></div>
+ </details>
+</section>
+<section id="grid" aria-label="Comparativa de models 3D"></section></div>
 </main>
-<script type="module" src="./src/vehicles-externs-proves.mjs?rev=compact-lab-v23-btr82-visor-front"></script>
+<script type="module" src="./src/vehicles-externs-proves.mjs?rev=live-editor-20261112-1"></script>
 </body></html>

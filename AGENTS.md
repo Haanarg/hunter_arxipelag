@@ -46,3 +46,30 @@ The vehicle model lab `vehicles-externs-proves.html` is the default reusable int
 ## Phase 2 tools
 
 Before bumping `GAME_VERSION`, update `src/version.mjs`, run `npm run sync:version`, then `npm run build`. `npm run check:build` must reject stale version stamps and generated bundles. Preserve the only runtime generation workflow at `.github/workflows/rebuild-runtime.yml`; do not reintroduce a second writer. For the reduced set of essential regressions use `npm test` (`npm run test:regression:once` is a compatibility alias), and `node tools/repository-audit.cjs` for a conservative dependency/preview inventory. HTML labs may have external URLs even when no source file links to them; never delete on graph reachability alone.
+
+## Fast model refinement (2026-11-12)
+
+`src/vehicle-live-editor.mjs` adds per-piece transforms/color, candidate undo/redo,
+IndexedDB drafts, JSON candidate export/import and optional whole-model symmetry
+for **every editable vehicle**, including imported static GLBs. `vehicle-live-geometry.mjs`
+clips and reflects one chosen half in model coordinates; X=0 is the normal
+left/right plane for models pointing along Z. Other orientations select Y/Z or
+a custom plane offset. This is an explicit reversible operation, not an enforced
+constraint on subsequent edits. Animated skin/morph/instanced meshes are rejected
+atomically rather than silently corrupted. Do not integrate a candidate into the
+game until approved; “Aprovar candidat” exports the artifact for that step.
+
+Queue: local by default; “Compartir / actualitzar cua” uses the game's signed-in
+administrator and stores one bounded queue in R2. Its read-only capability URL
+expires seven days after the last update and can be provided to the assistant.
+It does not trigger an AI or deploy from the browser. Never put GitHub/API keys
+in the lab. Preserve copy/export fallback when the backend is unavailable.
+
+For each published model-lab iteration, update `LAB_REVISION`, the HTML entry
+revision and `assets/vehicle-candidates/lab-revision.json` together. Changing this
+manifest triggers the existing Cloudflare deploy workflow without running the
+full game test suite or changing GAME_VERSION; runtime rebuild remains manual.
+Run focused `node tests/vehicle-live-editor.mjs` and relevant geometry checks.
+Auto-refresh checks every 15 seconds, preserves camera/type, and waits for the
+reload button when a local draft is dirty. Prior drafts remain recoverable; do
+not silently overwrite a newly published model with an older revision's draft.

@@ -1,3 +1,4 @@
+import {readModelLab,writeModelLab} from './model-lab.mjs';
 export {CoopRoomHub} from './coop-hub.mjs';
 import {readCoopRoom} from './coop.mjs';
 import {notifyCoopRoom} from './coop-hub.mjs';
@@ -30,6 +31,7 @@ function objectKey(owner,id){return 'saves/'+owner+'/'+id+'/'+crypto.randomUUID(
 async function privateAPI(request,env,user,url){
   const owner=user.id;
   if(request.headers.get('X-Hunter-User')!==owner)failure(403,'ACCOUNT_CHANGED','El compte ha canviat.');
+  const lab=await writeModelLab(request,env,user,url,readJSON,json,{access,limit});if(lab)return lab;
   if(url.pathname.startsWith('/api/coop/'))return coopAPI(request,env,user,url,readJSON,json);
   const match=url.pathname.match(/^\/api\/saves(?:\/([^/]+))?$/);
   if(match){
@@ -104,6 +106,7 @@ export default {
       if(!readiness.ready)failure(503,'NOT_CONFIGURED','Els comptes encara no estan activats. El desament local continua disponible.');
       if(['POST','PUT','DELETE','PATCH'].includes(request.method)&&request.headers.get('Origin')!==env.AUTH_ORIGIN)
         failure(403,'ORIGIN','Origen no admès.');
+      const sharedLab=await readModelLab(request,env,url,json);if(sharedLab)return sharedLab;
       const auth=createAuth(env,ctx);
       if(url.pathname.startsWith('/api/auth/')){
         const path=url.pathname.slice('/api/auth'.length);

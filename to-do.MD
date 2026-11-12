@@ -1,3 +1,13 @@
+**2026-11-12 · Refinat interactiu de models (tots els vehicles editables):**
+- [x] Controls de posició, rotació, escala i color per peça/grup/model; selecció amb clic o arbre; comparació amb original; 20 passos de desfer/refer.
+- [x] Simetria opcional del model complet amb pla X/Y/Z, desplaçament i costat de referència; retall real de triangles i reflexió amb UV/materials. Operació explícita reversible, no restricció permanent.
+- [x] Esborranys IndexedDB, exportació/importació JSON, aprovació explícita del candidat sense canviar automàticament el joc.
+- [x] Consola persistent amb peça, transformació, revisió i marques; còpia/exportació i cua R2 compartida des del compte administrador, enllaç de lectura de 7 dies.
+- [x] Recàrrega i detecció de nova revisió cada 15 s, conservant càmera i esborranys; workflow de desplegament existent activat pel manifest del laboratori, sense activar rebuild-runtime.
+- [x] Proves Node de simetria en sis direccions, transformacions, atributs, BTR, serialització, errors atòmics i permisos/caducitat de la cua. Corregides dues expectatives obsoletes del test del comparador (GLB antic / dos visors).
+- [ ] Validació visual 3D pendent: el navegador remot de la sessió té WebGL desactivat; no s'ha pogut comprovar el render ni interactuar amb els models.
+- [ ] Verificar desplegament real i compartir la cua amb una sessió administrador a Paradoxa.
+
 **P1 · 2026-11-10 · BTR-82: reparar forats reals i arribar amb el canó a la torreta:**
 - [x] Detectada la causa de la regressió: la versió de 5.371 triangles ja tenia el buit frontal; simplement conservar tots els triangles no el tapava.
 - [x] Nova geometria de tancament del morro a −Z (part alta, frontal i sota el llavi), i dels laterals/sponsons a la popa +Z, seguint el perfil.

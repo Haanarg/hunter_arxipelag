@@ -362,5 +362,10 @@ export function createVehicleAnnotationEditor({slots,getType}){
   updateLiveStatus(largeHole.checked?'Forats grans: contorns tancats fins a uns 4 m de radi. Previsualitza abans de clicar.':'Forats petits: comprovació estricta de contorns.');
  });
  updateList();updateLiveStatus('Mou el cursor per previsualitzar la reparació; clica per aplicar-la.');
- return {active:isEnabled,begin,move,end,reset,hover:(slot,e)=>placeCursor(slot,e.clientX,e.clientY),hideCursor:()=>{preview.visible=false;clearPatchPreview()},mark:(slot,e)=>{begin(slot,e);end(slot,e)}};
+ function detach(){
+  current=null;preview.visible=false;clearPatchPreview();
+  for(const stroke of strokes)for(const visual of stroke.visuals){visual.removeFromParent();visual.geometry?.dispose();visual.material?.dispose()}
+  strokes.length=0;updateList();updateLiveStatus();
+ }
+ return {description,detach,active:isEnabled,begin,move,end,reset,hover:(slot,e)=>placeCursor(slot,e.clientX,e.clientY),hideCursor:()=>{preview.visible=false;clearPatchPreview()},mark:(slot,e)=>{begin(slot,e);end(slot,e)}};
 }

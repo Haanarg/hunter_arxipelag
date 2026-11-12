@@ -1,10 +1,11 @@
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261112-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs';
 import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
-import {createVehicleAnnotationEditor} from './vehicle-annotation-editor.mjs?rev=editor-no-armour-v13';
+import {createVehicleAnnotationEditor} from './vehicle-annotation-editor.mjs?rev=live-editor-20261112-1';
 import {createBtr823BPreview} from './btr82-3b-preview.mjs?rev=btr82-3b-black-front-visor-v4';
 
 // Referències a models REALS publicats. Les cerques són exactes sobre
@@ -107,6 +108,28 @@ for(let i=0;i<5;i++){
 let currentType=CATALOG[0],generation=0,originalDims=new THREE.Vector3(3,2,5);
 const vehicleEditor=createVehicleAnnotationEditor({slots,getType:()=>currentType.id});
 let yaw=.60,elev=.32,zoom=1,lookY=.6,defaultLookY=.6,panScreenX=0;
+let resumedView=null;
+try{resumedView=JSON.parse(sessionStorage.getItem('hunter-lab-view')||'null');sessionStorage.removeItem('hunter-lab-view')}catch{}
+function refreshLab(){
+ try{sessionStorage.setItem('hunter-lab-view',JSON.stringify({type:currentType.id,yaw,elev,zoom,lookY,panScreenX,selection:liveEditor.getSelection()}))}catch{}
+ location.reload();
+}
+let suppressDraftRestore=false;
+let previewFactory=createBtr823BPreview;
+const liveEditor=createVehicleLiveEditor({slots,getType:()=>currentType.id,annotations:vehicleEditor,
+ onChange:slot=>{slot.status.textContent=metrics(slot.model)+' · candidat editat'},resumeSelection:resumedView?.selection,
+ getView:()=>({yaw,elev,zoom,lookY,panScreenX}),
+ restoreView:view=>{if(!view)return;({yaw,elev,zoom,lookY,panScreenX}=view);updateCamera()},
+ reload:async()=>{
+  const published=await fetch('./assets/vehicle-candidates/lab-revision.json',{cache:'no-store'}).then(r=>r.ok?r.json():null);
+  if(published&&published.revision!==LAB_REVISION){refreshLab();return}
+  const view={yaw,elev,zoom,lookY,panScreenX};
+  const module=await import('./btr82-3b-preview.mjs?live='+Date.now());previewFactory=module.createBtr823BPreview;
+  suppressDraftRestore=true;
+  try{await choose(currentType)}finally{suppressDraftRestore=false}
+  ({yaw,elev,zoom,lookY,panScreenX}=view);updateCamera();
+ }
+});
 let prev=performance.now();
 const packCache=new Map(),searchCache=new Map();
 let savedManifest=null;
@@ -201,6 +224,7 @@ function setModel(slot,obj,original,animations=[],keepNativeOrientation=false){
  wrap.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
  slot.scene.add(wrap);slot.model=wrap;
  if(animations?.length){slot.mixer=new THREE.AnimationMixer(obj);for(const clip of animations)slot.mixer.clipAction(clip).play()}
+ queueMicrotask(()=>{if(slot.model===wrap)liveEditor.ready(slot,{restore:!suppressDraftRestore})});
  return wrap;
 }
 
@@ -269,6 +293,7 @@ async function loadExternal(slot,entry,used,token){
  }
 }
 async function choose(config){
+ liveEditor.reset();
  vehicleEditor.reset();
   currentType=config;generation++;
   document.querySelector('#btrPartTool').hidden=false;
@@ -296,7 +321,7 @@ async function choose(config){
    slot.source.hidden=true;
  }
  try{
-   const model=btrStudy?createBtr823BPreview():makeOriginal(config.id,{color:0x4b9fd1});
+   const model=btrStudy?previewFactory():makeOriginal(config.id,{color:0x4b9fd1});
    setModel(slots[0],model,true,[],btrStudy);
    originalDims=dimsOf(slots[0].model);
    slots[0].status.textContent=metrics(slots[0].model);
@@ -319,7 +344,9 @@ async function choose(config){
  lookY=Math.min(6,Math.max(.55,originalDims.y*.38));
  defaultLookY=lookY;
  panScreenX=0;
- zoom=1;updateCamera();
+ zoom=1;
+ if(resumedView?.type===config.id){({yaw,elev,zoom,lookY,panScreenX}=resumedView);resumedView=null}
+ updateCamera();
  if(!btrStudy){
    const used=new Set();
    await Promise.all(config.options.map((entry,i)=>loadExternal(slots[i+1],entry,used,token)));
@@ -414,6 +441,13 @@ slots.forEach(slot=>{
   slot.viewport.setPointerCapture(e.pointerId);
   drag.set(e.pointerId,[e.clientX,e.clientY]);
   pointerStarts.set(e.pointerId,[e.clientX,e.clientY]);
+  if(document.querySelector('#livePick').checked&&!e.altKey&&!e.shiftKey&&e.button===0){
+   const rect=slot.viewport.getBoundingClientRect(),ray=new THREE.Raycaster();
+   ray.setFromCamera(new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1),slot.camera);
+   const hit=slot.model&&ray.intersectObject(slot.model,true).find(h=>!h.object.userData.vehicleAnnotationOverlay);
+   if(hit)liveEditor.select(slot,hit.object);
+   drag.delete(e.pointerId);return;
+  }
   if(vehicleEditor.active()&&!e.altKey&&!e.shiftKey&&e.button===0){
    paintPointers.add(e.pointerId);
    vehicleEditor.begin(slot,e);
@@ -467,5 +501,14 @@ addEventListener('resize',resizeRenderer);
 resizeRenderer();requestAnimationFrame(draw);
 fetch('./assets/vehicle-candidates/manifest.json',{cache:'no-store'})
  .then(response=>response.ok?response.json():null)
- .then(manifest=>{savedManifest=manifest;return choose(CATALOG[0]);})
+ .then(manifest=>{savedManifest=manifest;return choose(CATALOG.find(c=>c.id===resumedView?.type)||CATALOG[0]);})
  .catch(error=>{console.warn('Manifest local no disponible',error);choose(CATALOG[0]);});
+
+// A tiny manifest is the only periodic request; edited drafts are never discarded.
+setInterval(async()=>{
+ if(document.hidden||!document.querySelector('#liveAutoReload').checked)return;
+ try{const response=await fetch('./assets/vehicle-candidates/lab-revision.json',{cache:'no-store'});
+  if(!response.ok)return;const data=await response.json();
+  if(data.revision!==LAB_REVISION){if(!liveEditor.dirty())refreshLab();else document.querySelector('#liveStatus').textContent='Nova versió disponible. Prem Recarregar model publicat; conservarem l’esborrany.';}
+ }catch{}
+},15000);

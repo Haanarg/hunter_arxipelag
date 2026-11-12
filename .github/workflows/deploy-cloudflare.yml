@@ -1,12 +1,13 @@
 name: Hunter - desplegament Cloudflare
 # Desplegament real del Worker i dels assets del joc a Paradoxa.
-# Només un push de versió, un canvi en aquest workflow o una execució manual.
+# Push de versió del joc/laboratori, canvi en aquest workflow o execució manual.
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
       - 'src/version.mjs'
+      - 'assets/vehicle-candidates/lab-revision.json'
       - '.github/workflows/deploy-cloudflare.yml'
 permissions:
   contents: read
