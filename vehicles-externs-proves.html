@@ -139,5 +139,20 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 </section>
 <section id="grid" aria-label="Comparativa de models 3D"></section></div>
 </main>
-<script type="module" src="./src/vehicles-externs-proves.mjs?rev=live-editor-20261112-t90m-8-btr82-nose-restore"></script>
+<script type="module">
+// Carrega asíncronament per poder mostrar l'error si qualsevol import està
+// trencat. Un error de sintaxi al catàleg ja no deixa un visor en blanc.
+import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261112-t90m-9-catalog-fix')
+ .catch(error=>{
+  console.error('Error en arrencar el laboratori de vehicles:',error);
+  const reason=error instanceof Error?error.message:String(error);
+  const title=document.getElementById('vehicleName');
+  const warning=document.getElementById('warning');
+  const status=document.getElementById('liveStatus');
+  if(title)title.textContent='No s’ha pogut carregar el laboratori';
+  if(warning)warning.textContent='Error de càrrega: '+reason+
+   '. Recarrega la pàgina. Si persisteix, cal revisar el desplegament.';
+  if(status)status.textContent='L’editor no s’ha pogut inicialitzar. No s’han modificat els esborranys locals.';
+ });
+</script>
 </body></html>
