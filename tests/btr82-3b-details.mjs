@@ -2,7 +2,8 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as THREE from '../vendor/three-r186.module.mjs';
-import {applyBtr823BDetails,createBtr823BHardwareBatch} from '../src/btr82-3b-details.mjs';
+import {applyBtr823BDetails,createBtr823BHardwareBatch,
+ BTR82_3B_SIDE_ACCESS} from '../src/btr82-3b-details.mjs';
 import {createBtr82TurretV3Geometry} from '../src/btr82-hull-v3.mjs';
 import {compactBtr823BTurret,BTR82_3B_TURRET_PIVOT_Z} from '../src/btr82-angular-facets.mjs';
 
@@ -15,7 +16,8 @@ assert.deepEqual([scene.userData.btr82Details3B.rearGuards,
  scene.userData.btr82Details3B.roofHatches,
  scene.userData.btr82Details3B.roofVents,
  scene.userData.btr82Details3B.frontVisors,
- scene.userData.btr82Details3B.headlights],[2,2,2,2,4]);
+ scene.userData.btr82Details3B.headlights,
+ scene.userData.btr82Details3B.sideAccessDoors],[2,2,2,2,4,2]);
 assert.throws(()=>applyBtr823BDetails(scene),/duplicats/);
 const count=prefix=>group.children.filter(node=>node.name.startsWith(prefix)).length;
 assert(count('BTR82_3B_rear_guard_')>=7,'defenses i travessers posteriors');
@@ -23,6 +25,38 @@ assert.equal(count('BTR82_3B_rear_hatch_'),4,'dues trapes i marcs');
 assert.equal(count('BTR82_3B_vent_slit_'),10,'reixetes de ventilació');
 assert.equal(count('BTR82_3B_front_vision_glass_'),2,'dues mirilles davanteres');
 assert.equal(count('BTR82_3B_front_headlight_'),8,'quatre focus amb caixa i lent');
+assert.equal(count('BTR82_3B_side_access_'),12,
+ 'Hi ha d’haver dues comportes, amb contorn, placa, frontisses i nansa');
+const wheelZ=[-.938,1.7505],radius=.8125;
+assert.equal(BTR82_3B_SIDE_ACCESS.centreZ,(wheelZ[0]+wheelZ[1])/2);
+for(const side of ['left','right']){
+ const outline=scene.getObjectByName('BTR82_3B_side_access_'+side+'_outline');
+ const door=scene.getObjectByName('BTR82_3B_side_access_'+side+'_leaf');
+ const latch=scene.getObjectByName('BTR82_3B_side_access_'+side+'_latch');
+ const handle=scene.getObjectByName('BTR82_3B_side_access_'+side+'_handle');
+ assert(outline?.isMesh&&door?.isMesh&&latch?.isMesh&&handle?.isMesh,
+  'Comporta incompleta al lateral '+side);
+ assert.equal(door.material.color.getHex(),0x59684f,'Fulla de blindatge verda');
+ assert.equal(outline.material.color.getHex(),0x29342e,'Junta fosca visible');
+ for(const part of [door,outline]){
+  const position=part.geometry.getAttribute('position');
+  for(let i=0;i<position.count;i++){
+   const z=position.getZ(i);
+   assert(z>wheelZ[0]+radius+.025&&z<wheelZ[1]-radius-.025,
+    'La comporta no pot arribar a les rodes');
+   assert(position.getY(i)>=1.02&&position.getY(i)<=1.60);
+   assert(Math.abs(position.getX(i))>1.60,'El blindatge ha de ser a l’exterior del casc');
+   assert((side==='left'?-1:1)*position.getX(i)>0,'Costat invertit');
+  }
+ }
+ for(const i of [0,1])assert(scene.getObjectByName(
+  'BTR82_3B_side_access_'+side+'_hinge_'+i)?.isMesh);
+ const a=outline.geometry.getAttribute('position');
+ // Tres nivells: la placa segueix el bisell del casc, no flota vertical.
+ assert(Math.abs(a.getX(0)-a.getX(2))>.10);
+ assert(Math.abs(a.getX(2)-a.getX(4))>.20);
+}
+
 for(const side of ['left','right']){
  const frame=scene.getObjectByName('BTR82_3B_front_vision_frame_'+side);
  const glass=scene.getObjectByName('BTR82_3B_front_vision_glass_'+side);
@@ -46,6 +80,8 @@ for(const side of ['left','right']){
 }
 const batch=createBtr823BHardwareBatch(THREE);
 assert(batch.userData.btr82HardwareBatch);
+assert.equal(batch.userData.previewDetailCount,65,
+ 'Les 12 peces de les dues comportes s’afegeixen als 53 detalls originals');
 assert.equal(batch.index,null,'El lot ha d’estar sense índex per als colors compartits');
 assert(batch.getAttribute('position').count>1000);
 assert.equal(batch.getAttribute('color').count,batch.getAttribute('position').count);
@@ -77,4 +113,4 @@ const page=readFileSync(new URL('../btr82-model3-angular.html',import.meta.url),
 assert(viewer.includes("if(angularMode&&method.id==='angular-strong')applyBtr823BDetails(scene)"));
 assert(page.includes('model3-angular-20261111-a7'));
 assert(page.includes('defenses posteriors'));
-console.log('PASS model 3B: mirilles horitzontals verdes, defenses i 4 focus, detalls en una sola malla al joc');
+console.log('PASS model 3B: dues comportes laterals entre eixos 2–3, mirilles, focus i un sol lot de detalls');
