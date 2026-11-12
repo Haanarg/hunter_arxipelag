@@ -5,6 +5,8 @@
 - [x] Consola persistent amb peça, transformació, revisió i marques; còpia/exportació i cua R2 compartida des del compte administrador, enllaç de lectura de 7 dies.
 - [x] Recàrrega i detecció de nova revisió cada 15 s, conservant càmera i esborranys; workflow de desplegament existent activat pel manifest del laboratori, sense activar rebuild-runtime.
 - [x] Proves Node de simetria en sis direccions, transformacions, atributs, BTR, serialització, errors atòmics i permisos/caducitat de la cua. Corregides dues expectatives obsoletes del test del comparador (GLB antic / dos visors).
+- [x] **BTR-82 3B, 2026-11-12:** afegides dues comportes laterals entre els eixos 2/3, conformades al blindatge i amb perfil de junta, frontisses i nansa. Geometria comuna amb el joc en un únic lot de detalls; revisió de laboratori `live-editor-20261112-side-access-2` i manifest sincronitzats.
+- [ ] **Comportes laterals BTR-82:** verificar visualment els dos costats, l'encaix amb el blindatge i el marge de les rodes en WebGL/Android, i la seva presència efectiva a Paradoxa quan el desplegament torni a funcionar.
 - [ ] Validació visual 3D pendent: el navegador remot de la sessió té WebGL desactivat; no s'ha pogut comprovar el render ni interactuar amb els models.
 - [x] Compilació local Worker i `check:build` correctes; implementació publicada a `c9b8c585`.
 - [ ] **Desplegament bloquejat:** Actions [43209641224](https://github.com/Haanarg/hunter_arxipelag/actions/runs/43209641224) falla perquè falten `CLOUDFLARE_ACCOUNT_ID` i `CLOUDFLARE_API_TOKEN`. El manifest del laboratori encara retorna 404 a Paradoxa. Cal configurar aquests secrets i tornar a executar el workflow; després validar cua amb sessió administrador.
