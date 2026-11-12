@@ -2,8 +2,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {Box3,Vector3} from '../vendor/three-r186.module.mjs';
-import {createBtr823BPreview,BTR82_3B_PREVIEW_TURRET_SCALE,
- BTR82_3B_PREVIEW_FRONT_CUT_Z} from '../src/btr82-3b-preview.mjs';
+import {createBtr823BPreview,BTR82_3B_PREVIEW_TURRET_SCALE} from '../src/btr82-3b-preview.mjs';
 import {createBtr82TurretV3Geometry} from '../src/btr82-hull-v3.mjs';
 import {compactBtr823BTurret,BTR82_3B_TURRET_PIVOT_Z,
  createBtr82AngularGeometry} from '../src/btr82-angular-facets.mjs';
@@ -14,8 +13,6 @@ assert.equal(model.name,'BTR82_3B_revised_preview');
 assert.equal(model.userData.btr82Preview,'3B-revised');
 assert.equal(model.userData.btr82WheelCount,8);
 assert.equal(model.userData.previewOnly,true);
-assert.equal(BTR82_3B_PREVIEW_FRONT_CUT_Z,-4.54);
-assert.equal(model.userData.btr82FrontCutZ,-4.54);
 assert.equal(model.userData.btr82Details3B.sideAccessToKeel,true,
  'La comporta que mostra el visor ha d’arribar fins a la quilla');
 assert.equal(model.userData.btr82Details3B.rearSidePanels,4);
@@ -43,47 +40,17 @@ for(const z of [-2.938,-.938,1.7505,3.585]){
  assert.equal(pair.length,2,'Cada eix ha de tenir 2 rodes');
  assert.equal(pair[0].position.x,-pair[1].position.x);
 }
-// El morro no ha d'avançar per davant dels fars, però ha de conservar
-// una tapa completa, simètrica i sense triangles degenerats.
+// Regressió: conservar el morro complet després de desfer el tall
+// davant dels fars, sense afectar els detalls posteriors ni les comportes.
 const hull=model.getObjectByName('BTR82_v3_lowered_centre_hull');
-const trimmedHull=hull.geometry;
-trimmedHull.computeBoundingBox();
 const originalHull=createBtr82AngularGeometry('angular-strong');
+hull.geometry.computeBoundingBox();
 originalHull.computeBoundingBox();
-assert(originalHull.boundingBox.min.z<-5.4,'Morro original conservat per al joc');
-assert(Math.abs(trimmedHull.boundingBox.min.z-BTR82_3B_PREVIEW_FRONT_CUT_Z)<1e-5,
- 'El visor ha de retallar la falca davant dels quatre fars');
-assert.equal(trimmedHull.userData.frontCutZ,BTR82_3B_PREVIEW_FRONT_CUT_Z);
-const hullPos=trimmedHull.getAttribute('position');
-const hullIndices=trimmedHull.index;
-const section=[];
-for(let i=0;i<hullPos.count;i++)
- if(Math.abs(hullPos.getZ(i)-BTR82_3B_PREVIEW_FRONT_CUT_Z)<1e-5)
-  section.push([hullPos.getX(i),hullPos.getY(i)]);
-assert(section.length>=14);
-for(const [x,y] of section)
- assert(section.some(([xx,yy])=>Math.abs(x+xx)<1e-5&&Math.abs(y-yy)<1e-5),
-  'El nou tancament frontal ha de ser exactament simètric');
-let caps=0;
-for(let i=0;i<hullIndices.count;i+=3){
- const ids=[hullIndices.getX(i),hullIndices.getX(i+1),hullIndices.getX(i+2)];
- const vert=ids.map(j=>new Vector3(
-  hullPos.getX(j),hullPos.getY(j),hullPos.getZ(j)));
- assert(new Vector3().subVectors(vert[1],vert[0]).cross(
-   new Vector3().subVectors(vert[2],vert[0])).length()>1e-7,
-  'El retall ha deixat triangles degenerats');
- if(vert.every(v=>Math.abs(v.z-BTR82_3B_PREVIEW_FRONT_CUT_Z)<1e-5))caps++;
-}
-assert(caps>=14,'Falta la tapa frontal del casc retallat');
-for(let i=0;i<4;i++){
- const housing=model.getObjectByName('BTR82_3B_front_headlight_'+i+'_housing');
- const lens=model.getObjectByName('BTR82_3B_front_headlight_'+i+'_lens');
- assert(lens.position.z<BTR82_3B_PREVIEW_FRONT_CUT_Z,
-  'Els fars han de quedar PER DAVANT de la carrosseria retallada');
- assert(housing.position.z+housing.geometry.parameters.height/2>=
-    BTR82_3B_PREVIEW_FRONT_CUT_Z,
-  'El suport del far ha de continuar en contacte amb el nou frontal');
-}
+assert(Math.abs(hull.geometry.boundingBox.min.z-originalHull.boundingBox.min.z)<1e-5,
+ 'El morro del visor ha de coincidir amb el del joc');
+assert(hull.geometry.boundingBox.min.z< -5.4,'El morro ha de recuperar la llargada original');
+assert.equal(hull.geometry.userData.frontCutZ,undefined,
+ 'No hi pot haver retall frontal actiu');
 const wheelDiameter=2*.8125;
 const stations=[-2.938,-.938,1.7505,3.585];
 for(let i=1;i<stations.length;i++)
@@ -154,5 +121,5 @@ const page=readFileSync(new URL('../vehicles-externs-proves.html',import.meta.ur
 assert(file.includes('createBtr823BPreview()'),'El banc principal no construeix el 3B');
 assert(file.includes("slot.outer.hidden=btrStudy?slots.indexOf(slot)>0:slots.indexOf(slot)>3"));
 assert(!file.includes('studio.load(token)'),'No s’han de carregar els antics GLB');
-assert(page.includes('live-editor-20261112-btr82-front-trim-5'),'Revisió de memòria cau');
-console.log('PASS 3B preview: morro retallat darrere dels fars, frontal tancat/simètric, joc preservat');
+assert(page.includes('live-editor-20261112-t90m-8-btr82-nose-restore'),'Revisió de memòria cau');
+console.log('PASS 3B preview: morro original restaurat, sense retall, detalls i rodes intactes');
