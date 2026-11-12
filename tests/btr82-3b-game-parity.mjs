@@ -43,14 +43,39 @@ const hardware=rig.getObjectByName('BTR82_3B_batched_hardware');
 assert(hardware?.isMesh&&hardware.geometry.userData.btr82HardwareBatch);
 assert.equal(preview.userData.btr82Details3B.sideAccessDoors,2);
 assert.equal(preview.userData.btr82Details3B.sideAccessToKeel,true,
- 'El visor prova la comporta ampliada fins a la quilla');
-assert.equal(hardware.geometry.userData.previewDetailCount,65,
- 'Les dues comportes han de figurar també a la malla del joc');
+ 'La comporta del visor arriba fins a la quilla');
+assert.equal(preview.userData.btr82Details3B.rearSidePanels,4);
+assert.equal(preview.userData.btr82Details3B.rearSideSymmetricX,true);
+assert.equal(hardware.geometry.userData.previewDetailCount,97,
+ 'Portelles posteriors i comportes fins a la quilla incloses al lot del joc');
 assert.equal(rig.children.filter(o=>o.name==='BTR82_3B_batched_hardware').length,1);
 const batchXYZ=hardware.geometry.getAttribute('position');
 const batchColor=hardware.geometry.getAttribute('color');
 assert(batchXYZ.count>1000&&batchColor.count===batchXYZ.count,
  'Detalls del BTR-82 absents o sense els colors originals');
+// Tots els vèrtexs dels 97 detalls han de coincidir exactament entre
+// el visor i el lot renderitzat pel joc (mateixa escala i altura de rodes).
+preview.updateMatrixWorld(true,true);
+let detailVertex=0,detailMeshes=0;
+preview.getObjectByName('BTR82_3B_hardware').traverse(mesh=>{
+ if(!mesh.isMesh)return;
+ detailMeshes++;
+ const transformed=mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
+ const expanded=transformed.index?transformed.toNonIndexed():transformed;
+ const xyz=expanded.getAttribute('position');
+ for(let j=0;j<xyz.count;j++,detailVertex++){
+  const expect=[xyz.getX(j)*sx,xyz.getY(j)*sy+margin,xyz.getZ(j)*sz];
+  const got=[batchXYZ.getX(detailVertex),batchXYZ.getY(detailVertex),
+   batchXYZ.getZ(detailVertex)];
+  for(let axis=0;axis<3;axis++)
+   assert(Math.abs(expect[axis]-got[axis])<1e-4,
+    'Detall del BTR discrepant entre visor/joc: malla '+mesh.name+' / '+detailVertex);
+ }
+ if(expanded!==transformed)expanded.dispose();
+ transformed.dispose();
+});
+assert.equal(detailMeshes,97,'Les dues cares han de mantenir tots els detalls');
+assert.equal(detailVertex,batchXYZ.count,'El joc no pot perdre triangles durant l’agrupació');
 const testRig=new THREE.Group();
 installBtr82Model3B(THREE,testRig);
 assert.equal(hardware.geometry,testRig.getObjectByName('BTR82_3B_batched_hardware').geometry,
