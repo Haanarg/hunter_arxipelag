@@ -355,6 +355,9 @@ async function choose(config){
  }
  try{
    const model=btrStudy?previewFactory():await createCurrentVehicle(config.id);
+   // Canviar de pestanya durant la preparació asíncrona del Humvee no ha de
+   // reintroduir el model anterior damunt el vehicle acabat de seleccionar.
+   if(token!==generation)return;
    setModel(slots[0],model,true,[],btrStudy);
    originalDims=dimsOf(slots[0].model);
    slots[0].status.textContent=metrics(slots[0].model);
@@ -370,6 +373,7 @@ async function choose(config){
      slots[0].status.textContent+=' · 8 rodes · detalls de prova';
    }
  }catch(e){
+   if(token!==generation)return;
    console.error('Original no disponible',config.id,e);
    slots[0].status.textContent='Error en el model original: '+e.message;
    originalDims.set(3,3,6);
