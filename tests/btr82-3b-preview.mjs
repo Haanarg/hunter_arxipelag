@@ -12,6 +12,16 @@ assert.equal(model.name,'BTR82_3B_revised_preview');
 assert.equal(model.userData.btr82Preview,'3B-revised');
 assert.equal(model.userData.btr82WheelCount,8);
 assert.equal(model.userData.previewOnly,true);
+assert.equal(model.userData.btr82Details3B.sideAccessToKeel,true,
+ 'La comporta que mostra el visor ha d’arribar fins a la quilla');
+for(const side of ['left','right']){
+ const frame=model.getObjectByName('BTR82_3B_side_access_'+side+'_outline');
+ const position=frame.geometry.getAttribute('position');
+ assert.equal(position.count,14,
+  'Cal resseguir també el plec de sota la coberta');
+ assert(Math.abs(position.getY(0)+.32)<1e-6,
+  'La comporta del visor no arriba a la quilla');
+}
 assert.equal(BTR82_3B_PREVIEW_TURRET_SCALE,.75);
 assert.equal(model.userData.btr82TurretBodyScale,.75);
 assert.equal(model.userData.btr82TurretForwardZ,-.65);
@@ -94,5 +104,5 @@ const page=readFileSync(new URL('../vehicles-externs-proves.html',import.meta.ur
 assert(file.includes('createBtr823BPreview()'),'El banc principal no construeix el 3B');
 assert(file.includes("slot.outer.hidden=btrStudy?slots.indexOf(slot)>0:slots.indexOf(slot)>3"));
 assert(!file.includes('studio.load(token)'),'No s’han de carregar els antics GLB');
-assert(page.includes('compact-lab-v23-btr82-visor-front'),'Revisió de memòria cau');
-console.log('PASS 3B preview: torreta 25% més petita, base centrada, canó connectat, rodes i detalls intactes');
+assert(page.includes('live-editor-20261112-side-access-keel-3'),'Revisió de memòria cau');
+console.log('PASS 3B preview: comportes fins a la quilla, torreta i canó conservats, 8 rodes separades');
