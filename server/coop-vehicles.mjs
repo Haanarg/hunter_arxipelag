@@ -80,7 +80,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
  function exitPoint(v,actor){
    if(meta.mode==='native'&&v.t==='ferry'){
      // Desembarcar sobre la coberta; no fer caure el jugador a la mar.
-     for(const [lx,lz] of [[-4,-5],[4,-5],[-4,6],[4,6]]){
+     for(const [lx,lz] of [[4,-5],[4,6],[-4,-5],[-4,6]]){
        const at=ferryWorld(v,lx,lz),y=ferrySurfaceY(v,lz)+.12;
        if(at.x<meta.bounds.x0+1||at.x>meta.bounds.x1-1||
           at.z<meta.bounds.z0+1||at.z>meta.bounds.z1-1||
@@ -114,7 +114,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    const aircraft=vehicleDynamics.types[v.t]?.m==='a',
      ground=Math.max(0,world().heightAt(v.x,v.z));
    if(meta.mode==='native'&&aircraft&&v.y-ground>4){
-     const side=actor.id===v.seats[0]?-1:1,
+     const side=1,
        x=v.x+Math.cos(v.hd)*side*1.8,
        z=v.z-Math.sin(v.hd)*side*1.8,hd=v.hd,
        fx=-Math.sin(hd),fz=-Math.cos(hd);
@@ -153,7 +153,13 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
      if(distance(resolved,target)>1e-5)continue;
      // La zona al costat del vehicle és lliure; mai fer walkClear(v,q),
      // perquè travessaria una paret quan el cotxe és aparcat arran d'ella.
-     if(vehicles.some(other=>other!==v&&!other.destroyed&&
+     // La porta pot ser al costat d'una paret o una filferrada: exigim
+    // un camí lliure des de la vora de la carrosseria.
+    const door={...target,
+      x:v.x+Math.cos(v.hd)*side*(halfWidth+.2)-Math.sin(v.hd)*back,
+      z:v.z-Math.sin(v.hd)*side*(halfWidth+.2)-Math.cos(v.hd)*back};
+    if(!walkClear(door,target))continue;
+    if(vehicles.some(other=>other!==v&&!other.destroyed&&
          Math.abs(other.y-target.y)<3&&
          distance(other,target)<Math.max(1.6,(vehicleSpecs.hitboxes[other.t]?.[0]||2)*(vehicleSpecs.scales[other.t]||1)/2+.75)))continue;
      return target;

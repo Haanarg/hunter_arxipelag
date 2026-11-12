@@ -47,7 +47,7 @@ window.HUNTER_RIDER=Object.freeze({
     };
     const vec=(x,y,z)=>new THREE.Vector3(x,y,z);
     const shoulderAt=side=>vec(side*.57,1.17,0).applyQuaternion(torso.quaternion).add(torso.position);
-    const muzzleLocal=new THREE.Vector3(0,.183,-.84),
+    const muzzleLocal=new THREE.Vector3(0,.183,-1.47),
           forward=new THREE.Vector3(0,0,-1);
     // Animació superposada després de la postura de conducció: la mà
     // esquerra continua al manillar, rem o botavara; la dreta apunta.
@@ -108,7 +108,7 @@ window.HUNTER_RIDER=Object.freeze({
       pistol.quaternion.identity();
       if(u.pistolAim)pistol.quaternion.setFromUnitVectors(forward,u.pistolAim);
       pistolParts.slide.position.z=recoil*.65;
-      pistolParts.flash.visible=u.shotAge<.055;
+      pistolParts.flash.visible=false; // Pistola silenciada.
     };
     // Retorna el tret des de la boca REAL de la pistola, i orienta
     // l'arma segons l'autoapuntat del sistema existent.

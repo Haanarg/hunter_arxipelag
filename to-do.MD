@@ -1,3 +1,14 @@
+**2026-11-12 · Física, combats i interaccions (codi font):**
+- [x] Abaixades les copes principals, les reduïdes i les llunyanes de totes les palmeres per ajustar-les als troncs.
+- [x] Roques grosses amb intercepció contínua 3D per a projectils lleugers i pesats al mode individual.
+- [x] Caixes de munició unificades: 12 bales normals, 2 de franctirador i 1 coet de bazuca (individual i COOP), inventari i descripcions coherents.
+- [x] Pistola amb silenciador visual, sense flamarada i amb menor volum i radi de percepció (a peu i com a rider).
+- [x] Torre de comunicacions destruïble des de la base o l'estructura superior, 24 PV compartits, sense emetre cap avís especial als soldats.
+- [x] Rampes articulades al ferri: col·lisió de coberta/rampa segons l'angle, suport del moll/platja a l'aturada i elevació en moviment; representació compatible amb superfície de ferri COOP.
+- [x] Dalla de la Mort col·locada dins el puny dret a l'escena de mort.
+- [x] Sortida de vehicles per la dreta, amb alternatives a la mateixa banda i, només si està bloquejada per parets, filferrades o altres obstacles, provar l'esquerra (individual i COOP).
+- [ ] Validació al navegador amb llavor 148, proves de còpia de partida COOP, ferri estacionat/embarcant/navegant i reconstrucció manual del runtime; el codi font no constitueix per si sol un desplegament.
+
 **2026-11-12 · Refinat interactiu de models (tots els vehicles editables):**
 - [x] Controls de posició, rotació, escala i color per peça/grup/model; selecció amb clic o arbre; comparació amb original; 20 passos de desfer/refer.
 - [x] Simetria opcional del model complet amb pla X/Y/Z, desplaçament i costat de referència; retall real de triangles i reflexió amb UV/materials. Operació explícita reversible, no restricció permanent.

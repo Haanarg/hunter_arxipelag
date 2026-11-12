@@ -718,10 +718,15 @@ export const vehicleModels=Object.freeze({
         box(g,32,2.25,55,hullCol,0,.7,0,'paint');
         box(g,30.4,.3,51.6,deckCol,0,2.12,0,'metal');
         for(const x of[-15.05,15.05])box(g,.28,1.05,51.4,edge,x,2.58,0,'metal');
-        // Les rampes conserven exactament les mides originals.
-        const frontRamp=box(g,13.6,.3,6.2,deckCol,0,1.35,-28.4,'metal');frontRamp.rotation.x=-.22;
-        const rearRamp=box(g,13.6,.3,6.2,deckCol,0,1.35,28.4,'metal');rearRamp.rotation.x=.22;
-        for(const x of[-6.55,6.55]){rod(g,[x,2.3,-25.6],[x,.65,-31.2],.12,edge);rod(g,[x,2.3,25.6],[x,.65,31.2],.12,edge)}
+        // Les rampes articulades pivoteixen al cantell de la coberta.
+        g.userData.ferryRamps=[];
+        for(const side of [-1,1]){
+          const hinge=new THREE.Group();hinge.position.set(0,2.2,side*25.6);
+          hinge.rotation.x=side*Math.atan2(2.2-.45,6.2);g.add(hinge);
+          box(hinge,13.6,.3,6.2,deckCol,0,-.15,side*3.1,'metal');
+          for(const x of[-6.55,6.55])box(hinge,.22,.24,6.0,edge,x,.07,side*3.1,'metal');
+          g.userData.ferryRamps.push({hinge,side});
+        }
         box(g,3.35,3.7,7.6,cabin,11.5,4.05,1.8,'paint');
         box(g,3.05,1.05,7.1,glass,11.5,4.62,1.8,'glass');
         box(g,3.65,.28,8.05,hullCol,11.5,6.02,1.8,'metal');

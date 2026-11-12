@@ -121,7 +121,13 @@ function* buildApprovedCompoundSteps(layout,q,{path,pier,prop,vehicles,rocketAss
     const footing={x0:x-4*(a.scale||1),x1:x+4*(a.scale||1),z0:z-4*(a.scale||1),z1:z+4*(a.scale||1),y0:height,y1:height+1.3,
       hp:24,m:seedSearchMode?null:g.children[0],parts:seedSearchMode?[]:g.children.slice(),door:false,open:false,
       rammable:true,cx:x,cz:z};
-    Wl.push(footing);record.antennaFooting=footing;
+    // L'entramat superior també rep impactes, amb volum propi més estret.
+    const scale=a.scale||1,upper={x0:x-1.75*scale,x1:x+1.75*scale,
+      z0:z-1.75*scale,z1:z+1.75*scale,y0:height+1.3,
+      y1:height+Math.max(a.height,31*scale),hp:24,m:null,parts:[],
+      antennaRoot:footing,door:false,open:false,rammable:false,cx:x,cz:z};
+    footing.antennaMembers=[footing,upper];
+    Wl.push(footing,upper);record.antennaFooting=footing;
     if(!seedSearchMode)window.HUNTER_AIR_OBSTACLES.registerAntenna(world,g,a,footing);
   }
   if(layout.helipad&&!seedSearchMode){const p=layout.helipad,[x,z]=tr(p.x,p.z),g=new THREE.Group();g.position.set(x,height+.04,z);g.rotation.y=-angle;world.add(g);

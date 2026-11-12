@@ -431,10 +431,13 @@ function shoot(x,y,z,dx,dy,dz,sp,dmg,spl,own,mat,sc,audioSource=null,mountedCann
   const shotClass=shotClassFromSplash(spl),speed=sp*(shotClass==='heavy'?HEAVY_SHOT_SPEED_FACTOR:1),
         power=wholeDamage(dmg);
   if(own==='p'||own==='pb'){
-    const sound=spl?'bazooka':!cv&&sniperEquipped?'sniper':cv?'rifle':'pistol';
+    const suppressed=!spl&&(!cv&&!sniperEquipped&&!assaultRifleEquipped||cv&&OPEN_RIDER_PISTOL.has(cv.t));
+    const sound=spl?'bazooka':suppressed?'suppressedPistol':!cv&&sniperEquipped?'sniper':cv?'rifle':'pistol';
     window.HUNTER_STEALTH.emit(sound,x,y,z);
   }
-  snd(spl?'cannon':'shot',own==='e'?.6:1,{x,y,z},audioSource||((own==='p'||own==='pb')?P:null));
+  const playerSilenced=(own==='p'||own==='pb')&&!spl&&
+    (!cv&&!sniperEquipped&&!assaultRifleEquipped||cv&&OPEN_RIDER_PISTOL.has(cv.t));
+  snd(playerSilenced?'suppressedShot':spl?'cannon':'shot',own==='e'?.6:1,{x,y,z},audioSource||((own==='p'||own==='pb')?P:null));
   // Tots els projectils tenen l'eix longitudinal -Z: cilindres fins per
   // a les bales lleugeres i ojives per a les pesades. S'orienten en 3D,
   // també en tirs ascendents, descendents i diagonals.
@@ -894,6 +897,42 @@ function enemyProjectileContactT(x0,y0,z0,x1,y1,z1,e){
     upperY=base+(e.towerGuard?2.9:2.35),
     head=segmentSphereT(x0,y0,z0,x1,y1,z1,e.x,upperY,e.z,.38);
   return body==null?head:head==null?body:Math.min(body,head);
+}
+// Cobertura balística 3D de les roques grosses per a totes les armes.
+// Test continu sobre cada tram: els coets no travessen roques entre fotogrames.
+function rockProjectileT(from,to,rock){
+ const dx=to.x-from.x,dz=to.z-from.z,dy=to.y-from.y,
+   ox=from.x-rock.x,oz=from.z-rock.z,r=rock.r*.88,
+   a=dx*dx+dz*dz,b=2*(ox*dx+oz*dz),c=ox*ox+oz*oz-r*r;
+ let enter=0,leave=1;
+ if(a<1e-10){if(c>0)return null}
+ else{
+   const disc=b*b-4*a*c;if(disc<0)return null;
+   const root=Math.sqrt(disc),t0=(-b-root)/(2*a),t1=(-b+root)/(2*a);
+   enter=Math.max(enter,t0);leave=Math.min(leave,t1);
+ }
+ const bottom=rock.bottomY??rock.y-rock.s,top=rock.topY??rock.y+rock.s;
+ if(Math.abs(dy)<1e-10){if(from.y<bottom||from.y>top)return null}
+ else{
+   const y0=(bottom-from.y)/dy,y1=(top-from.y)/dy;
+   enter=Math.max(enter,Math.min(y0,y1));
+   leave=Math.min(leave,Math.max(y0,y1));
+ }
+ return enter<=leave&&leave>=0&&enter<=1?Math.max(0,enter):null;
+}
+function rockShotIntersections(from,to,visit){
+ const pad=10,minX=Math.floor((Math.min(from.x,to.x)-pad)/16),
+   maxX=Math.floor((Math.max(from.x,to.x)+pad)/16),
+   minZ=Math.floor((Math.min(from.z,to.z)-pad)/16),
+   maxZ=Math.floor((Math.max(from.z,to.z)+pad)/16);
+ for(let a=minX;a<=maxX;a++)for(let b=minZ;b<=maxZ;b++){
+   const bucket=TG.get(a+','+b);if(!bucket)continue;
+   for(const rock of bucket){
+     if(!rock.rock||(rock.r<=2.5&&rock.s<=1.7))continue;
+     const t=rockProjectileT(from,to,rock);
+     if(t!==null)visit(t,rock);
+   }
+ }
 }
 // Les bales lleugeres travessen la filferrada. Només els obstacles
 // sòlids bloquegen l'apuntat assistit.
@@ -1573,6 +1612,9 @@ function updPj(dt){
       consider(bt,'building',b)
     }
 
+    // Les roques grosses detenen bales i coets abans d'arribar a la diana.
+    rockShotIntersections(from,to,(t,rock)=>consider(t,'rock',rock));
+
     // Personatges i vehicles: intersecció contínua amb volum esfèric aproximat.
     // Neutrals share the nearest-hit comparison with cover and other bodies.
     // They are deliberately absent from all auto-aim candidate sets.
@@ -1675,7 +1717,7 @@ function updPj(dt){
     if(!p.spl){
       // La mateixa detecció de col·lisions dona feedback en ambdós sentits.
       // Soldats/general/jugador: sang discreta; altres dianes: espurnes.
-      const solid=kind==='wall'||kind==='building'||kind==='vehicle'||kind==='enemy';
+      const solid=kind==='wall'||kind==='building'||kind==='rock'||kind==='vehicle'||kind==='enemy';
       if(ineffective)spawnBulletImpact('ricochet',p.x,p.y,p.z,p);
       else if(solid&&!(kind==='enemy'&&(target.t==='soldat'||target.t==='general')))spawnBulletImpact('spark',p.x,p.y,p.z,p);
       if(kind==='wall'){if(!ineffective)dmgW(target,p.dmg,'light')}

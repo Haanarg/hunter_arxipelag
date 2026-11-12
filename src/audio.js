@@ -2,6 +2,7 @@
 // Els buffers es comparteixen; cada reproducció té una font i nodes propis.
 const AUDIO_SOUNDS=Object.freeze({
  shot:{duration:.12,filter:'highpass',frequency:1200,gain:.5,range:140},
+ suppressedShot:{duration:.07,filter:'lowpass',frequency:530,gain:.14,range:32},
  cannon:{duration:.35,frequency:600,gain:.5,range:140},
  boom:{duration:.7,frequency:300,gain:.5,range:200,priority:2},
  hurt:{duration:.15,frequency:600,gain:.5},

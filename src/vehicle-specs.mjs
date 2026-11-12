@@ -8,7 +8,7 @@ export const vehicleSpecs=Object.freeze({
   }),
   // Capacitat autoritativa: la resta de vehicles admeten pilot i passatger.
   seatCounts:Object.freeze({bici:1,moto:1,moto_aquatica:1,windsurf:1}),
-  decks:Object.freeze({ferry:Object.freeze({halfW:14.3,halfL:25.6,rampHalfW:6.7,ramp:5.8,y:2.2,rampY:.45,
+  decks:Object.freeze({ferry:Object.freeze({halfW:14.3,halfL:25.6,rampHalfW:6.7,ramp:6.2,y:2.2,rampY:.45,
     cabin:Object.freeze({x:11.5,z:1.8,halfW:1.9,halfL:4.05})})}),
 });
 

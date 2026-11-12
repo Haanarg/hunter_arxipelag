@@ -49,7 +49,7 @@ window.HUNTER_VEGETATION??=Object.freeze({
             const len=radius*v,w=Math.sin(v*Math.PI)*.68*side;
             return [
               Math.cos(a)*len-Math.sin(a)*w,
-              6.35+rise+Math.sin(v*Math.PI)*1.05-v*v*1.75,
+              6.12+rise*.12+Math.sin(v*Math.PI)*1.05-v*v*1.75,
               Math.sin(a)*len+Math.cos(a)*w
             ]
           };
@@ -102,7 +102,7 @@ window.HUNTER_VEGETATION??=Object.freeze({
         const a=j*Math.PI*2/fronds,tint=frondColor(j,fronds);
         const point=(v,side)=>{
           const len=radius*v,width=Math.sin(v*Math.PI)*.62*side;
-          const y=6.35+Math.sin(v*Math.PI)*.7-v*v*1.65;
+          const y=6.12+Math.sin(v*Math.PI)*.7-v*v*1.65;
           return [Math.cos(a)*len-Math.sin(a)*width,y,
                   Math.sin(a)*len+Math.cos(a)*width];
         };
@@ -132,7 +132,7 @@ window.HUNTER_VEGETATION??=Object.freeze({
               right=[dx*r+wx,4.95,dz*r+wz],
               left2=[-dx*r-wx,4.95,-dz*r-wz],
               right2=[dx*r-wx,4.95,dz*r-wz],
-              middle=[0,6.6,0];
+              middle=[0,6.12,0];
         pos.push(...left,...middle,...left2,...right2,...middle,...right);
         paintFrond(colors,tint,6);
       }

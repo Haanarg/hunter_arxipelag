@@ -44,6 +44,13 @@ function createPlayerPistol(T,gun){
   part(gun,.034,.115,.028,black,0,-.07,-.185).rotation.x=-.23;
   part(gun,.092,.060,.078,black,0,.286,.063).rotation.x=-.3;
   part(gun,.045,.033,.072,edge,.123,.055,.007);
+  // Silenciador permanent a la boca de la pistola.
+  const silencer=new T.Mesh(new T.CylinderGeometry(.079,.079,.64,12),dark);
+  silencer.rotation.x=Math.PI/2;silencer.position.set(0,.183,-1.12);slide.add(silencer);
+  const cap=new T.Mesh(new T.CylinderGeometry(.083,.083,.055,12),edge);
+  cap.rotation.x=Math.PI/2;cap.position.set(0,.183,-1.43);slide.add(cap);
+  const boreSuppressed=new T.Mesh(new T.CylinderGeometry(.035,.035,.007,12),black);
+  boreSuppressed.rotation.x=Math.PI/2;boreSuppressed.position.set(0,.183,-1.46);slide.add(boreSuppressed);
 
   const flash=new T.Group(),flashMat=new T.MeshBasicMaterial({color:0xffd76d,depthWrite:false});
   const cone=new T.Mesh(new T.ConeGeometry(.13,.41,6),flashMat);
@@ -811,7 +818,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.gun.position.copy(rig.idle).lerp(rig.aim,blend);
     u.gun.quaternion.copy(rig.idleQ).slerp(rig.aimQ,blend);
     u.pistolSlide.position.z=kick*.065;
-    u.pistolFlash.visible=targetBlend>0&&u.pistolShotAge<.055;
+    u.pistolFlash.visible=false; // Pistola silenciada.
     if(move>.02)player.position.y+=Math.abs(Math.sin(ph))*(.085+.065*run)*move;
     else player.position.y+=breath*.012;
   }

@@ -13,7 +13,9 @@ export function ferrySurfaceY(f,lz){
  const base=f.o?.position?.y??f.y??0,edge=D.halfL*sc,ramp=D.ramp*sc,top=D.y*sc;
  if(Math.abs(lz)<=edge)return base+top;
  const t=Math.max(0,Math.min(1,(Math.abs(lz)-edge)/Math.max(.01,ramp)));
- return base+top+(D.rampY*sc-top)*t;
+ const speed=Math.abs(f.v||0),raised=Math.max(0,Math.min(1,(speed-.4)/1.6)),
+   tip=(D.rampY*sc)*(1-raised)+(top+Math.sin(.88)*ramp)*raised;
+ return base+top+(tip-top)*t;
 }
 export function ferryCabinContains(x,z,margin=0){
  const c=D.cabin;
@@ -46,7 +48,7 @@ export function ferryForVehicle(v,fleet,x=v.x,z=v.z,includeRamp=true){
     ax=Math.abs(q.x),az=Math.abs(q.z);
   if(ax+ex>fw-.18)continue;
   if(az+ez<=fl)return f;
-  if(includeRamp&&az-ez<=fl+r+.65&&az<=fl+r+ez+.65&&
+  if(includeRamp&&Math.abs(f.v||0)<.8&&az-ez<=fl+r+.65&&az<=fl+r+ez+.65&&
       ax+ex<=D.rampHalfW*sc+.45)return f;
  }
  return null;

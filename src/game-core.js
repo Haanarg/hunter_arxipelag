@@ -1118,6 +1118,8 @@ function collapseCivicProp(w,effects=true){
  return true;
 }
 function dmgW(w,d,shotClass='heavy'){
+ // La peanya i el cos superior de l'antena comparteixen la vida.
+ if(w.antennaRoot)w=w.antennaRoot;
  if(w.civicRubble)return;
  if(w.civicFurniture){
   if(w.civicFurniture==='well'&&shotClass==='light')return;
@@ -1129,7 +1131,7 @@ function dmgW(w,d,shotClass='heavy'){
   return;
  }
  if(w.towerLegOwner){if(!w.towerLegOwner.destroyed)hurtE(w.towerLegOwner,d);return}
- if(shotClass==='light'&&!window.HUNTER_SHARED_COMBAT.canLightDamageWall(w))return;
+ if(shotClass==='light'&&!w.antennaMembers&&!window.HUNTER_SHARED_COMBAT.canLightDamageWall(w))return;
  const amount=wholeDamage(d);
  if(!amount||!Number.isFinite(w.hp)||w.hp<=0)return;
  if(w.owner?.civilianHut&&amount>=COMBAT_BALANCE.weapons.bazooka){
@@ -1139,7 +1141,7 @@ function dmgW(w,d,shotClass='heavy'){
  if(w.hp>0)return;
  // Destrucció atòmica de tota l'obertura: cap porta o llinda invisible
  // pot conservar la col·lisió després de caure un dels dos brancals.
- const members=w.woodenDoor?[w]:(w.doorAssembly||[w]);
+ const members=w.antennaMembers||(w.woodenDoor?[w]:(w.doorAssembly||[w]));
  for(const piece of members){
   if(!piece||piece.destroyedWall)continue;
   piece.destroyedWall=true;piece.hp=0;piece.open=true;piece.playerBlock=false;
@@ -1933,7 +1935,9 @@ const ferryLocalSurfaceY=(f,lz)=>{
   const az=Math.abs(lz),deck=d.y*sc,edge=d.halfL*sc,ramp=d.ramp*sc;
   if(az<=edge)return f.o.position.y+deck;
   const q=Math.max(0,Math.min(1,(az-edge)/Math.max(.01,ramp)));
-  return f.o.position.y+(deck+(d.rampY*sc-deck)*q)
+  const hinge=f.o?.userData?.ferryRamps?.find(a=>a.side===Math.sign(lz))?.hinge;
+  const tip=hinge?deck-Math.sin(hinge.rotation.x)*Math.sign(lz)*ramp:d.rampY*sc;
+  return f.o.position.y+deck+(tip-deck)*q
 };
 function ferryForVehicle(v,x=v.x,z=v.z,includeRamp=true){
   if(!FERRY_DECK||v.t==='ferry')return null;
@@ -1949,7 +1953,8 @@ function ferryForVehicle(v,x=v.x,z=v.z,includeRamp=true){
     const ax=Math.abs(q.x),az=Math.abs(q.z),rampHalf=FERRY_DECK.rampHalfW*sc;
     if(ax+ex>fw-.18)continue;
     if(az+ez<=fl)return f;
-    if(includeRamp&&az-ez<=fl+r+.65&&az<=fl+r+ez+.65&&
+    if(includeRamp&&Math.abs(f.v||0)<.8&&Math.abs(f.driveInput||0)<.2&&
+       az-ez<=fl+r+.65&&az<=fl+r+ez+.65&&
        ax+ex<=rampHalf+.45)return f
   }
   return null
@@ -2481,7 +2486,7 @@ function parachuteRoofLanding(x0,z0,y0,x1,z1,y1){
 // La caiguda conserva l'altura i la inèrcia; el dany es calcula en aterrar.
 function ejectFromHelicopter(v){
   resetCameraState();
-  const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),side=rn(-1,1)<0?-1:1,
+  const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),side=1,
         ground=Math.max(0,hAt(v.x,v.z)),
         altitude=Number.isFinite(v.alt)?v.alt:(v.o?.position?.y??ground);
   P.x=v.x+Math.cos(v.hd)*side*1.8;
@@ -2513,7 +2518,7 @@ function truckExitCandidate(v,side,index){
 function escapeSubmergedVehicle(v){
   if(cv!==v)return;
   resetCameraState();
-  const distance=vehicleBox(v).w/2+2.1,side=rn(-1,1)<0?-1:1;
+  const distance=vehicleBox(v).w/2+2.1,side=1;
   P.x=Math.max(-H+4,Math.min(H-4,v.x+Math.cos(v.hd)*side*distance));
   P.z=Math.max(-H+4,Math.min(H-4,v.z-Math.sin(v.hd)*side*distance));
   P.hd=v.hd;P.y=wy(P.x,P.z,elapsed)-1.9;
@@ -2563,24 +2568,39 @@ if(isAir&&height>4&&!ferry){
   leaving.crashing=true;leaving.crashT=0;leaving.crashSpin=rn(-1,1)<0?-1:1;leaving.driveInput=0;leaving.steerInput=0;leaving.strafeV=0;
   msg=playerFall.parachute?'Paracaigudes desplegat!':'Has saltat! L’helicòpter està fora de control!';msgT=3;return
 }
-const moving=speed>3&&!ferry,side=rn(-1,1)<0?-1:1,rrad=vehicleRadius(leaving.t)+2.2,
+const moving=speed>3&&!ferry,box=vehicleBox(leaving),
       safeMovingRoadExit=moving&&['camio','cotxe','cotxe_civil'].includes(leaving.t);let spot=null;
-for(let i=0;i<16;i++){
-  const a=leaving.hd+side*Math.PI/2+i*Math.PI/8,
-        localFerryExit=leaving.t==='ferry'?[0,-5,5,-10,10,-15,15,-20,20][i%9]:null,
-        candidate=localFerryExit!==null?{...ferryWorld(ferry,0,localFerryExit),side}:
-          safeMovingRoadExit?truckExitCandidate(leaving,side,i):
-          {x:leaving.x+Math.cos(a)*rrad,z:leaving.z+Math.sin(a)*rrad,side},
-        {x,z}=candidate;
-  if(ferry){const q=ferryLocal(ferry,x,z);
-    if(!ferryWalkable(q.x,q.z,1.15)||ferryCabinContains(q.x,q.z,1.15))continue;
+// Sempre dreta primer; l'esquerra només quan cap posició dreta és segura.
+for(const side of[1,-1]){
+  const backs=[0,-1.7,1.7,-3.4,3.4,-5.1,5.1,-6.8];
+  for(let i=0;i<backs.length;i++){
+    const front=backs[i],lateral=box.w/2+1.55;
+    const localFerryExit=leaving.t==='ferry'?[-5,6,-10,10,-15,15,-20,20][i]:null,
+      candidate=localFerryExit!==null?{...ferryWorld(ferry,side*8,localFerryExit),side}:
+        safeMovingRoadExit?truckExitCandidate(leaving,side,i):
+        {x:leaving.x+Math.cos(leaving.hd)*side*lateral-Math.sin(leaving.hd)*front,
+         z:leaving.z-Math.sin(leaving.hd)*side*lateral-Math.cos(leaving.hd)*front,side},
+      {x,z}=candidate;
+    if(ferry){const q=ferryLocal(ferry,x,z);
+      if(!ferryWalkable(q.x,q.z,1.15)||ferryCabinContains(q.x,q.z,1.15))continue;
+    }
+    if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||
+      (leaving!==ferry&&circleVehicleOverlap(x,z,1.1,leaving))||
+      vehicleCandidatesAt(x,z,40).some(u=>u!==leaving&&u!==ferry&&!u.destroyed&&circleVehicleOverlap(x,z,1.1,u))||
+      wallCandidates(x,z,1).some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;
+    // No travessam parets ni filferrada entre la porta i el punt d'eixida.
+    const doorDistance=box.w/2+.15,
+      doorX=leaving.x+Math.cos(leaving.hd)*side*doorDistance-Math.sin(leaving.hd)*front,
+      doorZ=leaving.z-Math.sin(leaving.hd)*side*doorDistance-Math.cos(leaving.hd)*front,
+      dx=x-doorX,dz=z-doorZ;
+    if(wallCandidates((x+doorX)/2,(z+doorZ)/2,Math.hypot(dx,dz)/2+2).some(w=>
+      !w.open&&segmentAabbT(doorX,P.y+1,doorZ,x,groundAt(x,z)+1,z,
+        w.x0-.6,w.x1+.6,w.y0,w.y1,w.z0-.6,w.z1+.6)!==null))continue;
+    if(safeMovingRoadExit&&hAt(x,z)<=0&&hAt(leaving.x,leaving.z)>0)continue;
+    if(hAt(x,z)<=0&&VT[leaving.t].m!=='w'&&!ferry)continue;
+    spot=candidate;break;
   }
-  if(Math.abs(x)>H-3||Math.abs(z)>H-3||treeHit(x,z,1)||
-    (leaving!==ferry&&circleVehicleOverlap(x,z,1.1,leaving))||
-    vehicleCandidatesAt(x,z,40).some(u=>u!==leaving&&u!==ferry&&!u.destroyed&&circleVehicleOverlap(x,z,1.1,u))||
-    wallCandidates(x,z,1).some(w=>!w.open&&x>w.x0-1&&x<w.x1+1&&z>w.z0-1&&z<w.z1+1))continue;
-  if(safeMovingRoadExit&&hAt(x,z)<=0&&hAt(leaving.x,leaving.z)>0)continue;
-  spot=candidate;if(ferry||hAt(x,z)>0||VT[leaving.t].m==='w')break;
+  if(spot)break;
 }
 if(!spot){msg='No hi ha espai per baixar aquí.';msgT=3;return}
 P.x=spot.x;P.z=spot.z;P.hd=leaving.hd;
@@ -3481,6 +3501,24 @@ else{
   }
 }
 if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.rotation.set(pi,v.hd,ro);
+// Les rampes del ferri reposen sobre el moll o la platja quan s'atura.
+// La superfície física empra el mateix angle que les peces animades.
+if(v.t==='ferry'&&o.userData.ferryRamps){
+  const deck=FERRY_DECK,sc=VS.ferry||1,length=deck.ramp*sc,
+    deckY=y+deck.y*sc,moving=Math.abs(v.v)>.8||Math.abs(v.driveInput||0)>.2;
+  for(const ramp of o.userData.ferryRamps){
+    const side=ramp.side,tip=ferryWorld(v,0,side*(deck.halfL+deck.ramp)*sc);
+    const supportGround=window.HUNTER_WALK_SURFACES.walkingHeightAt({
+      physical:hAt(tip.x,tip.z),visible:null,stairs:[],piers,buildings:[]
+    },tip.x,tip.z);
+    let support=Math.max(wy(tip.x,tip.z,t),supportGround);
+    const bridge=terminalRampHeight(tip.x,tip.z);
+    if(bridge!==null)support=Math.max(support,bridge);
+    const down=Math.max(-.16,Math.min(.58,Math.atan2(deckY-support,length))),
+      target=side*(moving?-.88:down),blend=1-Math.exp(-5*Math.max(0,dt));
+    ramp.hinge.rotation.x+=(target-ramp.hinge.rotation.x)*blend;
+  }
+}
 // Direcció visual a l'eix davant (-Z): independent del rodament en X.
 window.HUNTER_VEHICLES.animateSteering(o,v.t,tr,dt);
 v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const sideSpeed=v.v+side*(v.yawRate||0)*2.1*(VS[v.t]||1);w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})
@@ -3993,7 +4031,7 @@ if(worldVisualTick<=0){
 updateDoors(dt);
 items.forEach(it=>{const dx=it.x-P.x,dz=it.z-P.z;if(dx*dx+dz*dz<ITEM_ANIM2){it.o.rotation.y=t*2;it.o.position.y=it.y+Math.sin(t*3+it.x)*.25}});
 if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-it.z;if(dx*dx+dz*dz<4.84&&Math.abs(P.y-it.y)<3){let mapMessage=null;
-  if(it.t==='arma'){ammo+=12;sniperAmmo+=3;bazookaAmmo+=2;}
+  if(it.t==='arma'){ammo+=12;sniperAmmo+=2;bazookaAmmo+=1;}
   else if(it.t==='mapa'||it.t==='mapa_heli'||it.t==='mapa_tanc'){
     mapMessage=revealMapPickup(it.t,false,MAP_SCALE===2?mapSector(it.x,it.z):null);
     mini(); // la informació apareix de seguida, sense entrar a cap menú
@@ -4002,7 +4040,7 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-i
   else if(it.t==='bazooka'){inv.bazooka=1;bazookaAmmo+=3}
   else inv[it.t]=(inv[it.t]||0)+(it.t==='granada'?5:1);
   world.remove(it.o);items.splice(k,1);requestOperationAutosave('equipment');recordOperationMetric('pickups');
-  msg=mapMessage||'Has trobat: '+IT[it.t].n+(it.t==='arma'?' · +12 bales, +3 rifle, +2 coets':it.t==='granada'?' ×5':it.t==='bazooka'?' +3 coets':it.t==='franctirador'?' +6 cartutxos':'');
+  msg=mapMessage||'Has trobat: '+IT[it.t].n+(it.t==='arma'?' · +12 bales, +2 rifle, +1 coet':it.t==='granada'?' ×5':it.t==='bazooka'?' +3 coets':it.t==='franctirador'?' +6 cartutxos':'');
   msgT=3;snd('pick')}}
 msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
 // Strafe independent: gir visual de la cintura i les cames, no de P.hd.

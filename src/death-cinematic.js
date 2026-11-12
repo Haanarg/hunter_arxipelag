@@ -259,22 +259,27 @@ function deathBuildReaper(THREE){
   sleeve.rotation.z=side*.42;
   part(new THREE.SphereGeometry(.13,8,6),bone,side*.95,1.46,.27);
  }
- const shaft=part(new THREE.CylinderGeometry(.065,.085,4.45,8),trim,1.45,2.395,.3);
+ // La dalla queda subjectada físicament pel puny dret.
+ const shaft=part(new THREE.CylinderGeometry(.065,.085,4.45,8),trim,1.01,2.395,.3);
  shaft.rotation.z=0;
+ for(const offset of[-.06,.035]){
+  const finger=part(new THREE.TorusGeometry(.105,.033,6,10),bone,1.01,1.46+offset,.3);
+  finger.rotation.x=Math.PI/2;
+ }
  // Fulla plana i corbada com la referència: NOMÉS el perfil de la
  // fulla, no el mànec de la fotografia. La silueta afuada no és un tub.
  const blade=new THREE.Shape();
  // El tall apunta cap a fora (dreta) en lloc de travessar el cap.
  // Mirall del perfil original respecte a l'eix vertical del mànec.
- blade.moveTo(1.45,4.62);
- blade.bezierCurveTo(2.02,4.83,3.15,4.70,3.73,2.96);
- blade.bezierCurveTo(3.78,3.77,3.16,4.40,1.45,4.62);
+ blade.moveTo(1.01,4.62);
+ blade.bezierCurveTo(1.58,4.83,2.71,4.70,3.29,2.96);
+ blade.bezierCurveTo(3.34,3.77,2.72,4.40,1.01,4.62);
  const bladeMesh=part(new THREE.ShapeGeometry(blade,22),steel,0,0,.30);
  bladeMesh.material.side=THREE.DoubleSide;
  // Un fil clar al tall interior, en el mateix pla, sense gruix cilíndric.
  const cuttingEdge=new THREE.CubicBezierCurve3(
-  new THREE.Vector3(3.73,2.96,.32),new THREE.Vector3(3.78,3.77,.32),
-  new THREE.Vector3(3.16,4.40,.32),new THREE.Vector3(1.45,4.62,.32));
+  new THREE.Vector3(3.29,2.96,.32),new THREE.Vector3(3.34,3.77,.32),
+  new THREE.Vector3(2.72,4.40,.32),new THREE.Vector3(1.01,4.62,.32));
  const edgeGeometry=new THREE.BufferGeometry().setFromPoints(cuttingEdge.getPoints(22));
  const edgeMaterial=new THREE.LineBasicMaterial({color:0xe1e5e3,transparent:true,opacity:.85});
  owned.push(edgeGeometry,edgeMaterial);
