@@ -172,7 +172,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const native=meta.mode==='native',noise=native?{...position,id:++sequence,kind,radius:RADII[kind]??RADII.pistol}:null;
     for(const t of targets)if(t.ai&&t.hp>0){
       if(native&&t.t==='soldat'){hearNativeSoldier(t,noise,tick);continue;}
-      if(Math.hypot(t.x-position.x,t.z-position.z)<35){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.lastKnown={x:position.x,y:position.y,z:position.z};if(t.t!=='jeep')t.heading=facePoint(t,position);t.state='search';}
+      if(Math.hypot(t.x-position.x,t.z-position.z)<(kind==='suppressedPistol'?12:35)){t.alarmedUntil=tick+180;t.focus=actorId;t.lastSeenTick=tick;t.lastKnown={x:position.x,y:position.y,z:position.z};if(t.t!=='jeep')t.heading=facePoint(t,position);t.state='search';}
     }
   }
   // Únic esdeveniment autoritatiu per activar soldats i sincronitzar clients.
@@ -646,7 +646,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         }else if(weapon==='assault'){
           const burst={actorId,remaining:0,delay:0};beginBurst(burst,bag.bullets,()=>{fire(actorId,p,bag,tick);return true;});bursts.push(burst);code='BURST';
         }else code=fire(actorId,p,bag,tick,weapon,message.aim);
-        if(meta.mode!=='native'||!['grenade','c4'].includes(weapon))alarm(p,actorId,tick,['knife','cutters'].includes(weapon)?weapon:profile.splash?'bazooka':!vehicle&&weapon==='sniper'?'sniper':vehicle?'rifle':'pistol');bag.disguised=false;cooldowns.set(key,tick);ok=true;
+        if(meta.mode!=='native'||!['grenade','c4'].includes(weapon))alarm(p,actorId,tick,['knife','cutters'].includes(weapon)?weapon:profile.splash?'bazooka':!vehicle&&weapon==='sniper'?'sniper':vehicle?'rifle':weapon==='assault'?'rifle':weapon==='pistol'?'suppressedPistol':'pistol');bag.disguised=false;cooldowns.set(key,tick);ok=true;
       }
       const result={kind:'combat',actorId,commandId:message.commandId,ok,code};results.push(result);if(results.length>128)results.shift();return {...result};
     }return {kind:'combat',actorId,commandId:message.commandId,ok,code};
@@ -664,7 +664,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     if(!active())return;
     for(let i=bursts.length-1;i>=0;i--){const burst=bursts[i],p=players().find(p=>p.id===burst.actorId),bag=inventory.get(burst.actorId);
       if(!p||p.hp<=0||p.fall||p.swimming||!canAttack(p.id)||!bag?.assault||bag.weapon!=='assault'||!bag.bullets){bursts.splice(i,1);continue;}
-      stepBurst(burst,1/30,true,()=>{if(!bag.bullets)return false;fire(p.id,p,bag,tick);alarm(p,p.id,tick,'pistol');bag.disguised=false;return true;});if(!burst.remaining)bursts.splice(i,1);
+      stepBurst(burst,1/30,true,()=>{if(!bag.bullets)return false;fire(p.id,p,bag,tick);alarm(p,p.id,tick,'rifle');bag.disguised=false;return true;});if(!burst.remaining)bursts.splice(i,1);
     }
     // L'autoapuntat no necessita 30 recerques LOS/s per vehicle: el canó
     // comparteix l'actualització física a 10 Hz, i els trets continuen a 30 Hz.

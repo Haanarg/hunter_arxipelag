@@ -1,8 +1,8 @@
 **2026-11-12 · Física, combats i interaccions (codi font):**
 - [x] Abaixades les copes principals, les reduïdes i les llunyanes de totes les palmeres per ajustar-les als troncs.
-- [x] Roques grosses amb intercepció contínua 3D per a projectils lleugers i pesats al mode individual.
+- [x] Roques grosses amb intercepció contínua 3D per a projectils lleugers i pesats al mode individual i volum balístic vertical real al COOP.
 - [x] Caixes de munició unificades: 12 bales normals, 2 de franctirador i 1 coet de bazuca (individual i COOP), inventari i descripcions coherents.
-- [x] Pistola amb silenciador visual, sense flamarada i amb menor volum i radi de percepció (a peu i com a rider).
+- [x] Pistola amb silenciador visual, sense flamarada i amb menor volum i radi de percepció (a peu, com a rider i en percepció d'enemics COOP).
 - [x] Torre de comunicacions destruïble des de la base o l'estructura superior, 24 PV compartits, sense emetre cap avís especial als soldats.
 - [x] Rampes articulades al ferri: col·lisió de coberta/rampa segons l'angle, suport del moll/platja a l'aturada i elevació en moviment; representació compatible amb superfície de ferri COOP.
 - [x] Dalla de la Mort col·locada dins el puny dret a l'escena de mort.

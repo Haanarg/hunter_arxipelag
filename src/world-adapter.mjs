@@ -79,7 +79,9 @@ export function createStaticWorldAdapter(source){
     if(locomotionAt(x,z,y).basement)return null;
     const cx=Math.floor(x/16),cz=Math.floor(z/16),ground=Math.max(heightAt(x,z),0);
     for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)for(const t of grids.trees.get(key(cx+a,cz+b))||[])
-      if(alive(t)&&Math.hypot(x-t.x,z-t.z)<t.r+radius&&y<ground+(t.p?6.5:1.5))return t;
+      if(alive(t)&&Math.hypot(x-t.x,z-t.z)<t.r+radius&&
+        (t.rock&&(t.r>2.5||t.s>1.7)?y>=(t.bottomY??ground-.5)-.1&&y<=(t.topY??ground+1.5)+.1:
+        y<ground+(t.p?6.5:1.5)))return t;
     return null;
   }
   function resolveBody(previous,candidate){
