@@ -16,8 +16,8 @@ const editor=read('src/vehicle-annotation-editor.mjs');
 
 // Només categories pendents. No recuperar vehicles ja acceptats.
 const types=[...catalog.matchAll(/\{id:'([^']+)'/g)].map(m=>m[1]);
-assert.equal(types.length,5,'El laboratori ha de tenir cinc categories');
-assert.deepEqual(new Set(types),new Set(['tanqueta','tanc','llanxa','llanxa_coets','ferry']));
+assert.equal(types.length,6,'El laboratori ha de tenir sis categories');
+assert.deepEqual(new Set(types),new Set(['tanqueta','cotxe','tanc','llanxa','llanxa_coets','ferry']));
 for(const id of ['bici','cotxe_civil','camio','barca_rems','windsurf','moto_aquatica','moto','heli','heli_combat']){
  assert(!types.includes(id),'Vehicle aprovat al catàleg: '+id);
  assert(!(id in manifest.models),'Vehicle aprovat al manifest: '+id);
@@ -34,6 +34,7 @@ for(const item of files){
  assert(fs.existsSync(filename),'Falta el GLB: '+item.file);
  assert.equal(fs.statSync(filename).size,item.bytes,'Mida incorrecta: '+item.file);
 }
+assert.deepEqual(manifest.models.cotxe,[]);
 assert.deepEqual(manifest.models.tanc,[]);
 assert.deepEqual(manifest.models.tanqueta,[]);
 assert(manifest.limits.maxFileBytes>=32*1024*1024);
@@ -41,6 +42,14 @@ assert.equal(manifest.externalModels.tanc.length,2);
 assert.equal(manifest.externalModels.tanqueta.length,1);
 assert.deepEqual(manifest.externalModels.tanc.map(m=>m.modelId),['c858e6ac0f3045d68f73681725351372','7d3a7cf685334f3da3005c559e2b1952']);
 assert(!/Abrams|M1A1/.test(catalog));
+assert(catalog.includes("C('tigr-v1'")&&catalog.includes("C('t90m-v1'"));
+assert(catalog.includes('https://commons.wikimedia.org/wiki/Category:T-90M'));
+assert(catalog.includes('https://commons.wikimedia.org/wiki/Category:Tigr_vehicle'));
+assert(studio.includes("createReferenceVehicle(THREE,entry.variant)")&&studio.includes("entry.provider==='procedural'"));
+assert(studio.includes("prepareHumveeD31Runtime(THREE)"),'El visor ha de mostrar el Humvee D3.1 real del joc');
+assert(html.includes('id="referenceLinks"')&&html.includes('src/vehicles-externs-proves.mjs?rev='));
+assert.equal(manifest.externalModels.tanc[0].slot,2);
+assert.equal(manifest.externalModels.tanc[1].slot,3);
 for(const m of manifest.externalModels.tanc){assert(catalog.includes(m.modelId));assert(m.triangles<30000);}
 for(const id of ['tanc','tanqueta'])for(const candidate of manifest.externalModels[id]){
  assert.equal(candidate.provider,'sketchfab');
@@ -55,8 +64,8 @@ const version=btr.match(/export const BTR82_VERSION='([^']+)'/)?.[1];
 assert(version&&version.startsWith('btr82-'),'Falta la revisió del BTR-82');
 assert(studio.includes('btr82-3b-preview.mjs?rev='),'Falta el model de proves 3B vigent');
 assert(html.includes('src/vehicles-externs-proves.mjs?rev='));
-assert(studio.includes("vehicle-candidate-catalog.mjs?rev=lab-catalog-syntax-repair-1"),
- 'Força la càrrega del catàleg corregit, sense reutilitzar la versió amb SyntaxError');
+assert(studio.includes("vehicle-candidate-catalog.mjs?rev=lab-catalog-t90m-tigr-1"),
+ 'Força la càrrega del catàleg nou sense reutilitzar una còpia antiga');
 assert(html.includes(".catch(error=>")&&html.includes("No s’ha pogut carregar el laboratori"),
  'Una fallada en carregar un mòdul no pot deixar el visor en blanc');
 assert(btr.includes("BASE_FILE='btr82-base-100.glb'"));
@@ -99,7 +108,8 @@ for(const file of [
  'src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs',
  'src/btr82-lod-studio.mjs','src/btr82-hull-v3.mjs',
  'src/vehicle-annotation-editor.mjs','src/vehicle-hole-brush.mjs',
- 'src/vehicle-live-editor.mjs','src/vehicle-live-geometry.mjs','server/model-lab.mjs'
+ 'src/vehicle-live-editor.mjs','src/vehicle-live-geometry.mjs','src/vehicle-reference-candidates.mjs','server/model-lab.mjs'
 ])execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
 execFileSync(process.execPath,[path.join(root,'tests/btr82-hull-v3-geometry.cjs')],{stdio:'pipe'});
+execFileSync(process.execPath,[path.join(root,'tests/reference-vehicle-candidates.mjs')],{stdio:'pipe'});
 console.log('PASS vehicle candidate studio: catalog, manifest, BTR-82 v3, editor and syntax');

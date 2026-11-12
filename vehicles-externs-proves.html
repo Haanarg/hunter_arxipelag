@@ -15,6 +15,7 @@ header p{max-width:960px;font-size:13px;line-height:1.5;margin:7px 0;color:#c3d6
 nav{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:12px}
 main{padding:15px clamp(10px,2vw,30px) 26px}
 #vehicleList{display:flex;gap:7px;margin:10px 0 12px;overflow-x:auto;overflow-y:hidden;padding:2px 2px 10px;scrollbar-width:thin;overscroll-behavior-x:contain}
+.reference-links{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;font-size:12px}.reference-links:empty{display:none}
 #vehicleList button{text-align:left;min-height:44px;min-width:140px;flex:0 0 148px}#vehicleList small{display:block;font-size:10px;opacity:.8;margin-top:3px}
 #info{display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:10px;margin:0 0 11px}
 #warning{color:#f0d9a8;font-size:12px;line-height:1.5;max-width:900px}
@@ -88,7 +89,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <a href="helicopters-engine-compare.html" style="color:#f3dc9d;font-weight:800">Comparar Huey / Apache: GLB vs motor</a><a href="vehicle-mides-proves.html">Mides del joc</a><a href="index.html">Jugar</a>
 </nav></header>
 <main><div id="vehicleList" aria-label="Tria vehicle"></div>
-<section id="info"><div><h2 id="vehicleName">Carregant el taller…</h2><div id="warning"></div></div>
+<section id="info"><div><h2 id="vehicleName">Carregant el taller…</h2><div id="warning"></div><div id="referenceLinks" class="reference-links" aria-label="Fotografies de referència"></div></div>
 <div class="toolbar"><label><input id="fitScale" type="checkbox" checked> Ajustar candidates a l'escala del model actual</label>
 <label><input id="animate" type="checkbox" checked> Animacions disponibles</label>
 <label><input id="showGrid" type="checkbox" checked> Graella i referència humana</label>
@@ -142,7 +143,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <script type="module">
 // Carrega asíncronament per poder mostrar l'error si qualsevol import està
 // trencat. Un error de sintaxi al catàleg ja no deixa un visor en blanc.
-import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261112-t90m-9-catalog-fix')
+import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261112-t90m-tigr-procedural-1')
  .catch(error=>{
   console.error('Error en arrencar el laboratori de vehicles:',error);
   const reason=error instanceof Error?error.message:String(error);

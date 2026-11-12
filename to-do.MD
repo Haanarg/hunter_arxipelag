@@ -1,3 +1,11 @@
+**2026-11-12 · Nous candidats per al laboratori (no implementats al joc):**
+- [x] Reactivada la pastilla del cotxe militar al comparador com a GAZ Tigr-M; el visor original mostra el Humvee D3.1 real del joc.
+- [x] Creat GAZ Tigr-M candidat 1 amb geometria Three.js original: cabina, capó, parabrisa partit, portes, rodes, fars i sostre; model editable al laboratori.
+- [x] Creat T-90M candidat 1 amb geometria Three.js original: casc, glacis, faldons, sis rodes per costat, torreta angular, canó llarg i mòduls; conservades les referències externes.
+- [x] Fotografies de referència Wikimedia Commons enllaçades a l'editor; candidats independents sense descarregar GLB ni afegir llicències de tercers a les malles.
+- [x] Preparada la selecció de peces, transformacions, simetria, esborranys, marques i cua de canvis amb el flux existent.
+- [ ] Revisió visual al navegador dels candidats GAZ Tigr-M i T-90M abans d'aprovar o substituir els models del joc.
+
 **2026-11-12 · Física, combats i interaccions (codi font):**
 - [x] Abaixades les copes principals, les reduïdes i les llunyanes de totes les palmeres per ajustar-les als troncs.
 - [x] Roques grosses amb intercepció contínua 3D per a projectils lleugers i pesats al mode individual i volum balístic vertical real al COOP.

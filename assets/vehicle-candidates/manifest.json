@@ -9,6 +9,7 @@
   },
   "models": {
     "tanqueta": [],
+    "cotxe": [],
     "tanc": [],
     "llanxa": [
       {
@@ -120,7 +121,7 @@
         "triangles": 1412,
         "license": "CC BY 4.0",
         "note": "Molt lleuger · 1.412 triangles · candidat low poly per al joc.",
-        "slot": 1
+        "slot": 2
       },
       {
         "provider": "sketchfab",
@@ -131,7 +132,7 @@
         "triangles": 27718,
         "license": "CC BY 4.0",
         "note": "Estilitzat · 27.718 triangles · més detall i protecció Arena-M.",
-        "slot": 2
+        "slot": 3
       }
     ],
     "tanqueta": [

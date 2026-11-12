@@ -89,7 +89,7 @@ async function main(){
     }
     for(let i=0;i<config.options.length;i++){
       const entry=config.options[i];
-      if(entry.provider==='sketchfab')continue;
+      if(entry.provider==='sketchfab'||entry.provider==='procedural')continue;
       const oldEntry=old.models?.[config.id]?.find(a=>a.slot===i+1);
       if(oldEntry&&!force){
         const abs=join(root,oldEntry.file);
