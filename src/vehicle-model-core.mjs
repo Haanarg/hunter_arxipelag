@@ -51,7 +51,7 @@ export const vehicleModels=Object.freeze({
         .applyQuaternion(muzzle.getWorldQuaternion(new THREE.Quaternion())).normalize()
     };
   },
-  createFactory(THREE,{box,material,shadows,resources=null,civilianCar=null,humvee:humveeFactory=null,truck:truckFactory=null,batching=null}){
+  createFactory(THREE,{box,material,shadows,resources=null,civilianCar=null,gaz:gazFactory=null,truck:truckFactory=null,batching=null}){
     const VS=this.scales,templates=new Map(),distant=createDistantVehicleFactory(THREE,resources);
     const rod=(g,a,b,r,c,profile='metal')=>{const v=new THREE.Vector3(...a),w=new THREE.Vector3(...b),delta=w.clone().sub(v),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),8),material(c,profile));m.position.copy(v.add(w).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());g.add(m);return m};
     const round=(g,r,h,c,x,y,z,axis='y',profile='metal')=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,12),material(c,profile));m.position.set(x,y,z);if(axis==='x')m.rotation.z=Math.PI/2;if(axis==='z')m.rotation.x=Math.PI/2;g.add(m);return m};
@@ -131,21 +131,17 @@ export const vehicleModels=Object.freeze({
         }
         g.userData.staticBatches=count;
       }
-      if(t==='cotxe'&&humveeFactory?.create){
-        // Model definitiu Humvee D3.1, aprovat amb les quatre portes planes.
-        // La seva escala interna = 1.75 / VS.cotxe; la fàbrica general
-        // aplica VS.cotxe una sola vegada al final.
-        const humvee=humveeFactory.create();
-        resources?.retainModel(humvee);
-        g.add(humvee);
-        g.userData.wheels=humvee.userData.wheels;
-        g.userData.steeringPivots=humvee.userData.steeringPivots;
-        g.userData.humveeModel='D3.1';
-        g.userData.humveeScale=humveeFactory.scale;
-      }
-      if(t==='cotxe'&&!humveeFactory){const col=0xa35b38,trim=0x302f2d;box(g,3,1,5.6,col,0,1.15,0,'paint');box(g,2.92,.42,2.1,col,0,1.82,-1.72,'paint');box(g,2.62,.82,2.72,glass,0,2.04,.48,'glass');box(g,2.88,.18,2.95,col,0,2.52,.48,'paint');box(g,2.45,.1,1.1,0x7d432f,0,2.65,.5,'paint');for(const x of[-1.34,1.34]){box(g,.13,.28,2.9,col,x,1.7,.5,'paint');box(g,.15,.82,.14,col,x,2.04,-.82,'paint');box(g,.15,.82,.14,col,x,2.04,1.82,'paint');box(g,.18,.82,.15,col,x,2.04,.5,'paint');for(const z of[-1.85,1.85])wheel(g,x*1.16,.72,z,.72,.45,false,z<0);box(g,.35,.18,.4,metal,x*1.17,2.08,-.85,'metal')}for(const z of[-2.95,2.95])box(g,3.25,.3,.3,metal,0,.94,z,'metal');box(g,1.6,.45,.08,rubber,0,1.4,-2.84,'rubber');box(g,2.5,.14,.12,trim,0,1.12,-2.88,'rubber');for(const x of[-1.08,1.08]){box(g,.5,.34,.1,0xffedb2,x,1.43,-2.85,'paint');box(g,.38,.24,.1,0x9c2825,x,1.38,2.84,'paint')}for(const x of[-.72,.72])box(g,.5,.1,.16,0xd8d7c9,x,1.03,-2.9,'metal');const spare=wheel(g,0,1.5,3,.65,.45);spare.rotation.y=Math.PI/2;(g.userData.wheels||[]).pop()}
-      if(t==='cotxe'&&!humveeFactory){
-        // Reserva per si el GLB encara no s'ha pogut carregar.
+      if(t==='cotxe'&&gazFactory?.create){
+         // GAZ Tigr-M natiu, amb la física de cotxe i rodes/direcció animades.
+         const gaz=gazFactory.create();
+         g.add(gaz);
+         g.userData.wheels=gaz.userData.wheels;
+         g.userData.steeringPivots=gaz.userData.steeringPivots;
+         g.userData.gazModel='Tigr-M';
+       }
+       if(t==='cotxe'&&!gazFactory){const col=0xa35b38,trim=0x302f2d;box(g,3,1,5.6,col,0,1.15,0,'paint');box(g,2.92,.42,2.1,col,0,1.82,-1.72,'paint');box(g,2.62,.82,2.72,glass,0,2.04,.48,'glass');box(g,2.88,.18,2.95,col,0,2.52,.48,'paint');box(g,2.45,.1,1.1,0x7d432f,0,2.65,.5,'paint');for(const x of[-1.34,1.34]){box(g,.13,.28,2.9,col,x,1.7,.5,'paint');box(g,.15,.82,.14,col,x,2.04,-.82,'paint');box(g,.15,.82,.14,col,x,2.04,1.82,'paint');box(g,.18,.82,.15,col,x,2.04,.5,'paint');for(const z of[-1.85,1.85])wheel(g,x*1.16,.72,z,.72,.45,false,z<0);box(g,.35,.18,.4,metal,x*1.17,2.08,-.85,'metal')}for(const z of[-2.95,2.95])box(g,3.25,.3,.3,metal,0,.94,z,'metal');box(g,1.6,.45,.08,rubber,0,1.4,-2.84,'rubber');box(g,2.5,.14,.12,trim,0,1.12,-2.88,'rubber');for(const x of[-1.08,1.08]){box(g,.5,.34,.1,0xffedb2,x,1.43,-2.85,'paint');box(g,.38,.24,.1,0x9c2825,x,1.38,2.84,'paint')}for(const x of[-.72,.72])box(g,.5,.1,.16,0xd8d7c9,x,1.03,-2.9,'metal');const spare=wheel(g,0,1.5,3,.65,.45);spare.rotation.y=Math.PI/2;(g.userData.wheels||[]).pop()}
+      if(t==='cotxe'&&!gazFactory){
+        // Reserva geomètrica quan el model definitiu no està disponible.
         // El conductor veu el volant per darrere del parabrisa.
         const steeringWheel=new THREE.Mesh(
           new THREE.TorusGeometry(.27,.045,8,16),
