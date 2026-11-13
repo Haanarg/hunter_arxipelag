@@ -24,7 +24,7 @@ assert.deepEqual(manifest.models.ferry,[]);
 assert.deepEqual(manifest.models.llanxa_coets,[]);
 assert.deepEqual(manifest.models.tanqueta,[]);
 assert(!Object.hasOwn(manifest,'selectedForLod'));
-assert(studio.includes('createBtr823BPreview()'));
+assert(studio.includes('previewFactory=createBtr823BPreview')&&studio.includes('btrStudy?previewFactory()'));
 assert(studio.includes('prepareHueyDuaneRuntime(THREE)'));
 assert(studio.includes('prepareApacheAraonRuntime(THREE)'));
 assert(!studio.includes('studio.load(token)'));

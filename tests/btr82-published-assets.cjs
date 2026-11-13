@@ -31,7 +31,8 @@ for(const record of manifest.models.llanxa){
 const preview=fs.readFileSync(path.join(root,'src/btr82-3b-preview.mjs'),'utf8');
 const huey=fs.readFileSync(path.join(root,'src/huey-duane-runtime.mjs'),'utf8');
 assert(preview.includes('createBtr823BPreview')&&!preview.includes('GLTFLoader'));
-assert(huey.includes('createNativeHuey')&&!huey.includes('GLTFLoader'));
+assert(huey.includes('createNativeHuey')&&!/import\s+.*GLTFLoader/.test(huey)&&!/new\s+GLTFLoader\s*\(/.test(huey),
+ 'El Huey no pot carregar un GLB (els comentaris històrics no compten)');
 const fetcher=fs.readFileSync(path.join(root,'tools/fetch-vehicle-candidates.mjs'),'utf8');
 assert(fetcher.includes("REMOTE_ONLY_CATEGORIES=new Set(['llanxa_coets','ferry'])"));
 console.log('PASS inventari GLB: només 3 llanxes ràpides; BTR-82, Huey, combat i ferris retirats');

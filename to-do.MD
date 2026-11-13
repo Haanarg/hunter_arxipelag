@@ -1,3 +1,8 @@
+**2026-11-13 · Validació de la neteja GLB (correcció de test):**
+- [x] Diagnosi del primer deploy: l'assercció del Huey confonia el comentari textual «GLTFLoader» amb una importació real. El model natiu no carrega GLB.
+- [x] Ajustades les dues proves de contracte per buscar codi executable real i la fàbrica de tanqueta del laboratori.
+- [ ] Repetir les proves de GitHub Actions i confirmar desplegament actualitzat de Cloudflare.
+
 **2026-11-13 · Neteja dels GLB de models substituïts:**
 - [x] Eliminats 8 GLB: tanqueta (2), Huey (1), llanxa llançamíssils (3) i ferri (2).
 - [x] Conservats exclusivament els 3 GLB de candidats de llanxa ràpida; manifest (3 models, 851.208 bytes) i inventari actualitzats.
