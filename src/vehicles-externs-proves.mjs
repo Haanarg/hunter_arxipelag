@@ -356,7 +356,7 @@ async function choose(config){
  }
  try{
    const model=btrStudy?previewFactory():t90Study?createReferenceVehicle(THREE,config.candidate):await createCurrentVehicle(config.id);
-   // Canviar de pestanya durant la preparació asíncrona del Humvee no ha de
+   // Canviar de pestanya durant la preparació del GAZ no ha de
    // reintroduir el model anterior damunt el vehicle acabat de seleccionar.
    if(token!==generation)return;
    setModel(slots[0],model,true,[],soloStudy);
