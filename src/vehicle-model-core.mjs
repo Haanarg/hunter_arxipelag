@@ -1,6 +1,6 @@
 import {turretSpecs,advanceTurret,stepManualTurret} from './vehicle-turret-core.mjs';
 import {installBtr82Model3B} from './btr82-3b-native.mjs';
-import {installT90MModel} from './t90m-runtime.mjs?rev=t90m-game-1';
+import {installT90MModel} from './t90m-runtime.mjs?rev=t90m-game-double-1';
 import {vehicleSpecs} from './vehicle-specs.mjs';
 import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs?rev=vivid-engine-cover-2';
 import {createStreetfighter25,STREETFIGHTER_25_META} from './streetfighter-25-geometry.mjs';
@@ -307,7 +307,7 @@ export const vehicleModels=Object.freeze({
         g.userData.turretYawRate=turretSpecs.tanqueta.turretYawRate;
       }
       if(t==='tanc'){
-        // El mateix candidat propi del laboratori, amb l'escala x1,5.
+        // Base del laboratori x1,5; el tanc del joc duplica aquesta escala (x3 total).
         // El mòdul registra els pivots i les sabates perquè les físiques
         // existents controlin torreta, canó, rodes i erugues.
         installT90MModel(THREE,g);

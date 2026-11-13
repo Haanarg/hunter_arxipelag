@@ -1,3 +1,13 @@
+**2026-11-13 · T-90M del joc a mida doble respecte de l'actual:**
+- [x] El model x1,5 del laboratori és intacte; la fàbrica del tanc del joc aplica escala exterior addicional x2 (efectiva x3 de l'original).
+- [x] Les hitboxes i els radis físics es multipliquen pel mateix `vehicleSpecs.scales.tanc=2`, també al Worker COOP i per als enemics.
+- [x] El canó i la boca de foc s'escalen i coincideixen amb la mateixa transformació autoritativa de la torreta.
+- [x] Erugues i rodes: factors de desplaçament i radi actualitzats per a l'escala física x3, evitant rotacions massa ràpides.
+- [x] El LOD llunyà s'escala juntament amb el grup del vehicle; la càmera ja incorpora el factor d'escala dels vehicles.
+- [x] Afegida regressió de geometria, hitbox, tir i controls a les proves del desplegament.
+- [ ] Validar visualment en partida que els tancs grans tenen espai per girar, entrar als complexos i sortir-ne.
+- [ ] Confirmar desplegament a Cloudflare.
+
 **2026-11-13 · GAZ Tigr-M aprovat i retirat del laboratori:**
 - [x] Confirmada la integració del GAZ amb les portes retallades a la fàbrica del cotxe militar del joc.
 - [x] Eliminada la pestanya GAZ i la instanciació d'aquest model al laboratori; models natius del joc conservats.

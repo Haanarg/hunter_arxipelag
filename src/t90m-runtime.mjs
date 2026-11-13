@@ -3,18 +3,22 @@
 import {createReferenceVehicle} from './vehicle-reference-candidates.mjs?rev=t90m-game-1';
 import {getT90Rig,stepT90Tracks} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 import {turretSpecs} from './vehicle-turret-core.mjs';
+import {vehicleSpecs} from './vehicle-specs.mjs';
 
-export const T90M_GAME_MODEL_VERSION='t90m-studio-v1-150-game';
+export const T90M_GAME_MODEL_VERSION='t90m-studio-v1-300-game';
 
 export function installT90MModel(THREE,vehicle){
  const model=createReferenceVehicle(THREE,'t90m-v1');
  const rig=getT90Rig(model);
  if(!rig||rig.tracks.length!==2||rig.wheels.length!==12)
   throw new Error('El T-90M del laboratori ha perdut la torreta o les erugues');
- // L'escala x1,5 es troba exclusivament al candidat. El grup exterior
- // utilitza vehicleSpecs.scales.tanc=1 per no tornar a aplicar x2,25.
+ // El laboratori conserva el model x1,5. Al joc el grup físic exterior
+ // aplica un factor addicional x2: escala efectiva x3 respecte a l'original.
+ // El mateix factor regeix col·lisions i boca de foc en SOLO i COOP.
  if(model.scale.x!==1.5||model.scale.y!==1.5||model.scale.z!==1.5)
-  throw new Error('Escala de T-90M no concordant amb el laboratori');
+  throw new Error('Escala base de T-90M no concordant amb el laboratori');
+ if(vehicleSpecs.scales.tanc!==2)
+  throw new Error('La mida definitiva del tanc al joc ha de ser x2 sobre la base aprovada');
  vehicle.add(model);
  // La boca de tir queda sota el pivot d'elevació: l'autoapuntat i la
  // trajectòria real surten de l'extrem visual del canó i giren junts.
@@ -50,12 +54,12 @@ export function installT90MModel(THREE,vehicle){
   cy:track.cy,r:track.r,front:track.front,rear:track.rear,
   straight:track.straight,perimeter:track.perimeter,x:track.x
  }));
- data.trackVisualScale=model.scale.x;
+ data.trackVisualScale=model.scale.x*vehicleSpecs.scales.tanc;
  data.trackHalfWidth=1.52; // Semiamplada en coordenades locals del candidat.
  data.wheels=rig.wheels;
  for(const wheel of data.wheels){
   wheel.userData.trackSide=wheel.userData.t90RoadWheel.side;
-  wheel.userData.radius=wheel.userData.t90RoadWheel.radius*model.scale.x;
+  wheel.userData.radius=wheel.userData.t90RoadWheel.radius*data.trackVisualScale;
  }
  return model;
 }

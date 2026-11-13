@@ -92,8 +92,8 @@ export function createDistantVehicleFactory(THREE,resources=null){
       box(0,2.85,0,w*1.65,.075,.30,0x292d2d);
       box(0,2.2,d*.34,.3,.37,d*.46,main);
     }else{
-      // La geometria llunyana també segueix la mida del casc T-90M x1,5,
-      // no l'escala anterior x2,25.
+      // La malla llunyana manté les proporcions: el mateix grup de
+      // vehicle escala x2 tant aquest proxy com el T-90M complet.
       box(0,narrow?.72:type==='tanc'?1.22:1.05,0,
         w*.94,narrow?.35:type==='tanc'?1.8:1.4,d*.91,main);
       if(!narrow)box(0,type==='tanc'?2.63:heavy?2.1:2.05,-d*.04,

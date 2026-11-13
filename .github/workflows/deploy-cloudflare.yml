@@ -31,6 +31,9 @@ jobs:
           node --check src/vehicle-live-editor.mjs
           node --check src/btr82-3b-preview.mjs
           node --check src/vehicle-reference-candidates.mjs
+          node --check src/t90m-runtime.mjs
+          node --check src/vehicle-specs.mjs
+          node --check tests/t90m-game-integration.mjs
           node --check tests/gaz-tigr-door-contours.mjs
           node --check tests/gaz-tigr-approved.mjs
       - name: Verificar credencials de desplegament sense mostrar secrets
@@ -48,6 +51,8 @@ jobs:
         run: |
           node tests/civilian-car-roof-candidate.mjs
           node tests/vehicle-lab-current-models.mjs
+          node tests/t90m-game-integration.mjs
+          node tests/armored-crew-controls.mjs
           node tests/gaz-tigr-door-contours.mjs
           node tests/gaz-tigr-approved.mjs
           node tests/btr82-published-assets.cjs
@@ -85,8 +90,14 @@ jobs:
           for attempt in 1 2 3 4 5; do
             if curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
               "https://hunter.paradoxa.cat/src/version.mjs?release=$COMMIT" | grep -Fq "GAME_VERSION = '$version'"; then
-              echo "Paradoxa: versió $version desplegada i verificada"
-              exit 0
+              # La versió visible del joc no canvia en una revisió de model.
+              # Comprovam també la nova escala FÍSICA publicada, no només la versió.
+              if curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+                "https://hunter.paradoxa.cat/src/vehicle-specs.mjs?release=$COMMIT" |
+                grep -Fq 'tanqueta:1.8125,tanc:2,heli:1.75'; then
+                echo "Paradoxa: versió $version i T-90M x2 desplegats i verificats"
+                exit 0
+              fi
             fi
             sleep 3
           done
