@@ -19,7 +19,7 @@ export const CATALOG=[
    note:'Model C1A actual del joc, recuperat per continuar modificant-lo.',
    options:[]},
  {id:'tanc',name:'Tanc · T-90M',kind:'terra',candidate:'t90m-v1',
-   note:'Només el nostre T-90M: model procedimental ampliat un 50 %, amb torreta, canó i erugues animables al laboratori. El tanc del joc es conserva sense canvis fins a validar l’escala i les col·lisions.',
+   note:'Només el nostre T-90M: model procedimental ampliat un 50 %, amb torreta, canó i erugues animables al laboratori. El mateix model s’ha integrat al joc, amb la caixa de col·lisions ajustada al casc.',
    references:[
      {label:'T-90M · galeria Wikimedia',url:'https://commons.wikimedia.org/wiki/Category:T-90M'}
    ],

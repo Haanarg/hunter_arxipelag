@@ -1,6 +1,6 @@
 // Hunter: Arxipèlag · candidats ORIGINALS low-poly per al laboratori.
 // Orientació compartida amb el joc: morro cap a -Z, simetria X=0.
-// No es publiquen al joc fins que s'aprovi un candidat al laboratori.
+// El T-90M aprovat també és el model del joc; les proves continuen emprant la mateixa geometria.
 export const REFERENCE_CANDIDATE_VERSION='20261113-t90m-animated-150-tigr-interior-v3';
 
 export function createReferenceVehicle(THREE,type){

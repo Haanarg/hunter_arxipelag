@@ -1,3 +1,13 @@
+**2026-11-13 · Model T-90M aprovat al joc:**
+- [x] Substituït el tanc original de la fàbrica pel nostre candidat procedimental T-90M, compartit amb el laboratori.
+- [x] Mantinguda l'escala x1,5 exacta del candidat sense multiplicació posterior; hitbox del casc reajustada (5,9 × 10,9 m) i radi 6,4.
+- [x] Tornats a vincular els pivots de torreta i elevació del canó, punt de sortida de projectils i dades compartides amb el Worker de COOP.
+- [x] Erugues esquerra/dreta i dotze rodes connectades a la velocitat i al gir real del vehicle; sabates distribuïdes també en repòs.
+- [x] Ajustat el model llunyà i incorporada una regressió d'igualtat amb el laboratori, dimensió de col·lisió, boca del canó i animacions.
+- [ ] Validar visualment el model en joc (mida, col·lisions, erugues, apuntat i dos jugadors).
+- [x] Runtime 0.6.212 reconstruït manualment a partir dels 70 scripts de producció i syntax-check de tot el paquet, sense GitHub Actions.
+- [ ] Confirmar desplegament actualitzat de Pages i del Worker, conservant la publicació manual.
+
 **2026-11-13 · Controls de torreta i rols cooperatius T-90M / BTR-82:**
 - [x] Apuntat automàtic de sèrie per al tanc i la tanqueta; SHIFT mantingut o interruptor «TORRETA» activa el manual.
 - [x] Joystick i W/S/A/D controlen gir/elevació de la torreta en manual; conducció bloquejada mentre s'apunta manualment amb un sol jugador.

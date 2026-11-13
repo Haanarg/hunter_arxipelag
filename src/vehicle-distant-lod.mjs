@@ -92,10 +92,14 @@ export function createDistantVehicleFactory(THREE,resources=null){
       box(0,2.85,0,w*1.65,.075,.30,0x292d2d);
       box(0,2.2,d*.34,.3,.37,d*.46,main);
     }else{
-      box(0,narrow?.72:1.05,0,w*.94,narrow?.35:1.4,d*.91,main);
-      if(!narrow)box(0,heavy?2.1:2.05,-d*.04,w*.68,heavy?.66:1.05,d*.46,
+      // La geometria llunyana també segueix la mida del casc T-90M x1,5,
+      // no l'escala anterior x2,25.
+      box(0,narrow?.72:type==='tanc'?1.22:1.05,0,
+        w*.94,narrow?.35:type==='tanc'?1.8:1.4,d*.91,main);
+      if(!narrow)box(0,type==='tanc'?2.63:heavy?2.1:2.05,-d*.04,
+        w*.68,type==='tanc'?1.05:heavy?.66:1.05,d*.46,
         heavy?0x4b5747:0x516063);
-      if(heavy)box(0,2.23,-d*.30,.22,.23,d*.64,0x333d36);
+      if(heavy)box(0,type==='tanc'?3.05:2.23,-d*.30,.22,.23,d*.64,0x333d36);
       if(narrow){
         box(0,.58,d*.37,w*.75,.72,.28,0x343938);
         box(0,.58,-d*.37,w*.75,.72,.28,0x343938);

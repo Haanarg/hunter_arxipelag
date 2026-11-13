@@ -48,7 +48,7 @@ import * as weapons from './weapon-catalog.mjs?v=0.6.212&rifleCone80=1';
 window.HUNTER_SHARED_WEAPONS=weapons;
 import * as sharedBatching from './player-batching-core.mjs';
 window.HUNTER_SHARED_BATCHING=sharedBatching;
-import * as vehicleModels from './vehicle-model-core.mjs?v=0.6.212&armoredCrew=1';
+import * as vehicleModels from './vehicle-model-core.mjs?v=0.6.212&armoredCrew=1&t90m=1';
 window.HUNTER_SHARED_VEHICLE_MODELS=vehicleModels;
 import * as sharedAccuracy from './enemy-accuracy-core.mjs';
 window.HUNTER_SHARED_ACCURACY=sharedAccuracy;
@@ -103,7 +103,7 @@ window.HUNTER_RUNTIME_LAYOUTS=runtimeLayouts;window.HUNTER_CHOOSE_COMPOUND=choos
 import {createCompoundStructures} from './compound-structures.mjs';
 window.HUNTER_COMPOUND_STRUCTURES=createCompoundStructures;
 import {runtimeScripts} from './runtime-scripts.mjs';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.212&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.212&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
 import {GAME_VERSION} from './version.mjs?v=0.6.212';

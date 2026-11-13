@@ -3,7 +3,8 @@ import {vehicleSpecs} from './vehicle-specs.mjs';
 export const turretSpecs=Object.freeze({
  // Pivots del BTR-82 3B visual (mateixos en navegador i servidor COOP).
  tanqueta:Object.freeze({pivot:[0,2.748375,-.936],pitch:[0,.160875,.22425],muzzle:[0,0,-3.07125],turretYawRate:2.05,turretMinPitch:-.42,turretMaxPitch:.43}),
- tanc:Object.freeze({pivot:[0,2.54,.1],pitch:[0,.08,-1.1],muzzle:[0,0,-4.35],turretYawRate:1.40,turretMinPitch:-.62,turretMaxPitch:.72})
+ // T-90M del laboratori x1,5: torreta 1,62·1,5, elevació .36·1,5 i boca -4,848·1,5.
+ tanc:Object.freeze({pivot:[0,2.43,-.36],pitch:[0,.54,-1.83],muzzle:[0,0,-7.272],turretYawRate:1.40,turretMinPitch:-.62,turretMaxPitch:.72})
 });
 export function advanceTurret(state,currentYaw,currentPitch,local,dt,config=state){
  const yaw=Math.hypot(local.x,local.z)<1e-4?currentYaw:Math.atan2(-local.x,-local.z),

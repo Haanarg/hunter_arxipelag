@@ -32,7 +32,7 @@ export function stepT90Tracks(root,{throttle=0,steer=0}={},dt=0){
   // inverteix les erugues mentre pivota al mateix lloc.
   const beltSpeed=3.5*Math.max(-1,Math.min(1,throttle))
    +track.side*2.1*Math.max(-1,Math.min(1,steer));
-  if(!beltSpeed)continue;
+  if(!beltSpeed&&track.renderedPhase===track.phase)continue;
   track.phase=((track.phase+beltSpeed*seconds)%track.perimeter+track.perimeter)%track.perimeter;
   for(const link of track.links){
    let q=(link.userData.trackOffset+track.phase)%track.perimeter,y,z,rx;
@@ -49,6 +49,7 @@ export function stepT90Tracks(root,{throttle=0,steer=0}={},dt=0){
    link.position.set(track.x,y,z);
    link.rotation.set(rx,0,0);
   }
+  track.renderedPhase=track.phase;
   for(const wheel of rig.wheels){
    if(wheel.userData.t90RoadWheel.side!==track.side)continue;
    wheel.rotation.x-=beltSpeed*seconds/wheel.userData.t90RoadWheel.radius;

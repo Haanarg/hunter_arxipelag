@@ -1,9 +1,10 @@
 import {turretSpecs,advanceTurret,stepManualTurret} from './vehicle-turret-core.mjs';
 import {installBtr82Model3B} from './btr82-3b-native.mjs';
+import {installT90MModel} from './t90m-runtime.mjs?rev=t90m-game-1';
 import {vehicleSpecs} from './vehicle-specs.mjs';
 import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs?rev=vivid-engine-cover-2';
 import {createStreetfighter25,STREETFIGHTER_25_META} from './streetfighter-25-geometry.mjs';
-import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?v=0.6.170';
+import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?v=0.6.170&t90m=1';
 import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.mjs?v=0.6.81';
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 export const vehicleModels=Object.freeze({
@@ -306,42 +307,10 @@ export const vehicleModels=Object.freeze({
         g.userData.turretYawRate=turretSpecs.tanqueta.turretYawRate;
       }
       if(t==='tanc'){
-        const trackSide=x=>{
-          const side=Math.sign(x),outer=x+side*.02,trackMetal=0x53564d,cy=.78,r=.66,front=-2.62,rear=2.62,straight=rear-front,perimeter=2*straight+2*Math.PI*r;
-          box(g,1.05,1.16,5.25,rubber,outer,cy,0,'rubber');
-          round(g,r,1.04,rubber,outer,cy,front,'x','rubber');
-          round(g,r,1.04,rubber,outer,cy,rear,'x','rubber');
-          for(const z of[-2.35,-1.18,0,1.18,2.35]){
-            const w=wheel(g,x+side*.52,.76,z,.55,.16);
-            w.userData.trackSide=side;
-          }
-          const links=[],count=Math.round(perimeter/.38);
-          for(let i=0;i<count;i++){
-            const link=box(g,1.17,.11,.28,trackMetal,outer,cy,0,'metal');
-            link.userData.trackOffset=i*perimeter/count;
-            links.push(link);
-          }
-          (g.userData.tracks||(g.userData.tracks=[])).push({side,links,phase:0,cy,r,front,rear,straight,perimeter,x:outer});
-        };
-        [-2.1,2.1].forEach(trackSide);
-        box(g,3.75,1.15,5.9,0x667348,0,1.5,0,'paint');
-        const front=box(g,3.65,.72,1.55,0x727c50,0,1.95,-2.05,'paint');front.rotation.x=-.28;
-        for(const x of[-1.45,1.45])box(g,.22,.52,4.9,0x56623f,x,1.88,.15,'paint');
-        const turret=new THREE.Group();turret.position.set(...turretSpecs.tanc.pivot);g.add(turret);
-        round(turret,1.62,.82,0x78845b,0,0,0,'y','paint');
-        box(turret,2.2,.26,1.65,0x6d7950,0,.38,0,'paint');
-        round(turret,.62,.2,metal,.45,.54,.3);
-        rod(turret,[-1,.16,.9],[-1,2.66,.9],.025,metal);
-        const elev=new THREE.Group();elev.position.set(...turretSpecs.tanc.pitch);turret.add(elev);
-        rod(elev,[0,0,0],[0,0,-4.35],.2,metal);
-        box(elev,.66,.4,.68,metal,0,0,-4.08,'metal');
-        const muzzle=new THREE.Object3D();muzzle.position.set(...turretSpecs.tanc.muzzle);elev.add(muzzle);
-        g.userData.turretPivot=turret;g.userData.turretPitch=elev;
-        g.userData.turretMuzzle=muzzle;g.userData.turretYawRate=turretSpecs.tanc.turretYawRate;
-        // El tanc pot apuntar a casetes altes i a objectius sota un turó.
-        g.userData.turretMinPitch=turretSpecs.tanc.turretMinPitch;g.userData.turretMaxPitch=turretSpecs.tanc.turretMaxPitch;
-        for(const x of[-1.2,1.2])box(g,.64,.45,1.2,0x596343,x,2.24,2,'paint');
-        for(const x of[-1.35,1.35])box(g,.42,.22,.42,0x2f332e,x,2.15,-2.45,'metal');
+        // El mateix candidat propi del laboratori, amb l'escala x1,5.
+        // El mòdul registra els pivots i les sabates perquè les físiques
+        // existents controlin torreta, canó, rodes i erugues.
+        installT90MModel(THREE,g);
       }
       if(t==='llanxa'){
         // Stealth A1: model seleccionat a proves.html. Proa neta, casc facetat,
