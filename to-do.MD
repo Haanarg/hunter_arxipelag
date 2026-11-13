@@ -10,7 +10,7 @@
 - [x] Càmera específica darrere la torreta amb seguiment de yaw interpolat i elevació a 72% de la vista normal; pivot visual real com a referència.
 - [x] SHIFT/interruptor en SOLO canvia la càmera; a COOP el conductor (seient 0) conserva la vista normal i l'artiller (seient 1) segueix la torreta independentment de l'estat manual/auto.
 - [x] Controls i càmeres de SOLO/COOP comparteixen regles autoritatives i regressions automatitzades.
-- [ ] Confirmar la reconstrucció i el desplegament del runtime clàssic a Cloudflare.
+- [x] Bundle clàssic recompilat, verificació `npm run check:build` superada i desplegament Cloudflare verificat a Paradoxa (GitHub Actions 43512624565).
 - [ ] Validació visual a dos navegadors i de l'espai sota el canó en totes les orientacions.
 
 **2026-11-13 · Refinament Ka-60 segons la fotografia aportada (peticions a47f8dca / 3dcdc174):**
