@@ -10,12 +10,12 @@ export const CATALOG=[
    note:'Model 3B actualitzat al joc: torreta 25% més petita i centrada longitudinalment sobre el segon eix, amb el canó alineat; mirilles horitzontals amb carcassa verda encastada al casc. Conserva les vuit rodes i incorpora una comporta d’accés verda amb frontisses i nansa a cada lateral entre els eixos segon i tercer, a més de defenses posteriors, trapes, ventilació i quatre focus. Les dues comportes arriben fins a la quilla i els laterals posteriors tenen registres de blindatge, frontisses, barres i tapes simètriques, seguint la referència fotogràfica; canvis aplicats al laboratori i al joc. El morro original es manté complet, també al laboratori; no s’ha modificat la posició dels fars.',
    options:[]},
  {id:'heli',name:'Helicòpter · Kamov Ka-60',kind:'aire',
-   note:'Ka-60 candidat Three.js propi: fuselatge allargat, rotor de quatre pales i fenestron d’onze pales, cabina i tren de rodes. Huey actual al costat per comparar.',
+   note:'Ka-60 revisat: portes de transport obertes, finestres de pilot més petites, motor dorsal continu, tren de cua ancorat i estabilitzador superior en T. Huey actual al costat per comparar.',
    references:[
     {label:'Ka-60 · fotografia lateral (Leonid Faerberg)',url:'https://commons.wikimedia.org/wiki/File:Russian_Air_Force_Ka-60.jpg'},
     {label:'Ka-60 · altres angles',url:'https://commons.wikimedia.org/wiki/Category:Kamov_Ka-60'},
     {label:'Ka-60 · Vertical Flight Society',url:'https://vertipedia.vtol.org/aircraft/getAircraft/aircraftID/257'}
-   ],options:[C('ka60','Kamov Ka-60 · candidat 1','Quatre pales · fenestron animat · cabina amb dos pilots i seients de transport')]},
+   ],options:[C('ka60','Kamov Ka-60 · candidat 2','Portes obertes · vidres més petits · motor dorsal · T de cua · fenestron')]},
  {id:'heli_combat',name:'Helicòpter de combat · Kamov Ka-52',kind:'aire',
    note:'Ka-52 candidat Three.js propi: cabina ampla amb dos pilots de costat, nas aplanat, rotors coaxials contrarotatius i ales curtes. Apache actual al costat per comparar.',
    references:[
