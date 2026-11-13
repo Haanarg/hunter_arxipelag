@@ -1,3 +1,10 @@
+**2026-11-13 · Refinat visual T-90M / GAZ Tigr-M (laboratori):**
+- [x] Candidats 2 Three.js originals revisats amb fotografies noves: Tigr AMN-233114 i T-90M de desfilada. Fonts accessibles al comparador; proporcions del Tigr contrastades amb el catàleg VPK.
+- [x] Tigr: carrosseria estreta, distància entre eixos 3,3 m, passos de roda retallats, frontal amb defensa tubular, capó i parabrisa inclinats, quatre portes i escotilla rectangular.
+- [x] T-90M: casc i torreta baixos, falques frontals, canó més prim, cadenes buides amb sis rodes per banda, faldons segmentats i cistella posterior.
+- [x] Verificades geometria, proporcions, recompte de rodes i serialització de l’editor; inspecció d’imatges renderitzades de les malles. Revisió `live-editor-20261113-reference-shapes-2`; sense modificar models del joc.
+- [ ] Aprovar visualment els candidats al visor WebGL abans de la integració al joc.
+
 **2026-11-13 · P0 COOP: dos mons diferents en iniciar una partida:**
 - [x] Causa localitzada: `spawnFaunaSteps()` generava amb `Math.random()` la posició i l'orientació de cada tauró. Com que aquestes dades entren al SHA-256 de `captureNativeCoopWorld()`, dos navegadors amb la mateixa llavor no coincidien i quedaven bloquejats a la càmera inicial.
 - [x] Introduït RNG local de fauna determinista derivat de la llavor; independent del RNG geogràfic `R`. Regenerat el runtime natiu i afegida regressió de captura amb `Math.random()` alterat a `tests/native-coop-startup.cjs`.

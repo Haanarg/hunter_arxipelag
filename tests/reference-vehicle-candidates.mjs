@@ -12,8 +12,9 @@ for(const [type,needles,minMeshes] of [
  candidate.updateMatrixWorld(true);
  const all=[],names=[];
  candidate.traverse(o=>{
+  names.push(o.name);
   if(!o.isMesh)return;
-  all.push(o);names.push(o.name);
+  all.push(o);
   const pos=o.geometry?.getAttribute('position');
   assert(pos&&pos.count>=3,type+' té una malla buida: '+o.name);
   for(let i=0;i<pos.count;i++)
@@ -28,11 +29,17 @@ for(const [type,needles,minMeshes] of [
  if(type==='t90m-v1'){
   assert.equal(names.filter(n=>n.startsWith('Roda de carretera')).length,12);
   assert.equal(candidate.userData.candidateParts.wheelsPerSide,6);
+  assert(size.x>3.6&&size.x<4.0,'Amplada T-90M');
+  assert(candidate.getObjectByName('Cadena contínua buida').geometry.parameters.shapes.holes.length===1,'Cadena buida');
   assert(size.z>7,'El canó llarg ha d’estar dins la caixa visual');
  }else{
   assert.equal(names.filter(n=>n.startsWith('Pneumàtic tot terreny')).length,4);
   assert.equal(names.filter(n=>n.startsWith('Porta lateral')).length,4);
   assert.equal(candidate.userData.candidateParts.doors,4);
+  assert(size.x>2.4&&size.x<2.8,'Amplada Tigr amb retrovisors');
+  assert(size.z>5.6&&size.z<5.9,'Longitud Tigr');
+  assert.equal(candidate.userData.candidateParts.wheelbase,3.3);
+  assert.equal(names.filter(n=>n==='Panell lateral amb passos de roda').length,2);
  }
  const json=candidate.toJSON();
  const restored=new THREE.ObjectLoader().parse(json);

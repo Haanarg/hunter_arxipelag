@@ -12,20 +12,22 @@ export const CATALOG=[
    note:'Model 3B actualitzat al joc: torreta 25% més petita i centrada longitudinalment sobre el segon eix, amb el canó alineat; mirilles horitzontals amb carcassa verda encastada al casc. Conserva les vuit rodes i incorpora una comporta d’accés verda amb frontisses i nansa a cada lateral entre els eixos segon i tercer, a més de defenses posteriors, trapes, ventilació i quatre focus. Les dues comportes arriben fins a la quilla i els laterals posteriors tenen registres de blindatge, frontisses, barres i tapes simètriques, seguint la referència fotogràfica; canvis aplicats al laboratori i al joc. El morro original es manté complet, també al laboratori; no s’ha modificat la posició dels fars.',
    options:[]},
  {id:'cotxe',name:'Cotxe militar · GAZ Tigr-M',kind:'terra',
-   note:'El Humvee D3.1 continua al joc. Candidat 1 del GAZ Tigr-M, dibuixat amb geometria Three.js pròpia, editable per peces i amb simetria opcional. No s’ha substituït cap vehicle del joc.',
+   note:'El Humvee D3.1 continua al joc. Candidat 2 del GAZ Tigr-M, dibuixat amb geometria Three.js pròpia, editable per peces i amb simetria opcional. No s’ha substituït cap vehicle del joc.',
    references:[
      {label:'GAZ Tigr · galeria Wikimedia',url:'https://commons.wikimedia.org/wiki/Category:Tigr_vehicle'},
-     {label:'GAZ Tigr-M · frontal i 3/4',url:'https://commons.wikimedia.org/wiki/File:GAZ_ASN_233115_Tigr-M.jpg'}
+     {label:'Tigr-M AMN-233114 · fotografies',url:'https://commons.wikimedia.org/wiki/Category:AMN_233114'},
+     {label:'Tigr-M · frontal de referència',url:'https://tank-afv.com/modern/Russia/photos/AMN_233114_TVM2012ch2p3photo015.jpg'},
+     {label:'VPK · catàleg del fabricant',url:'https://bmimpex.com/gallery/VPK%20book_eng.pdf'}
    ],
-   options:[C('tigr-v1','GAZ Tigr-M · candidat 1','Cabina blindada, capó, quatre rodes, portes, parabrisa i sostre; geometria original editable')]},
+   options:[C('tigr-v1','GAZ Tigr-M · candidat 2','Proporcions revisades, passos de roda oberts, defensa tubular i parabrisa inclinat; editable')]},
  {id:'tanc',name:'Tanc · T-90M',kind:'terra',
    note:'Candidat T-90M propi, low-poly i completament editable amb torreta angular, canó, sis rodes per costat i blindatge lateral. Les dues referències Sketchfab continuen disponibles. Encara no s’ha modificat el tanc del joc.',
    references:[
      {label:'T-90M · galeria Wikimedia',url:'https://commons.wikimedia.org/wiki/Category:T-90M'},
-     {label:'T-90M · fotografia frontal/3/4',url:'https://commons.wikimedia.org/wiki/File:T-90M.jpg'}
+     {label:'T-90M · fotografia frontal/3/4',url:'https://media-en.almayadeen.net/archive/image/2023/7/2/31ff1d07-c12c-4312-9c3d-17137675a3ec.jpg'}
    ],
    options:[
-    C('t90m-v1','T-90M · candidat 1','Model procedimental propi: casc baix, 12 rodes, cadenes, torreta soldada i canó llarg'),
+    C('t90m-v1','T-90M · candidat 2','Perfil baix revisat, cadenes buides, 12 rodes, torreta en falca i canó amb camisa tèrmica'),
     S("c858e6ac0f3045d68f73681725351372","https://sketchfab.com/3d-models/t90m-proryv-low-poly-tank-c858e6ac0f3045d68f73681725351372","T90M PRORYV LOW-POLY TANK","PhoneModeler3D",1412,"CC BY 4.0","Molt lleuger · 1.412 triangles · candidat low poly per al joc."),
     S("7d3a7cf685334f3da3005c559e2b1952","https://sketchfab.com/3d-models/t-90m-arena-m-stylised-7d3a7cf685334f3da3005c559e2b1952","T-90M Arena-M (Stylised)","Inmate",27718,"CC BY 4.0","Estilitzat · 27.718 triangles · més detall i protecció Arena-M.")]},
 
