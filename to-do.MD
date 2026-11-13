@@ -1,3 +1,7 @@
+**2026-11-13 · Validació repetida després d'ajustar el test T-90M:**
+- [x] Revisions de memòria cau coordinades per executar de nou el desplegament a Cloudflare sense activar el workflow manual de reconstrucció del runtime.
+- [ ] Confirmar geometria, tir, pistes i escales autoritatives amb la prova T-90M i verificació de mòdul real a Paradoxa.
+
 **2026-11-13 · T-90M x2 · regressió de sintaxi:**
 - [x] La prova antiga de T-90M tenia una cadena JS amb apòstrof no escapat (`d'utilitzar`). Corregida amb cometes dobles.
 - [x] El workflow ja executa `node --check tests/t90m-game-integration.mjs` per detectar-ho abans de desplegar.
