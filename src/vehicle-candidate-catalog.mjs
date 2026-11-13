@@ -3,12 +3,10 @@
 // Huey i Apache aprovats al joc: se'n mostren els models reals com a base editable.
 const P=(pack,match,query)=>({pack,match,query:query||match});
 const Q=(query)=>({query});
+// Els blindats T-90M i BTR-82 es mantenen al joc; temporalment no tenen pestanya al visor.
 // Candidats procedimentals que es poden editar sense dependre de GLB externs.
 const C=(variant,title,note)=>({provider:'procedural',variant,title,note});
 export const CATALOG=[
- {id:'tanqueta',name:'Tanqueta · BTR-82 3B',kind:'terra',
-   note:'Model 3B actualitzat al joc: torreta 25% més petita i centrada longitudinalment sobre el segon eix, amb el canó alineat; mirilles horitzontals amb carcassa verda encastada al casc. Conserva les vuit rodes i incorpora una comporta d’accés verda amb frontisses i nansa a cada lateral entre els eixos segon i tercer, a més de defenses posteriors, trapes, ventilació i quatre focus. Les dues comportes arriben fins a la quilla i els laterals posteriors tenen registres de blindatge, frontisses, barres i tapes simètriques, seguint la referència fotogràfica; canvis aplicats al laboratori i al joc. El morro original es manté complet, també al laboratori; no s’ha modificat la posició dels fars.',
-   options:[]},
  {id:'heli',name:'Helicòpter · Kamov Ka-60',kind:'aire',
    note:'Candidat Three.js ajustat exclusivament a les dues imatges facilitades a la conversa: morro opac diferenciat dels vidres davanters, parabrisa endarrerit i alerons triangulars de cua orientats cap avall. Conservar portes laterals obertes, motor dorsal i tren posterior.',
    // Retirades totes les referències URL externes antigues. Les dues
@@ -22,13 +20,6 @@ export const CATALOG=[
     {label:'Ka-52 · fotografia lateral',url:'https://commons.wikimedia.org/wiki/File:Ka-52_at_MAKS-2009.jpg'},
     {label:'Ka-52 · dimensions del fabricant / exportador',url:'https://roe.ru/pdfs/pdf_4679.pdf'}
    ],options:[C('ka52','Kamov Ka-52 · candidat 1','Dos rotors de tres pales · pilots de costat · sensor frontal i canó lateral')]},
- {id:'tanc',name:'Tanc · T-90M',kind:'terra',candidate:'t90m-v1',
-   note:'Només el nostre T-90M: model procedimental ampliat un 50 %, amb torreta, canó i erugues animables al laboratori. El mateix model s’ha integrat al joc, amb la caixa de col·lisions ajustada al casc.',
-   references:[
-     {label:'T-90M · galeria Wikimedia',url:'https://commons.wikimedia.org/wiki/Category:T-90M'}
-   ],
-   options:[]},
-
  {id:'llanxa',name:'Llanxa ràpida',kind:'mar',options:[
    P('transport-collection-hd','Open sport runabout'),
    P('powerboat-racing-and-launch-ramp','Offshore monohull racer'),

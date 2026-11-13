@@ -1,3 +1,10 @@
+**2026-11-13 · Retirada temporal del T-90M i la BTR-82 de l'editor 3D:**
+- [x] Eliminades les entrades `tanc` i `tanqueta` del catàleg visible del laboratori; en queden cinc: Kamov Ka-60, Kamov Ka-52, llanxa ràpida, llanxa llançamíssils i ferri.
+- [x] Mantinguts intactes els models definitius T-90M i BTR-82, les fàbriques i els controls al joc; el codi de l'editor es conserva per poder recuperar les pestanyes més endavant.
+- [x] Adaptades les regressions de llistat de pestanyes i verificat per contracte que el joc encara instancia els dos blindats.
+- [x] Actualitzada la revisió del laboratori sense canviar la versió del joc ni el bundle.
+- [ ] Validar el desplegament a Cloudflare i comprovar al navegador les cinc pestanyes.
+
 **2026-11-13 · Ka-60: correcció del model Three.js de l’editor (dues imatges aportades):**
 - [x] Construït un morro propi amb malla opaca independent de la cabina i una junta transversal visible. El parabrisa comença més enrere; vidres compactes sense xapa darrere.
 - [x] Eliminats els estabilitzadors baixos que no corresponen a les dues imatges; a la T superior, substituïdes les aletes terminals rectangulars per alerons triangulars que apunten cap avall, amb gruix real.
