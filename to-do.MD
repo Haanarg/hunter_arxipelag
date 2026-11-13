@@ -1,3 +1,10 @@
+**2026-11-13 · Petició 96da6cd8 · Ajust C1A del laboratori:**
+- [x] Reducció addicional de 6 cm per costat (42 cm menys en total respecte del sostre original).
+- [x] Recol·locats els vidres laterals al pla dels muntants; ampliats fins sota el sostre i fins als llindars de les finestres.
+- [x] Parabrisa i lluna posterior ampliats cap al sostre amb encaix trapezoïdal; nova regressió geomètrica de juntes.
+- [x] El C1A del joc roman sense modificacions.
+- [ ] Validar visualment al WebGL les juntes i decidir si s'aprova el candidat.
+
 **2026-11-13 · Petició 046a6d10 · Cotxe utilitari C1A, sostre estret (laboratori):**
 - [x] Candidat C1A amb sostre 15 cm més estret per banda, muntants A/B/C/D inclinats cap endins, finestres laterals en plans oblics i llunes davantera/posterior trapezoïdals.
 - [x] Mantingut el C1A actual del joc sense modificacions. El visor indica explícitament que és un candidat pendent d'aprovació.

@@ -16,7 +16,7 @@ export const CATALOG=[
      {label:'Tigr-M AMN-233114 · fotografies',url:'https://commons.wikimedia.org/wiki/Category:AMN_233114'}
    ],options:[]},
  {id:'cotxe_civil',name:'Cotxe utilitari',kind:'terra',
-   note:'Prova C1A: sostre 30 cm més estret en total, muntants laterals inclinats i parabrisa i lluna posterior retallats en trapezi. El model del joc es conserva sense canvis fins a aprovar aquesta versió.',
+   note:'Prova C1A revisada: sostre 42 cm més estret en total, muntants inclinats i els vuit vidres allargats i alineats amb els marcs i el sostre per eliminar les escletxes. El model del joc es conserva sense canvis fins a aprovar aquesta versió.',
    options:[]},
  {id:'tanc',name:'Tanc · T-90M',kind:'terra',candidate:'t90m-v1',
    note:'Només el nostre T-90M: model procedimental ampliat un 50 %, amb torreta, canó i erugues animables al laboratori. El mateix model s’ha integrat al joc, amb la caixa de col·lisions ajustada al casc.',

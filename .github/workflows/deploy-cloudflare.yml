@@ -25,6 +25,7 @@ jobs:
           node-version: '22'
       - name: Comprovar sintaxi del laboratori de vehicles abans de desplegar
         run: |
+          node --check src/civilian-car-model.mjs
           node --check src/vehicle-candidate-catalog.mjs
           node --check src/vehicles-externs-proves.mjs
           node --check src/vehicle-live-editor.mjs
@@ -40,6 +41,8 @@ jobs:
           if [ "$missing" -ne 0 ]; then exit 1; fi
       - name: Instal·lar dependències
         run: npm ci --ignore-scripts
+      - name: Comprovar geometria del C1A candidat
+        run: node tests/civilian-car-roof-candidate.mjs
       - name: Comprovar versió i bundle publicable
         run: npm run check:build
       - name: Comprovar la compilació del Worker

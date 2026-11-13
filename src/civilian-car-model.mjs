@@ -237,14 +237,25 @@ export function createCivilianCarModel(THREE,color=0x4b9fd1,q=C1A,decorate=null,
   bar([x,belt,q.frontBase],[x,belt,q.rearBase],.045,paint);
   // Els vidres segueixen el mateix pla inclinat que els muntants:
   // una geometria 3D, no un panell vertical separat del marc.
-  const windows=[
+  const oldWindows=[
    [[q.frontBase+.10,belt+.09],[roofFront+.08,top-.11],[.24,top-.11],[.24,belt+.09]],
    [[.36,belt+.09],[.36,top-.11],[1.40,top-.11],[1.40,belt+.09]],
    [[1.53,belt+.09],[1.53,top-.11],[roofRear-.08,top-.11],[q.rearBase-.10,belt+.09]]
   ];
+  // El sostre té la cara inferior a top-.0275. Penetram 7,5 mm
+  // dins la làmina per no deixar la ranura vertical del candidat previ.
+  const glassTop=top-.02,glassBottom=belt+.035;
+  const taperedWindows=[
+   [[q.frontBase+.035,glassBottom],[roofFront+.035,glassTop],[.265,glassTop],[.265,glassBottom]],
+   [[.335,glassBottom],[.335,glassTop],[1.435,glassTop],[1.435,glassBottom]],
+   [[1.505,glassBottom],[1.505,glassTop],[roofRear-.035,glassTop],[q.rearBase-.035,glassBottom]]
+  ];
+  const windows=roofInset?taperedWindows:oldWindows;
   for(const [i,points] of windows.entries()){
    if(!roofInset){panel(points,outside,glassTint);continue}
-   const vertices=points.map(([z,y])=>[outside-side*insetAtY(y),y,z]);
+   // La superfície segueix l'eix dels muntants i queda 1,5 cm
+   // enfora d'aquests, no 13,8 cm com abans.
+   const vertices=points.map(([z,y])=>[side*(hw-.12+.015-insetAtY(y)),y,z]);
    face(vertices,glassTint).name='civil-c-side-glass-'+side+'-'+i;
   }
   // Mirall separat en comptes d'un panell que tapi el finestral.
@@ -252,14 +263,19 @@ export function createCivilianCarModel(THREE,color=0x4b9fd1,q=C1A,decorate=null,
   mirror.rotation.y=side*.18;
  }
  // Davanter i lluna posterior: quadrilàters en el pla real del vidre.
+ // El parabrisa i la lluna posterior s'endinsen sota el sostre.
+ // El model de producció conserva les coordenades originals.
+ const frontBottom=roofInset?belt+.035:belt+.12;
+ const rearBottom=roofInset?belt+.035:belt+.10;
+ const endTop=roofInset?top-.02:top-.12;
  const frontGlass=face([
-  [left+insetAtY(belt+.12),belt+.12,q.frontBase+.03],[right-insetAtY(belt+.12),belt+.12,q.frontBase+.03],
-  [right-insetAtY(top-.12),top-.12,roofFront+.03],[left+insetAtY(top-.12),top-.12,roofFront+.03]
+  [left+insetAtY(frontBottom),frontBottom,q.frontBase+.03],[right-insetAtY(frontBottom),frontBottom,q.frontBase+.03],
+  [right-insetAtY(endTop),endTop,roofFront+.03],[left+insetAtY(endTop),endTop,roofFront+.03]
  ],glassTint);
  frontGlass.name='civil-c-front-glass';
  const backGlass=face([
-  [left+insetAtY(belt+.10),belt+.10,q.rearBase-.03],[right-insetAtY(belt+.10),belt+.10,q.rearBase-.03],
-  [right-insetAtY(top-.12),top-.12,roofRear-.03],[left+insetAtY(top-.12),top-.12,roofRear-.03]
+  [left+insetAtY(rearBottom),rearBottom,q.rearBase-.03],[right-insetAtY(rearBottom),rearBottom,q.rearBase-.03],
+  [right-insetAtY(endTop),endTop,roofRear-.03],[left+insetAtY(endTop),endTop,roofRear-.03]
  ],glassTint);
  backGlass.name='civil-c-rear-glass';
  for(const side of[-1,1]){
@@ -298,9 +314,9 @@ export function createCivilianCarModel(THREE,color=0x4b9fd1,q=C1A,decorate=null,
 
 /** Només laboratori: no modifica el C1A de producció fins a l'aprovació. */
 export function createCivilianCarRoofCandidate(THREE,color=0x4b9fd1){
- const model=createCivilianCarModel(THREE,color,{...C1A,roofInset:.15});
+ const model=createCivilianCarModel(THREE,color,{...C1A,roofInset:.21});
  model.name='hunter-civil-c1a-narrow-roof-candidate';
- model.userData.roofInset=.15;
+ model.userData.roofInset=.21;
  model.userData.labOnly=true;
  return model;
 }
