@@ -41,10 +41,13 @@ jobs:
           if [ "$missing" -ne 0 ]; then exit 1; fi
       - name: Instal·lar dependències
         run: npm ci --ignore-scripts
-      - name: Comprovar C1A definitiu i pestanyes de l'editor
+      - name: Comprovar C1A definitiu, inventari GLB i pestanyes de l'editor
         run: |
           node tests/civilian-car-roof-candidate.mjs
           node tests/vehicle-lab-current-models.mjs
+          node tests/btr82-published-assets.cjs
+          node tests/vehicle-candidate-studio.cjs
+          node tests/btr82-3b-preview.mjs
           node tests/huey-native-runtime.mjs
           node tests/apache-native-runtime.mjs
       - name: Comprovar versió i bundle publicable

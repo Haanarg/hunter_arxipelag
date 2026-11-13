@@ -1,42 +1,17 @@
-# BTR-82 · reparació real del buit frontal, darrere i canó — 10/11/2026
+# Inventari GLB · Hunter: Arxipèlag
 
-La versió anterior de 4.199 triangles s'havia validat erròniament perquè
-**conservava** tots els triangles del casc de referència. Però el referent
-ja tenia el morro obert i una sèrie de cares no connectades als laterals
-posteriors. Conservar una superfície oberta no repara cap forat.
+A data de **13 de novembre de 2026**, el repositori només conserva **tres fitxers GLB de candidats per a la llanxa ràpida**, sota `assets/vehicle-candidates/llanxa/`.
 
-## Model del comparador
+| Model | Fitxer | Mida |
+|---|---|---:|
+| Open sport runabout | `llanxa/1-transport-collection-hd-sport-runabout-5b288a58.glb` | 286.556 B |
+| Offshore monohull racer | `llanxa/2-powerboat-racing-and-launch-ramp-offshore-monohull-rac-2fa0de2f.glb` | 213.768 B |
+| Open rescue powerboat | `llanxa/3-powerboat-racing-and-launch-ramp-rescue-boat-ed671043.glb` | 350.884 B |
 
-- **Base:** `btr82-base-100.glb` — 5.371 triangles, 18 malles.
-- **BTR-82 corregit:** `btr82-50-repaired.glb` — **4.581 triangles,
-  25 malles, 185.796 bytes**.
-- Només dos models visibles a la pestanya Tanqueta; **no s'ha modificat**
-  el vehicle de les partides SOLO/COOP.
+La llicència d'aquests tres candidats és CC0 1.0; els enllaços originals són al `manifest.json`.
 
-El model nou conserva *exactament* els 2.556 triangles dels vuit grups de
-casc de la base, però hi afegeix **superfícies noves de tancament**:
-panells del morro i sota el frontal, unió superior amb el sostre,
-galtes laterals simètriques al darrere i faldons inferiors que segueixen
-el perfil estret de la popa. Les peces addicionals són agrupades per
-material per contenir les crides de dibuix. No es fan servir textures UV
-que podrien retornar els colors fluorescents.
+S'han eliminat del repositori els dos GLB antics de la **BTR-82**, el GLB font del **Huey**, els tres GLB de **llanxa llançamíssils** i els dos de **ferri**. El joc i el laboratori principal utilitzen **BTR-82 3B procedimental** i **Huey Three.js natiu** (el fitxer GLB font ja no és necessari). També es conserva l'Apache natiu, sense fitxer GLB.
 
-El canó negre prim (amb boca més gruixuda) va de **z = −4,35** fins
-**z = −1,015**: l'extrem posterior se solapa àmpliament amb el volum real
-de la torreta, que arriba fins a z = −0,31. Per tant, no queda penjat
-davant de la torreta. El frontal del model és −Z. La geometria també
-inclou quatre fars davanters i les vuit rodes independents, de 12
-facetes i **168 triangles cadascuna, totes watertight**.
+Les alternatives de llanxa llançamíssils i ferri poden consultar-se en línia des del catàleg, però **no es tornen a desar al repositori** si s'executa `tools/fetch-vehicle-candidates.mjs`.
 
-## Validacions
-
-`tests/btr82-published-assets.cjs` obre els dos GLB publicats i comprova
-SHA256, triangles, malles, conservació exacta de cadascun dels triangles
-de casc originals, superfícies de tancament noves a ambdós extrems,
-posició dels fars, rodes independents i el solapament del tub del canó
-dins de la torreta. S'ha renderitzat **el mateix GLB final** amb VTK
-en vistes frontal i posterior. Aquesta validació tècnica no substitueix
-la comprovació final del visor Three.js des de Chrome Android.
-
-**Autoria original:** SIpriv, Low Poly BTR 82, CC BY 4.0
-https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5
+El comparador antic «sis morros» de BTR-82 depenia del GLB font i ara redirigeix al laboratori principal amb el model 3B vigent. La geometria històrica continua recuperable a l'historial de Git, però no es publica com a asset.

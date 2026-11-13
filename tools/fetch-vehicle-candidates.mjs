@@ -11,6 +11,8 @@ import {CATALOG} from '../src/vehicle-candidate-catalog.mjs';
 
 const root=fileURLToPath(new URL('../assets/vehicle-candidates/',import.meta.url));
 const force=process.argv.includes('--force'),MAX_FILE=32*1024*1024,MAX_TOTAL=128*1024*1024;
+// Són només alternatives consultables en línia: no regenerar els GLB retirats.
+const REMOTE_ONLY_CATEGORIES=new Set(['llanxa_coets','ferry']);
 const canonical=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const safeName=s=>String(s||'asset').replace(/[^a-z0-9-]/gi,'-').slice(0,100);
@@ -87,6 +89,7 @@ async function main(){
       // Mai substituir aquests candidats amb assets aleatoris del pack CC0.
       manifest.externalModels[config.id]=references;
     }
+    if(REMOTE_ONLY_CATEGORIES.has(config.id))continue;
     for(let i=0;i<config.options.length;i++){
       const entry=config.options[i];
       if(entry.provider==='sketchfab'||entry.provider==='procedural')continue;

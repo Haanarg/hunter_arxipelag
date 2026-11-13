@@ -46,68 +46,11 @@
         "license": "CC0-1.0"
       }
     ],
-    "llanxa_coets": [
-      {
-        "slot": 1,
-        "id": "22261",
-        "title": "Large RIB with twin outboards (Speedboats, Powerboat Racing and Marina)",
-        "bytes": 354888,
-        "triangles": 8184,
-        "file": "llanxa_coets/1-powerboat-racing-and-launch-ramp-large-rib-6626e0ca.glb",
-        "url": "https://3dassets.dev/assets/powerboat-racing-and-launch-ramp-large-rib-6626e0ca",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/22261/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 2,
-        "id": "18720",
-        "title": "Rigid inflatable boat (Vehicle Collection HD: Cars, Planes and Boats)",
-        "bytes": 317680,
-        "triangles": 6492,
-        "file": "llanxa_coets/2-transport-collection-hd-rigid-inflatable-a8316db9.glb",
-        "url": "https://3dassets.dev/assets/transport-collection-hd-rigid-inflatable-a8316db9",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/18720/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 3,
-        "id": "22250",
-        "title": "Offshore catamaran racer (Speedboats, Powerboat Racing and Marina)",
-        "bytes": 305312,
-        "triangles": 7208,
-        "file": "llanxa_coets/3-powerboat-racing-and-launch-ramp-offshore-catamaran-ra-77500cfc.glb",
-        "url": "https://3dassets.dev/assets/powerboat-racing-and-launch-ramp-offshore-catamaran-ra-77500cfc",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/22250/v1/model.glb",
-        "license": "CC0-1.0"
-      }
-    ],
-    "ferry": [
-      {
-        "slot": 1,
-        "id": "35635",
-        "title": "Roll on roll off ferry, berthed stern section (Ferry Terminal and Harbour Crossing)",
-        "bytes": 50896,
-        "triangles": 1036,
-        "file": "ferry/1-ferry-terminal-and-harbour-crossing-ferry-terminal-and-e2675bfb.glb",
-        "url": "https://3dassets.dev/assets/ferry-terminal-and-harbour-crossing-ferry-terminal-and-e2675bfb",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/35635/v1/model.glb",
-        "license": "CC0-1.0"
-      },
-      {
-        "slot": 2,
-        "id": "35636",
-        "title": "Roll on roll off ferry, blue livery (Ferry Terminal and Harbour Crossing)",
-        "bytes": 50964,
-        "triangles": 1036,
-        "file": "ferry/2-ferry-terminal-and-harbour-crossing-ferry-terminal-and-c0fcd3aa.glb",
-        "url": "https://3dassets.dev/assets/ferry-terminal-and-harbour-crossing-ferry-terminal-and-c0fcd3aa",
-        "cdnUrl": "https://cdn.3dassets.dev/assets/35636/v1/model.glb",
-        "license": "CC0-1.0"
-      }
-    ]
+    "llanxa_coets": [],
+    "ferry": []
   },
-  "savedModels": 8,
-  "savedBytes": 1930948,
+  "savedModels": 3,
+  "savedBytes": 851208,
   "skipped": 1,
   "retiredHelicopterCandidates": 6,
   "externalModels": {
@@ -125,49 +68,6 @@
       }
     ]
   },
-  "lastCurated": "2026-11-08",
-  "curationNotes": "2026-11-10: v4 verificat contra GLB real: 4.581 triangles / 25 malles / 185.796 bytes. Original intacte (5.371/18). Afegides superfícies de tancament del buit frontal (−Z), lateral posterior simètric (+Z) i un canó cilíndric de -4.35 fins -1.015 que solapa la torreta; 8 rodes watertight 168 triangles cada una i 4 fars amb lents opaques. No es presenta una mera recuperació de triangles originals com a reparació de forats. SIpriv CC BY 4.0.",
-  "selectedForLod": {
-    "tanqueta": {
-      "modelId": "6226acae68424d99bf03882b245ff7c5",
-      "title": "Low poly BTR 82",
-      "author": "SIpriv",
-      "license": "CC BY 4.0",
-      "source": "https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5",
-      "status": "selected_preview_pending_game_integration",
-      "present": true,
-      "activePreviewModels": 2,
-      "original": {
-        "file": "tanqueta/btr82-base-100.glb",
-        "triangles": 5371,
-        "meshes": 18,
-        "bytes": 428172
-      },
-      "selected": {
-        "file": "tanqueta/btr82-50-repaired.glb",
-        "triangles": 4581,
-        "meshes": 25,
-        "bytes": 185796,
-        "sha256": "aa10c00cde94e26b1a3edcfed1836092012b5e3e07b66ec330f1fe0c9467ba16",
-        "derivedFrom": "5,371-triangle reference hull with no lost faces, reduced turret, 8 sealed low-poly wheels and explicit front/rear closures",
-        "repairs": [
-          "Front cut-out closed with lower armour bulkhead and upper roof/bevel",
-          "Left/right rear sponson cheeks and lower returns closed along taper",
-          "Black cylindrical barrel extended through turret from z=-4.35 to z=-1.015",
-          "Four real forward-facing headlight lenses with housings",
-          "Eight watertight 12-sided wheels, each a distinct mesh"
-        ],
-        "geometry": {
-          "originalHullTrianglesPreserved": 2556,
-          "frontDirection": "-Z",
-          "rearDirection": "+Z",
-          "gunRearInsideTurretZ": -1.015,
-          "gunTipZ": -4.35,
-          "closedWheelFacesEach": 168
-        },
-        "status": "candidate_preview_not_game"
-      },
-      "gameIntegration": "pending_visual_review"
-    }
-  }
+  "lastCurated": "2026-11-13",
+  "curationNotes": "Neteja de GLB (2026-11-13): es conserven únicament 3 candidats de llanxa ràpida. Eliminats BTR-82 original/reparat, Huey històric, 3 llanxes llançamíssils i 2 ferris; BTR-82/Huey/Apache utilitzen geometria nativa. Les alternatives de ferry i llanxa de combat són consultables en remot, sense GLB desat."
 }

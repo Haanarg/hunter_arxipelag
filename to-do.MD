@@ -1,3 +1,12 @@
+**2026-11-13 · Neteja dels GLB de models substituïts:**
+- [x] Eliminats 8 GLB: tanqueta (2), Huey (1), llanxa llançamíssils (3) i ferri (2).
+- [x] Conservats exclusivament els 3 GLB de candidats de llanxa ràpida; manifest (3 models, 851.208 bytes) i inventari actualitzats.
+- [x] Eliminades les referències a les còpies locals retirades del manifest i el descriptor històric `selectedForLod`.
+- [x] El script de descàrrega ja no reposarà els GLB de ferri i llanxa de combat: només els consulta en remot.
+- [x] El comparador antic dels sis morros, dependent del GLB eliminat, redirigeix al laboratori del model natiu BTR-82 3B.
+- [x] Proves d'inventari i laboratori actualitzades per evitar que es reintrodueixin binaris obsolets.
+- [ ] Verificar les proves automàtiques i el desplegament, i comprovar al navegador les pestanyes de models actius.
+
 **2026-11-13 · C1A aprovat i helicòpters recuperats al laboratori:**
 - [x] El cotxe utilitari C1A actual del joc fa servir el sostre estret aprovat (21 cm menys per costat), amb els vuit vidres ajustats i cap canvi de física ni de seients.
 - [x] Retirada la categoria `cotxe_civil` del laboratori de vehicles (no se n'esborra el model del joc).

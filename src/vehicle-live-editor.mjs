@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {symmetrizeModel} from './vehicle-live-geometry.mjs';
-export const LAB_REVISION='live-editor-20261113-aircraft-tabs-civil-game-1';
+export const LAB_REVISION='live-editor-20261113-glb-cleanup-1';
 const clone=root=>{const copy=root.clone(true),overlays=[];copy.traverse(o=>{if(o.userData.vehicleAnnotationOverlay)overlays.push(o)});for(const o of overlays)o.removeFromParent();return copy};
 const pathOf=(root,node)=>{const path=[];while(node&&node!==root){path.unshift(node.parent.children.indexOf(node));node=node.parent}return path};
 const atPath=(root,path)=>path.reduce((node,i)=>node?.children[i],root);
