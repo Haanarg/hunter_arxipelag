@@ -31,6 +31,8 @@ jobs:
           node --check src/vehicle-live-editor.mjs
           node --check src/btr82-3b-preview.mjs
           node --check src/vehicle-reference-candidates.mjs
+          node --check src/kamov-reference-candidates.mjs
+          node --check tests/kamov-reference-candidates.mjs
           node --check src/t90m-runtime.mjs
           node --check src/vehicle-specs.mjs
           node --check tests/t90m-game-integration.mjs
@@ -58,6 +60,7 @@ jobs:
           node tests/gaz-tigr-approved.mjs
           node tests/btr82-published-assets.cjs
           node tests/vehicle-candidate-studio.cjs
+          node tests/kamov-reference-candidates.mjs
           node tests/huey-native-runtime.mjs
           node tests/apache-native-runtime.mjs
       - name: Comprovar versió i bundle publicable
