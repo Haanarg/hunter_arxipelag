@@ -1,7 +1,7 @@
 // Hunter: Arxipèlag · candidats ORIGINALS low-poly per al laboratori.
 // Orientació compartida amb el joc: morro cap a -Z, simetria X=0.
 // El T-90M aprovat també és el model del joc; les proves continuen emprant la mateixa geometria.
-export const REFERENCE_CANDIDATE_VERSION='20261113-t90m-animated-150-tigr-interior-v3';
+export const REFERENCE_CANDIDATE_VERSION='20261113-t90m-animated-150-tigr-door-contours-v4';
 
 export function createReferenceVehicle(THREE,type){
  if(type!=='t90m-v1'&&type!=='tigr-v1')throw new Error('Candidat desconegut: '+type);
@@ -176,7 +176,13 @@ export function createReferenceVehicle(THREE,type){
    pane.material=pane.material.clone();pane.material.opacity=.22;pane.material.roughness=.16;
    pane.castShadow=false;pane.renderOrder=2;return pane;
   };
-  const windowHoles=[...[-.24,.89].map(z=>rect(z-.34,z+.34,1.77,2.17)),rect(1.72,2.24,1.805,2.155)];
+  // La finestra de la porta davantera segueix la inclinació del parabrisa.
+  // La mateixa obertura s'empra a la carrosseria i a la porta.
+  const frontSideWindow=[
+   [-.56,1.77],[.10,1.77],[.10,2.17],[-.51,2.17]
+  ];
+  const rearSideWindow=rect(.55,1.23,1.77,2.17);
+  const windowHoles=[frontSideWindow,rearSideWindow,rect(1.72,2.24,1.805,2.155)];
 
   block(body,'Bastidor central',1.45,.22,4.96,0,.59,0,T.dark);
   // Carrosseria amb retalls reals als dos passos de roda.
@@ -216,10 +222,26 @@ export function createReferenceVehicle(THREE,type){
     profile(body,'Aleta arquejada',outer.concat(inner),.21,side*1.105,T.shadow);
    }
    for(const [i,z] of [-.24,.89].entries()){
-    // Portes planes i estretes; els vidres queden sobre el mateix pla.
-    const opening=rect(z-.34,z+.34,1.77,2.17);
-    panel('Porta lateral '+(i?'posterior':'davantera'),rect(z-.52,z+.52,.97,2.24),[opening],(u,y)=>[side*1.13,y,u],T.top);
-    panel('Marc finestra lateral',rect(z-.39,z+.39,1.725,2.215),[opening],(u,y)=>[side*1.15,y,u],T.shadow);
+    const opening=windowHoles[i];
+    // El davant de la porta davantera segueix el muntant A; la seva
+    // part alta és per darrere del parabrisa inclinat i no el tapa.
+    const frontDoor=[
+     [-.76,.97],[.28,.97],[.28,2.22],[-.56,2.22],[-.76,1.63]
+    ];
+    // La vora inferior de popa evita el parafang de radi .74 i
+    // la roda del darrere, centrats en Z=1.60 i Y=.56.
+    const rearDoor=[
+     [.37,.97],[.89,.97],[1.03,1.08],[1.15,1.18],
+     [1.33,1.28],[1.41,1.39],[1.41,2.24],[.37,2.24]
+    ];
+    const frontWindowFrame=[
+     [-.63,1.725],[.15,1.725],[.15,2.205],[-.54,2.205]
+    ];
+    const outline=i?rearDoor:frontDoor;
+    const frame=i?rect(z-.39,z+.39,1.725,2.215):frontWindowFrame;
+    panel('Porta lateral '+(i?'posterior':'davantera'),
+      outline,[opening],(u,y)=>[side*1.13,y,u],T.top);
+    panel('Marc finestra lateral',frame,[opening],(u,y)=>[side*1.15,y,u],T.shadow);
     glass('Vidre lateral',opening.map(([u,y])=>[side*1.155,y,u]));
     block(body,'Maneta lateral',.047,.045,.19,side*1.145,1.57,z+.31,T.dark);
     for(const y of [1.20,1.68])block(body,'Frontissa porta',.055,.095,.07,side*1.145,y,z-.49,T.shadow);

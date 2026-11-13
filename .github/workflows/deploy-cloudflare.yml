@@ -45,6 +45,8 @@ jobs:
         run: |
           node tests/civilian-car-roof-candidate.mjs
           node tests/vehicle-lab-current-models.mjs
+          node tests/gaz-tigr-door-contours.mjs
+          node tests/gaz-tigr-approved.mjs
           node tests/btr82-published-assets.cjs
           node tests/vehicle-candidate-studio.cjs
           node tests/huey-native-runtime.mjs

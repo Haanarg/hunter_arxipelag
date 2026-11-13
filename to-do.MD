@@ -1,3 +1,11 @@
+**2026-11-13 · GAZ Tigr-M, portes adaptades al xassís (petició 05388bfd):**
+- [x] Porta lateral davantera retallada al muntant A: el frontal superior ja no sobresurt del parabrisa inclinat.
+- [x] Vidre i marc davanters trapezoïdals; obertura del mateix perfil a la carrosseria, sense blindatge darrere el vidre.
+- [x] Porta lateral posterior retallada a l'arc del parafang (radi exterior 0,74 m), amb marge respecte de la roda de darrere.
+- [x] El model és compartit entre laboratori i partida; preservades física, mida, seients i rodes.
+- [x] Afegida prova de geometria de portes als desplegaments del laboratori.
+- [ ] Validació visual al navegador de l'encaix dels marcs, les portes i els parafangs.
+
 **2026-11-13 · Regressió antiga BTR-82 al desplegament:**
 - [x] Les proves de neteja GLB i laboratori actual ja passen; la prova històrica BTR-82 3B contenia llindars d'altura i textos fixos d'una revisió antiga.
 - [x] Actualitzats aquests contractes textuals i eliminada la prova antiga del bloqueig del desplegament de neteja; es manté al conjunt de regressió habitual.
