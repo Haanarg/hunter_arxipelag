@@ -5,14 +5,15 @@
 - [x] Autoritat del Worker sobre els trets i entrades de torreta; gir, elevació i límits compartits amb el mode individual.
 - [x] Laboratori: retirades les tecles J/L/I/K i tots els lliscadors de l'animació del T-90M; prova W/S/A/D + SHIFT o botó TORRETA.
 - [x] Afegida una prova automatitzada del contracte de control i rols; comprovats els helpers bàsics d'angle i validació d'input aïllats.
-- [ ] Reconstruir manualment el runtime de joc (inclou controls globals i COOP) i desplegar Worker de COOP; provar en dos navegadors el canvi automàtic/manual, seients i dispar.
+- [x] Runtime reconstruït manualment amb 70 mòduls i comprovació de sintaxi (inclou cotxe GAZ, controls globals i cooperatiu), sense activar GitHub Actions.
+- [ ] Desplegar nova versió de Pages/Worker i provar en dos navegadors el canvi automàtic/manual, seients i dispar.
 
 **2026-11-13 · GAZ Tigr-M definitiu i editor de vehicles:**
 - [x] GAZ Tigr-M procedimental propi integrat a la fàbrica del vehicle `cotxe`, en substitució del Humvee D3.1. Física, hitbox, seients i regles del cotxe es mantenen.
 - [x] Quatre rodes animables amb pivots de direcció davanters, mantenint la geometria i els vidres del GAZ aprovat.
 - [x] Laboratori: GAZ com a únic cotxe militar, cap pestanya Humvee; recuperada la pestanya del cotxe utilitari C1A, sense GLB alternatiu.
 - [x] Comprovat que no hi ha cap GLB de Humvee al repositori; els altres GLB són actius o candidats d'altres vehicles i es conserven.
-- [ ] Reconstruir el runtime del joc amb el workflow **manual** `rebuild-runtime.yml`, validar-lo al navegador i desplegar-lo. Els canvis al laboratori sí es poden publicar via manifest.
+- [x] Runtime reconstruït manualment al repositori (sense activar el workflow). [ ] Validar-lo al navegador i desplegar-lo a Cloudflare.
 
 **2026-11-13 · T-90M, candidat propi únic i animacions al laboratori:**
 - [x] Eliminats del catàleg i manifest els dos candidats externs de T-90M, deixant només el model procedimental propi en un visor.
