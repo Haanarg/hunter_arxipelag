@@ -1,3 +1,10 @@
+**2026-11-13 · Ka-60: correcció del model Three.js de l’editor (dues imatges aportades):**
+- [x] Construït un morro propi amb malla opaca independent de la cabina i una junta transversal visible. El parabrisa comença més enrere; vidres compactes sense xapa darrere.
+- [x] Eliminats els estabilitzadors baixos que no corresponen a les dues imatges; a la T superior, substituïdes les aletes terminals rectangulars per alerons triangulars que apunten cap avall, amb gruix real.
+- [x] Eliminades del Ka-60 les antigues referències externes del catàleg. Modelat basat només en la fotografia lateral i la perspectiva del model aportades pel jugador.
+- [x] Preservats el Ka-52, les portes obertes, motor, fenestron i tren d'aterratge. Regressions geomètriques afegides.
+- [ ] Validació visual al laboratori 3D i comprovació final del desplegament.
+
 **2026-11-13 · Proves de la torreta manual suavitzada:**
 - [x] La prova antiga esperava aturada instantània en deixar el joystick; actualitzada perquè validi la nova frenada progressiva.
 - [x] Prova de geometria T-90M a escala doble i tir autoritatiu aprovada.

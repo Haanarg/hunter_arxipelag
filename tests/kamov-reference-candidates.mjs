@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as T from '../vendor/three-r186.module.mjs';
 import {createKamovCandidate,stepKamovRotors,KAMOV_VERSION} from '../src/kamov-reference-candidates.mjs';
-assert(KAMOV_VERSION.includes('ka60-open-doors'));
+assert(KAMOV_VERSION.includes('separate-nose-downfins'));
 for(const type of ['ka60','ka52']){
  const root=createKamovCandidate(T,type),meshes=[],rotors=[];
  root.traverse(o=>{if(o.userData.kamovRotor)rotors.push(o);if(o.isMesh)meshes.push(o)});
@@ -35,7 +35,24 @@ for(const type of ['ka60','ka52']){
   assert.equal(panes.length,8,'Vidres més petits, només a la cabina davantera');
   assert(panes.every(o=>o.material.transparent&&o.material.opacity<.5));
   assert.equal(meshes.filter(o=>o.name==='Estabilitzador superior en T').length,2);
-  assert.equal(meshes.filter(o=>o.name==='Aleta terminal T de cua').length,2);
+  // Nou morro: és xapa opaca pròpia i queda per davant dels vidres.
+  const noseParts=meshes.filter(o=>o.name.startsWith('Morro independent Ka-60'));
+  assert(noseParts.length>24&&noseParts.every(o=>!o.material.transparent),'Morro separat, sòlid i opac');
+  const noseBounds=new T.Box3();for(const part of noseParts)noseBounds.expandByObject(part);
+  const glassBounds=new T.Box3();for(const pane of panes)glassBounds.expandByObject(pane);
+  assert(noseBounds.min.z< -4.98,'El morro ha de sobresortir davant del parabrisa');
+  assert(glassBounds.min.z>noseBounds.min.z+.95,'Els vidres davanters han de començar més enrere');
+  assert(root.getObjectByName('Junta visible morro-cabina'));
+  assert(!root.getObjectByName('Aleta terminal T de cua'));
+  assert(!root.getObjectByName('Estabilitzador horitzontal inferior'));
+  const fins=meshes.filter(o=>o.name==='Aleró triangular descendent Ka-60');
+  assert.equal(fins.length,2,'Aletes triangulars a les dues puntes de la T');
+  for(const fin of fins){
+   const attr=fin.geometry.getAttribute('position');
+   assert.equal(attr.count,3,'La silueta de cada aleró ha de ser triangular');
+   const heights=Array.from({length:3},(_,i)=>attr.getY(i));
+   assert(Math.max(...heights)-Math.min(...heights)>.65,'La punta triangular ha de penjar cap avall');
+  }
   assert(root.getObjectByName('Balisa superior deriva'));
   assert(root.getObjectByName('Espinada superior cua Ka-60 panell 0 0'));
   assert(root.getObjectByName('Carenat dorsal motor Ka-60 panell 0 0'));
@@ -64,4 +81,4 @@ for(const type of ['ka60','ka52']){
  console.log(type,Math.round(triangles)+' triangles',meshes.length+' peces',size.toArray().map(x=>x.toFixed(2)).join(' × '));
 }
 assert.throws(()=>createKamovCandidate(T,'unknown'));
-console.log('PASS Kamov: Ka-60 amb portes obertes, vidres reduïts, motor, tren de cua, T de cua i animació');
+console.log('PASS Kamov: morro Ka-60 separat, parabrisa reculat, alerons de cua triangulars descendents, portes i animació');

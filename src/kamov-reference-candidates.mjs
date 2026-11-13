@@ -1,6 +1,6 @@
 // Original low-poly geometry, based on photographs linked in the lab catalogue.
 // Nose = -Z, metres before the lab's uniform comparison scale. No external assets.
-export const KAMOV_VERSION='kamov-20261113-ka60-open-doors-2';
+export const KAMOV_VERSION='kamov-20261113-separate-nose-downfins-3';
 export function createKamovCandidate(T,type){
  if(!['ka60','ka52'].includes(type))throw new Error('Kamov desconegut: '+type);
  const combat=type==='ka52',root=new T.Group();
@@ -84,14 +84,28 @@ export function createKamovCandidate(T,type){
  };
  if(!combat){
   // Ka-60 prototype: 4 main blades, 11-blade fenestron, no coaxial mast.
+  // Morro propi, completament OPAC, com a volum frontal independent.
+  // La junta de darrere del morro queda 36 cm davant l'inici del parabrisa.
+  const noseSections=[
+   [-5.00,.11,1.27,1.47],[-4.82,.35,1.13,1.68],
+   [-4.31,.60,1.00,1.96],[-3.94,.76,.95,2.24]
+  ];
+  loft(root,'Morro independent Ka-60',noseSections);
+  const junction=ring(noseSections.at(-1));
+  for(let k=0;k<12;k++)
+   rod(root,'Junta visible morro-cabina',junction[k],junction[(k+1)%12],.014,c.dark);
+  // La cabina comença amb un marc OPAC. Les finestres són peces separades,
+  // més endarrerides que el morro i envoltades per carrosseria.
   loft(root,'Fuselatge Ka-60',[
-   [-4.50,.13,1.30,1.65],[-4.05,.65,1.02,2.03],[-3.30,.97,.91,2.57],[-2.30,1.10,.83,3.01],
-   [-1.15,1.11,.82,3.06],[.40,1.11,.83,3.02],[1.85,.97,.90,2.78],[3.15,.62,1.13,2.36]
+   [-3.94,.76,.95,2.24],[-3.58,.86,.91,2.46],
+   [-2.80,1.02,.85,2.88],[-2.30,1.10,.83,3.01],
+   [-1.15,1.11,.82,3.06],[.40,1.11,.83,3.02],
+   [1.85,.97,.90,2.78],[3.15,.62,1.13,2.36]
   ],(j,k)=>{
-   // Dues portes de transport obertes: buidam els quatre panells laterals
-   // (superiors i inferiors) en els dos trams de la zona de passatgers.
+   // Mantenir les dues obertures reals de les portes de transport.
    if((j===4||j===5)&&[0,5,6,11].includes(k))return 'open';
-   // Parabrisa i finestres de pilot més compactes, amb xapa al voltant.
+   // Quatre vidres més petits al parabrisa, dos a cada lateral.
+   // El primer tram de la cabina (j=0) és xapa, no vidre.
    if(j===1&&[1,2,3,4].includes(k)||
       (j===2||j===3)&&[0,5].includes(k))return 'small-glass';
    return false;
@@ -127,9 +141,6 @@ export function createKamovCandidate(T,type){
    cyl(root,'Cèrcol escapament',.225,.06,side*.68,2.85,1.96,c.metal,'z',14);
    for(let i=0;i<3;i++)
     box(root,'Lama refrigeració superior',.27,.025,.045,side*.35,3.30-i*.015,.66+i*.14,c.dark);
-   poly(root,'Estabilitzador horitzontal inferior',[
-    [side*.27,1.79,5.10],[side*1.50,1.79,5.35],
-    [side*1.50,1.79,6.05],[side*.27,1.79,5.80]],c.top);
   }
   // Nervi dorsal afuat damunt el botaló i detalls de la deriva del fenestron.
   loft(root,'Espinada superior cua Ka-60',[
@@ -142,16 +153,28 @@ export function createKamovCandidate(T,type){
   mesh(root,'Conducte fenestron obert',new T.BufferGeometry().copy(duct),c.body);
   fin('Deriva Ka-60',[[7.04,2.61],[7.98,4.08],[8.46,4.08],[8.38,2.31]],.25);
   box(root,'Capçal deriva',.72,.07,.68,0,4.08,8.19,c.top);
-  // T de cua de la fotografia: pla horitzontal al CAPDAMUNT de la deriva.
+  // T de cua del Ka-60 real. Els dos alerons terminals són triangulars
+  // i PENGEN cap avall des de les puntes, no són caixes verticals cap amunt.
+  // Les superfícies són peces editables separades per cada costat.
   for(const side of [-1,1]){
    const wing=[[side*.11,3.94,7.93],[side*1.76,3.91,7.86],
                [side*1.92,3.90,8.36],[side*.11,3.94,8.45]];
    poly(root,'Estabilitzador superior en T',wing,c.top);
    poly(root,'Intrados estabilitzador superior',wing.map(p=>[p[0],p[1]-.055,p[2]]).reverse(),c.body);
    rod(root,'Vora atac estabilitzador superior',wing[0],wing[1],.035,c.dark);
-   box(root,'Aleta terminal T de cua',.065,.22,.48,side*1.84,3.98,8.10,c.body);
-   cyl(root,'Llum posició cua',.055,.035,side*1.85,4.08,8.13,
-       side<0?c.beacon:c.navGreen,'y',8);
+   // Perfil de tres vèrtexs, elevació del punta (3.90) > punta inferior (3.17).
+   // Petit gruix real perquè no desaparegui vist de perfil.
+   const outerX=side*1.90,innerX=side*1.83;
+   const outer=[[outerX,3.90,7.87],[outerX,3.90,8.38],[outerX,3.17,8.27]];
+   const inner=outer.map(p=>[innerX,p[1],p[2]]);
+   poly(root,'Aleró triangular descendent Ka-60',outer,c.top);
+   poly(root,'Cara interior aleró triangular',inner.slice().reverse(),c.body);
+   for(let i=0;i<3;i++)
+    poly(root,'Cantell aleró triangular',[outer[i],outer[(i+1)%3],
+      inner[(i+1)%3],inner[i]],c.body);
+   rod(root,'Costella aleró descendent',outer[0],outer[2],.025,c.dark);
+   cyl(root,'Llum posició aleta descendent',.053,.045,
+       side*1.87,3.20,8.25,side<0?c.beacon:c.navGreen,'y',8);
   }
   rod(root,'Frontissa timó de cua',[0,2.86,8.34],[0,3.99,8.37],.018,c.dark);
   cyl(root,'Balisa superior deriva',.105,.13,0,4.20,8.19,c.beacon,'y',10);
