@@ -1,4 +1,4 @@
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261113-t90m-animation-1';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261113-gaz-published-t90m-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs';
@@ -9,12 +9,11 @@ import {createVehicleAnnotationEditor} from './vehicle-annotation-editor.mjs?rev
 import {createBtr823BPreview} from './btr82-3b-preview.mjs?rev=btr82-3b-full-nose-restored-v9';
 import {createReferenceVehicle} from './vehicle-reference-candidates.mjs?rev=t90m-animated-150-1';
 import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-animated-150-1';
-import {prepareHumveeD31Runtime} from './humvee-d31-runtime.mjs';
 
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=lab-catalog-t90m-solo-animation-1';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=lab-catalog-gaz-published-t90m-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -55,18 +54,9 @@ const makeOriginal=vehicleModels.createFactory(THREE,{
  box,material,shadows:true,civilianCar:createCivilianCarModel,
  truck:createTruckModel,batching:playerBatching
 });
-// Per al cotxe militar mostrem el Humvee REAL del joc, no el fallback antic.
-let realHumveeFactoryPromise=null;
-async function createCurrentVehicle(type){
- if(type!=='cotxe')return makeOriginal(type,{color:0x4b9fd1});
- if(!realHumveeFactoryPromise){
-  realHumveeFactoryPromise=prepareHumveeD31Runtime(THREE).then(humvee=>
-   vehicleModels.createFactory(THREE,{
-    box,material,shadows:true,civilianCar:createCivilianCarModel,
-    truck:createTruckModel,batching:playerBatching,humvee
-   }));
- }
- return (await realHumveeFactoryPromise)('cotxe',{color:0x4b9fd1});
+// Només resten al laboratori vehicles pendents i el cotxe utilitari C1A.
+function createCurrentVehicle(type){
+ return makeOriginal(type,{color:0x4b9fd1});
 }
 const slots=[];
 for(let i=0;i<5;i++){
@@ -360,7 +350,7 @@ async function choose(config){
  }
  try{
    const model=btrStudy?previewFactory():t90Study?createReferenceVehicle(THREE,config.candidate):await createCurrentVehicle(config.id);
-   // Canviar de pestanya durant la preparació asíncrona del Humvee no ha de
+   // Canviar de pestanya durant la preparació del model no ha de
    // reintroduir el model anterior damunt el vehicle acabat de seleccionar.
    if(token!==generation)return;
    setModel(slots[0],model,true,[],soloStudy);
@@ -370,7 +360,6 @@ async function choose(config){
    slots[0].sub.textContent=btrStudy?
      'Casc i torreta 3B, defenses i visors · SIpriv · CC BY 4.0':
      t90Study?'Model Three.js propi · 150 % · torreta, canó i erugues animables':
-     config.id==='cotxe'?'Humvee D3.1 · model real del joc':
      'Fàbrica original · Three.js r186';
    if(t90Study){
      slots[0].bold.textContent='T-90M · model propi únic · 150 %';

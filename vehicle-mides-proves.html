@@ -68,7 +68,7 @@ footer a{color:#cfe5a8}
 <p>Amplada × altura × longitud, en unitats del món del joc. Les mides inclouen la vela, les aspes i els accessoris visibles; són mesures de la geometria, no de les caixes de col·lisió. Toca un nom per centrar-hi la càmera. El ferri conserva expressament l'escala grossa del joc.</p>
 <div id="measurements"></div>
 </section>
-<footer>Models de <code>HUNTER_VEHICLES.createFactory</code> · escala del jugador de <code>HUNTER_CHARACTERS.createPlayer</code>. El Humvee usa el model procedural D3.1; el camió, l'A4.3; el cotxe civil, el C1A. <a href="./">Torna al joc</a>.</footer>
+<footer>Models de <code>HUNTER_VEHICLES.createFactory</code> · escala del jugador de <code>HUNTER_CHARACTERS.createPlayer</code>. El cotxe militar usa el GAZ Tigr-M Three.js; el camió, l'A4.3; el cotxe civil, el C1A. <a href="./">Torna al joc</a>.</footer>
 <script src="src/shared-resources.js?v=0.5.94"></script>
 <script src="src/palette.js?v=0.5.94"></script>
 <script src="src/player-model.js?v=0.5.94"></script>
@@ -79,7 +79,7 @@ footer a{color:#cfe5a8}
 import * as THREE from './vendor/three-r186.module.mjs';
 import {createTruckModel} from './src/truck-model.mjs';
 import {createCivilianCarModel} from './src/civilian-car-model.mjs';
-import {prepareHumveeD31Runtime} from './src/humvee-d31-runtime.mjs';
+import {prepareGazTigrRuntime} from './src/gaz-tigr-runtime.mjs';
 
 const STATUS=document.getElementById('status'),canvas=document.getElementById('view'),
       stage=document.getElementById('showroom'),tags=document.getElementById('tags'),
@@ -88,7 +88,7 @@ const TYPES=[
   {id:'bici',name:'Bicicleta',row:'terra'},
   {id:'moto',name:'Motocicleta',row:'terra'},
   {id:'cotxe_civil',name:'Cotxe civil C1A',row:'terra'},
-  {id:'cotxe',name:'Humvee D3.1',row:'terra'},
+  {id:'cotxe',name:'GAZ Tigr-M',row:'terra'},
   {id:'camio',name:'Camió militar A4.3',row:'terra'},
   {id:'tanqueta',name:'Tanqueta',row:'terra'},
   {id:'tanc',name:'Tanc',row:'terra'},
@@ -297,13 +297,7 @@ window.addEventListener('resize',updateCamera);
 try{
  window.HUNTER_CIVIL_C1A=createCivilianCarModel;
  window.HUNTER_TRUCK_CONCEPT=createTruckModel;
- try{
-  window.HUNTER_HUMVEE_D31=await prepareHumveeD31Runtime(THREE,{vehicleScale:1.3});
- }catch(error){
-  window.HUNTER_HUMVEE_D31=null;
-  console.warn('Humvee procedural no disponible',error);
-  STATUS.textContent='Avís: Humvee D3.1 no disponible; es mostrarà la reserva del cotxe militar.';
- }
+ window.HUNTER_GAZ_TIGR=prepareGazTigrRuntime(THREE,{vehicleScale:1.3});
  const factory=window.HUNTER_VEHICLES.createFactory(THREE,{box,material:mat,shadows:false});
  buildRows(factory);listMetrics();selectGroup('tots');
  STATUS.textContent='16 vehicles · 3 files · 1 figura humana per vehicle · graella d’1 metre';

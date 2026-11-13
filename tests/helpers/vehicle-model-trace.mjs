@@ -3,10 +3,10 @@ import * as T from '../../vendor/three-r186.module.mjs';
 import {playerBatching} from '../../src/player-batching-core.mjs';
 import {createTruckModel} from '../../src/truck-model.mjs';
 import {createCivilianCarModel} from '../../src/civilian-car-model.mjs';
-import {prepareHumveeD31Runtime} from '../../src/humvee-d31-runtime.mjs';
+import {prepareGazTigrRuntime} from '../../src/gaz-tigr-runtime.mjs';
 export async function modelTraces(models){
- const humvee=await prepareHumveeD31Runtime(T),material=(color)=>new T.MeshStandardMaterial({color}),box=(g,w,h,d,c,x,y,z)=>{const m=new T.Mesh(new T.BoxGeometry(w,h,d),material(c));m.position.set(x,y,z);g.add(m);return m;};
- const services={box,material,shadows:false,humvee,truck:createTruckModel,civilianCar:createCivilianCarModel,batching:playerBatching};
+ const gazTigr=prepareGazTigrRuntime(T),material=(color)=>new T.MeshStandardMaterial({color}),box=(g,w,h,d,c,x,y,z)=>{const m=new T.Mesh(new T.BoxGeometry(w,h,d),material(c));m.position.set(x,y,z);g.add(m);return m;};
+ const services={box,material,shadows:false,gazTigr,truck:createTruckModel,civilianCar:createCivilianCarModel,batching:playerBatching};
  const create=models.createFactory(T,services),traces={};
  for(const t of Object.keys(models.scales)){
   const model=create(t);model.updateMatrixWorld(true);const hash=createHash('sha256'),push=a=>hash.update(JSON.stringify(a));

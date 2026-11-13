@@ -17,8 +17,8 @@ const editor=read('src/vehicle-annotation-editor.mjs');
 // Només categories pendents. No recuperar vehicles ja acceptats.
 const types=[...catalog.matchAll(/\{id:'([^']+)'/g)].map(m=>m[1]);
 assert.equal(types.length,6,'El laboratori ha de tenir sis categories');
-assert.deepEqual(new Set(types),new Set(['tanqueta','cotxe','tanc','llanxa','llanxa_coets','ferry']));
-for(const id of ['bici','cotxe_civil','camio','barca_rems','windsurf','moto_aquatica','moto','heli','heli_combat']){
+assert.deepEqual(new Set(types),new Set(['tanqueta','cotxe_civil','tanc','llanxa','llanxa_coets','ferry']));
+for(const id of ['bici','cotxe','camio','barca_rems','windsurf','moto_aquatica','moto','heli','heli_combat']){
  assert(!types.includes(id),'Vehicle aprovat al catàleg: '+id);
  assert(!(id in manifest.models),'Vehicle aprovat al manifest: '+id);
 }
@@ -34,24 +34,24 @@ for(const item of files){
  assert(fs.existsSync(filename),'Falta el GLB: '+item.file);
  assert.equal(fs.statSync(filename).size,item.bytes,'Mida incorrecta: '+item.file);
 }
-assert.deepEqual(manifest.models.cotxe,[]);
+assert.deepEqual(manifest.models.cotxe_civil,[]);
 assert.deepEqual(manifest.models.tanc,[]);
 assert.deepEqual(manifest.models.tanqueta,[]);
 assert(manifest.limits.maxFileBytes>=32*1024*1024);
 assert.equal(manifest.externalModels.tanc,undefined,'No poden quedar candidats Sketchfab per al T-90M');
 assert.equal(manifest.externalModels.tanqueta.length,1);
 assert(!/Abrams|M1A1/.test(catalog));
-assert(catalog.includes("C('tigr-v1'")&&catalog.includes("candidate:'t90m-v1'"));
+assert(!catalog.includes("C('tigr-v1'")&&catalog.includes("candidate:'t90m-v1'"));
 assert(!catalog.includes('c858e6ac0f3045d68f73681725351372'));
 assert(!catalog.includes('7d3a7cf685334f3da3005c559e2b1952'));
 assert(studio.includes('t90Study=config.id===\'tanc\''));
 assert(catalog.includes('https://commons.wikimedia.org/wiki/Category:T-90M'));
-assert(catalog.includes('https://commons.wikimedia.org/wiki/Category:Tigr_vehicle'));
+assert(catalog.includes("{id:'cotxe_civil',name:'Cotxe utilitari"));
 assert(studio.includes("createReferenceVehicle(THREE,entry.variant)")&&studio.includes("entry.provider==='procedural'"));
 assert(studio.includes('stepT90MPreview(slots[0].model'));
 assert(html.includes('id="t90Motion"')&&html.includes('id="t90Throttle"'));
 assert(catalog.includes("options:[]"));
-assert(studio.includes("prepareHumveeD31Runtime(THREE)"),'El visor ha de mostrar el Humvee D3.1 real del joc');
+assert(!studio.includes('prepareHumveeD31Runtime')&&studio.includes('createCurrentVehicle(type)'),'El visor no ha de carregar el Humvee');
 assert(html.includes('id="referenceLinks"')&&html.includes('src/vehicles-externs-proves.mjs?rev='));
 for(const id of ['tanqueta'])for(const candidate of manifest.externalModels[id]){
  assert.equal(candidate.provider,'sketchfab');
@@ -66,7 +66,7 @@ const version=btr.match(/export const BTR82_VERSION='([^']+)'/)?.[1];
 assert(version&&version.startsWith('btr82-'),'Falta la revisió del BTR-82');
 assert(studio.includes('btr82-3b-preview.mjs?rev='),'Falta el model de proves 3B vigent');
 assert(html.includes('src/vehicles-externs-proves.mjs?rev='));
-assert(studio.includes("vehicle-candidate-catalog.mjs?rev=lab-catalog-t90m-solo-animation-1"),
+assert(studio.includes("vehicle-candidate-catalog.mjs?rev=lab-catalog-gaz-published-t90m-1"),
  'Força la càrrega del catàleg nou sense reutilitzar una còpia antiga');
 assert(html.includes(".catch(error=>")&&html.includes("No s’ha pogut carregar el laboratori"),
  'Una fallada en carregar un mòdul no pot deixar el visor en blanc');
