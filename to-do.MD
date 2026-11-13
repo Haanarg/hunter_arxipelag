@@ -3,7 +3,8 @@
 - [x] Finestres de la cabina de pilots més petites i envoltades de xapa retallada; carenat dorsal del motor continu amb entrades, escapaments i ventilació.
 - [x] Roda posterior sota el botaló, amb amortidor, tirants i fixació al fuselatge; espinada dorsal, estabilitzador superior en T, aletes terminals i balisa.
 - [x] Conservat el Ka-52 original, el rotor principal de quatre pales i el fenestron d'onze pales. Prova estructural ampliada, inclosa la comprovació d'obertures reals.
-- [ ] Validació visual de les proporcions al navegador (portes, motor, cua i suspensió) i desplegament Cloudflare. El Huey del joc no s'ha substituït.
+- [x] Desplegament Cloudflare i proves del Ka-60: GitHub Actions 43511239550, resultat correcte (sintaxi, geometria, generació del Worker i verificació a Paradoxa).
+- [ ] Validació visual al navegador de les proporcions (portes, motor, cua i suspensió); el Huey del joc no s'ha substituït.
 
 **2026-11-13 · T-90M de mida doble: control blindat i coma flotant:**
 - [x] La regressió del T-90M, inclosa la mida doble, la geometria de casc, el canó autoritatiu COOP i el moviment de les rodes, ha passat.
