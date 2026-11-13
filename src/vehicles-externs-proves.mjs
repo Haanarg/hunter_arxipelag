@@ -1,5 +1,5 @@
 import {createKamovCandidate,stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261113-1';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261113-kamov-1';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261113-gaz-approved-out-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs';
@@ -12,12 +12,11 @@ import {createVehicleAnnotationEditor} from './vehicle-annotation-editor.mjs?rev
 import {createBtr823BPreview} from './btr82-3b-preview.mjs?rev=btr82-3b-full-nose-restored-v9';
 import {createReferenceVehicle} from './vehicle-reference-candidates.mjs?rev=gaz-door-contours-v4';
 import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
-import {prepareGazTigrRuntime} from './gaz-tigr-runtime.mjs';
 
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261113-kamov-1';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261113-gaz-approved-out-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -58,12 +57,7 @@ const makeOriginal=vehicleModels.createFactory(THREE,{
  box,material,shadows:true,civilianCar:createCivilianCarModel,
  truck:createTruckModel,batching:playerBatching
 });
-// El GAZ, Huey i Apache mostren els mateixos models natius del joc.
-const finalGazFactory=prepareGazTigrRuntime(THREE);
-const makeCurrentGaz=vehicleModels.createFactory(THREE,{
- box,material,shadows:true,civilianCar:createCivilianCarModel,
- truck:createTruckModel,batching:playerBatching,gaz:finalGazFactory
-});
+// El laboratori mostra el Huey i l'Apache reals; el GAZ es queda al joc.
 let hueyFactoryPromise=null,apacheFactoryPromise=null;
 async function createCurrentVehicle(type){
  // El bootstrap del joc prepara aquests models abans de construir vehicles.
@@ -79,7 +73,7 @@ async function createCurrentVehicle(type){
     .catch(error=>{apacheFactoryPromise=null;throw error});
   await apacheFactoryPromise;
  }
- return makeCurrentGaz(type,{color:0x4b9fd1});
+ return makeOriginal(type,{color:0x4b9fd1});
 }
 const slots=[];
 for(let i=0;i<5;i++){
@@ -352,7 +346,7 @@ async function choose(config){
  grid.classList.remove('featured');
  const btrStudy=config.id==='tanqueta';
  const t90Study=config.id==='tanc';
- const soloStudy=btrStudy||t90Study||config.id==='cotxe';
+ const soloStudy=btrStudy||t90Study;
  grid.classList.toggle('btr-study',soloStudy);
  document.querySelector('#fitScale').closest('label').hidden=soloStudy;
  document.querySelector('#t90Motion').hidden=!t90Study;
@@ -374,8 +368,7 @@ async function choose(config){
  }
  try{
    const model=btrStudy?previewFactory():t90Study?createReferenceVehicle(THREE,config.candidate):await createCurrentVehicle(config.id);
-   // Canviar de pestanya durant la preparació del GAZ no ha de
-   // reintroduir el model anterior damunt el vehicle acabat de seleccionar.
+   // No reintroduir models antics quan es canvia de pestanya durant la càrrega.
    if(token!==generation)return;
    setModel(slots[0],model,true,[],soloStudy);
    if(config.id==='heli')slots[0].bold.textContent='Actual · Huey UH-1';
@@ -386,7 +379,6 @@ async function choose(config){
    slots[0].sub.textContent=btrStudy?
      'Casc i torreta 3B, defenses i visors · SIpriv · CC BY 4.0':
      t90Study?'Model Three.js propi · 150 % · torreta, canó i erugues animables':
-     config.id==='cotxe'?'GAZ Tigr-M · model definitiu del joc':
      config.id==='heli'?'Huey UH-1 · model definitiu natiu · portes obertes · dos seients':
      config.id==='heli_combat'?'Apache AH-64 · model definitiu natiu · 3 rodes':
      'Fàbrica original · Three.js r186';
@@ -602,7 +594,7 @@ const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.textContent=config.name;
- const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3B revisat · únic model':config.id==='tanc'?'Model propi · únic':config.id==='cotxe'?'GAZ definitiu':config.id==='heli'?'Huey definitiu · Three.js':config.id==='heli_combat'?'Apache definitiu · Three.js':config.options.length+' alternatives');
+ const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3B revisat · únic model':config.id==='tanc'?'Model propi · únic':config.id==='heli'?'Huey definitiu · Three.js':config.id==='heli_combat'?'Apache definitiu · Three.js':config.options.length+' alternatives');
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }

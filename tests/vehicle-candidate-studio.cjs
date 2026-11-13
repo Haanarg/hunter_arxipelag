@@ -13,9 +13,10 @@ const studio=read('src/vehicles-externs-proves.mjs');
 const html=read('vehicles-externs-proves.html');
 const types=[...catalog.matchAll(/\{id:'([^']+)'/g)].map(x=>x[1]);
 assert.deepEqual(new Set(types),new Set([
- 'tanqueta','cotxe','heli','heli_combat','tanc','llanxa','llanxa_coets','ferry'
+ 'tanqueta','heli','heli_combat','tanc','llanxa','llanxa_coets','ferry'
 ]));
 assert(!types.includes('cotxe_civil'));
+assert(!types.includes('cotxe'),'El GAZ aprovat no ha de ser al laboratori');
 for(const type of ['heli','heli_combat'])assert(!Object.hasOwn(manifest.models,type));
 assert.equal(manifest.savedModels,3);
 assert.equal(manifest.savedBytes,851208);
@@ -45,4 +46,4 @@ for(const file of [
  'tests/vehicle-candidate-studio.cjs'
 ])execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
 execFileSync(process.execPath,[path.join(root,'tests/btr82-published-assets.cjs')],{stdio:'pipe'});
-console.log('PASS laboratori: vuit pestanyes, manifest coherent, només tres GLB');
+console.log('PASS laboratori: set pestanyes i GAZ aprovat retirat, manifest coherent');

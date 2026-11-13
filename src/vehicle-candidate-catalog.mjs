@@ -9,12 +9,6 @@ export const CATALOG=[
  {id:'tanqueta',name:'Tanqueta · BTR-82 3B',kind:'terra',
    note:'Model 3B actualitzat al joc: torreta 25% més petita i centrada longitudinalment sobre el segon eix, amb el canó alineat; mirilles horitzontals amb carcassa verda encastada al casc. Conserva les vuit rodes i incorpora una comporta d’accés verda amb frontisses i nansa a cada lateral entre els eixos segon i tercer, a més de defenses posteriors, trapes, ventilació i quatre focus. Les dues comportes arriben fins a la quilla i els laterals posteriors tenen registres de blindatge, frontisses, barres i tapes simètriques, seguint la referència fotogràfica; canvis aplicats al laboratori i al joc. El morro original es manté complet, també al laboratori; no s’ha modificat la posició dels fars.',
    options:[]},
- {id:'cotxe',name:'Cotxe militar · GAZ Tigr-M',kind:'terra',
-   note:'GAZ Tigr-M definitiu de Three.js, al joc i editable per peces. Portes laterals amb el muntant A inclinat i el cantell posterior retallat per evitar el pas de roda.',
-   references:[
-     {label:'GAZ Tigr · galeria Wikimedia',url:'https://commons.wikimedia.org/wiki/Category:Tigr_vehicle'},
-     {label:'Tigr-M AMN-233114 · fotografies',url:'https://commons.wikimedia.org/wiki/Category:AMN_233114'}
-   ],options:[]},
  {id:'heli',name:'Helicòpter · Kamov Ka-60',kind:'aire',
    note:'Ka-60 candidat Three.js propi: fuselatge allargat, rotor de quatre pales i fenestron d’onze pales, cabina i tren de rodes. Huey actual al costat per comparar.',
    references:[

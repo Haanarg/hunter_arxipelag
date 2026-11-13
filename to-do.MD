@@ -1,3 +1,11 @@
+**2026-11-13 · GAZ Tigr-M aprovat i retirat del laboratori:**
+- [x] Confirmada la integració del GAZ amb les portes retallades a la fàbrica del cotxe militar del joc.
+- [x] Eliminada la pestanya GAZ i la instanciació d'aquest model al laboratori; models natius del joc conservats.
+- [x] Mantinguts la física, la hitbox, les quatre rodes, els seients, la direcció i els controls.
+- [x] Conservades les set pestanyes restants, especialment les proves Kamov Ka-60 i Ka-52.
+- [x] Actualitzats les regressions de catàleg, la paritat de fàbriques i els identificadors de memòria cau.
+- [ ] Validar al navegador l'absència de pestanya i el GAZ en partida.
+
 **2026-11-13 · Kamov Ka-60 i Ka-52 · candidats natius del laboratori:**
 - [x] Models Three.js originals basats en fotografies noves de perfil i tres quarts, amb fonts enllaçades a les dues pestanyes. Proporcions aproximades de les referències; no són models CAD.
 - [x] Ka-60: rotor principal de quatre pales, conducte de cua realment obert i rotor d’onze pales, fuselatge i botaló afuats, dos seients de pilot i sis de transport, vidres transparents i tren de tres rodes.
