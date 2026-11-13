@@ -9,7 +9,7 @@ import {createVehicleAnnotationEditor} from './vehicle-annotation-editor.mjs?rev
 import {createBtr823BPreview} from './btr82-3b-preview.mjs?rev=btr82-3b-full-nose-restored-v9';
 import {createReferenceVehicle} from './vehicle-reference-candidates.mjs?rev=t90m-animated-150-1';
 import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-animated-150-1';
-import {prepareHumveeD31Runtime} from './humvee-d31-runtime.mjs';
+import {prepareGazTigrRuntime} from './gaz-tigr-runtime.mjs';
 
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
@@ -55,18 +55,14 @@ const makeOriginal=vehicleModels.createFactory(THREE,{
  box,material,shadows:true,civilianCar:createCivilianCarModel,
  truck:createTruckModel,batching:playerBatching
 });
-// Per al cotxe militar mostrem el Humvee REAL del joc, no el fallback antic.
-let realHumveeFactoryPromise=null;
+// El cotxe militar mostra el GAZ definitiu del joc i el cotxe utilitari el C1A.
+const finalGazFactory=prepareGazTigrRuntime(THREE);
+const makeCurrentGaz=vehicleModels.createFactory(THREE,{
+ box,material,shadows:true,civilianCar:createCivilianCarModel,
+ truck:createTruckModel,batching:playerBatching,gaz:finalGazFactory
+});
 async function createCurrentVehicle(type){
- if(type!=='cotxe')return makeOriginal(type,{color:0x4b9fd1});
- if(!realHumveeFactoryPromise){
-  realHumveeFactoryPromise=prepareHumveeD31Runtime(THREE).then(humvee=>
-   vehicleModels.createFactory(THREE,{
-    box,material,shadows:true,civilianCar:createCivilianCarModel,
-    truck:createTruckModel,batching:playerBatching,humvee
-   }));
- }
- return (await realHumveeFactoryPromise)('cotxe',{color:0x4b9fd1});
+ return makeCurrentGaz(type,{color:0x4b9fd1});
 }
 const slots=[];
 for(let i=0;i<5;i++){
@@ -339,7 +335,7 @@ async function choose(config){
  grid.classList.remove('featured');
  const btrStudy=config.id==='tanqueta';
  const t90Study=config.id==='tanc';
- const soloStudy=btrStudy||t90Study;
+ const soloStudy=btrStudy||t90Study||config.id==='cotxe'||config.id==='cotxe_civil';
  grid.classList.toggle('btr-study',soloStudy);
  document.querySelector('#fitScale').closest('label').hidden=soloStudy;
  document.querySelector('#t90Motion').hidden=!t90Study;
@@ -370,7 +366,7 @@ async function choose(config){
    slots[0].sub.textContent=btrStudy?
      'Casc i torreta 3B, defenses i visors · SIpriv · CC BY 4.0':
      t90Study?'Model Three.js propi · 150 % · torreta, canó i erugues animables':
-     config.id==='cotxe'?'Humvee D3.1 · model real del joc':
+     config.id==='cotxe'?'GAZ Tigr-M · model definitiu del joc':
      'Fàbrica original · Three.js r186';
    if(t90Study){
      slots[0].bold.textContent='T-90M · model propi únic · 150 %';
@@ -588,7 +584,7 @@ const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.textContent=config.name;
- const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3B revisat · únic model':config.id==='tanc'?'Model propi · únic':config.options.length+' alternatives');
+ const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3B revisat · únic model':config.id==='tanc'?'Model propi · únic':config.id==='cotxe'?'GAZ definitiu':config.id==='cotxe_civil'?'C1A · model actual':config.options.length+' alternatives');
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }
