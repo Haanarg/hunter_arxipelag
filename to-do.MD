@@ -1,3 +1,9 @@
+**2026-11-13 · T-90M de mida doble: control blindat i coma flotant:**
+- [x] La regressió del T-90M, inclosa la mida doble, la geometria de casc, el canó autoritatiu COOP i el moviment de les rodes, ha passat.
+- [x] Corregida una asserció massa estricta de yaw de torreta en una prova existent (diferència d'arrodoniment < 1e-15 rad); tolerància 1e-12.
+- [x] Afegida validació sintàctica de la prova de tripulació al desplegament.
+- [ ] Repassar la prova de tripulació i verificar el desplegament a Paradoxa.
+
 **2026-11-13 · Validació repetida després d'ajustar el test T-90M:**
 - [x] Revisions de memòria cau coordinades per executar de nou el desplegament a Cloudflare sense activar el workflow manual de reconstrucció del runtime.
 - [ ] Confirmar geometria, tir, pistes i escales autoritatives amb la prova T-90M i verificació de mòdul real a Paradoxa.

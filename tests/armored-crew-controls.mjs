@@ -13,7 +13,7 @@ for(const type of ['tanc','tanqueta']){
  assert(v.turretYaw>0&&v.turretPitch>0);
  const yaw=v.turretYaw;
  stepManualTurret(v,type,0,0,.1);
- assert.equal(v.turretYaw,yaw);
+ assert(Math.abs(v.turretYaw-yaw)<1e-12,'La torreta no ha de girar sense entrada');
  stepManualTurret(v,type,0,1,20);
  assert(v.turretPitch<=turretSpecs[type].turretMaxPitch);
  v.seats[1]='second';

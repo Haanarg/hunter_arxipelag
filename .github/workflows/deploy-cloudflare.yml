@@ -34,6 +34,7 @@ jobs:
           node --check src/t90m-runtime.mjs
           node --check src/vehicle-specs.mjs
           node --check tests/t90m-game-integration.mjs
+          node --check tests/armored-crew-controls.mjs
           node --check tests/gaz-tigr-door-contours.mjs
           node --check tests/gaz-tigr-approved.mjs
       - name: Verificar credencials de desplegament sense mostrar secrets
