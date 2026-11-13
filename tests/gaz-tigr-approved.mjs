@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {prepareGazTigrRuntime} from '../src/gaz-tigr-runtime.mjs';
 import {vehicleModels} from '../src/vehicle-model-core.mjs';
+import {playerBatching} from '../src/player-batching-core.mjs';
 
 const gaz=prepareGazTigrRuntime(THREE,{vehicleScale:1.3});
 const a=gaz.create(),b=gaz.create();
@@ -13,7 +14,7 @@ assert(a.userData.wheels.every(w=>w.userData.radius>.65));
 const create=vehicleModels.createFactory(THREE,{
  box(){throw new Error('Fallback del cotxe utilitzat incorrectament')},
  material(){throw new Error('Material de fallback')},
- shadows:false,gaz
+ shadows:false,gaz,batching:playerBatching
 });
 const car=create('cotxe');
 assert.equal(car.userData.gazModel,'Tigr-M');

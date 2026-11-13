@@ -1,3 +1,9 @@
+**2026-11-13 · Regressió del GAZ (configuració del test):**
+- [x] La prova nova dels perfils ha passat al model de laboratori, joc i exportació de l'editor.
+- [x] La prova antiga de conducció instanciava la fàbrica sense `playerBatching` (obligatori); ara utilitza el mòdul real d'optimització, com el joc.
+- [x] Afegida comprovació sintàctica del test al deploy.
+- [ ] Desplegament Cloudflare: comprovar resultat del workflow.
+
 **2026-11-13 · Prova de portes GAZ: errada de sintaxi corregida:**
 - [x] L'apòstrof d'un text del diagnòstic JS impedia executar la prova. Corregida la cadena.
 - [x] Afegit `node --check` de la geometria GAZ i de la seva prova per detectar aquest error abans de desplegar.
