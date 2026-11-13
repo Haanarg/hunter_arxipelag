@@ -3,6 +3,10 @@ const C1A={id:'C1A',name:'Maleter clàssic',description:'C1 original depurat: ma
 export function createCivilianCarModel(THREE,color=0x4b9fd1,q=C1A,decorate=null,accessories=null){
  const g=new THREE.Group();g.name='hunter-civil-family-iteration-'+q.id;
  const L=q.length,W=q.width,hw=W/2,top=q.roofY,belt=q.beltY;
+ // Els C1A aprovats no canvien. El candidat del laboratori redueix
+ // l'amplada del sostre i inclina tota la superfície envidrada.
+ const roofInset=Math.max(0,Math.min(.4,q.roofInset||0));
+ const insetAtY=y=>roofInset*Math.max(0,Math.min(1,(y-belt)/(top-belt)));
  const frontZ=-L/2,rearZ=L/2;
  const wheelFront=-L*.33,wheelRear=L*.33,wheelY=.72,wheelR=q.rWheel,archR=q.rArch;
  const rim=q.trim,paint=color,black=0x252b2c,interior=0x303539,glassTint=0x8ac6d7;
@@ -220,40 +224,48 @@ export function createCivilianCarModel(THREE,color=0x4b9fd1,q=C1A,decorate=null,
  // Muntants de l'habitacle. El sostre és únicament una làmina,
  // NO un bloc extruït opac que amagui l'interior.
  const left=-hw+.12,right=hw-.12,roofFront=q.roofFront,roofRear=q.roofRear;
- const roofPanel=box(W-.22,.105,roofRear-roofFront+.15,paint,0,top+.025,(roofFront+roofRear)/2);
+ const roofPanel=box(W-.22-2*roofInset,.105,roofRear-roofFront+.15,paint,0,top+.025,(roofFront+roofRear)/2);
  roofPanel.name='civil-c-roof-panel';
  for(const side of[-1,1]){
-  const x=side*(hw-.12),outside=side*(hw+.018);
-  // Muntants A, B, C i D, amb finestres reals entre ells.
+  const x=side*(hw-.12),topX=side*(hw-.12-roofInset),outside=side*(hw+.018);
+  // Els quatre muntants convergeixen lleugerament cap al sostre.
   for(const [loZ,hiZ] of [[q.frontBase,roofFront],[.30,.30],[1.47,1.47],[q.rearBase,roofRear]]){
-   const bottom=[x,belt,loZ],upper=[x,top,hiZ];
+   const bottom=[x,belt,loZ],upper=[topX,top,hiZ];
    bar(bottom,upper,.055,paint);
   }
-  bar([x,top,roofFront],[x,top,roofRear],.059,paint);
+  bar([topX,top,roofFront],[topX,top,roofRear],.059,paint);
   bar([x,belt,q.frontBase],[x,belt,q.rearBase],.045,paint);
-  // Tres finestrals laterals amb trasparència física (opacity i depthWrite).
+  // Els vidres segueixen el mateix pla inclinat que els muntants:
+  // una geometria 3D, no un panell vertical separat del marc.
   const windows=[
    [[q.frontBase+.10,belt+.09],[roofFront+.08,top-.11],[.24,top-.11],[.24,belt+.09]],
    [[.36,belt+.09],[.36,top-.11],[1.40,top-.11],[1.40,belt+.09]],
    [[1.53,belt+.09],[1.53,top-.11],[roofRear-.08,top-.11],[q.rearBase-.10,belt+.09]]
   ];
-  for(const points of windows)panel(points,outside,glassTint);
+  for(const [i,points] of windows.entries()){
+   if(!roofInset){panel(points,outside,glassTint);continue}
+   const vertices=points.map(([z,y])=>[outside-side*insetAtY(y),y,z]);
+   face(vertices,glassTint).name='civil-c-side-glass-'+side+'-'+i;
+  }
   // Mirall separat en comptes d'un panell que tapi el finestral.
   const mirror=box(.21,.20,.34,rim,side*(hw+.15),belt+.23,q.frontBase+.21,'metal');
   mirror.rotation.y=side*.18;
  }
  // Davanter i lluna posterior: quadrilàters en el pla real del vidre.
  const frontGlass=face([
-  [left,belt+.12,q.frontBase+.03],[right,belt+.12,q.frontBase+.03],
-  [right,top-.12,roofFront+.03],[left,top-.12,roofFront+.03]
+  [left+insetAtY(belt+.12),belt+.12,q.frontBase+.03],[right-insetAtY(belt+.12),belt+.12,q.frontBase+.03],
+  [right-insetAtY(top-.12),top-.12,roofFront+.03],[left+insetAtY(top-.12),top-.12,roofFront+.03]
  ],glassTint);
+ frontGlass.name='civil-c-front-glass';
  const backGlass=face([
-  [left,belt+.10,q.rearBase-.03],[right,belt+.10,q.rearBase-.03],
-  [right,top-.12,roofRear-.03],[left,top-.12,roofRear-.03]
+  [left+insetAtY(belt+.10),belt+.10,q.rearBase-.03],[right-insetAtY(belt+.10),belt+.10,q.rearBase-.03],
+  [right-insetAtY(top-.12),top-.12,roofRear-.03],[left+insetAtY(top-.12),top-.12,roofRear-.03]
  ],glassTint);
- for(const x of[left,right]){
-  bar([x,belt,q.frontBase],[x,top,roofFront],.06,paint);
-  bar([x,belt,q.rearBase],[x,top,roofRear],.06,paint);
+ backGlass.name='civil-c-rear-glass';
+ for(const side of[-1,1]){
+  const bottomX=side*(hw-.12),upperX=side*(hw-.12-roofInset);
+  bar([bottomX,belt,q.frontBase],[upperX,top,roofFront],.06,paint);
+  bar([bottomX,belt,q.rearBase],[upperX,top,roofRear],.06,paint);
  }
  // Graella, llums i pilots amb separació profunda de les cares.
  box(W*.64,.33,.075,0x445156,0,1.34,frontZ-.11,'metal');
@@ -282,4 +294,13 @@ export function createCivilianCarModel(THREE,color=0x4b9fd1,q=C1A,decorate=null,
  g.userData.hasWheelArchCutouts=true;
  g.userData.hasVisibleInterior=true;
  return g;
+}
+
+/** Només laboratori: no modifica el C1A de producció fins a l'aprovació. */
+export function createCivilianCarRoofCandidate(THREE,color=0x4b9fd1){
+ const model=createCivilianCarModel(THREE,color,{...C1A,roofInset:.15});
+ model.name='hunter-civil-c1a-narrow-roof-candidate';
+ model.userData.roofInset=.15;
+ model.userData.labOnly=true;
+ return model;
 }

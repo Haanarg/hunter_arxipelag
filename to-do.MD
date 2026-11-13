@@ -1,3 +1,9 @@
+**2026-11-13 · Petició 046a6d10 · Cotxe utilitari C1A, sostre estret (laboratori):**
+- [x] Candidat C1A amb sostre 15 cm més estret per banda, muntants A/B/C/D inclinats cap endins, finestres laterals en plans oblics i llunes davantera/posterior trapezoïdals.
+- [x] Mantingut el C1A actual del joc sense modificacions. El visor indica explícitament que és un candidat pendent d'aprovació.
+- [ ] Provar el candidat visualment a WebGL, comprovar encaixos sense fissures i decidir si l'integrem al joc.
+- [ ] Confirmar desplegament del laboratori a Cloudflare.
+
 **2026-11-13 · Model T-90M aprovat al joc:**
 - [x] Substituït el tanc original de la fàbrica pel nostre candidat procedimental T-90M, compartit amb el laboratori.
 - [x] Mantinguda l'escala x1,5 exacta del candidat sense multiplicació posterior; hitbox del casc reajustada (5,9 × 10,9 m) i radi 6,4.

@@ -1,10 +1,10 @@
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261113-armored-crew-1';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261113-civil-tapered-roof-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs';
 import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
-import {createCivilianCarModel} from './civilian-car-model.mjs';
+import {createCivilianCarModel,createCivilianCarRoofCandidate} from './civilian-car-model.mjs';
 import {createVehicleAnnotationEditor} from './vehicle-annotation-editor.mjs?rev=live-editor-20261112-1';
 import {createBtr823BPreview} from './btr82-3b-preview.mjs?rev=btr82-3b-full-nose-restored-v9';
 import {createReferenceVehicle} from './vehicle-reference-candidates.mjs?rev=t90m-game-1';
@@ -14,7 +14,7 @@ import {prepareGazTigrRuntime} from './gaz-tigr-runtime.mjs';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=t90m-game-1';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261113-civil-tapered-roof-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -356,7 +356,7 @@ async function choose(config){
    slot.source.hidden=true;
  }
  try{
-   const model=btrStudy?previewFactory():t90Study?createReferenceVehicle(THREE,config.candidate):await createCurrentVehicle(config.id);
+   const model=btrStudy?previewFactory():t90Study?createReferenceVehicle(THREE,config.candidate):config.id==='cotxe_civil'?createCivilianCarRoofCandidate(THREE):await createCurrentVehicle(config.id);
    // Canviar de pestanya durant la preparació del GAZ no ha de
    // reintroduir el model anterior damunt el vehicle acabat de seleccionar.
    if(token!==generation)return;
@@ -368,7 +368,9 @@ async function choose(config){
      'Casc i torreta 3B, defenses i visors · SIpriv · CC BY 4.0':
      t90Study?'Model Three.js propi · 150 % · torreta, canó i erugues animables':
      config.id==='cotxe'?'GAZ Tigr-M · model definitiu del joc':
+     config.id==='cotxe_civil'?'Candidat C1A · sostre més estret, vidres inclinats · encara no integrat al joc':
      'Fàbrica original · Three.js r186';
+   if(config.id==='cotxe_civil')slots[0].bold.textContent='Cotxe utilitari · sostre estret (prova)';
    if(t90Study){
      slots[0].bold.textContent='T-90M · model propi únic · 150 %';
      slots[0].source.href=config.references?.[0]?.url||'https://commons.wikimedia.org/wiki/Category:T-90M';
@@ -581,7 +583,7 @@ const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.textContent=config.name;
- const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3B revisat · únic model':config.id==='tanc'?'Model propi · únic':config.id==='cotxe'?'GAZ definitiu':config.id==='cotxe_civil'?'C1A · model actual':config.options.length+' alternatives');
+ const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3B revisat · únic model':config.id==='tanc'?'Model propi · únic':config.id==='cotxe'?'GAZ definitiu':config.id==='cotxe_civil'?'C1A · sostre estret en proves':config.options.length+' alternatives');
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }
