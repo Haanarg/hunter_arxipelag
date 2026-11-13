@@ -111,30 +111,6 @@
   "skipped": 1,
   "retiredHelicopterCandidates": 6,
   "externalModels": {
-    "tanc": [
-      {
-        "provider": "sketchfab",
-        "modelId": "c858e6ac0f3045d68f73681725351372",
-        "url": "https://sketchfab.com/3d-models/t90m-proryv-low-poly-tank-c858e6ac0f3045d68f73681725351372",
-        "title": "T90M PRORYV LOW-POLY TANK",
-        "author": "PhoneModeler3D",
-        "triangles": 1412,
-        "license": "CC BY 4.0",
-        "note": "Molt lleuger · 1.412 triangles · candidat low poly per al joc.",
-        "slot": 2
-      },
-      {
-        "provider": "sketchfab",
-        "modelId": "7d3a7cf685334f3da3005c559e2b1952",
-        "url": "https://sketchfab.com/3d-models/t-90m-arena-m-stylised-7d3a7cf685334f3da3005c559e2b1952",
-        "title": "T-90M Arena-M (Stylised)",
-        "author": "Inmate",
-        "triangles": 27718,
-        "license": "CC BY 4.0",
-        "note": "Estilitzat · 27.718 triangles · més detall i protecció Arena-M.",
-        "slot": 3
-      }
-    ],
     "tanqueta": [
       {
         "modelId": "6226acae68424d99bf03882b245ff7c5",

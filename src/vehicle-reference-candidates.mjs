@@ -1,11 +1,11 @@
 // Hunter: Arxipèlag · candidats ORIGINALS low-poly per al laboratori.
 // Orientació compartida amb el joc: morro cap a -Z, simetria X=0.
 // No es publiquen al joc fins que s'aprovi un candidat al laboratori.
-export const REFERENCE_CANDIDATE_VERSION='20261113-t90m-tigr-interior-v3';
+export const REFERENCE_CANDIDATE_VERSION='20261113-t90m-animated-150-tigr-interior-v3';
 
 export function createReferenceVehicle(THREE,type){
  if(type!=='t90m-v1'&&type!=='tigr-v1')throw new Error('Candidat desconegut: '+type);
- const root=new THREE.Group();root.name=type==='t90m-v1'?'T-90M · candidat 2 · proporcions revisades':'GAZ Tigr-M · candidat 3 · interior visible';
+ const root=new THREE.Group();root.name=type==='t90m-v1'?'T-90M · model propi · escala 150 %':'GAZ Tigr-M · candidat 3 · interior visible';
  root.userData.referenceCandidate=type;
  const mats=new Map();
  const mat=(color,profile='armor')=>{
@@ -87,16 +87,26 @@ export function createReferenceVehicle(THREE,type){
    profile(chassis,'Cadena contínua buida',capsule(.65),.59,x,T.dark,capsule(.55).reverse());
    for(let i=0;i<6;i++){
     const z=-2.30+i*.92;
-    cylinder(chassis,'Roda de carretera '+(i+1),.43,.50,x,.58,z,T.dark);
-    cylinder(chassis,'Disc de roda '+(i+1),.35,.035,x+side*.26,.58,z,T.armor);
-    cylinder(chassis,'Boixa de roda '+(i+1),.105,.06,x+side*.29,.58,z,T.shadow);
+    const pivot=new THREE.Group();pivot.name='Pivot rodatge '+(i+1);
+    pivot.position.set(x,.58,z);pivot.userData.t90RoadWheel={side,radius:.43};
+    chassis.add(pivot);
+    cylinder(pivot,'Roda de carretera '+(i+1),.43,.50,0,0,0,T.dark);
+    cylinder(pivot,'Disc de roda '+(i+1),.35,.035,side*.26,0,0,T.armor);
+    cylinder(pivot,'Boixa de roda '+(i+1),.105,.06,side*.29,0,0,T.shadow);
    }
    for(const z of [-2.84,2.84])cylinder(chassis,'Roda tensora / motriu',.43,.50,x,.80,z,T.metal);
-   for(let i=0;i<22;i++)for(const y of [.095,1.405])block(chassis,'Sabata cadena',.63,.055,.13,x,y,-2.60+i*5.2/21,T.metal);
-   for(const end of [-1,1])for(let i=0;i<9;i++){
-    const angle=-Math.PI/2+(i+.5)*Math.PI/9;
-    const shoe=block(chassis,'Sabata corba cadena',.63,.055,.13,x,.75+Math.sin(angle)*.66,end*(2.65+Math.cos(angle)*.66),T.metal);
-    shoe.rotation.x=-end*angle;
+   // Sabates independents repartides per arc de longitud, com l'animador
+   // del tanc del joc. Cada costat es pot moure en sentit oposat al girar.
+   const front=-2.65,rear=2.65,cy=.75,r=.66,straight=rear-front;
+   const perimeter=2*straight+2*Math.PI*r;
+   const belt=new THREE.Group();
+   belt.name=side<0?'Eruga mòbil esquerra':'Eruga mòbil dreta';
+   belt.userData.t90Belt={side,x,front,rear,cy,r,straight,perimeter};
+   chassis.add(belt);
+   const count=Math.round(perimeter/.24);
+   for(let i=0;i<count;i++){
+    const shoe=block(belt,'Sabata mòbil '+(i+1),.63,.055,.18,x,cy+r,front,T.metal);
+    shoe.userData.trackOffset=i*perimeter/count;
    }
    for(let i=0;i<6;i++){
     const z=-2.43+i*.90;
@@ -145,6 +155,11 @@ export function createReferenceVehicle(THREE,type){
   cylinder(gun,'Boca del canó',.088,.09,0,0,-4.80,T.metal,'z');
   cylinder(gun,'Ànima fosca',.065,.005,0,0,-4.848,T.dark,'z');
   root.userData.candidateParts={hull:chassis.name,turret:turret.name,gun:gun.name,wheelsPerSide:6};
+  // L'escala és del model sencer, també canó i animacions. No altera el GAZ.
+  root.scale.setScalar(1.5);
+  root.userData.t90Animation={turret:turret.name,pitch:gun.name,
+   leftTrack:'Eruga mòbil esquerra',rightTrack:'Eruga mòbil dreta',
+   movement:'differential',scale:1.5};
  }else{
   const body=new THREE.Group();body.name='Carrosseria GAZ Tigr-M';root.add(body);
   const rect=(a,b,c,d)=>[[a,c],[b,c],[b,d],[a,d]];

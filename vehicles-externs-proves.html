@@ -16,6 +16,13 @@ nav{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:12px}
 main{padding:15px clamp(10px,2vw,30px) 26px}
 #vehicleList{display:flex;gap:7px;margin:10px 0 12px;overflow-x:auto;overflow-y:hidden;padding:2px 2px 10px;scrollbar-width:thin;overscroll-behavior-x:contain}
 .reference-links{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;font-size:12px}.reference-links:empty{display:none}
+.t90-motion{max-width:1120px;margin:3px auto 14px;padding:10px 13px;border:1px solid #688b78;border-radius:10px;background:#1a3538}
+.t90-motion[hidden]{display:none!important}.t90-motion h2{margin:0 0 8px;font-size:15px}
+.t90-motion-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.t90-motion-grid label{display:flex;flex-direction:column;gap:3px;font-size:12px}
+.t90-motion-grid input{width:100%;accent-color:#c3d997}.t90-motion output{font-variant-numeric:tabular-nums}
+.t90-motion p{margin:9px 0 0;font-size:11px;color:#c7d6ca}
+@media(max-width:740px){.t90-motion-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 #vehicleList button{text-align:left;min-height:44px;min-width:140px;flex:0 0 148px}#vehicleList small{display:block;font-size:10px;opacity:.8;margin-top:3px}
 #info{display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:10px;margin:0 0 11px}
 #warning{color:#f0d9a8;font-size:12px;line-height:1.5;max-width:900px}
@@ -95,6 +102,21 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <label><input id="showGrid" type="checkbox" checked> Graella i referència humana</label>
 
 </div></section>
+<section id="t90Motion" class="t90-motion" hidden aria-label="Controls de simulació del T-90M">
+ <h2>Provar moviments del T-90M</h2>
+ <div class="t90-motion-grid">
+  <label>Avançar / retrocedir <output id="t90ThrottleValue">0</output>
+   <input id="t90Throttle" type="range" min="-1" max="1" step=".05" value="0" aria-label="Velocitat de les erugues"></label>
+  <label>Girar a esquerra / dreta <output id="t90SteerValue">0</output>
+   <input id="t90Steer" type="range" min="-1" max="1" step=".05" value="0" aria-label="Gir diferencial"></label>
+  <label>Girar la torreta <output id="t90YawValue">0°</output>
+   <input id="t90Yaw" type="range" min="-180" max="180" step="1" value="0" aria-label="Angle de la torreta"></label>
+  <label>Elevar el canó <output id="t90ElevationValue">0°</output>
+   <input id="t90Elevation" type="range" min="-25" max="25" step="1" value="0" aria-label="Elevació del canó"></label>
+ </div>
+ <p>Teclat: W/S mouen les erugues, A/D giren, J/L mouen la torreta i I/K eleven el canó. Els controls també funcionen amb ratolí o pantalla tàctil.
+  <button type="button" id="t90ResetMotion">Restablir posició</button></p>
+</section>
 <details class="annotation-tools"><summary>Marques i reparació de forats</summary><section id="btrPartTool" class="btr-part-tool" aria-label="Editor de marques 3D del laboratori de vehicles">
  <div class="btr-part-header"><h2>Editor de marques 3D</h2><span>Per a tots els vehicles · Anotacions no destructives</span></div>
  <div class="btr-part-controls">
@@ -143,7 +165,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <script type="module">
 // Carrega asíncronament per poder mostrar l'error si qualsevol import està
 // trencat. Un error de sintaxi al catàleg ja no deixa un visor en blanc.
-import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261113-tigr-interior-3')
+import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261113-t90m-animation-1')
  .catch(error=>{
   console.error('Error en arrencar el laboratori de vehicles:',error);
   const reason=error instanceof Error?error.message:String(error);

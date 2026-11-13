@@ -1,3 +1,12 @@
+**2026-11-13 · T-90M, candidat propi únic i animacions al laboratori:**
+- [x] Eliminats del catàleg i manifest els dos candidats externs de T-90M, deixant només el model procedimental propi en un visor.
+- [x] Augmentada la mida global del candidat T-90M un 50 % (escala 1,5) sense alterar el GAZ Tigr.
+- [x] Torreta independent en Y i canó en X amb punts d'ancoratge, noms editables i límits d'elevació segons el controlador actual.
+- [x] Erugues dreta i esquerra amb sabates mòbils al contorn, rodes giratòries i velocitats diferencials a avançar, recular i pivotar.
+- [x] Controls de simulació al laboratori: lliscadors de velocitat/gir/torreta/elevació i tecles W/S/A/D, J/L, I/K; respecten la casella Animacions.
+- [x] Dades de l'animació preservades com a userData serialitzable en exportacions i esborranys; ajustada la revisió de laboratori.
+- [ ] Validar visualment al navegador, especialment escala, solapament de cadenes/rodes i moviment del canó. Encara no substitueix el tanc del joc; la integració amb hitbox i tret requereix validar l'escala abans.
+
 **2026-11-13 · Petició f0a3c211 · Interior GAZ Tigr-M candidat:**
 - [x] Confirmat per l’usuari: modificar el Tigr candidat, tot i que l’exportació indicava el visor Actual/Humvee.
 - [x] Deu vidres transparents amb retalls reals al blindatge, portes i parabrisa; quatre seients amb reposacaps, terra, tauler, consola i volant amb columna. Peces editables.

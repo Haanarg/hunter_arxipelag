@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {createReferenceVehicle,REFERENCE_CANDIDATE_VERSION} from '../src/vehicle-reference-candidates.mjs';
+import {getT90Rig,stepT90MPreview,stepT90Tracks} from '../src/t90m-preview-animation.mjs';
 
 assert(REFERENCE_CANDIDATE_VERSION.includes('tigr'));
 for(const [type,needles,minMeshes] of [
@@ -29,9 +30,26 @@ for(const [type,needles,minMeshes] of [
  if(type==='t90m-v1'){
   assert.equal(names.filter(n=>n.startsWith('Roda de carretera')).length,12);
   assert.equal(candidate.userData.candidateParts.wheelsPerSide,6);
-  assert(size.x>3.6&&size.x<4.0,'Amplada T-90M');
+  assert(size.x>5.4&&size.x<6.1,'Amplada T-90M ×1.5');
+  assert.equal(candidate.scale.x,1.5,'Escala exacta 150 %');
+  assert.equal(candidate.scale.y,1.5);
+  assert.equal(candidate.scale.z,1.5);
   assert(candidate.getObjectByName('Cadena contínua buida').geometry.parameters.shapes.holes.length===1,'Cadena buida');
-  assert(size.z>7,'El canó llarg ha d’estar dins la caixa visual');
+  assert(size.z>10,'El canó llarg ha d’estar dins la caixa visual');
+  const rig=getT90Rig(candidate);
+  assert(rig&&rig.tracks.length===2,'Les erugues han de tenir dos controls independents');
+  assert.equal(rig.wheels.length,12,'Sis pivots de roda per costat');
+  const left=rig.tracks.find(t=>t.side===-1),right=rig.tracks.find(t=>t.side===1);
+  assert(left.links.length>30&&right.links.length>30);
+  const before=left.links[0].position.clone();
+  stepT90MPreview(candidate,{throttle:1,steer:0,turretYaw:60,elevation:15},.07);
+  assert(left.links[0].position.distanceTo(before)>.01,'Les sabates s’han de moure');
+  assert(rig.turret.rotation.y>0&&rig.barrel.rotation.x>0,'Torreta i canó animats');
+  const l0=left.phase,r0=right.phase;
+  stepT90Tracks(candidate,{throttle:0,steer:1},.07);
+  assert(left.phase<l0&&right.phase>r0,'Gir pivotant amb erugues en sentits contraris');
+  assert(rig.wheels.some(w=>Math.abs(w.rotation.x)>0),'Rodes que roden');
+
  }else{
   assert.equal(names.filter(n=>n.startsWith('Pneumàtic tot terreny')).length,4);
   assert.equal(names.filter(n=>n.startsWith('Porta lateral')).length,4);

@@ -3,9 +3,7 @@
 // Huey i Apache acceptats ja formen part del joc.
 const P=(pack,match,query)=>({pack,match,query:query||match});
 const Q=(query)=>({query});
-// Candidates reals amb visor oficial (no hi ha un GLB extern publicat al repo).
-// La llicència es declara per model: CC BY i CC BY-SA requereixen atribució.
-const S=(modelId,url,title,author,triangles,license,note)=>({provider:'sketchfab',modelId,url,title,author,triangles,license,note});
+// Candidats procedimentals que es poden editar sense dependre de GLB externs.
 const C=(variant,title,note)=>({provider:'procedural',variant,title,note});
 export const CATALOG=[
  {id:'tanqueta',name:'Tanqueta · BTR-82 3B',kind:'terra',
@@ -20,16 +18,12 @@ export const CATALOG=[
      {label:'VPK · catàleg del fabricant',url:'https://bmimpex.com/gallery/VPK%20book_eng.pdf'}
    ],
    options:[C('tigr-v1','GAZ Tigr-M · candidat 3','Vidres transparents amb obertures reals, quatre seients, volant i tauler; editable')]},
- {id:'tanc',name:'Tanc · T-90M',kind:'terra',
-   note:'Candidat T-90M propi, low-poly i completament editable amb torreta angular, canó, sis rodes per costat i blindatge lateral. Les dues referències Sketchfab continuen disponibles. Encara no s’ha modificat el tanc del joc.',
+ {id:'tanc',name:'Tanc · T-90M',kind:'terra',candidate:'t90m-v1',
+   note:'Només el nostre T-90M: model procedimental ampliat un 50 %, amb torreta, canó i erugues animables al laboratori. El tanc del joc es conserva sense canvis fins a validar l’escala i les col·lisions.',
    references:[
-     {label:'T-90M · galeria Wikimedia',url:'https://commons.wikimedia.org/wiki/Category:T-90M'},
-     {label:'T-90M · fotografia frontal/3/4',url:'https://media-en.almayadeen.net/archive/image/2023/7/2/31ff1d07-c12c-4312-9c3d-17137675a3ec.jpg'}
+     {label:'T-90M · galeria Wikimedia',url:'https://commons.wikimedia.org/wiki/Category:T-90M'}
    ],
-   options:[
-    C('t90m-v1','T-90M · candidat 2','Perfil baix revisat, cadenes buides, 12 rodes, torreta en falca i canó amb camisa tèrmica'),
-    S("c858e6ac0f3045d68f73681725351372","https://sketchfab.com/3d-models/t90m-proryv-low-poly-tank-c858e6ac0f3045d68f73681725351372","T90M PRORYV LOW-POLY TANK","PhoneModeler3D",1412,"CC BY 4.0","Molt lleuger · 1.412 triangles · candidat low poly per al joc."),
-    S("7d3a7cf685334f3da3005c559e2b1952","https://sketchfab.com/3d-models/t-90m-arena-m-stylised-7d3a7cf685334f3da3005c559e2b1952","T-90M Arena-M (Stylised)","Inmate",27718,"CC BY 4.0","Estilitzat · 27.718 triangles · més detall i protecció Arena-M.")]},
+   options:[]},
 
  {id:'llanxa',name:'Llanxa ràpida',kind:'mar',options:[
    P('transport-collection-hd','Open sport runabout'),

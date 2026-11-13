@@ -1,4 +1,4 @@
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261113-tigr-interior-3';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261113-t90m-animation-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs';
@@ -7,13 +7,14 @@ import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs';
 import {createVehicleAnnotationEditor} from './vehicle-annotation-editor.mjs?rev=live-editor-20261112-1';
 import {createBtr823BPreview} from './btr82-3b-preview.mjs?rev=btr82-3b-full-nose-restored-v9';
-import {createReferenceVehicle} from './vehicle-reference-candidates.mjs?rev=tigr-interior-3';
+import {createReferenceVehicle} from './vehicle-reference-candidates.mjs?rev=t90m-animated-150-1';
+import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-animated-150-1';
 import {prepareHumveeD31Runtime} from './humvee-d31-runtime.mjs';
 
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=lab-catalog-tigr-interior-3';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=lab-catalog-t90m-solo-animation-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -337,10 +338,14 @@ async function choose(config){
  const marine=config.kind==='mar';
  grid.classList.remove('featured');
  const btrStudy=config.id==='tanqueta';
- grid.classList.toggle('btr-study',btrStudy);
- document.querySelector('#fitScale').closest('label').hidden=btrStudy;
+ const t90Study=config.id==='tanc';
+ const soloStudy=btrStudy||t90Study;
+ grid.classList.toggle('btr-study',soloStudy);
+ document.querySelector('#fitScale').closest('label').hidden=soloStudy;
+ document.querySelector('#t90Motion').hidden=!t90Study;
+ labTankKeys.clear();
  for(const slot of slots){
-   slot.outer.hidden=slots.indexOf(slot)>config.options.length;
+   slot.outer.hidden=slots.indexOf(slot)>(soloStudy?0:config.options.length);
    dropPrevious(slot);
    slot.kind=config.kind;
    slot.ground.material.color.setHex(marine?0x285f65:config.kind==='aire'?0x6a7b67:0x69735e);
@@ -354,18 +359,25 @@ async function choose(config){
    slot.source.hidden=true;
  }
  try{
-   const model=btrStudy?previewFactory():await createCurrentVehicle(config.id);
+   const model=btrStudy?previewFactory():t90Study?createReferenceVehicle(THREE,config.candidate):await createCurrentVehicle(config.id);
    // Canviar de pestanya durant la preparació asíncrona del Humvee no ha de
    // reintroduir el model anterior damunt el vehicle acabat de seleccionar.
    if(token!==generation)return;
-   setModel(slots[0],model,true,[],btrStudy);
+   setModel(slots[0],model,true,[],soloStudy);
    originalDims=dimsOf(slots[0].model);
    slots[0].status.textContent=metrics(slots[0].model);
    slots[0].person.position.x=originalDims.x*.62+1.0;
    slots[0].sub.textContent=btrStudy?
      'Casc i torreta 3B, defenses i visors · SIpriv · CC BY 4.0':
+     t90Study?'Model Three.js propi · 150 % · torreta, canó i erugues animables':
      config.id==='cotxe'?'Humvee D3.1 · model real del joc':
      'Fàbrica original · Three.js r186';
+   if(t90Study){
+     slots[0].bold.textContent='T-90M · model propi únic · 150 %';
+     slots[0].source.href=config.references?.[0]?.url||'https://commons.wikimedia.org/wiki/Category:T-90M';
+     slots[0].source.hidden=false;
+     slots[0].status.textContent+=' · 12 rodes · prova de comandaments';
+   }
    if(btrStudy){
      slots[0].bold.textContent='BTR-82 · model 3B revisat';
      slots[0].source.href='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
@@ -385,7 +397,7 @@ async function choose(config){
  zoom=1;
  if(resumedView?.type===config.id){({yaw,elev,zoom,lookY,panScreenX}=resumedView);resumedView=null}
  updateCamera();
- if(!btrStudy){
+ if(!soloStudy){
    const used=new Set();
    await Promise.all(config.options.map((entry,i)=>loadExternal(slots[i+1],entry,used,token)));
  }
@@ -422,8 +434,11 @@ function resizeRenderer(){
 function draw(now){
  requestAnimationFrame(draw);
  const dt=Math.min(.07,(now-prev)/1000);prev=now;
- if(document.querySelector('#animate').checked)
+ if(document.querySelector('#animate').checked){
    for(const slot of slots)slot.mixer?.update(dt);
+   if(currentType.id==='tanc'&&slots[0].model)
+     stepT90MPreview(slots[0].model,t90MotionInput(),dt);
+ }
 
  // Les coordenades setViewport i setScissor de WebGLRenderer ja es
  // multipliquen internament pel pixelRatio. Multiplicar-les aquí deixava
@@ -527,11 +542,53 @@ slots.forEach(slot=>{
   updateCamera();
  },{passive:false});
 });
+// Controls tàctils/ratolí i W/S/A/D: les dues erugues tenen velocitats
+// diferents quan el tanc avança o gira. J/L apunten i I/K eleven el canó.
+const labTankKeys=new Set();
+function t90MotionInput(){
+ const value=id=>Number(document.getElementById(id).value);
+ const has=key=>labTankKeys.has(key);
+ return {
+  throttle:has('w')===has('s')?value('t90Throttle'):has('w')?1:-1,
+  steer:has('a')===has('d')?value('t90Steer'):has('d')?1:-1,
+  turretYaw:value('t90Yaw'),elevation:value('t90Elevation')
+ };
+}
+function t90MotionLabels(){
+ for(const id of ['t90Throttle','t90Steer','t90Yaw','t90Elevation']){
+  const input=document.getElementById(id),value=document.getElementById(id+'Value');
+  value.textContent=input.value+(id==='t90Yaw'||id==='t90Elevation'?'°':'');
+ }
+}
+for(const input of document.querySelectorAll('#t90Motion input[type=range]'))
+ input.addEventListener('input',t90MotionLabels);
+document.getElementById('t90ResetMotion').addEventListener('click',()=>{
+ labTankKeys.clear();
+ for(const id of ['t90Throttle','t90Steer','t90Yaw','t90Elevation'])
+  document.getElementById(id).value=0;
+ t90MotionLabels();
+});
+document.addEventListener('keydown',e=>{
+ if(currentType.id!=='tanc')return;
+ const tag=e.target?.tagName?.toLowerCase();
+ if(['input','textarea','select','button'].includes(tag)||e.target?.isContentEditable)return;
+ const key=e.key.toLowerCase();
+ if(['w','s','a','d'].includes(key)){labTankKeys.add(key);e.preventDefault();return}
+ const adjustment={j:['t90Yaw',-3],l:['t90Yaw',3],i:['t90Elevation',2],k:['t90Elevation',-2]}[key];
+ if(adjustment){
+  const input=document.getElementById(adjustment[0]);
+  input.value=Number(input.value)+adjustment[1];
+  t90MotionLabels();e.preventDefault();
+ }
+});
+document.addEventListener('keyup',e=>labTankKeys.delete(e.key.toLowerCase()));
+window.addEventListener('blur',()=>labTankKeys.clear());
+t90MotionLabels();
 const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.textContent=config.name;
- const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3B revisat · únic model':config.options.length+' alternatives');
+ const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3B revisat · únic model':config.id==='tanc'?'Model propi · únic':config.options.length+' alternatives');
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }

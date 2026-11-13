@@ -38,20 +38,22 @@ assert.deepEqual(manifest.models.cotxe,[]);
 assert.deepEqual(manifest.models.tanc,[]);
 assert.deepEqual(manifest.models.tanqueta,[]);
 assert(manifest.limits.maxFileBytes>=32*1024*1024);
-assert.equal(manifest.externalModels.tanc.length,2);
+assert.equal(manifest.externalModels.tanc,undefined,'No poden quedar candidats Sketchfab per al T-90M');
 assert.equal(manifest.externalModels.tanqueta.length,1);
-assert.deepEqual(manifest.externalModels.tanc.map(m=>m.modelId),['c858e6ac0f3045d68f73681725351372','7d3a7cf685334f3da3005c559e2b1952']);
 assert(!/Abrams|M1A1/.test(catalog));
-assert(catalog.includes("C('tigr-v1'")&&catalog.includes("C('t90m-v1'"));
+assert(catalog.includes("C('tigr-v1'")&&catalog.includes("candidate:'t90m-v1'"));
+assert(!catalog.includes('c858e6ac0f3045d68f73681725351372'));
+assert(!catalog.includes('7d3a7cf685334f3da3005c559e2b1952'));
+assert(studio.includes('t90Study=config.id===\'tanc\''));
 assert(catalog.includes('https://commons.wikimedia.org/wiki/Category:T-90M'));
 assert(catalog.includes('https://commons.wikimedia.org/wiki/Category:Tigr_vehicle'));
 assert(studio.includes("createReferenceVehicle(THREE,entry.variant)")&&studio.includes("entry.provider==='procedural'"));
+assert(studio.includes('stepT90MPreview(slots[0].model'));
+assert(html.includes('id="t90Motion"')&&html.includes('id="t90Throttle"'));
+assert(catalog.includes("options:[]"));
 assert(studio.includes("prepareHumveeD31Runtime(THREE)"),'El visor ha de mostrar el Humvee D3.1 real del joc');
 assert(html.includes('id="referenceLinks"')&&html.includes('src/vehicles-externs-proves.mjs?rev='));
-assert.equal(manifest.externalModels.tanc[0].slot,2);
-assert.equal(manifest.externalModels.tanc[1].slot,3);
-for(const m of manifest.externalModels.tanc){assert(catalog.includes(m.modelId));assert(m.triangles<30000);}
-for(const id of ['tanc','tanqueta'])for(const candidate of manifest.externalModels[id]){
+for(const id of ['tanqueta'])for(const candidate of manifest.externalModels[id]){
  assert.equal(candidate.provider,'sketchfab');
  assert.match(candidate.modelId,/^[0-9a-f]{32}$/);
  assert(candidate.license.startsWith('CC BY'));
@@ -64,7 +66,7 @@ const version=btr.match(/export const BTR82_VERSION='([^']+)'/)?.[1];
 assert(version&&version.startsWith('btr82-'),'Falta la revisió del BTR-82');
 assert(studio.includes('btr82-3b-preview.mjs?rev='),'Falta el model de proves 3B vigent');
 assert(html.includes('src/vehicles-externs-proves.mjs?rev='));
-assert(studio.includes("vehicle-candidate-catalog.mjs?rev=lab-catalog-tigr-interior-3"),
+assert(studio.includes("vehicle-candidate-catalog.mjs?rev=lab-catalog-t90m-solo-animation-1"),
  'Força la càrrega del catàleg nou sense reutilitzar una còpia antiga');
 assert(html.includes(".catch(error=>")&&html.includes("No s’ha pogut carregar el laboratori"),
  'Una fallada en carregar un mòdul no pot deixar el visor en blanc');
@@ -73,7 +75,9 @@ assert(btr.includes('withTruckWheels')&&btr.includes('replaceBarrelWithCylinders
 assert.equal((btr.match(/\{slot:[01],level:[03],title:/g)||[]).length,2,'Calen dos visors BTR-82');
 assert(btr.includes('makeBtr82HullV3(baseline)')&&!btr.includes('makeBtr82HullV2('));
 assert(studio.includes("const btrStudy=config.id==='tanqueta'"));
-assert(studio.includes('slot.outer.hidden=slots.indexOf(slot)>config.options.length'));
+assert(studio.includes('slot.outer.hidden=slots.indexOf(slot)>(soloStudy?0:config.options.length)'));
+assert(studio.includes("const soloStudy=btrStudy||t90Study;"),'El T-90M ha de tenir un únic visor');
+assert(studio.includes("createReferenceVehicle(THREE,config.candidate)"));
 assert(studio.includes('previewFactory=createBtr823BPreview')&&studio.includes('previewFactory()'));
 assert(!studio.includes('studio.load(token)'),'Els antics GLB no han de carregar-se en triar la tanqueta');
 assert(html.includes('#grid.btr-study{grid-template-columns:minmax(0,1fr)'));
@@ -108,7 +112,7 @@ for(const file of [
  'src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs',
  'src/btr82-lod-studio.mjs','src/btr82-hull-v3.mjs',
  'src/vehicle-annotation-editor.mjs','src/vehicle-hole-brush.mjs',
- 'src/vehicle-live-editor.mjs','src/vehicle-live-geometry.mjs','src/vehicle-reference-candidates.mjs','server/model-lab.mjs'
+ 'src/vehicle-live-editor.mjs','src/vehicle-live-geometry.mjs','src/vehicle-reference-candidates.mjs','src/t90m-preview-animation.mjs','server/model-lab.mjs'
 ])execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
 execFileSync(process.execPath,[path.join(root,'tests/btr82-hull-v3-geometry.cjs')],{stdio:'pipe'});
 execFileSync(process.execPath,[path.join(root,'tests/reference-vehicle-candidates.mjs')],{stdio:'pipe'});
