@@ -51,7 +51,7 @@ export const vehicleModels=Object.freeze({
         .applyQuaternion(muzzle.getWorldQuaternion(new THREE.Quaternion())).normalize()
     };
   },
-  createFactory(THREE,{box,material,shadows,resources=null,civilianCar=null,humvee:humveeFactory=null,truck:truckFactory=null,batching=null}){
+  createFactory(THREE,{box,material,shadows,resources=null,civilianCar=null,gazTigr:gazTigrFactory=null,truck:truckFactory=null,batching=null}){
     const VS=this.scales,templates=new Map(),distant=createDistantVehicleFactory(THREE,resources);
     const rod=(g,a,b,r,c,profile='metal')=>{const v=new THREE.Vector3(...a),w=new THREE.Vector3(...b),delta=w.clone().sub(v),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),8),material(c,profile));m.position.copy(v.add(w).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());g.add(m);return m};
     const round=(g,r,h,c,x,y,z,axis='y',profile='metal')=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,12),material(c,profile));m.position.set(x,y,z);if(axis==='x')m.rotation.z=Math.PI/2;if(axis==='z')m.rotation.x=Math.PI/2;g.add(m);return m};
@@ -65,7 +65,7 @@ export const vehicleModels=Object.freeze({
       }
       const p=new THREE.Group();p.position.set(px,py,pz);parent.add(p);const tire=new THREE.Mesh(new THREE.TorusGeometry(r*.8,r*.2,6,12),material(0x20252a,'rubber'));tire.rotation.y=Math.PI/2;tire.scale.z=width/(r*.4);p.add(tire);round(p,r*.45,width*.8,0x8b9699,0,0,0,'x','metal');if(spokes)for(let a=0;a<Math.PI;a+=Math.PI/3)rod(p,[0,Math.sin(a)*r*.75,Math.cos(a)*r*.75],[0,-Math.sin(a)*r*.75,-Math.cos(a)*r*.75],.035,0xb6bdc1,'metal');p.userData.radius=r;(owner.userData.wheels||(owner.userData.wheels=[])).push(p);return p};
     return function createVehicle(t,appearance={}){
-      const cacheKey=t==='camio'?'camio':t==='cotxe_civil'?'civil:'+String(appearance.color??0x4b9fd1):null;
+      const cacheKey=t==='cotxe'?'gaz-tigr':t==='camio'?'camio':t==='cotxe_civil'?'civil:'+String(appearance.color??0x4b9fd1):null;
       if(resources&&cacheKey&&templates.has(cacheKey))return resources.cloneModel(templates.get(cacheKey));
       const g=new THREE.Group();g.rotation.order='YXZ';const metal=0x3e4849,glass=0x76acba,rubber=0x252d31;
       if(t==='cotxe_civil'){
@@ -131,29 +131,16 @@ export const vehicleModels=Object.freeze({
         }
         g.userData.staticBatches=count;
       }
-      if(t==='cotxe'&&humveeFactory?.create){
-        // Model definitiu Humvee D3.1, aprovat amb les quatre portes planes.
-        // La seva escala interna = 1.75 / VS.cotxe; la fàbrica general
-        // aplica VS.cotxe una sola vegada al final.
-        const humvee=humveeFactory.create();
-        resources?.retainModel(humvee);
-        g.add(humvee);
-        g.userData.wheels=humvee.userData.wheels;
-        g.userData.steeringPivots=humvee.userData.steeringPivots;
-        g.userData.humveeModel='D3.1';
-        g.userData.humveeScale=humveeFactory.scale;
-      }
-      if(t==='cotxe'&&!humveeFactory){const col=0xa35b38,trim=0x302f2d;box(g,3,1,5.6,col,0,1.15,0,'paint');box(g,2.92,.42,2.1,col,0,1.82,-1.72,'paint');box(g,2.62,.82,2.72,glass,0,2.04,.48,'glass');box(g,2.88,.18,2.95,col,0,2.52,.48,'paint');box(g,2.45,.1,1.1,0x7d432f,0,2.65,.5,'paint');for(const x of[-1.34,1.34]){box(g,.13,.28,2.9,col,x,1.7,.5,'paint');box(g,.15,.82,.14,col,x,2.04,-.82,'paint');box(g,.15,.82,.14,col,x,2.04,1.82,'paint');box(g,.18,.82,.15,col,x,2.04,.5,'paint');for(const z of[-1.85,1.85])wheel(g,x*1.16,.72,z,.72,.45,false,z<0);box(g,.35,.18,.4,metal,x*1.17,2.08,-.85,'metal')}for(const z of[-2.95,2.95])box(g,3.25,.3,.3,metal,0,.94,z,'metal');box(g,1.6,.45,.08,rubber,0,1.4,-2.84,'rubber');box(g,2.5,.14,.12,trim,0,1.12,-2.88,'rubber');for(const x of[-1.08,1.08]){box(g,.5,.34,.1,0xffedb2,x,1.43,-2.85,'paint');box(g,.38,.24,.1,0x9c2825,x,1.38,2.84,'paint')}for(const x of[-.72,.72])box(g,.5,.1,.16,0xd8d7c9,x,1.03,-2.9,'metal');const spare=wheel(g,0,1.5,3,.65,.45);spare.rotation.y=Math.PI/2;(g.userData.wheels||[]).pop()}
-      if(t==='cotxe'&&!humveeFactory){
-        // Reserva per si el GLB encara no s'ha pogut carregar.
-        // El conductor veu el volant per darrere del parabrisa.
-        const steeringWheel=new THREE.Mesh(
-          new THREE.TorusGeometry(.27,.045,8,16),
-          material(0x303735,'rubber'));
-        steeringWheel.position.set(-.72,1.91,-.67);
-        steeringWheel.rotation.x=-.35;g.add(steeringWheel);
-        box(g,.86,.14,.85,0x424640,-.72,1.15,.42,'rubber');
-        box(g,.82,.72,.13,0x424640,-.72,1.59,.85,'rubber');
+      if(t==='cotxe'){
+        // El GAZ Tigr-M natiu substitueix del tot el Humvee, també en COOP.
+        if(typeof gazTigrFactory?.create!=='function')throw new Error('Falta el model GAZ Tigr-M');
+        const gaz=gazTigrFactory.create();
+        resources?.retainModel(gaz);
+        g.add(gaz);
+        g.userData.wheels=gaz.userData.wheels;
+        g.userData.steeringPivots=gaz.userData.steeringPivots;
+        g.userData.militaryCarModel='GAZ Tigr-M';
+        g.userData.staticBatches=gazTigrFactory.staticBatches;
       }
       if(t==='camio'){
         // A4.3: el mateix low-poly de la preview, adaptat a la
