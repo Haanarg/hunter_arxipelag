@@ -1,3 +1,12 @@
+**2026-11-13 · Explosions a la base de torres: correcció dels dos defensors**
+- [x] Detectat el cas: els soldats vius rebien una empenta fora del forjat però conservaven la cota elevada, flotant o dins els parapets.
+- [x] Desplaçament restringit a l'interior de les quatre baranes amb el radi del soldat; reindexació i reparació de coordenades ja desplaçades.
+- [x] Suport vertical fixat a la plataforma i impuls limitat pel sostre quan la torre encara és dempeus.
+- [x] Prova de regressió amb dos soldats, cinc direccions d'explosió i recuperació de coordenades, sense alterar la infanteria ordinària.
+- [x] Runtime 0.6.212 reconstruït manualment amb 70 scripts; no s'han activat GitHub Actions.
+- [ ] Provar visualment en una missió les explosions, les postures i els trets després de l'ona expansiva.
+- [ ] Confirmar desplegament a Cloudflare: el commit a GitHub no és una prova de publicació.
+
 **2026-11-13 · Petició 96da6cd8 · Ajust C1A del laboratori:**
 - [x] Reducció addicional de 6 cm per costat (42 cm menys en total respecte del sostre original).
 - [x] Recol·locats els vidres laterals al pla dels muntants; ampliats fins sota el sostre i fins als llindars de les finestres.

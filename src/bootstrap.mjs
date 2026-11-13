@@ -42,7 +42,7 @@ import * as fenceVisual from './fence-visual-core.mjs';
 window.HUNTER_FENCE_VISUAL=fenceVisual;
 import * as vegetationLayout from './vegetation-layout.mjs';
 window.HUNTER_VEGETATION_LAYOUT=vegetationLayout;
-import * as towerModel from './tower-model.mjs?v=0.6.212';
+import * as towerModel from './tower-model.mjs?v=0.6.212&towerBlast=1';
 window.HUNTER_TOWER_MODEL=towerModel;
 import * as weapons from './weapon-catalog.mjs?v=0.6.212&rifleCone80=1';
 window.HUNTER_SHARED_WEAPONS=weapons;
@@ -103,7 +103,7 @@ window.HUNTER_RUNTIME_LAYOUTS=runtimeLayouts;window.HUNTER_CHOOSE_COMPOUND=choos
 import {createCompoundStructures} from './compound-structures.mjs';
 window.HUNTER_COMPOUND_STRUCTURES=createCompoundStructures;
 import {runtimeScripts} from './runtime-scripts.mjs';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.212&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.212&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1';
 import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
 import {GAME_VERSION} from './version.mjs?v=0.6.212';
@@ -190,6 +190,7 @@ try {
     script.async=false;
     const url=new URL('../'+path,import.meta.url);
     if(versioned)url.searchParams.set('v',GAME_VERSION);
+    if(versioned&&path==='src/enemy-ai.js')url.searchParams.set('towerBlast','1');
     script.src=url.href;
     const cleanup=()=>window.removeEventListener('error',onError);
     const onError=event=>{

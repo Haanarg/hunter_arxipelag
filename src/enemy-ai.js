@@ -355,9 +355,24 @@ function enemyMotorcycleRifleShot(v,target,targetY){
 // Les ones explosives no poden impulsar una unitat a través de parets.
 // Especialment, el general no pot sortir del seu despatx subterrani.
 function moveBlastedEnemy(u,dt){
-  const imp=u.blastImpulse,dx=imp.vx*dt,dz=imp.vz*dt,
-        room=u.t==='general'?u.basement?.basement?.generalRoom:null;
+  const imp=u.blastImpulse,
+        room=u.t==='general'?u.basement?.basement?.generalRoom:null,
+        deck=u.towerGuard&&!u.towerHost?.destroyed?u.towerHost:null;
+  const ox=u.x,oz=u.z;
+  // Si una partida guardada conté un defensor ja expulsat de la
+  // plataforma, recuperam una posició vàlida abans de simular l'ona.
+  if(deck){
+    const safe=window.HUNTER_TOWER_MODEL.towerGuardDeckPoint(deck,u.x,u.z);
+    u.x=safe.x;u.z=safe.z;
+    if(safe.limitedX)imp.vx=0;
+    if(safe.limitedZ)imp.vz=0;
+  }
+  const dx=imp.vx*dt,dz=imp.vz*dt;
   const clear=(x,z)=>{
+    // Els parapets són sòlids i la cota del defensor continua elevada:
+    // comprovar només les parets de terra el deixava sortir al buit.
+    if(deck&&!window.HUNTER_TOWER_MODEL.towerGuardWithinDeck(deck,x,z))
+      return false;
     if(room){
       const p=buildingLocalPoint(u.basement,x,z),margin=.35;
       if(p.x<room.xMin+margin||p.x>room.xMax-margin||
@@ -365,7 +380,7 @@ function moveBlastedEnemy(u,dt){
     }
     return enemySolidAt(u,x,z,u.hd);
   };
-  const ox=u.x,oz=u.z,steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.45));
+  const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.45));
   for(let i=0;i<steps;i++){
     const sx=dx/steps,sz=dz/steps;
     if(clear(u.x+sx,u.z+sz)){u.x+=sx;u.z+=sz;continue}
@@ -609,7 +624,16 @@ function towerGuardTick(u,dt){
  if(!tower||tower.destroyed||tower.hp<=0){
    hurtE(u,Math.max(1,u.hp+1));return;
  }
- const rules=window.HUNTER_TOWER_MODEL,q=cv||P,
+ const rules=window.HUNTER_TOWER_MODEL,
+   safe=rules.towerGuardDeckPoint(tower,u.x,u.z);
+ if(safe.limitedX||safe.limitedZ){
+   const ox=u.x,oz=u.z;
+   u.x=safe.x;u.z=safe.z;enemyReindex(u,ox,oz);
+ }
+ // La plataforma i el sostre són altures distintes. Després d'un
+ // ragdoll viu, no reinterpretem el sostre com a terra del soldat.
+ u.gy=(tower.gy??tower.o?.position.y??0)+rules.TOWER_GUARD_FLOOR_Y;
+ const q=cv||P,
    targetY=cv?cv.o.position.y:P.y,
    dx=q.x-u.x,dz=q.z-u.z,d=Math.hypot(dx,dz),
    // El cap i la boca del canó queden per damunt dels quatre parapets.
@@ -806,6 +830,13 @@ function updEn(frameDt,preserveFrameBudget=false,underPressure=false){
       moveBlastedEnemy(u,dt);
       imp.vy-=19*dt;
       u.blastHeight=Math.max(0,(u.blastHeight||0)+imp.vy*dt);
+      if(u.towerGuard&&!u.towerHost?.destroyed){
+        const limit=window.HUNTER_TOWER_MODEL.TOWER_GUARD_BLAST_CLEARANCE;
+        if(u.blastHeight>limit){
+          u.blastHeight=limit;
+          imp.vy=Math.min(0,imp.vy);
+        }
+      }
       // El forjat del soterrani és un límit físic, també durant el ragdoll.
       if(u.basement?.basement&&u.blastHeight>5.4){u.blastHeight=5.4;imp.vy=Math.min(0,imp.vy)}
       if(u.blastHeight===0)imp.vy=0;
@@ -813,7 +844,9 @@ function updEn(frameDt,preserveFrameBudget=false,underPressure=false){
       const landed=u.blastHeight===0;
       imp.vx*=Math.exp(-(landed?7:1.7)*dt);
       imp.vz*=Math.exp(-(landed?7:1.7)*dt);
-      u.o.position.set(u.x,enemyGroundAt(u,u.x,u.z)+u.blastHeight,u.z);
+      u.o.position.set(u.x,
+        (u.towerGuard&&!u.towerHost?.destroyed?u.gy:enemyGroundAt(u,u.x,u.z))+
+        u.blastHeight,u.z);
       const elapsed=(u.blastTotal||2.5)-u.blastT;
       u.o.rotation.z=Math.sin(elapsed*5)*.75*Math.min(1,u.blastHeight+.2);
       if(landed&&u.blastT<.25)u.blastT=0;

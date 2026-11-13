@@ -18,6 +18,7 @@ export function towerLegRamDamage(speed,mass=1){
 export const TOWER_SIDE_PARAPET_HEIGHT=1.75;
 export const TOWER_SIDE_PARAPET_Y=9.305; // base local: 8.43 .. 10.18
 export const TOWER_SIDE_PARAPET_X=3.02;
+export const TOWER_END_PARAPET_Z=2.5;
 export const TOWER_SIDE_PARAPET_LENGTH=5.1;
 export function towerParapetVolumes(){
   const sideWalls=[-1,1].map(side=>({
@@ -25,7 +26,7 @@ export function towerParapetVolumes(){
     width:.18,height:TOWER_SIDE_PARAPET_HEIGHT,depth:TOWER_SIDE_PARAPET_LENGTH
   }));
   const endWalls=[-1,1].map(side=>({
-    x:0,y:TOWER_SIDE_PARAPET_Y,z:side*2.5,
+    x:0,y:TOWER_SIDE_PARAPET_Y,z:side*TOWER_END_PARAPET_Z,
     width:6.02,height:TOWER_SIDE_PARAPET_HEIGHT,depth:.18
   }));
   return [...sideWalls,...endWalls];
@@ -44,6 +45,28 @@ export function towerParapetBlocksShot(w,from){
     from.y>base+TOWER_GUARD_FLOOR_Y-.25);
 }
 
+// Límit físic de la plataforma: fins i tot amb l'empenta d'una explosió,
+// un defensor viu no pot sortir per sobre dels parapets ni quedar encastat
+// en una paret. Respectam el radi de col·lisió que usa enemy-navigation.
+// El sostre NO és un terra addicional per als soldats de la plataforma.
+export const TOWER_GUARD_BODY_RADIUS=1.05;
+// Sostre a 12,16 m, plataforma a 8,28 m: el soldat (2,78 m fins al cap)
+// pot rebre una empenta vertical curta sense travessar la coberta.
+export const TOWER_GUARD_BLAST_CLEARANCE=1.0;
+export function towerGuardDeckPoint(tower,x,z,radius=TOWER_GUARD_BODY_RADIUS){
+  if(!tower||![tower.x,tower.z,x,z,radius].every(Number.isFinite))
+    return {x,z,limitedX:false,limitedZ:false};
+  const safeRadius=Math.max(0,radius),edge=.07,
+    halfX=Math.max(.1,TOWER_SIDE_PARAPET_X-.09-safeRadius-edge),
+    halfZ=Math.max(.1,TOWER_END_PARAPET_Z-.09-safeRadius-edge),
+    nx=Math.max(tower.x-halfX,Math.min(tower.x+halfX,x)),
+    nz=Math.max(tower.z-halfZ,Math.min(tower.z+halfZ,z));
+  return {x:nx,z:nz,limitedX:nx!==x,limitedZ:nz!==z};
+}
+export function towerGuardWithinDeck(tower,x,z,radius=TOWER_GUARD_BODY_RADIUS){
+  const p=towerGuardDeckPoint(tower,x,z,radius);
+  return Number.isFinite(p.x)&&Number.isFinite(p.z)&&!p.limitedX&&!p.limitedZ;
+}
 export function towerGuardPosition(tower,seat){
   return {x:tower.x+(seat===0?-TOWER_GUARD_SPACING:TOWER_GUARD_SPACING),
     y:(tower.y??tower.gy??0)+TOWER_GUARD_FLOOR_Y,z:tower.z+.25};
