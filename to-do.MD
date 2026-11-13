@@ -1,3 +1,10 @@
+**2026-11-13 · Kamov Ka-60 i Ka-52 · candidats natius del laboratori:**
+- [x] Models Three.js originals basats en fotografies noves de perfil i tres quarts, amb fonts enllaçades a les dues pestanyes. Proporcions aproximades de les referències; no són models CAD.
+- [x] Ka-60: rotor principal de quatre pales, conducte de cua realment obert i rotor d’onze pales, fuselatge i botaló afuats, dos seients de pilot i sis de transport, vidres transparents i tren de tres rodes.
+- [x] Ka-52: cabina amb pilots de costat, nas aplanat, motors laterals, dues corones de tres pales contrarotatives, ales curtes amb contenidors, sensor frontal, canó lateral dret i tren amb roda davantera doble.
+- [x] Animació amb el control existent del visor; geometria editable i serialització JSON comprovades. Inspecció d’imatges renderitzades de les malles; 5.440 / 5.892 triangles. Revisió `live-editor-20261113-kamov-1`.
+- [x] Comparació amb Huey/Apache originals; cap canvi a les fàbriques del joc ni als models aprovats d’altres vehicles.
+- [ ] Valoració visual al visor WebGL i aprovació dels Kamov abans de substituir els helicòpters del joc.
 **2026-11-13 · Regressió del GAZ (configuració del test):**
 - [x] La prova nova dels perfils ha passat al model de laboratori, joc i exportació de l'editor.
 - [x] La prova antiga de conducció instanciava la fàbrica sense `playerBatching` (obligatori); ara utilitza el mòdul real d'optimització, com el joc.

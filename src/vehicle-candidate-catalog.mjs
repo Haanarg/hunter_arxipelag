@@ -15,13 +15,20 @@ export const CATALOG=[
      {label:'GAZ Tigr · galeria Wikimedia',url:'https://commons.wikimedia.org/wiki/Category:Tigr_vehicle'},
      {label:'Tigr-M AMN-233114 · fotografies',url:'https://commons.wikimedia.org/wiki/Category:AMN_233114'}
    ],options:[]},
- {id:'heli',name:'Helicòpter · Huey UH-1',kind:'aire',
-   note:'Huey definitiu del joc (Duane’s Mind), reconstruït amb geometria nativa de Three.js: cabina amb dos seients, portes obertes i rotors independents. Model editable al laboratori; sense GLB.',
-   references:[{label:'Bell Huey · model original CC BY 4.0',url:'https://sketchfab.com/3d-models/bell-huey-helicopter-755d8518a06e41b19752c1b54c0da588'}],
-   options:[]},
- {id:'heli_combat',name:'Helicòpter de combat · Apache AH-64',kind:'aire',
-   note:'Apache definitiu d’Araon, geometria Three.js nativa amb tren de tres rodes circulars, malla sàlvia i rotors independents. Model editable al laboratori; no carrega cap GLB.',
-   options:[]},
+ {id:'heli',name:'Helicòpter · Kamov Ka-60',kind:'aire',
+   note:'Ka-60 candidat Three.js propi: fuselatge allargat, rotor de quatre pales i fenestron d’onze pales, cabina i tren de rodes. Huey actual al costat per comparar.',
+   references:[
+    {label:'Ka-60 · fotografia lateral (Leonid Faerberg)',url:'https://commons.wikimedia.org/wiki/File:Russian_Air_Force_Ka-60.jpg'},
+    {label:'Ka-60 · altres angles',url:'https://commons.wikimedia.org/wiki/Category:Kamov_Ka-60'},
+    {label:'Ka-60 · Vertical Flight Society',url:'https://vertipedia.vtol.org/aircraft/getAircraft/aircraftID/257'}
+   ],options:[C('ka60','Kamov Ka-60 · candidat 1','Quatre pales · fenestron animat · cabina amb dos pilots i seients de transport')]},
+ {id:'heli_combat',name:'Helicòpter de combat · Kamov Ka-52',kind:'aire',
+   note:'Ka-52 candidat Three.js propi: cabina ampla amb dos pilots de costat, nas aplanat, rotors coaxials contrarotatius i ales curtes. Apache actual al costat per comparar.',
+   references:[
+    {label:'Ka-52 · fotografia frontal / tres quarts',url:'https://commons.wikimedia.org/wiki/File:Kamov_Ka-52_at_the_MAKS-2013_(01).jpg'},
+    {label:'Ka-52 · fotografia lateral',url:'https://commons.wikimedia.org/wiki/File:Ka-52_at_MAKS-2009.jpg'},
+    {label:'Ka-52 · dimensions del fabricant / exportador',url:'https://roe.ru/pdfs/pdf_4679.pdf'}
+   ],options:[C('ka52','Kamov Ka-52 · candidat 1','Dos rotors de tres pales · pilots de costat · sensor frontal i canó lateral')]},
  {id:'tanc',name:'Tanc · T-90M',kind:'terra',candidate:'t90m-v1',
    note:'Només el nostre T-90M: model procedimental ampliat un 50 %, amb torreta, canó i erugues animables al laboratori. El mateix model s’ha integrat al joc, amb la caixa de col·lisions ajustada al casc.',
    references:[

@@ -1,4 +1,5 @@
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261113-gaz-door-contours-2';
+import {createKamovCandidate,stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261113-1';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261113-kamov-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs';
@@ -16,7 +17,7 @@ import {prepareGazTigrRuntime} from './gaz-tigr-runtime.mjs';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261113-gaz-door-contours-2';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261113-kamov-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -249,7 +250,7 @@ function setModel(slot,obj,original,animations=[],keepNativeOrientation=false){
  if(!original&&!keepNativeOrientation)obj.rotation.y+=Math.PI;
  const wrap=new THREE.Group();wrap.add(obj);
  normalize(wrap,original);
- wrap.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
+ wrap.traverse(o=>{if(o.isMesh){o.castShadow=!o.material?.transparent;o.receiveShadow=true}});
  slot.scene.add(wrap);slot.model=wrap;
  if(animations?.length){slot.mixer=new THREE.AnimationMixer(obj);for(const clip of animations)slot.mixer.clipAction(clip).play()}
  queueMicrotask(()=>{if(slot.model===wrap)liveEditor.ready(slot,{restore:!suppressDraftRestore})});
@@ -259,7 +260,7 @@ function setModel(slot,obj,original,animations=[],keepNativeOrientation=false){
 async function loadExternal(slot,entry,used,token){
  if(entry.provider==='procedural'){
    if(token!==generation)return;
-   const model=createReferenceVehicle(THREE,entry.variant);
+   const model=['ka60','ka52'].includes(entry.variant)?createKamovCandidate(THREE,entry.variant):createReferenceVehicle(THREE,entry.variant);
    setModel(slot,model,false,[],true);
    slot.bold.textContent=entry.title;
    slot.sub.textContent='Model Three.js propi · editable per peces · sense GLB extern';
@@ -351,7 +352,7 @@ async function choose(config){
  grid.classList.remove('featured');
  const btrStudy=config.id==='tanqueta';
  const t90Study=config.id==='tanc';
- const soloStudy=btrStudy||t90Study||config.id==='cotxe'||config.id==='heli'||config.id==='heli_combat';
+ const soloStudy=btrStudy||t90Study||config.id==='cotxe';
  grid.classList.toggle('btr-study',soloStudy);
  document.querySelector('#fitScale').closest('label').hidden=soloStudy;
  document.querySelector('#t90Motion').hidden=!t90Study;
@@ -377,6 +378,8 @@ async function choose(config){
    // reintroduir el model anterior damunt el vehicle acabat de seleccionar.
    if(token!==generation)return;
    setModel(slots[0],model,true,[],soloStudy);
+   if(config.id==='heli')slots[0].bold.textContent='Actual · Huey UH-1';
+   if(config.id==='heli_combat')slots[0].bold.textContent='Actual · Apache AH-64';
    originalDims=dimsOf(slots[0].model);
    slots[0].status.textContent=metrics(slots[0].model);
    slots[0].person.position.x=originalDims.x*.62+1.0;
@@ -450,7 +453,7 @@ function draw(now){
  requestAnimationFrame(draw);
  const dt=Math.min(.07,(now-prev)/1000);prev=now;
  if(document.querySelector('#animate').checked){
-   for(const slot of slots)slot.mixer?.update(dt);
+   for(const slot of slots){slot.mixer?.update(dt);if(slot.model)stepKamovRotors(slot.model,dt);}
    if(currentType.id==='tanc'&&slots[0].model)
      stepT90MPreview(slots[0].model,t90MotionInput(dt),dt);
  }
