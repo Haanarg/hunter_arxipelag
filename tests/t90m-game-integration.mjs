@@ -45,7 +45,7 @@ assert(hullSize.z<=depth&&depth-hullSize.z<1.3,'Hitbox longitud ajustada al casc
 
 // El mateix fabricant s'utilitza per a jugador, enemics i instantànies COOP.
 const factory=vehicleModels.createFactory(THREE,{
- box(){throw new Error('El T-90M no ha d'utilitzar caixes del tanc antic')},
+ box(){throw new Error("El T-90M no ha d'utilitzar caixes del tanc antic")},
  material:(color)=>new THREE.MeshStandardMaterial({color}),
  shadows:false,batching:playerBatching
 });

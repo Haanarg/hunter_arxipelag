@@ -1,3 +1,8 @@
+**2026-11-13 · T-90M x2 · regressió de sintaxi:**
+- [x] La prova antiga de T-90M tenia una cadena JS amb apòstrof no escapat (`d'utilitzar`). Corregida amb cometes dobles.
+- [x] El workflow ja executa `node --check tests/t90m-game-integration.mjs` per detectar-ho abans de desplegar.
+- [ ] Tornar a passar les proves geomètriques i publicar a Cloudflare.
+
 **2026-11-13 · T-90M del joc a mida doble respecte de l'actual:**
 - [x] El model x1,5 del laboratori és intacte; la fàbrica del tanc del joc aplica escala exterior addicional x2 (efectiva x3 de l'original).
 - [x] Les hitboxes i els radis físics es multipliquen pel mateix `vehicleSpecs.scales.tanc=2`, també al Worker COOP i per als enemics.
