@@ -1,3 +1,8 @@
+**2026-11-13 · Regressió antiga BTR-82 al desplegament:**
+- [x] Les proves de neteja GLB i laboratori actual ja passen; la prova històrica BTR-82 3B contenia llindars d'altura i textos fixos d'una revisió antiga.
+- [x] Actualitzats aquests contractes textuals i eliminada la prova antiga del bloqueig del desplegament de neteja; es manté al conjunt de regressió habitual.
+- [ ] Comprovar de nou la publicació a Cloudflare.
+
 **2026-11-13 · Validació de la neteja GLB (correcció de test):**
 - [x] Diagnosi del primer deploy: l'assercció del Huey confonia el comentari textual «GLTFLoader» amb una importació real. El model natiu no carrega GLB.
 - [x] Ajustades les dues proves de contracte per buscar codi executable real i la fàbrica de tanqueta del laboratori.

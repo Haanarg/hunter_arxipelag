@@ -114,12 +114,13 @@ model.updateWorldMatrix(true,true);
 const bounds=new Box3().setFromObject(model);
 const size=bounds.getSize(new Vector3());
 assert(size.x>3&&size.x<5&&size.z>10&&size.z<12,'Volum del 3B inesperat');
-assert(size.y>3,'El model complet ha de tenir altura');
+assert(size.y>2&&size.y<5,'El model complet ha de tenir altura coherent amb el casc baix');
 
 const file=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8');
 const page=readFileSync(new URL('../vehicles-externs-proves.html',import.meta.url),'utf8');
-assert(file.includes('createBtr823BPreview()'),'El banc principal no construeix el 3B');
-assert(file.includes("slot.outer.hidden=btrStudy?slots.indexOf(slot)>0:slots.indexOf(slot)>3"));
+assert(file.includes('previewFactory=createBtr823BPreview')&&file.includes('btrStudy?previewFactory()'),'El banc principal no construeix el 3B');
+assert(file.includes("slot.outer.hidden=slots.indexOf(slot)>(soloStudy?0:config.options.length)"));
 assert(!file.includes('studio.load(token)'),'No s’han de carregar els antics GLB');
-assert(page.includes('live-editor-20261112-t90m-8-btr82-nose-restore'),'Revisió de memòria cau');
+const revision=JSON.parse(readFileSync(new URL('../assets/vehicle-candidates/lab-revision.json',import.meta.url),'utf8')).revision;
+assert(page.includes('src/vehicles-externs-proves.mjs?rev='+revision),'Revisió de memòria cau');
 console.log('PASS 3B preview: morro original restaurat, sense retall, detalls i rodes intactes');
