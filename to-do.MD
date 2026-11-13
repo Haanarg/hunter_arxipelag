@@ -1,3 +1,9 @@
+**2026-11-13 · Proves de la torreta manual suavitzada:**
+- [x] La prova antiga esperava aturada instantània en deixar el joystick; actualitzada perquè validi la nova frenada progressiva.
+- [x] Prova de geometria T-90M a escala doble i tir autoritatiu aprovada.
+- [x] La prova nova de torreta i càmera s'executa en primer lloc per diagnosticar qualsevol regressió.
+- [ ] Confirmar la resta de proves i desplegament amb bundle regenerat.
+
 **2026-11-13 · Control i càmera de torreta per a T-90M i BTR-82 3B:**
 - [x] Mode manual: velocitats independents de l'autoapuntat, reduïdes a 0,55/0,70 rad/s i amb acceleració/frenada amortida en SOLO i COOP.
 - [x] Depressió del canó limitada a -0,16 rad T-90M i -0,17 rad BTR-82, tant per a control manual com autoapuntat.

@@ -11,9 +11,12 @@ for(const type of ['tanc','tanqueta']){
  assert.equal(armoredSeatRole(v,'first'),'driver');
  stepManualTurret(v,type,1,1,.1);
  assert(v.turretYaw>0&&v.turretPitch>0);
- const yaw=v.turretYaw;
+ const yaw=v.turretYaw,manualSpeed=v.manualTurretYawSpeed;
  stepManualTurret(v,type,0,0,.1);
- assert(Math.abs(v.turretYaw-yaw)<1e-12,'La torreta no ha de girar sense entrada');
+ // La torreta manual frena progressivament; no s'atura en sec al
+ // primer fotograma sense entrada, però perd velocitat immediatament.
+ assert(v.turretYaw>yaw,'La torreta manual ha de frenar amb suavitat');
+ assert(v.manualTurretYawSpeed<manualSpeed,'La velocitat ha de disminuir sense entrada');
  stepManualTurret(v,type,0,1,20);
  assert(v.turretPitch<=turretSpecs[type].turretMaxPitch);
  v.seats[1]='second';

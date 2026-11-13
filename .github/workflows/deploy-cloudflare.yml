@@ -58,8 +58,8 @@ jobs:
           node tests/civilian-car-roof-candidate.mjs
           node tests/vehicle-lab-current-models.mjs
           node tests/t90m-game-integration.mjs
-          node tests/armored-crew-controls.mjs
           node tests/armored-turret-camera.mjs
+          node tests/armored-crew-controls.mjs
           node tests/gaz-tigr-door-contours.mjs
           node tests/gaz-tigr-approved.mjs
           node tests/btr82-published-assets.cjs
