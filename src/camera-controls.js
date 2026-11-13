@@ -23,6 +23,22 @@ window.HUNTER_CAMERA_CONTROLS=Object.freeze({
       }
     };
   },
+  // Seguiment angular suau per client: conductor i artiller COOP tenen
+  // càmeres independents encara que comparteixin blindat i instantànies.
+  createTurretFollow(){
+    let active=false,angle=0;
+    return {
+      reset(){active=false;angle=0},
+      heading(vehicle,turretYaw,dt){
+        const desired=(Number.isFinite(vehicle?.hd)?vehicle.hd:0)+
+          (Number.isFinite(turretYaw)?turretYaw:0);
+        if(!active){angle=desired;active=true;return angle}
+        const delta=Math.atan2(Math.sin(desired-angle),Math.cos(desired-angle));
+        angle+=delta*(1-Math.exp(-12*Math.max(0,Math.min(.1,dt||0))));
+        return angle;
+      }
+    };
+  },
   // Manté visible el vehicle mentre travessa la boca d'un hangar.
   // Comprova tota la línia de visió, no només si el centre és a dins:
   // la càmera pot romandre sota la volta quan el vehicle ja n'ha sortit.

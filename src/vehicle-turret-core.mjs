@@ -2,9 +2,9 @@ import {vehicleSpecs} from './vehicle-specs.mjs';
 // Tank/tankette rig coordinates and controller, shared by visual model and server.
 export const turretSpecs=Object.freeze({
  // Pivots del BTR-82 3B visual (mateixos en navegador i servidor COOP).
- tanqueta:Object.freeze({pivot:[0,2.748375,-.936],pitch:[0,.160875,.22425],muzzle:[0,0,-3.07125],turretYawRate:2.05,turretMinPitch:-.42,turretMaxPitch:.43}),
+ tanqueta:Object.freeze({pivot:[0,2.748375,-.936],pitch:[0,.160875,.22425],muzzle:[0,0,-3.07125],turretYawRate:2.05,manualYawRate:.70,manualPitchRate:.30,turretMinPitch:-.17,turretMaxPitch:.43}),
  // T-90M del laboratori x1,5: torreta 1,62·1,5, elevació .36·1,5 i boca -4,848·1,5.
- tanc:Object.freeze({pivot:[0,2.43,-.36],pitch:[0,.54,-1.83],muzzle:[0,0,-7.272],turretYawRate:1.40,turretMinPitch:-.62,turretMaxPitch:.72})
+ tanc:Object.freeze({pivot:[0,2.43,-.36],pitch:[0,.54,-1.83],muzzle:[0,0,-7.272],turretYawRate:1.40,manualYawRate:.55,manualPitchRate:.26,turretMinPitch:-.16,turretMaxPitch:.72})
 });
 export function advanceTurret(state,currentYaw,currentPitch,local,dt,config=state){
  const yaw=Math.hypot(local.x,local.z)<1e-4?currentYaw:Math.atan2(-local.x,-local.z),
@@ -24,6 +24,8 @@ export function advanceTurret(state,currentYaw,currentPitch,local,dt,config=stat
 }
 export function stepVehicleTurret(v,direction,dt){
  const config=turretSpecs[v.t];if(!config)return false;
+ // A l'autoapuntat no s'hereta la inèrcia d'una sessió manual anterior.
+ v.manualTurretYawSpeed=0;v.manualTurretPitchSpeed=0;
  const [dx,dy,dz]=direction,c=Math.cos(v.hd),s=Math.sin(v.hd),local={x:c*dx-s*dz,y:dy,z:s*dx+c*dz};
  const result=advanceTurret(v,v.turretYaw||0,v.turretPitch||0,local,dt,config);
  v.turretYaw=result.yaw;v.turretPitch=result.pitch;return result.aligned;
@@ -44,11 +46,27 @@ export function stepManualTurret(state,type,turn,lift,dt){
  const config=turretSpecs[type];if(!config)return null;
  const seconds=Math.max(0,Math.min(.1,Number.isFinite(dt)?dt:0));
  const clamp=v=>Math.max(-1,Math.min(1,Number.isFinite(v)?v:0));
- const yaw=(state.turretYaw||0)+clamp(turn)*config.turretYawRate*seconds;
+ // Velocitats manuals més lentes que l'autoapuntat, amb arrencada i
+ // frenada suaus. El mateix estat persisteix al client i al Worker COOP.
+ const blend=1-Math.exp(-7*seconds);
+ const ease=(previous,target)=>{
+  const next=(previous||0)+(target-(previous||0))*blend;
+  return Math.abs(next)<.0007&&Math.abs(target)<1e-9?0:next;
+ };
+ const yawSpeed=ease(state.manualTurretYawSpeed,clamp(turn)*config.manualYawRate);
+ const pitchSpeed=ease(state.manualTurretPitchSpeed,clamp(lift)*config.manualPitchRate);
+ const yaw=(state.turretYaw||0)+yawSpeed*seconds;
+ const currentPitch=Math.max(config.turretMinPitch,
+  Math.min(config.turretMaxPitch,state.turretPitch||0));
  const pitch=Math.max(config.turretMinPitch,Math.min(config.turretMaxPitch,
-  (state.turretPitch||0)+clamp(lift)*.85*seconds));
+  currentPitch+pitchSpeed*seconds));
  state.turretYaw=Math.atan2(Math.sin(yaw),Math.cos(yaw));
  state.turretPitch=pitch;
+ state.manualTurretYawSpeed=yawSpeed;
+ // Sense empenyer contínuament un límit mecànic amb velocitat residual.
+ state.manualTurretPitchSpeed=pitch===currentPitch&&
+  (pitch===config.turretMinPitch&&pitchSpeed<0||
+   pitch===config.turretMaxPitch&&pitchSpeed>0)?0:pitchSpeed;
  state.turretYawSpeed=0;state.turretPitchSpeed=0;
  return {yaw:state.turretYaw,pitch};
 }

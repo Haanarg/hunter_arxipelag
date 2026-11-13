@@ -39,16 +39,22 @@ export const vehicleModels=Object.freeze({
     const local=worldDirection.clone().normalize().applyQuaternion(
       model.getWorldQuaternion(new THREE.Quaternion()).invert());
     const result=advanceTurret(rig,pivot.rotation.y,pitch.rotation.x,local,dt);
-    pivot.rotation.y=result.yaw;pitch.rotation.x=result.pitch;return result.aligned;
+    pivot.rotation.y=result.yaw;pitch.rotation.x=result.pitch;
+    rig.manualTurretYawSpeed=0;rig.manualTurretPitchSpeed=0;
+    return result.aligned;
   },
   manualTurret(model,type,turn,lift,dt){
     const rig=model?.userData,pivot=rig?.turretPivot,pitch=rig?.turretPitch;
     if(!pivot||!pitch||!['tanc','tanqueta'].includes(type))return false;
-    const pose={turretYaw:pivot.rotation.y,turretPitch:pitch.rotation.x};
+    const pose={turretYaw:pivot.rotation.y,turretPitch:pitch.rotation.x,
+      manualTurretYawSpeed:rig.manualTurretYawSpeed||0,
+      manualTurretPitchSpeed:rig.manualTurretPitchSpeed||0};
     const result=stepManualTurret(pose,type,turn,lift,dt);
     if(!result)return false;
     pivot.rotation.y=result.yaw;pitch.rotation.x=result.pitch;
     rig.turretYawSpeed=0;rig.turretPitchSpeed=0;
+    rig.manualTurretYawSpeed=pose.manualTurretYawSpeed;
+    rig.manualTurretPitchSpeed=pose.manualTurretPitchSpeed;
     return true;
   },
   // L'origen i l'orientació dels projectils són els del canó visible.

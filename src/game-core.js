@@ -2052,8 +2052,9 @@ function resetSimulationClock(now=performance.now()){
 // Comptabilitat consultable: temps admès, simulat i descartat, també en pauses.
 window.HUNTER_SIMULATION_STATS={gameplay:simulationClock.stats,cinematic:cinematicClock.stats};
 const vehicleLook=window.HUNTER_CAMERA_CONTROLS.createVehicleLook(),
+      turretLook=window.HUNTER_CAMERA_CONTROLS.createTurretFollow(),
       cameraOcclusion=window.HUNTER_CAMERA_CONTROLS.createOcclusion();
-let drag=null,cameraVehicle=null,cameraBasement=null;
+let drag=null,cameraVehicle=null,cameraBasement=null,cameraTurretMode=false;
 function restoreCameraWalls(){
   cameraOcclusion.restore();
   if(activeBunker?.basement)activeBunker.basement.cameraHiddenWalls.length=0;
@@ -2065,7 +2066,8 @@ function cancelCameraDrag(){
   try{if(ren.domElement.hasPointerCapture(id))ren.domElement.releasePointerCapture(id)}catch{}
 }
 function resetCameraState(){
-  cancelCameraDrag();vehicleLook.reset();cameraVehicle=cv;
+  cancelCameraDrag();vehicleLook.reset();turretLook.reset();
+  cameraTurretMode=false;cameraVehicle=cv;
   restoreCameraWalls();
 }
 function syncCameraVehicle(){if(cameraVehicle!==cv)resetCameraState()}
@@ -2361,6 +2363,13 @@ function armoredManualActive(){
  if(armoredTurretVehicle!==cv){armoredTurretVehicle=cv;armoredTurretToggle=false;}
  if(!armoredVehicle()||armoredRole()==='driver-locked')return false;
  return armoredTurretToggle||!!K.ShiftLeft||!!K.ShiftRight;
+}
+// El seient 1 sempre segueix la torreta en COOP, inclòs l'autoapuntat;
+// el conductor (seient 0) conserva la càmera normal del xassís.
+function armoredTurretCameraActive(){
+ if(!armoredVehicle())return false;
+ const role=armoredRole();
+ return role==='gunner'||role!=='driver-locked'&&armoredManualActive();
 }
 function armoredCanFire(){
  return !armoredVehicle()||armoredRole()!=='driver-locked';
@@ -2742,7 +2751,7 @@ ren.domElement.addEventListener('pointermove',e=>{
   if(scopeActive){
     scopePitch=Math.max(-.65,Math.min(.65,scopePitch-dy*.00115));
     scopeYaw-=dx*.00115;
-  }else if(cv)vehicleLook.turn(dx);
+  }else if(cv&&!armoredTurretCameraActive())vehicleLook.turn(dx);
   else P.hd-=dx*.006;
   drag.x=e.clientX;drag.y=e.clientY;
 });
@@ -3653,7 +3662,7 @@ function updateVehicleVisualLod(t,dt,{skipHidden=false}={}){
   }
 }
 let runStepTimer=0,stealthStepTimer=0;
-const cameraOffset=new THREE.Vector3(),bunkerEye=new THREE.Vector3();
+const cameraOffset=new THREE.Vector3(),bunkerEye=new THREE.Vector3(),turretCameraPivot=new THREE.Vector3();
 function hideCameraObstructions(owner,eye,basement){
   const radius=Math.hypot(eye.x-cam.position.x,eye.z-cam.position.z)/2+2;
   for(const wall of wallCandidates((eye.x+cam.position.x)/2,(eye.z+cam.position.z)/2,radius)){
@@ -3750,9 +3759,21 @@ if(scopeNow){
   cam.position.set(P.x-fx*.12,P.y+1.76,P.z-fz*.12);
   cam.lookAt(P.x+fx*160,P.y+1.76+vertical*160,P.z+fz*160);
 }else{
-  const T=cv||P,c=cv?VT[cv.t]:ib?{cd:6,ch:11}:{cd:10,ch:5},ty=cv?cv.o.position.y:P.y,
-    heading=cv?vehicleLook.heading(cv,dt,!!drag):P.hd,
-    w=cameraOffset.set(T.x+Math.sin(heading)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1),0,T.z+Math.cos(heading)*c.cd*zoom*(cv?Math.sqrt(VS[cv.t]):1));
+  const turretMode=armoredTurretCameraActive();
+  if(turretMode!==cameraTurretMode){
+    cameraTurretMode=turretMode;
+    turretLook.reset();vehicleLook.reset();
+  }
+  if(!turretMode)turretLook.reset();
+  const T=cv||P,c=cv?VT[cv.t]:ib?{cd:6,ch:11}:{cd:10,ch:5},
+    ty=cv?cv.o.position.y:P.y,
+    heading=turretMode?turretLook.heading(cv,
+      cv.o?.userData?.turretPivot?.rotation.y||0,dt):
+      cv?vehicleLook.heading(cv,dt,!!drag):P.hd,
+    viewScale=cv?Math.sqrt(VS[cv.t]):1,
+    viewDistance=c.cd*zoom*viewScale*(turretMode?.84:1),
+    w=cameraOffset.set(T.x+Math.sin(heading)*viewDistance,0,
+      T.z+Math.cos(heading)*viewDistance);
   // Mode soterrani també durant el PRIMER esglaó, no només quan
   // el jugador ja ha baixat 2 m. La càmera no es pot quedar darrere
   // d'un envà opac, ni pot perseguir l'altura exterior de la muntanya.
@@ -3806,7 +3827,10 @@ if(scopeNow){
     cameraBasement=b;
   }else{
     if(b?.basement)b.basement.cameraInside=false;
-    w.y=Math.max(ty+c.ch*zoom*(cv?Math.sqrt(VS[cv.t]):1),hAt(w.x,w.z)+3,2.5);
+    // Vista d'artiller: en línia amb la torreta, darrere seu i una mica
+    // per sota de la càmera normal; mai travessa el terreny.
+    w.y=Math.max(ty+c.ch*zoom*viewScale*(turretMode?.72:1),
+      hAt(w.x,w.z)+3,2.5);
     // En sortir del soterrani cal passar directament al costat exterior
     // del forjat. El suavitzat exterior es manté sempre damunt el terreny,
     // inclòs l'arc entre dues posicions segures al voltant d'un turó.
@@ -3816,13 +3840,20 @@ if(scopeNow){
     cameraBasement=null;
     if(ib&&!cv)hideCameraObstructions(ib,bunkerEye.set(P.x,P.y+1.65,P.z),false);
   }
-  cam.lookAt(T.x-Math.sin(heading)*(bunkerBelow?3.5:8),
-    Math.min(bunkerBelow?b.fy-1.0:Infinity,ty+(bunkerBelow?2.0:2)),
+  let lookY=Math.min(bunkerBelow?b.fy-1.0:Infinity,ty+(bunkerBelow?2.0:2));
+  if(turretMode){
+    const pivot=cv.o?.userData?.turretPivot;
+    if(pivot){
+      pivot.getWorldPosition(turretCameraPivot);
+      lookY=Math.max(ty+2,turretCameraPivot.y+.35*viewScale);
+    }
+  }
+  cam.lookAt(T.x-Math.sin(heading)*(bunkerBelow?3.5:8),lookY,
     T.z-Math.cos(heading)*(bunkerBelow?3.5:8));
   if(cv){
     // Es recalcula a cada fotograma: el LOD (.2 s) és massa lent
     // quan el vehicle surt del hangar i la càmera encara hi és dins.
-    const sight={x:cv.x-Math.sin(heading)*8,y:ty+2,z:cv.z-Math.cos(heading)*8},
+    const sight={x:cv.x-Math.sin(heading)*8,y:lookY,z:cv.z-Math.cos(heading)*8},
           vehicle={x:cv.x,y:VT[cv.t]?.m==='a'?(cv.alt??ty):ty,z:cv.z};
     for(const hangar of B){
       if(!hangar.hangar||!hangar.o.visible||hangar.rb)continue;

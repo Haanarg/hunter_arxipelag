@@ -37,6 +37,9 @@ jobs:
           node --check src/vehicle-specs.mjs
           node --check tests/t90m-game-integration.mjs
           node --check tests/armored-crew-controls.mjs
+          node --check tests/armored-turret-camera.mjs
+          node --check src/camera-controls.js
+          node --check src/game-core.js
           node --check tests/gaz-tigr-door-contours.mjs
           node --check tests/gaz-tigr-approved.mjs
       - name: Verificar credencials de desplegament sense mostrar secrets
@@ -56,6 +59,7 @@ jobs:
           node tests/vehicle-lab-current-models.mjs
           node tests/t90m-game-integration.mjs
           node tests/armored-crew-controls.mjs
+          node tests/armored-turret-camera.mjs
           node tests/gaz-tigr-door-contours.mjs
           node tests/gaz-tigr-approved.mjs
           node tests/btr82-published-assets.cjs

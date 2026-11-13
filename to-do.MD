@@ -1,3 +1,12 @@
+**2026-11-13 · Control i càmera de torreta per a T-90M i BTR-82 3B:**
+- [x] Mode manual: velocitats independents de l'autoapuntat, reduïdes a 0,55/0,70 rad/s i amb acceleració/frenada amortida en SOLO i COOP.
+- [x] Depressió del canó limitada a -0,16 rad T-90M i -0,17 rad BTR-82, tant per a control manual com autoapuntat.
+- [x] Càmera específica darrere la torreta amb seguiment de yaw interpolat i elevació a 72% de la vista normal; pivot visual real com a referència.
+- [x] SHIFT/interruptor en SOLO canvia la càmera; a COOP el conductor (seient 0) conserva la vista normal i l'artiller (seient 1) segueix la torreta independentment de l'estat manual/auto.
+- [x] Controls i càmeres de SOLO/COOP comparteixen regles autoritatives i regressions automatitzades.
+- [ ] Confirmar la reconstrucció i el desplegament del runtime clàssic a Cloudflare.
+- [ ] Validació visual a dos navegadors i de l'espai sota el canó en totes les orientacions.
+
 **2026-11-13 · Refinament Ka-60 segons la fotografia aportada (peticions a47f8dca / 3dcdc174):**
 - [x] Portes laterals de transport realment obertes amb marcs, llindars i esglaons; els sis seients queden visibles pels costats.
 - [x] Finestres de la cabina de pilots més petites i envoltades de xapa retallada; carenat dorsal del motor continu amb entrades, escapaments i ventilació.
