@@ -19,7 +19,7 @@ export function moveOnFoot(state,input,dt,{limit,swimming=false,crouched=false}=
     z:clamp(state.z-Math.cos(state.hd)*ss-Math.sin(state.hd)*lateral,-limit,limit),hd:state.hd};
 }
 export function validatePlayerInput(input){
-  return !!input&&typeof input==='object'&&!Array.isArray(input)&&[4,5,6,7].includes(Object.keys(input).length)&&Object.keys(input).every(k=>['forward','turn','strafe','run','climb','crouch','fire'].includes(k))&&(!Object.hasOwn(input,'fire')||typeof input.fire==='boolean')&&(!Object.hasOwn(input,'crouch')||typeof input.crouch==='boolean')&&(!Object.hasOwn(input,'climb')||finite(input.climb)&&Math.abs(input.climb)<=1)&&
+  return !!input&&typeof input==='object'&&!Array.isArray(input)&&Object.keys(input).length>=4&&Object.keys(input).length<=10&&Object.keys(input).every(k=>['forward','turn','strafe','run','climb','crouch','fire','manualTurret','turretTurn','turretLift'].includes(k))&&(!Object.hasOwn(input,'fire')||typeof input.fire==='boolean')&&(!Object.hasOwn(input,'crouch')||typeof input.crouch==='boolean')&&(!Object.hasOwn(input,'manualTurret')||typeof input.manualTurret==='boolean')&&(!Object.hasOwn(input,'turretTurn')||finite(input.turretTurn)&&Math.abs(input.turretTurn)<=1)&&(!Object.hasOwn(input,'turretLift')||finite(input.turretLift)&&Math.abs(input.turretLift)<=1)&&(!Object.hasOwn(input,'climb')||finite(input.climb)&&Math.abs(input.climb)<=1)&&
     ['forward','turn','strafe'].every(k=>finite(input[k])&&Math.abs(input[k])<=1)&&typeof input.run==='boolean';
 }
 function copyFall(fall){

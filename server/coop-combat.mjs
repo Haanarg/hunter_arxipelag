@@ -1,4 +1,4 @@
-import {turretSpecs,stepVehicleTurret,vehicleGunPose} from '../src/vehicle-turret-core.mjs';
+import {turretSpecs,stepVehicleTurret,stepManualTurret,vehicleGunPose,turretControllerId,isArmoredTurretVehicle} from '../src/vehicle-turret-core.mjs';
 import {towerGuardInView,towerTurnHeading,towerParapetBlocksShot,TOWER_GUARD_SCAN_SPEED,TOWER_GUARD_RANGE} from '../src/tower-model.mjs';
 import {SOLDIER,RADII,VEHICLE_SIGNAL_SOUNDS,soldierAccuracyProfile} from '../src/enemy-perception-core.mjs';
 import {senseNativeSoldier,hearNativeSoldier} from './native-soldier-perception.mjs';
@@ -570,7 +570,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     return {direction,focus};
   }
   function fire(actorId,p,bag,tick,weapon=bag.weapon||'pistol',requestedAim=null){
-    const profile=weaponCatalog[weapon],vehicle=vehicles.mounted(actorId),gun=vehicle&&vehicle.seats[0]===actorId&&vehicleGunPose(vehicle),
+    const profile=weaponCatalog[weapon],vehicle=vehicles.mounted(actorId),gun=vehicle&&(isArmoredTurretVehicle(vehicle.t)?turretControllerId(vehicle)===actorId:vehicle.seats[0]===actorId)&&vehicleGunPose(vehicle),
       // El mateix avançament de la boca del canó que en mode individual.
       // Només quan es va a peu: els vehicles conserven els seus punts
       // de sortida i les seves regles de muntatge.
@@ -617,10 +617,14 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const cached=results.find(r=>r.actorId===actorId&&r.commandId===message.commandId);if(cached)return {...cached,duplicate:true};
     const p=players().find(p=>p.id===actorId),bag=inventory.get(actorId);let code='INVALID',ok=false;
     if(p&&message.epoch===meta.id&&typeof message.commandId==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(message.commandId)&&combatCommands.includes(message.weapon)){
-      const vehicle=vehicles.mounted(actorId),passenger=!!vehicle&&vehicle.seats[0]!==actorId,
-        weapon=passenger?message.weapon:vehicle?(message.weapon==='grenade'?(canThrowGrenadeFromVehicle(vehicle)?'grenade':null):message.weapon==='secondary'&&vehicle.t==='heli_combat'?'heliMissile':message.weapon==='c4'&&vehicle.t==='heli'?'c4':mountedWeapons[vehicle.t]):message.weapon;
+      const vehicle=vehicles.mounted(actorId),armored=!!vehicle&&isArmoredTurretVehicle(vehicle.t),
+        turretOwner=armored?turretControllerId(vehicle):null,
+        passenger=!!vehicle&&!armored&&vehicle.seats[0]!==actorId,
+        roleLocked=armored&&turretOwner!==actorId,
+        weapon=armored?mountedWeapons[vehicle.t]:passenger?message.weapon:vehicle?(message.weapon==='grenade'?(canThrowGrenadeFromVehicle(vehicle)?'grenade':null):message.weapon==='secondary'&&vehicle.t==='heli_combat'?'heliMissile':message.weapon==='c4'&&vehicle.t==='heli'?'c4':mountedWeapons[vehicle.t]):message.weapon;
       const profile=weaponCatalog[weapon],ammoSource=profile?.ammo==='rockets'?vehicle:bag,key=actorId+':'+(weapon==='assault'?'pistol':weapon),cooldown=!['proving','world','native'].includes(meta.mode)&&['pistol','assault','grenade'].includes(weapon)?({pistol:10,assault:18,grenade:30}[weapon]):Math.ceil((profile?.cooldown||1)*30);
-      if(vehicle&&message.weapon==='grenade'&&!canThrowGrenadeFromVehicle(vehicle))code='NOT_ACTIVE';
+      if(roleLocked)code='ROLE_LOCKED';
+      else if(vehicle&&message.weapon==='grenade'&&!canThrowGrenadeFromVehicle(vehicle))code='NOT_ACTIVE';
       else if(!active()||p.hp<=0||p.fall||p.swimming&&!vehicle||!canAttack(actorId)||!profile||vehicle&&!passenger&&(weapon==='grenade'? !vehicle.seats.includes(actorId):vehicle.seats[0]!==actorId))code='NOT_ACTIVE';
       else if((!vehicle||passenger)&&!['grenade',...(meta.mode==='native'?['c4']:[])].includes(weapon)&&((bag.weapon||'pistol')!==weapon||profile.item&&!bag[profile.item]))code='NOT_EQUIPPED';
       else if(tick-(cooldowns.get(key)??-Infinity)<cooldown)code='COOLDOWN';
@@ -654,7 +658,7 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
   function hold(actorId,tick){
     const player=players().find(p=>p.id===actorId);if(!player||player.hp<=0||player.fall||!active())return;
     const bag=inventory.get(actorId),vehicle=vehicles.mounted(actorId),weapon=vehicle?(vehicle.t==='heli'?'grenade':mountedWeapons[vehicle.t]):bag?.weapon||'pistol',profile=weaponCatalog[weapon];
-    if(vehicle&&vehicle.seats[0]!==actorId&&weapon!=='grenade')return;
+    if(vehicle&&(isArmoredTurretVehicle(vehicle.t)?turretControllerId(vehicle)!==actorId:vehicle.seats[0]!==actorId&&weapon!=='grenade'))return;
     if(weapon==='sniper'||weapon==='bazooka')return; // Els trets de precisió requereixen la mira de cada clic.
      if(!profile||profile.ammo&&!((profile.ammo==='rockets'?vehicle:bag)?.[profile.ammo]>0)||weapon==='assault'&&bag.bullets<3)return;
     const key=actorId+':'+(weapon==='assault'?'pistol':weapon);if(tick-(cooldowns.get(key)??-Infinity)<Math.ceil(profile.cooldown*30))return;
@@ -668,9 +672,18 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     }
     // L'autoapuntat no necessita 30 recerques LOS/s per vehicle: el canó
     // comparteix l'actualització física a 10 Hz, i els trets continuen a 30 Hz.
-    if(tick%3===0)for(const vehicle of vehicles.live())if(turretSpecs[vehicle.t]&&vehicle.seats[0]){
-      const p=players().find(p=>p.id===vehicle.seats[0]);if(!p||p.hp<=0)continue;
-      const weapon=mountedWeapons[vehicle.t],gun=vehicleGunPose(vehicle),aimed=aimWeapon(p,vehicle,weapon,gun.origin);
+    if(tick%3===0)for(const vehicle of vehicles.live())if(turretSpecs[vehicle.t]){
+      const controllerId=turretControllerId(vehicle);
+      if(!controllerId)continue;
+      const p=players().find(p=>p.id===controllerId);if(!p||p.hp<=0)continue;
+      const input=vehicles.turretInput(controllerId,tick);
+      if(input?.manualTurret){
+        stepManualTurret(vehicle,vehicle.t,input.turretTurn||0,input.turretLift||0,3/30);
+        continue;
+      }
+      const weapon=mountedWeapons[vehicle.t],gun=vehicleGunPose(vehicle);
+      if(!gun)continue;
+      const aimed=aimWeapon(p,vehicle,weapon,gun.origin);
       stepVehicleTurret(vehicle,aimed.direction,3/30);
     }
     for(let i=projectiles.length-1;i>=0;i--){

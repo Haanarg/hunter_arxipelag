@@ -1,4 +1,4 @@
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261113-gaz-game-civil-tab-1';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261113-armored-crew-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs';
@@ -339,7 +339,8 @@ async function choose(config){
  grid.classList.toggle('btr-study',soloStudy);
  document.querySelector('#fitScale').closest('label').hidden=soloStudy;
  document.querySelector('#t90Motion').hidden=!t90Study;
- labTankKeys.clear();
+ labTankKeys.clear();labTurretSwitch=false;labTurretYaw=0;labTurretPitch=0;
+ syncLabTurretButton();
  for(const slot of slots){
    slot.outer.hidden=slots.indexOf(slot)>(soloStudy?0:config.options.length);
    dropPrevious(slot);
@@ -433,7 +434,7 @@ function draw(now){
  if(document.querySelector('#animate').checked){
    for(const slot of slots)slot.mixer?.update(dt);
    if(currentType.id==='tanc'&&slots[0].model)
-     stepT90MPreview(slots[0].model,t90MotionInput(),dt);
+     stepT90MPreview(slots[0].model,t90MotionInput(dt),dt);
  }
 
  // Les coordenades setViewport i setScissor de WebGLRenderer ja es
@@ -538,48 +539,44 @@ slots.forEach(slot=>{
   updateCamera();
  },{passive:false});
 });
-// Controls tàctils/ratolí i W/S/A/D: les dues erugues tenen velocitats
-// diferents quan el tanc avança o gira. J/L apunten i I/K eleven el canó.
+// W/S/A/D condueixen les erugues. SHIFT o TORRETA fan servir les
+// mateixes tecles per orientar la torreta i elevar el canó, sense sliders.
 const labTankKeys=new Set();
-function t90MotionInput(){
- const value=id=>Number(document.getElementById(id).value);
- const has=key=>labTankKeys.has(key);
- return {
-  throttle:has('w')===has('s')?value('t90Throttle'):has('w')?1:-1,
-  steer:has('a')===has('d')?value('t90Steer'):has('d')?1:-1,
-  turretYaw:value('t90Yaw'),elevation:value('t90Elevation')
- };
+let labTurretSwitch=false,labTurretYaw=0,labTurretPitch=0;
+function labTurretActive(){return labTurretSwitch||labTankKeys.has('shift')}
+function t90MotionInput(dt=0){
+ const has=k=>labTankKeys.has(k);
+ const vertical=(has('w')?1:0)-(has('s')?1:0);
+ const horizontal=(has('a')?1:0)-(has('d')?1:0);
+ const manual=labTurretActive();
+ if(manual){
+  labTurretYaw=Math.max(-180,Math.min(180,labTurretYaw+horizontal*85*dt));
+  labTurretPitch=Math.max(-26,Math.min(26,labTurretPitch+vertical*50*dt));
+ }else{labTurretYaw=0;labTurretPitch=0}
+ return {throttle:manual?0:vertical,steer:manual?0:horizontal,
+  turretYaw:labTurretYaw,elevation:labTurretPitch};
 }
-function t90MotionLabels(){
- for(const id of ['t90Throttle','t90Steer','t90Yaw','t90Elevation']){
-  const input=document.getElementById(id),value=document.getElementById(id+'Value');
-  value.textContent=input.value+(id==='t90Yaw'||id==='t90Elevation'?'°':'');
- }
+const labTurretButton=document.getElementById('t90LabTurret');
+function syncLabTurretButton(){
+ const active=labTurretActive();
+ labTurretButton.setAttribute('aria-pressed',String(active));
+ labTurretButton.textContent=active?'TORRETA ●':'TORRETA';
 }
-for(const input of document.querySelectorAll('#t90Motion input[type=range]'))
- input.addEventListener('input',t90MotionLabels);
-document.getElementById('t90ResetMotion').addEventListener('click',()=>{
- labTankKeys.clear();
- for(const id of ['t90Throttle','t90Steer','t90Yaw','t90Elevation'])
-  document.getElementById(id).value=0;
- t90MotionLabels();
+labTurretButton.addEventListener('click',()=>{
+ labTurretSwitch=!labTurretSwitch;syncLabTurretButton();
 });
 document.addEventListener('keydown',e=>{
  if(currentType.id!=='tanc')return;
  const tag=e.target?.tagName?.toLowerCase();
  if(['input','textarea','select','button'].includes(tag)||e.target?.isContentEditable)return;
  const key=e.key.toLowerCase();
- if(['w','s','a','d'].includes(key)){labTankKeys.add(key);e.preventDefault();return}
- const adjustment={j:['t90Yaw',-3],l:['t90Yaw',3],i:['t90Elevation',2],k:['t90Elevation',-2]}[key];
- if(adjustment){
-  const input=document.getElementById(adjustment[0]);
-  input.value=Number(input.value)+adjustment[1];
-  t90MotionLabels();e.preventDefault();
+ if(['w','s','a','d','shift'].includes(key)){
+  labTankKeys.add(key);e.preventDefault();syncLabTurretButton();
  }
 });
-document.addEventListener('keyup',e=>labTankKeys.delete(e.key.toLowerCase()));
-window.addEventListener('blur',()=>labTankKeys.clear());
-t90MotionLabels();
+document.addEventListener('keyup',e=>{labTankKeys.delete(e.key.toLowerCase());syncLabTurretButton()});
+window.addEventListener('blur',()=>{labTankKeys.clear();syncLabTurretButton()});
+syncLabTurretButton();
 const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;

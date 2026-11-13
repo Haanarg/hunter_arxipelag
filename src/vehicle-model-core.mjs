@@ -1,4 +1,4 @@
-import {turretSpecs,advanceTurret} from './vehicle-turret-core.mjs';
+import {turretSpecs,advanceTurret,stepManualTurret} from './vehicle-turret-core.mjs';
 import {installBtr82Model3B} from './btr82-3b-native.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
 import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs?rev=vivid-engine-cover-2';
@@ -39,6 +39,16 @@ export const vehicleModels=Object.freeze({
       model.getWorldQuaternion(new THREE.Quaternion()).invert());
     const result=advanceTurret(rig,pivot.rotation.y,pitch.rotation.x,local,dt);
     pivot.rotation.y=result.yaw;pitch.rotation.x=result.pitch;return result.aligned;
+  },
+  manualTurret(model,type,turn,lift,dt){
+    const rig=model?.userData,pivot=rig?.turretPivot,pitch=rig?.turretPitch;
+    if(!pivot||!pitch||!['tanc','tanqueta'].includes(type))return false;
+    const pose={turretYaw:pivot.rotation.y,turretPitch:pitch.rotation.x};
+    const result=stepManualTurret(pose,type,turn,lift,dt);
+    if(!result)return false;
+    pivot.rotation.y=result.yaw;pitch.rotation.x=result.pitch;
+    rig.turretYawSpeed=0;rig.turretPitchSpeed=0;
+    return true;
   },
   // L'origen i l'orientació dels projectils són els del canó visible.
   turretShot(THREE,model){

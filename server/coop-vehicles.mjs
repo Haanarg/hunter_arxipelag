@@ -1,4 +1,5 @@
 import {vehicleSpecs,vehicleSeatCount} from '../src/vehicle-specs.mjs';
+import {turretControllerId} from '../src/vehicle-turret-core.mjs';
 import {palmImpact,rockImpact} from '../src/vehicle-environment-core.mjs';
 import {firstVehicleContact,vehicleContactDamage} from './coop-vehicle-contacts.mjs';
 import {stepRangeVehicle} from './coop-vehicle-motion.mjs';
@@ -326,7 +327,13 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
  const live=()=>vehicles.filter(v=>!v.destroyed);
  // Existing individual sphere contact/hull falloff, adapted to the 3.2 m relay model.
  const hullRadius=v=>v.hullRadius??Math.max(1.6,(vehicleSpecs.radii[v.t]||1.6)*(vehicleSpecs.scales[v.t]||1)*.7);
- return {mounted,position,command,step,damage,live,enemyReserve,enemyRelease,enemyPromote,enemyAccept,contact:(from,to,v)=>vehicleHullSegmentT(from,to,v,v.y,hullRadius(v)),blastDistance:(v,at)=>vehicleHullDistance(v,v.y,hullRadius(v),at.x,at.y,at.z),accept(id,input,tick){if(mounted(id))inputs.set(id,{input:{...input},tick});},pause(){inputs.clear();for(const v of vehicles){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;}},ferryDeckAt(x,z,previousY){
+ return {mounted,position,command,step,damage,live,enemyReserve,enemyRelease,enemyPromote,enemyAccept,contact:(from,to,v)=>vehicleHullSegmentT(from,to,v,v.y,hullRadius(v)),blastDistance:(v,at)=>vehicleHullDistance(v,v.y,hullRadius(v),at.x,at.y,at.z),accept(id,input,tick){if(mounted(id))inputs.set(id,{input:{...input},tick});},
+  turretInput(actorId,tick){
+   const v=mounted(actorId);
+   if(!v||turretControllerId(v)!==actorId)return null;
+   const entry=inputs.get(actorId);
+   return entry&&tick-entry.tick<=8?entry.input:null;
+  },pause(){inputs.clear();for(const v of vehicles){v.v=0;v.driveInput=0;v.steerInput=0;v.yawRate=0;v.sideV=0;v.strafeV=0;}},ferryDeckAt(x,z,previousY){
    for(const f of vehicles)if(!f.destroyed&&f.t==='ferry'){
      const result=ferryPedestrianAt(f,x,z,previousY);
      if(result)return result;

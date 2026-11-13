@@ -1,3 +1,12 @@
+**2026-11-13 · Controls de torreta i rols cooperatius T-90M / BTR-82:**
+- [x] Apuntat automàtic de sèrie per al tanc i la tanqueta; SHIFT mantingut o interruptor «TORRETA» activa el manual.
+- [x] Joystick i W/S/A/D controlen gir/elevació de la torreta en manual; conducció bloquejada mentre s'apunta manualment amb un sol jugador.
+- [x] COOP: primer ocupant al seient 0 condueix; segon al seient 1 és l'únic autoritzat a apuntar i disparar el canó. No es poden canviar els rols mentre hi ha dos jugadors al mateix blindat.
+- [x] Autoritat del Worker sobre els trets i entrades de torreta; gir, elevació i límits compartits amb el mode individual.
+- [x] Laboratori: retirades les tecles J/L/I/K i tots els lliscadors de l'animació del T-90M; prova W/S/A/D + SHIFT o botó TORRETA.
+- [x] Afegida una prova automatitzada del contracte de control i rols; comprovats els helpers bàsics d'angle i validació d'input aïllats.
+- [ ] Reconstruir manualment el runtime de joc (inclou controls globals i COOP) i desplegar Worker de COOP; provar en dos navegadors el canvi automàtic/manual, seients i dispar.
+
 **2026-11-13 · GAZ Tigr-M definitiu i editor de vehicles:**
 - [x] GAZ Tigr-M procedimental propi integrat a la fàbrica del vehicle `cotxe`, en substitució del Humvee D3.1. Física, hitbox, seients i regles del cotxe es mantenen.
 - [x] Quatre rodes animables amb pivots de direcció davanters, mantenint la geometria i els vidres del GAZ aprovat.

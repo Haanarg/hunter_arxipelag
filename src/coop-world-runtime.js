@@ -52,7 +52,14 @@ function nativeCoopInput(){
  if(!nativeCoopSession||nativeCoopSession.preparing||nativeCoopSession.gameOver||paused||document.hidden)return {forward:0,turn:0,strafe:0,run:false,interact:false};
  const controls=readPlayerControls(updateStrafeControls(),!cv&&!paused&&!scopeActive),{f:forward,tr:turn,strafe,ud:climb,running:run}=controls;
  const flying=!cv&&nativeCoopSession.state?.cheats?.fly;
- return {forward:scopeActive?0:forward,turn:scopeActive?0:turn,strafe:scopeActive?0:strafe,interact:!!K.KeyE&&!!nativeReviveAction(),run:!!run,crouch:!!playerCrouched,fire:!!K.KeyF&&(!grenadeEquipped||!!cv),...(flying?{climb:(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0)}:cv&&VT[cv.t].m==='a'?{climb}:{})};
+ const armored=armoredVehicle(),role=armored?armoredRole():'solo';
+ const turretManual=armored&&armoredManualActive();
+ const noDrive=armored&&(role==='gunner'||turretManual);
+ return {forward:scopeActive||noDrive?0:forward,turn:scopeActive||noDrive?0:turn,
+  strafe:scopeActive||noDrive?0:strafe,interact:!!K.KeyE&&!!nativeReviveAction(),
+  run:!!run,crouch:!!playerCrouched,fire:!!K.KeyF&&armoredCanFire()&&(!grenadeEquipped||!!cv),
+  ...(armored?{manualTurret:turretManual,turretTurn:turretManual?turn:0,turretLift:turretManual?forward:0}:{}),
+  ...(flying?{climb:(K.KeyH||K.Space?1:0)-(K.KeyJ||K.ShiftLeft?1:0)}:cv&&VT[cv.t].m==='a'?{climb}:{})};
 }
 // La fase 2 hereta el camp, els cinc NPC i els relés que JA ha generat
 // el joc individual. No consumeix cap tirada aleatòria suplementària.
@@ -166,6 +173,10 @@ function nativeCoopFireWeapon(){
  if(cv&&grenadeEquipped&&!window.HUNTER_SHARED_WEAPONS.canThrowGrenadeFromVehicle(cv))grenadeEquipped=false;
  const row=cv&&nativeCoopSession?.appliedVehicleRows?.get(cv.saveId);
  const passenger=!!row&&row.seats?.[0]!==nativeCoopSession.self;
+ if(armoredVehicle()){
+  if(!armoredCanFire())return null;
+  return window.HUNTER_SHARED_WEAPONS.mountedWeapons[cv.t];
+ }
  if(passenger)return grenadeEquipped?'grenade':bazookaEquipped?'bazooka':sniperEquipped?'sniper':assaultRifleEquipped?'assault':cisallaEquipped?'cutters':knifeEquipped?'knife':'pistol';
  return cv?(cv.t==='heli'?'grenade':window.HUNTER_SHARED_WEAPONS.mountedWeapons[cv.t]):grenadeEquipped?'grenade':bazookaEquipped?'bazooka':sniperEquipped?'sniper':assaultRifleEquipped?'assault':cisallaEquipped?'cutters':knifeEquipped?'knife':'pistol';
 }
@@ -181,6 +192,7 @@ function selectNativeCoopWeapon(id){
 function nativeCoopCommand(type,payload={}){
  const s=nativeCoopSession;if(!s?.state||s.state.status!=='running'||paused&&!['item','plant'].includes(type))return false;
  if(type==='fire'){
+   if(!armoredCanFire())return false;
    const weapon=nativeCoopFireWeapon();if(!weapon)return false;
    let aim=null;
    if(!cv&&weapon==='bazooka'){
@@ -458,6 +470,7 @@ function updateNativeCoopFrame(dt){
  // Si el convidat condueix, continua assegut al lloc esquerre.
  const mySeats=cv&&s.appliedVehicleRows?.get(cv.saveId)?.seats,
        mySeat=mySeats?.indexOf(s.self)??-1;
+ updateArmoredTurretButton();
  poseRider(cv,dt,mySeat>=0?mySeat:null);
  pl.rotation.z=hp<=0&&!cv?-Math.PI/2:0;if(hp<=0&&!cv)pl.position.y+=.5;
  // El crol inclina el model i enfonsa el pit si només es pren P.y.

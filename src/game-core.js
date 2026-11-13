@@ -2345,6 +2345,57 @@ const K={},joystick=window.HUNTER_JOYSTICK.create(document.getElementById('joyst
       strafePointers={left:null,right:null},
       STRAFE_VEHICLES=new Set(['hover','heli','heli_combat']);
 const playerInputReader=window.HUNTER_PLAYER_INPUT.createReader(K,joystick,strafePointers);
+// Els blindats tenen dos papers autoritatius: conductor (seient 0) i
+// artiller (seient 1). Amb un sol ocupant, SHIFT o TORRETA activen
+// temporalment el control manual i bloquegen la conducció.
+let armoredTurretToggle=false,armoredTurretVehicle=null;
+const armoredVehicle=()=>!!cv&&(cv.t==='tanc'||cv.t==='tanqueta');
+function armoredRole(){
+ if(!armoredVehicle()||!nativeCoopSession)return 'solo';
+ const row=nativeCoopSession.appliedVehicleRows?.get(cv.saveId);
+ if(row?.seats?.[1]===nativeCoopSession.self)return 'gunner';
+ if(row?.seats?.[0]===nativeCoopSession.self&&row.seats[1])return 'driver-locked';
+ return 'solo';
+}
+function armoredManualActive(){
+ if(armoredTurretVehicle!==cv){armoredTurretVehicle=cv;armoredTurretToggle=false;}
+ if(!armoredVehicle()||armoredRole()==='driver-locked')return false;
+ return armoredTurretToggle||!!K.ShiftLeft||!!K.ShiftRight;
+}
+function armoredCanFire(){
+ return !armoredVehicle()||armoredRole()!=='driver-locked';
+}
+const armoredTurretButton=document.createElement('button');
+armoredTurretButton.id='armoredTurretButton';armoredTurretButton.type='button';
+armoredTurretButton.textContent='TORRETA';
+armoredTurretButton.style.cssText='display:none;position:fixed;z-index:7;'+
+ 'right:calc(12px + env(safe-area-inset-right,0px));'+
+ 'bottom:calc(210px + env(safe-area-inset-bottom,0px));'+
+ 'height:44px;min-width:100px;padding:8px 12px;border-radius:11px;'+
+ 'border:2px solid #c9d5a7;background:#152e2de8;color:#fff;'+
+ 'font:700 12px system-ui;touch-action:manipulation';
+armoredTurretButton.setAttribute('aria-label','Activar control manual de torreta');
+armoredTurretButton.setAttribute('aria-pressed','false');
+document.body.appendChild(armoredTurretButton);
+armoredTurretButton.addEventListener('click',()=>{
+ if(!armoredVehicle()||armoredRole()==='driver-locked'||paused||over)return;
+ armoredTurretToggle=!armoredTurretToggle;
+ joystick.reset();releaseStrafeButtons();
+ updateArmoredTurretButton();
+});
+function updateArmoredTurretButton(){
+ const show=!!started&&!paused&&!over&&armoredVehicle();
+ const role=show?armoredRole():'solo',locked=role==='driver-locked',manual=show&&armoredManualActive();
+ armoredTurretButton.style.display=show?'block':'none';
+ armoredTurretButton.disabled=locked;
+ armoredTurretButton.textContent=locked?'CONDUCTOR':manual?'TORRETA ●':'TORRETA';
+ armoredTurretButton.style.background=manual?'#477757ef':'#152e2de8';
+ armoredTurretButton.setAttribute('aria-pressed',String(manual));
+ armoredTurretButton.title=locked?'Conductor: el segon jugador controla la torreta':
+  role==='gunner'?'Artiller · SHIFT o interruptor per apuntar manualment':
+  'SHIFT o interruptor: apuntat manual; deixa de conduir mentre està actiu';
+}
+
 const crouchButton=document.createElement('button');
 crouchButton.id='crouchButton';crouchButton.type='button';
 crouchButton.textContent='AJUPIR';crouchButton.title='Ajupir-se o aixecar-se · X';
@@ -2630,7 +2681,7 @@ cv=null}else{const v=nearV();if(v&&(!v.sunk||v.t==='bici')){
   msg=VT[v.t].n+' · accelera amb joystick / W';msgT=3;
 }}}
 addEventListener('keydown',e=>{
-  if(['Escape','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
+  if(['Escape','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)||armoredVehicle()&&e.code.startsWith('Shift'))e.preventDefault();
   if(e.repeat)return;
   if(e.code==='KeyF'&&started&&!paused&&!over&&grenadeEquipped&&!cv){
     beginGrenadeCharge();K.KeyF=0;return;
@@ -3835,6 +3886,7 @@ mini();ui.renderHUD({nearVehicle:nv});}}
 function update(dt,t){
 if(nativeCoopSession){updateNativeCoop(dt);return;}
 syncCameraVehicle();
+updateArmoredTurretButton();
 if(activeBunker?.basement?.lights?.length){
   const basement=activeBunker.basement;
   const nearby=started&&!paused&&
@@ -3891,7 +3943,7 @@ if(scopeActive){
   scopePitch=Math.max(-.65,Math.min(.65,scopePitch+scopeForward*dt*.30));
 }else if(cv){
   const driven=cv;let alive=false;
-  try{alive=stepV(driven,f,tr,ud,dt,strafe)}
+  try{const turretSteering=armoredVehicle()&&armoredManualActive();alive=stepV(driven,turretSteering?0:f,turretSteering?0:tr,ud,dt,strafe)}
   catch(error){if(!recoverArmoredControlFailure(driven,error,'moviment'))throw error;}
   if(alive&&cv===driven){P.x=driven.x;P.z=driven.z;P.hd=driven.hd}
 }
@@ -4149,6 +4201,8 @@ updateVehicleVisualLod(t,dt);poseRider(cv,dt);
 // que triaria l'autoapuntat actual. El vehicle pot avançar/girar mentre
 // la torre conserva el seu propi rumb i l'elevació del canó.
 if(cv&&(cv.t==='tanc'||cv.t==='tanqueta')){
+  if(armoredManualActive())window.HUNTER_VEHICLES.manualTurret(cv.o,cv.t,tr,f,dt);
+  else{
     const gun=window.HUNTER_VEHICLES.turretShot(THREE,cv.o);
   if(gun){
     const hd=cv.hd,fx=-Math.sin(hd),fz=-Math.cos(hd),
@@ -4159,6 +4213,7 @@ if(cv&&(cv.t==='tanc'||cv.t==='tanqueta')){
             heavy?'heavy':'light',heavy?85*HEAVY_SHOT_SPEED_FACTOR:135);
     window.HUNTER_VEHICLES.aimTurret(THREE,cv.o,
       new THREE.Vector3(ax,ay,az),dt);
+  }
   }
 }
 updatePlayerCamera(dt);

@@ -27,6 +27,30 @@ export function stepVehicleTurret(v,direction,dt){
  const result=advanceTurret(v,v.turretYaw||0,v.turretPitch||0,local,dt,config);
  v.turretYaw=result.yaw;v.turretPitch=result.pitch;return result.aligned;
 }
+// Turret roles are seat-bound while the vehicle has two human occupants.
+// A solo driver may temporarily assume turret control via SHIFT / TORRETA.
+export const isArmoredTurretVehicle=type=>type==='tanc'||type==='tanqueta';
+export function turretControllerId(vehicle){
+ if(!vehicle||!isArmoredTurretVehicle(vehicle.t))return null;
+ return vehicle.seats?.[1]||vehicle.seats?.[0]||null;
+}
+export function armoredSeatRole(vehicle,actorId){
+ if(!vehicle||!actorId||!isArmoredTurretVehicle(vehicle.t))return null;
+ return vehicle.seats?.[0]===actorId?'driver':vehicle.seats?.[1]===actorId?'gunner':null;
+}
+// Use exactly the same angular limits and rates in solo and authoritative COOP.
+export function stepManualTurret(state,type,turn,lift,dt){
+ const config=turretSpecs[type];if(!config)return null;
+ const seconds=Math.max(0,Math.min(.1,Number.isFinite(dt)?dt:0));
+ const clamp=v=>Math.max(-1,Math.min(1,Number.isFinite(v)?v:0));
+ const yaw=(state.turretYaw||0)+clamp(turn)*config.turretYawRate*seconds;
+ const pitch=Math.max(config.turretMinPitch,Math.min(config.turretMaxPitch,
+  (state.turretPitch||0)+clamp(lift)*.85*seconds));
+ state.turretYaw=Math.atan2(Math.sin(yaw),Math.cos(yaw));
+ state.turretPitch=pitch;
+ state.turretYawSpeed=0;state.turretPitchSpeed=0;
+ return {yaw:state.turretYaw,pitch};
+}
 // Same Y(chassis) * Y(turret) * X(barrel) hierarchy as the original Three rig.
 export function vehicleGunPose(v){
  const spec=turretSpecs[v.t];if(!spec)return null;
