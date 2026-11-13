@@ -1,6 +1,6 @@
 // Catàleg compartit entre el visor Three.js i l'eina de descàrrega local.
 // La moto aquàtica definitiva ja forma part de la fàbrica del joc; no és cap candidata.
-// Huey i Apache acceptats ja formen part del joc.
+// Huey i Apache aprovats al joc: se'n mostren els models reals com a base editable.
 const P=(pack,match,query)=>({pack,match,query:query||match});
 const Q=(query)=>({query});
 // Candidats procedimentals que es poden editar sense dependre de GLB externs.
@@ -15,8 +15,12 @@ export const CATALOG=[
      {label:'GAZ Tigr · galeria Wikimedia',url:'https://commons.wikimedia.org/wiki/Category:Tigr_vehicle'},
      {label:'Tigr-M AMN-233114 · fotografies',url:'https://commons.wikimedia.org/wiki/Category:AMN_233114'}
    ],options:[]},
- {id:'cotxe_civil',name:'Cotxe utilitari',kind:'terra',
-   note:'Prova C1A revisada: sostre 42 cm més estret en total, muntants inclinats i els vuit vidres allargats i alineats amb els marcs i el sostre per eliminar les escletxes. El model del joc es conserva sense canvis fins a aprovar aquesta versió.',
+ {id:'heli',name:'Helicòpter · Huey UH-1',kind:'aire',
+   note:'Huey definitiu del joc (Duane’s Mind), reconstruït amb geometria nativa de Three.js: cabina amb dos seients, portes obertes i rotors independents. Model editable al laboratori; sense GLB.',
+   references:[{label:'Bell Huey · model original CC BY 4.0',url:'https://sketchfab.com/3d-models/bell-huey-helicopter-755d8518a06e41b19752c1b54c0da588'}],
+   options:[]},
+ {id:'heli_combat',name:'Helicòpter de combat · Apache AH-64',kind:'aire',
+   note:'Apache definitiu d’Araon, geometria Three.js nativa amb tren de tres rodes circulars, malla sàlvia i rotors independents. Model editable al laboratori; no carrega cap GLB.',
    options:[]},
  {id:'tanc',name:'Tanc · T-90M',kind:'terra',candidate:'t90m-v1',
    note:'Només el nostre T-90M: model procedimental ampliat un 50 %, amb torreta, canó i erugues animables al laboratori. El mateix model s’ha integrat al joc, amb la caixa de col·lisions ajustada al casc.',

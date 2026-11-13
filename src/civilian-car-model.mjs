@@ -1,10 +1,10 @@
-// Shared C1 body; the default configuration is the in-game C1A.
-const C1A={id:'C1A',name:'Maleter clàssic',description:'C1 original depurat: maleter baix, passadors interiors foscos i cromats fins.',length:5.75,width:2.92,roofY:2.73,roofFront:-.82,roofRear:2.02,frontBase:-1.37,rearBase:2.26,beltY:1.75,rWheel:.70,rArch:.83,trim:0xcbd0c7,upholstery:0x6e5743,rack:false,rails:false,cargoY:1.06,liner:0x414440,cargo:0x494e49,bumper:0xcbd0c7};
+// Shared C1 body; C1A default includes the approved tapered roof and sealed glazing.
+const C1A={id:'C1A',name:'Maleter clàssic',description:'C1 original depurat: maleter baix, passadors interiors foscos i cromats fins.',length:5.75,width:2.92,roofY:2.73,roofFront:-.82,roofRear:2.02,frontBase:-1.37,rearBase:2.26,beltY:1.75,rWheel:.70,rArch:.83,trim:0xcbd0c7,upholstery:0x6e5743,rack:false,rails:false,cargoY:1.06,liner:0x414440,cargo:0x494e49,bumper:0xcbd0c7,roofInset:.21};
 export function createCivilianCarModel(THREE,color=0x4b9fd1,q=C1A,decorate=null,accessories=null){
  const g=new THREE.Group();g.name='hunter-civil-family-iteration-'+q.id;
  const L=q.length,W=q.width,hw=W/2,top=q.roofY,belt=q.beltY;
- // Els C1A aprovats no canvien. El candidat del laboratori redueix
- // l'amplada del sostre i inclina tota la superfície envidrada.
+ // El C1A definitiu té sostre estret i vidres inclinats. Altres
+ // variants històriques sense roofInset continuen amb el sostre original.
  const roofInset=Math.max(0,Math.min(.4,q.roofInset||0));
  const insetAtY=y=>roofInset*Math.max(0,Math.min(1,(y-belt)/(top-belt)));
  const frontZ=-L/2,rearZ=L/2;
@@ -309,14 +309,7 @@ export function createCivilianCarModel(THREE,color=0x4b9fd1,q=C1A,decorate=null,
  g.userData.hasTransparentGlass=true;
  g.userData.hasWheelArchCutouts=true;
  g.userData.hasVisibleInterior=true;
+ g.userData.roofInset=roofInset;
  return g;
 }
 
-/** Només laboratori: no modifica el C1A de producció fins a l'aprovació. */
-export function createCivilianCarRoofCandidate(THREE,color=0x4b9fd1){
- const model=createCivilianCarModel(THREE,color,{...C1A,roofInset:.21});
- model.name='hunter-civil-c1a-narrow-roof-candidate';
- model.userData.roofInset=.21;
- model.userData.labOnly=true;
- return model;
-}

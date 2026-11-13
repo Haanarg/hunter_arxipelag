@@ -1,3 +1,11 @@
+**2026-11-13 · C1A aprovat i helicòpters recuperats al laboratori:**
+- [x] El cotxe utilitari C1A actual del joc fa servir el sostre estret aprovat (21 cm menys per costat), amb els vuit vidres ajustats i cap canvi de física ni de seients.
+- [x] Retirada la categoria `cotxe_civil` del laboratori de vehicles (no se n'esborra el model del joc).
+- [x] Recuperades les pestanyes `heli` i `heli_combat` del laboratori amb els models natius definitius Huey i Apache, sense dependre dels GLB originals.
+- [x] Inventari de GLB revisat: 11 fitxers (8 candidats navals, 2 BTR-82 i 1 Huey històric); cap GLB de l'Apache definitiu ni del Humvee.
+- [ ] Verificar visualment el C1A en el joc i el funcionament interactiu dels models d'helicòpter a l'editor 3D.
+- [ ] Confirmar el desplegament complet a Cloudflare i la càrrega al navegador.
+
 **2026-11-13 · Explosions a la base de torres: correcció dels dos defensors**
 - [x] Detectat el cas: els soldats vius rebien una empenta fora del forjat però conservaven la cota elevada, flotant o dins els parapets.
 - [x] Desplaçament restringit a l'interior de les quatre baranes amb el radi del soldat; reindexació i reparació de coordenades ja desplaçades.

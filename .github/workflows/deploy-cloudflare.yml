@@ -41,8 +41,12 @@ jobs:
           if [ "$missing" -ne 0 ]; then exit 1; fi
       - name: Instal·lar dependències
         run: npm ci --ignore-scripts
-      - name: Comprovar geometria del C1A candidat
-        run: node tests/civilian-car-roof-candidate.mjs
+      - name: Comprovar C1A definitiu i pestanyes de l'editor
+        run: |
+          node tests/civilian-car-roof-candidate.mjs
+          node tests/vehicle-lab-current-models.mjs
+          node tests/huey-native-runtime.mjs
+          node tests/apache-native-runtime.mjs
       - name: Comprovar versió i bundle publicable
         run: npm run check:build
       - name: Comprovar la compilació del Worker
