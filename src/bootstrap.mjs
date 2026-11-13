@@ -151,20 +151,14 @@ try {
   const THREE = await import('../vendor/three-r186.module.mjs');
   THREE.ColorManagement.enabled = true;
   window.THREE = THREE;
-  // El model D3.1 del cotxe militar és ara la versió procedural B.
-  // La malla, normals, UV i textura es creen a partir de dades JavaScript
-  // una sola vegada; no es demana cap GLB durant la partida.
-  // Les dades procedurals són la font del model; els GLB s’han retirat.
-  // Si les dades no es poden preparar, mantenim la geometria clàssica
-  // de reserva per no impedir l'inici de la partida.
+  // GAZ Tigr-M natiu del laboratori, sense cap GLB ni Humvee.
   try {
-    const {prepareHumveeD31Runtime}=await import('./humvee-d31-runtime.mjs?v=0.6.212');
-    window.HUNTER_HUMVEE_D31=await prepareHumveeD31Runtime(THREE,{vehicleScale:1.3});
-    console.info('Humvee D3.1 procedural B · 175% carregat al joc',
-      window.HUNTER_HUMVEE_D31.dimensions);
-  } catch (humveeError) {
-    window.HUNTER_HUMVEE_D31=null;
-    console.warn('No es pot preparar el Humvee B; geometria clàssica de reserva',humveeError);
+    const {prepareGazTigrRuntime}=await import('./gaz-tigr-runtime.mjs?rev=gaz-final-1');
+    window.HUNTER_GAZ_TIGR=prepareGazTigrRuntime(THREE,{vehicleScale:1.3});
+    console.info('GAZ Tigr-M procedimental preparat',window.HUNTER_GAZ_TIGR.dimensions);
+  } catch (gazError) {
+    window.HUNTER_GAZ_TIGR=null;
+    console.error('No es pot preparar el GAZ Tigr-M',gazError);
   }
   // Huey natiu +10% i dos seients de cabina: les geometries i la textura
   // es preparen una sola vegada i es comparteixen entre totes les instàncies.
