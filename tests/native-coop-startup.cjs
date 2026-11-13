@@ -5,7 +5,16 @@ const assert=require('node:assert/strict');
  g.context.HUNTER_NATIVE_COOP_TRANSPORT=options=>{callbacks=options;return {stats:{},start(){},stop(){},prepare(p){payload=p;},combat(){commands++;return true;},inventory(){return true;}};};
  const room={id:'startup',host:'a',revision:1,seed:67,mapScale:1,difficulty:1,allReady:true,expiresAt:Date.now()+86400000,members:[{id:'a',name:'A',host:true},{id:'b',name:'B'}]};
  const task=g.context.HUNTER_NATIVE_COOP.start(room);await g.flushTasks();await task;
- assert.ok(payload.host);assert.ok(payload.payload.targets.some(e=>e.t==='general'));assert.equal(payload.fingerprint.length,64);assert.equal(g.run('generationPromise'),null);
+ assert.ok(payload.host);assert.ok(payload.payload.targets.some(e=>e.t==='general'));assert.equal(payload.fingerprint.length,64);// Regressió del COOP: dos navegadors amb la mateixa llavor han de
+ // generar exactament les mateixes dades, independentment de Math.random().
+ const capturedWorld=JSON.stringify(payload.payload),generationRng=g.run('R.getState()');
+ g.context.Math.random=()=>.9987654321;
+ g.run('spawnFauna()');
+ assert.equal(g.run('R.getState()'),generationRng,'la fauna no consumeix RNG del món');
+ assert.equal(JSON.stringify(g.run('captureNativeCoopWorld()')),capturedWorld,
+   'els taurons han de ser idèntics amb Math.random diferent');
+ delete g.context.Math.random;
+ assert.equal(g.run('generationPromise'),null);
  const {generateNativeMission}=await import('../server/coop-native.mjs'),{restoreRelayMission}=await import('../server/coop-mission.mjs'),generated=generateNativeMission(room,payload.payload,payload.fingerprint),mission=restoreRelayMission(generated.record,generated.geometry);mission.setStatus('running');
  callbacks.onMission({self:'a',meta:mission.meta,state:mission.snapshot()});g.run('update(1/30,0)');assert.equal(g.run('nativeCoopSession.preparing'),false);assert.equal(g.run('cam.isPerspectiveCamera'),true);
  g.dispatch('window','keydown',{code:'KeyW'});assert.equal(callbacks.getInput().forward,1);g.dispatch('window','keyup',{code:'KeyW'});g.run('fire()');assert.equal(commands,1,'original command authority routes fire to room');

@@ -1,3 +1,10 @@
+**2026-11-13 · P0 COOP: dos mons diferents en iniciar una partida:**
+- [x] Causa localitzada: `spawnFaunaSteps()` generava amb `Math.random()` la posició i l'orientació de cada tauró. Com que aquestes dades entren al SHA-256 de `captureNativeCoopWorld()`, dos navegadors amb la mateixa llavor no coincidien i quedaven bloquejats a la càmera inicial.
+- [x] Introduït RNG local de fauna determinista derivat de la llavor; independent del RNG geogràfic `R`. Regenerat el runtime natiu i afegida regressió de captura amb `Math.random()` alterat a `tests/native-coop-startup.cjs`.
+- [ ] Comprovar `npm test` / desplegament i una partida real HOST/GUEST (incloent mòbil vs escriptori); no s'ha relaxat la verificació de fingerprint.
+
+**2026-11-12 · Desplegament Cloudflare:** l'execució manual [43305405474](https://github.com/Haanarg/hunter_arxipelag/actions/runs/43305405474) ha completat amb èxit el deploy. Les notes anteriors que diuen que els secrets falten descriuen l'estat anterior.
+
 **2026-11-12 · Nous candidats per al laboratori (no implementats al joc):**
 - [x] Reactivada la pastilla del cotxe militar al comparador com a GAZ Tigr-M; el visor original mostra el Humvee D3.1 real del joc.
 - [x] Creat GAZ Tigr-M candidat 1 amb geometria Three.js original: cabina, capó, parabrisa partit, portes, rodes, fars i sostre; model editable al laboratori.
