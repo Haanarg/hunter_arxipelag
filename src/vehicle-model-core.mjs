@@ -1,4 +1,5 @@
 import {turretSpecs,advanceTurret} from './vehicle-turret-core.mjs';
+import {prepareGazTigrRuntime} from './gaz-tigr-runtime.mjs';
 import {installBtr82Model3B} from './btr82-3b-native.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
 import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs?rev=vivid-engine-cover-2';
@@ -133,14 +134,14 @@ export const vehicleModels=Object.freeze({
       }
       if(t==='cotxe'){
         // El GAZ Tigr-M natiu substitueix del tot el Humvee, també en COOP.
-        if(typeof gazTigrFactory?.create!=='function')throw new Error('Falta el model GAZ Tigr-M');
-        const gaz=gazTigrFactory.create();
+        const runtime=gazTigrFactory||(gazTigrFactory=prepareGazTigrRuntime(THREE));
+        const gaz=runtime.create();
         resources?.retainModel(gaz);
         g.add(gaz);
         g.userData.wheels=gaz.userData.wheels;
         g.userData.steeringPivots=gaz.userData.steeringPivots;
         g.userData.militaryCarModel='GAZ Tigr-M';
-        g.userData.staticBatches=gazTigrFactory.staticBatches;
+        g.userData.staticBatches=runtime.staticBatches;
       }
       if(t==='camio'){
         // A4.3: el mateix low-poly de la preview, adaptat a la

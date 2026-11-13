@@ -1,3 +1,11 @@
+**2026-11-13 · GAZ Tigr-M integrat i editor cotxe utilitari:**
+- [x] GAZ Tigr-M candidat 3 integrat en SOLO/COOP com a malla Three.js pròpia; quatre rodes animades, direcció davantera i instàncies amb geometria compartida.
+- [x] Substituït el Humvee i eliminats els mòduls antics i les tres pàgines de prova corresponents. Recuperada la pestanya **Cotxe utilitari C1A** i retirada la del GAZ ja aprovat.
+- [x] Ajustada la caixa de col·lisió; mantingut intacte el T-90M en proves i els seus controls d'erugues, torreta i canó.
+- [x] Retirat el GLB històric del Huey, no carregat pel joc. Els GLB restants són únicament els referents a candidats actius de llanxes/ferri i proves del BTR.
+- [ ] Validació visual al navegador, equip/passatger, IA que requisa el GAZ, partida COOP real i desplegament Cloudflare.
+- [ ] Recalcular l'empremta del vehicle cotxe als fitxers històrics de traces si es torna a executar aquella bateria especial.
+
 **2026-11-13 · T-90M, candidat propi únic i animacions al laboratori:**
 - [x] Eliminats del catàleg i manifest els dos candidats externs de T-90M, deixant només el model procedimental propi en un visor.
 - [x] Augmentada la mida global del candidat T-90M un 50 % (escala 1,5) sense alterar el GAZ Tigr.

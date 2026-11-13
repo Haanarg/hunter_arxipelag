@@ -2512,7 +2512,7 @@ function ejectFromHelicopter(v){
   v.reentryLockUntil=elapsed+8;
   playerEject=null;v.strafeV=0;cv=null;swimming=false;
 }
-// Sortida segura del Humvee, turismes i camió en marxa: pel costat i
+// Sortida segura del GAZ Tigr-M, turismes i camió en marxa: pel costat i
 // darrere del sentit de moviment, fora de la caixa física del vehicle.
 function truckExitCandidate(v,side,index){
   const box=vehicleBox(v),k=index%8,exitSide=index<8?side:-side,
