@@ -1,3 +1,8 @@
+**2026-11-13 · Prova de portes GAZ: errada de sintaxi corregida:**
+- [x] L'apòstrof d'un text del diagnòstic JS impedia executar la prova. Corregida la cadena.
+- [x] Afegit `node --check` de la geometria GAZ i de la seva prova per detectar aquest error abans de desplegar.
+- [ ] Comprovar prova funcional i Cloudflare.
+
 **2026-11-13 · GAZ Tigr-M, portes adaptades al xassís (petició 05388bfd):**
 - [x] Porta lateral davantera retallada al muntant A: el frontal superior ja no sobresurt del parabrisa inclinat.
 - [x] Vidre i marc davanters trapezoïdals; obertura del mateix perfil a la carrosseria, sense blindatge darrere el vidre.

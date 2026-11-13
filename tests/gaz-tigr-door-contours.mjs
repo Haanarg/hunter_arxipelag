@@ -44,7 +44,7 @@ function verify(root,name){
   assert(v.some(p=>Math.abs(p[2]-.89)<1e-4&&Math.abs(p[1]-.97)<1e-4),
     name+': falta el retall inferior');
   assert(v.some(p=>Math.abs(p[2]-1.33)<1e-4&&Math.abs(p[1]-1.28)<1e-4),
-    name+': falta l'ajust al parafang');
+    name+': falta el perfil del parafang');
  }
  const panes=find('Vidre lateral');
  assert.equal(panes.length,4);

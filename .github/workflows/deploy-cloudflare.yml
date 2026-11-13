@@ -30,6 +30,8 @@ jobs:
           node --check src/vehicles-externs-proves.mjs
           node --check src/vehicle-live-editor.mjs
           node --check src/btr82-3b-preview.mjs
+          node --check src/vehicle-reference-candidates.mjs
+          node --check tests/gaz-tigr-door-contours.mjs
       - name: Verificar credencials de desplegament sense mostrar secrets
         env:
           CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
