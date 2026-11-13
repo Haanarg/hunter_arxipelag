@@ -1,3 +1,10 @@
+**2026-11-13 · GAZ Tigr-M definitiu i editor de vehicles:**
+- [x] GAZ Tigr-M procedimental propi integrat a la fàbrica del vehicle `cotxe`, en substitució del Humvee D3.1. Física, hitbox, seients i regles del cotxe es mantenen.
+- [x] Quatre rodes animables amb pivots de direcció davanters, mantenint la geometria i els vidres del GAZ aprovat.
+- [x] Laboratori: GAZ com a únic cotxe militar, cap pestanya Humvee; recuperada la pestanya del cotxe utilitari C1A, sense GLB alternatiu.
+- [x] Comprovat que no hi ha cap GLB de Humvee al repositori; els altres GLB són actius o candidats d'altres vehicles i es conserven.
+- [ ] Reconstruir el runtime del joc amb el workflow **manual** `rebuild-runtime.yml`, validar-lo al navegador i desplegar-lo. Els canvis al laboratori sí es poden publicar via manifest.
+
 **2026-11-13 · T-90M, candidat propi únic i animacions al laboratori:**
 - [x] Eliminats del catàleg i manifest els dos candidats externs de T-90M, deixant només el model procedimental propi en un visor.
 - [x] Augmentada la mida global del candidat T-90M un 50 % (escala 1,5) sense alterar el GAZ Tigr.
