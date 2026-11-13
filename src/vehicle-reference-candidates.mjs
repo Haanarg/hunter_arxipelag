@@ -1,11 +1,11 @@
 // Hunter: Arxipèlag · candidats ORIGINALS low-poly per al laboratori.
 // Orientació compartida amb el joc: morro cap a -Z, simetria X=0.
 // No es publiquen al joc fins que s'aprovi un candidat al laboratori.
-export const REFERENCE_CANDIDATE_VERSION='20261113-t90m-tigr-v2';
+export const REFERENCE_CANDIDATE_VERSION='20261113-t90m-tigr-interior-v3';
 
 export function createReferenceVehicle(THREE,type){
  if(type!=='t90m-v1'&&type!=='tigr-v1')throw new Error('Candidat desconegut: '+type);
- const root=new THREE.Group();root.name=type==='t90m-v1'?'T-90M · candidat 2 · proporcions revisades':'GAZ Tigr-M · candidat 2 · proporcions revisades';
+ const root=new THREE.Group();root.name=type==='t90m-v1'?'T-90M · candidat 2 · proporcions revisades':'GAZ Tigr-M · candidat 3 · interior visible';
  root.userData.referenceCandidate=type;
  const mats=new Map();
  const mat=(color,profile='armor')=>{
@@ -64,10 +64,10 @@ export function createReferenceVehicle(THREE,type){
  // Extrusió d'un perfil longitudinal: coordenades del perfil = (Z,Y).
  const profile=(g,name,points,width,x,color,hole)=>{
   const shape=new THREE.Shape();points.forEach(([z,y],i)=>i?shape.lineTo(z,y):shape.moveTo(z,y));shape.closePath();
-  if(hole){const path=new THREE.Path();hole.forEach(([z,y],i)=>i?path.lineTo(z,y):path.moveTo(z,y));path.closePath();shape.holes.push(path)}
+  if(hole)for(const loop of (Array.isArray(hole[0][0])?hole:[hole])){const path=new THREE.Path();loop.forEach(([z,y],i)=>i?path.lineTo(z,y):path.moveTo(z,y));path.closePath();shape.holes.push(path)}
   const geo=new THREE.ExtrudeGeometry(shape,{depth:width,bevelEnabled:false,steps:1});
   geo.rotateY(-Math.PI/2);geo.translate(x+width/2,0,0);
-  return mesh(g,geo,color,name);
+  return mesh(g,type==='tigr-v1'?new THREE.BufferGeometry().copy(geo):geo,color,name);
  };
  if(type==='t90m-v1'){
   const chassis=new THREE.Group();chassis.name='Casc inferior T-90M';root.add(chassis);
@@ -147,6 +147,22 @@ export function createReferenceVehicle(THREE,type){
   root.userData.candidateParts={hull:chassis.name,turret:turret.name,gun:gun.name,wheelsPerSide:6};
  }else{
   const body=new THREE.Group();body.name='Carrosseria GAZ Tigr-M';root.add(body);
+  const rect=(a,b,c,d)=>[[a,c],[b,c],[b,d],[a,d]];
+  // Panells amb obertures geomètriques; cap superfície opaca rere el vidre.
+  const panel=(name,outline,holes,map,color)=>{
+   const shape=new THREE.Shape(outline.map(p=>new THREE.Vector2(...p)));
+   for(const loop of holes)shape.holes.push(new THREE.Path(loop.map(p=>new THREE.Vector2(...p))));
+   const geo=new THREE.ShapeGeometry(shape),pos=geo.attributes.position;
+   for(let i=0;i<pos.count;i++)pos.setXYZ(i,...map(pos.getX(i),pos.getY(i)));
+   geo.computeVertexNormals();return mesh(body,new THREE.BufferGeometry().copy(geo),color,name);
+  };
+  const glass=(name,points)=>{
+   const pane=quad(body,name,points,0xa6c7c9,'glass');
+   pane.material=pane.material.clone();pane.material.opacity=.22;pane.material.roughness=.16;
+   pane.castShadow=false;pane.renderOrder=2;return pane;
+  };
+  const windowHoles=[...[-.24,.89].map(z=>rect(z-.34,z+.34,1.77,2.17)),rect(1.72,2.24,1.805,2.155)];
+
   block(body,'Bastidor central',1.45,.22,4.96,0,.59,0,T.dark);
   // Carrosseria amb retalls reals als dos passos de roda.
   const sideProfile=[[-2.65,1.48],[-.91,1.63],[-.56,2.37],[2.53,2.37],[2.61,.77],[2.29,.77]];
@@ -154,9 +170,11 @@ export function createReferenceVehicle(THREE,type){
   sideProfile.push([.91,.73],[-1.01,.73]);
   for(let i=0;i<=12;i++){const t=i*Math.PI/12;sideProfile.push([-1.70+Math.cos(t)*.69,.56+Math.sin(t)*.69])}
   sideProfile.push([-2.65,.77]);
-  for(const side of [-1,1])profile(body,'Panell lateral amb passos de roda',sideProfile,.055,side*1.075,T.armor);
+  for(const side of [-1,1])profile(body,'Panell lateral amb passos de roda',sideProfile,.055,side*1.075,T.armor,windowHoles);
   block(body,'Sostre blindat',2.15,.09,3.09,0,2.37,.985,T.armor);
-  quad(body,'Mampara parabrisa',[[-1.075,1.63,-.91],[1.075,1.63,-.91],[1.075,2.37,-.56],[-1.075,2.37,-.56]],T.armor);
+  const windZ=y=>-.91+(y-1.63)*.35/.74;
+  const windHoles=[rect(-.93,-.075,1.77,2.23),rect(.075,.93,1.77,2.23)];
+  panel('Mampara parabrisa oberta',rect(-1.075,1.075,1.63,2.37),windHoles,(x,y)=>[x,y,windZ(y)],T.armor);
   quad(body,'Capó inclinat',[[-1.075,1.48,-2.65],[1.075,1.48,-2.65],[1.075,1.63,-.91],[-1.075,1.63,-.91]],T.top);
   armoredLoft(body,'Relleu del capó',[
    {z:-2.30,w:.64,bot:1.51,shoulder:1.55,roof:1.59},
@@ -184,13 +202,14 @@ export function createReferenceVehicle(THREE,type){
    }
    for(const [i,z] of [-.24,.89].entries()){
     // Portes planes i estretes; els vidres queden sobre el mateix pla.
-    block(body,'Porta lateral '+(i?'posterior':'davantera'),.026,1.16,1.04,side*1.116,1.55,z,T.top);
-    block(body,'Marc finestra lateral',.032,.49,.78,side*1.135,1.97,z,T.shadow);
-    block(body,'Vidre lateral',.035,.40,.68,side*1.155,1.97,z,T.glass,'glass');
+    const opening=rect(z-.34,z+.34,1.77,2.17);
+    panel('Porta lateral '+(i?'posterior':'davantera'),rect(z-.52,z+.52,.97,2.24),[opening],(u,y)=>[side*1.13,y,u],T.top);
+    panel('Marc finestra lateral',rect(z-.39,z+.39,1.725,2.215),[opening],(u,y)=>[side*1.15,y,u],T.shadow);
+    glass('Vidre lateral',opening.map(([u,y])=>[side*1.155,y,u]));
     block(body,'Maneta lateral',.047,.045,.19,side*1.145,1.57,z+.31,T.dark);
     for(const y of [1.20,1.68])block(body,'Frontissa porta',.055,.095,.07,side*1.145,y,z-.49,T.shadow);
    }
-   block(body,'Finestreta posterior lateral',.035,.35,.52,side*1.12,1.98,1.98,T.glass,'glass');
+   glass('Finestreta posterior lateral',windowHoles[2].map(([u,y])=>[side*1.12,y,u]));
    block(body,'Esglaó lateral',.22,.065,1.80,side*1.14,.62,-.03,T.dark);
    cylinder(body,'Bisel del far',.17,.07,side*.79,1.21,-2.72,T.dark,'z');
    cylinder(body,'Far principal rodó',.13,.025,side*.79,1.21,-2.765,T.light,'z');
@@ -204,21 +223,40 @@ export function createReferenceVehicle(THREE,type){
   }
   line(body,'Barra superior defensa',[-.68,1.59,-2.84],[.68,1.59,-2.84],.038,T.shadow);
   for(const side of [-1,1]){
-   quad(body,'Marc parabrisa',[[side*.035,1.72,-.875],[side*.98,1.72,-.875],[side*.98,2.28,-.610],[side*.035,2.28,-.610]],T.shadow);
-   quad(body,'Parabrisa partit '+side,[[side*.075,1.77,-.855],[side*.93,1.77,-.855],[side*.93,2.23,-.637],[side*.075,2.23,-.637]],T.glass,'glass');
+   glass('Parabrisa partit '+side,rect(side*.075,side*.93,1.77,2.23).map(([x,y])=>[x,y,windZ(y)-.008]));
    line(body,'Eixugaparabrisa',[side*.12,1.78,-.872],[side*.65,1.94,-.797],.012,T.dark);
   }
-  block(body,'Panell posterior',2.15,1.56,.07,0,1.55,2.58,T.armor);
+  const rearHoles=[rect(-.795,-.185,1.81,2.17),rect(.185,.795,1.81,2.17)];
+  panel('Panell posterior obert',rect(-1.075,1.075,.77,2.33),rearHoles,(x,y)=>[x,y,2.58],T.armor);
   for(const side of [-1,1]){
-   block(body,'Porta posterior',.93,1.39,.035,side*.49,1.55,2.63,T.top);
-   block(body,'Vidre posterior',.61,.36,.025,side*.49,1.99,2.66,T.glass,'glass');
+   const opening=rect(side*.49-.305,side*.49+.305,1.81,2.17);
+   panel('Porta posterior',rect(side*.49-.465,side*.49+.465,.855,2.245),[opening],(x,y)=>[x,y,2.63],T.top);
+   glass('Vidre posterior',opening.map(([x,y])=>[x,y,2.66]));
    block(body,'Maneta posterior',.13,.045,.045,side*.13,1.46,2.67,T.dark);
   }
   block(body,'Para-xocs posterior',2.24,.14,.24,0,.70,2.73,T.dark);
   block(body,'Marc escotilla sostre',.94,.075,1.04,0,2.44,.54,T.shadow);
   block(body,'Escotilla rectangular tancada',.85,.045,.95,0,2.49,.54,T.armor);
   line(body,'Antena',[.89,2.41,2.15],[.89,3.17,2.15],.012,T.dark);
-  root.userData.candidateParts={body:body.name,wheels:4,doors:4,front:-1,wheelbase:3.3};
+  const interior=new THREE.Group();interior.name='Interior Tigr-M';body.add(interior);
+  block(interior,'Terra habitacle',2.04,.07,3.25,0,.94,.91,0x53594d);
+  block(interior,'Tauler de comandament',1.96,.20,.36,0,1.54,-.67,0x42483f);
+  block(interior,'Consola central',.30,.30,.72,0,1.15,-.21,0x555c50);
+  for(const z of [.12,1.28])for(const x of [-.53,.53]){
+   const seat=new THREE.Group();seat.name='Seient '+(z<1?'davanter':'posterior')+' '+(x<0?'conductor':'dret');interior.add(seat);
+   block(seat,'Base seient',.47,.17,.48,x,1.15,z,0x737461);
+   const back=block(seat,'Respatller',.47,.52,.12,x,1.46,z+.23,0x737461);back.rotation.x=-.10;
+   block(seat,'Reposacaps',.27,.18,.12,x,1.80,z+.25,0x626553);
+   block(seat,'Suport seient',.30,.12,.31,x,1.01,z,0x353b34);
+  }
+  const steering=new THREE.Group();steering.name='Volant';steering.position.set(-.53,1.62,-.32);steering.rotation.x=-.48;interior.add(steering);
+  mesh(steering,new THREE.TorusGeometry(.18,.022,6,16),0x30372f,'Cèrcol volant');
+  for(let i=0;i<3;i++){const a=i*Math.PI*2/3;line(steering,'Radi volant',[0,0,0],[Math.cos(a)*.16,Math.sin(a)*.16,0],.014,0x30372f)}
+  cylinder(steering,'Centre volant',.045,.06,0,0,0,0x30372f,'z');
+  line(interior,'Columna direcció',[-.53,1.62,-.32],[-.53,1.38,-.67],.033,0x30372f);
+  block(interior,'Quadre instruments',.45,.12,.025,-.53,1.61,-.475,0x1d292a);
+  root.userData.candidateParts={body:body.name,wheels:4,doors:4,front:-1,wheelbase:3.3,seats:4,interior:interior.name};
+
  }
  root.traverse(o=>{if(o.isMesh&&o.geometry?.attributes?.position){
   const positions=o.geometry.getAttribute('position');

@@ -1,3 +1,9 @@
+**2026-11-13 · Petició f0a3c211 · Interior GAZ Tigr-M candidat:**
+- [x] Confirmat per l’usuari: modificar el Tigr candidat, tot i que l’exportació indicava el visor Actual/Humvee.
+- [x] Deu vidres transparents amb retalls reals al blindatge, portes i parabrisa; quatre seients amb reposacaps, terra, tauler, consola i volant amb columna. Peces editables.
+- [x] Proves de transparència, absència de blindatge immediat darrere dels vidres i preservació de la geometria en exportar/importar JSON; revisió `live-editor-20261113-tigr-interior-3`.
+- [ ] Valoració visual al visor WebGL. Models del joc sense modificar.
+
 **2026-11-13 · Refinat visual T-90M / GAZ Tigr-M (laboratori):**
 - [x] Candidats 2 Three.js originals revisats amb fotografies noves: Tigr AMN-233114 i T-90M de desfilada. Fonts accessibles al comparador; proporcions del Tigr contrastades amb el catàleg VPK.
 - [x] Tigr: carrosseria estreta, distància entre eixos 3,3 m, passos de roda retallats, frontal amb defensa tubular, capó i parabrisa inclinats, quatre portes i escotilla rectangular.

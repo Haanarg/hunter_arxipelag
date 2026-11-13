@@ -64,7 +64,7 @@ const version=btr.match(/export const BTR82_VERSION='([^']+)'/)?.[1];
 assert(version&&version.startsWith('btr82-'),'Falta la revisió del BTR-82');
 assert(studio.includes('btr82-3b-preview.mjs?rev='),'Falta el model de proves 3B vigent');
 assert(html.includes('src/vehicles-externs-proves.mjs?rev='));
-assert(studio.includes("vehicle-candidate-catalog.mjs?rev=lab-catalog-t90m-tigr-2"),
+assert(studio.includes("vehicle-candidate-catalog.mjs?rev=lab-catalog-tigr-interior-3"),
  'Força la càrrega del catàleg nou sense reutilitzar una còpia antiga');
 assert(html.includes(".catch(error=>")&&html.includes("No s’ha pogut carregar el laboratori"),
  'Una fallada en carregar un mòdul no pot deixar el visor en blanc');

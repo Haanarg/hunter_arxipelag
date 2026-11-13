@@ -36,6 +36,21 @@ for(const [type,needles,minMeshes] of [
   assert.equal(names.filter(n=>n.startsWith('Pneumàtic tot terreny')).length,4);
   assert.equal(names.filter(n=>n.startsWith('Porta lateral')).length,4);
   assert.equal(candidate.userData.candidateParts.doors,4);
+  assert.equal(candidate.userData.candidateParts.seats,4);
+  assert(candidate.getObjectByName('Volant'));
+  const panes=all.filter(o=>/^(Vidre lateral|Vidre posterior|Finestreta posterior lateral|Parabrisa partit)/.test(o.name));
+  assert.equal(panes.length,10);
+  for(const pane of panes){
+   assert(pane.material.transparent&&pane.material.opacity<.3);
+   const p=pane.geometry.attributes.position,center=new THREE.Vector3();
+   for(let i=0;i<p.count;i++)center.add(new THREE.Vector3().fromBufferAttribute(p,i));
+   center.divideScalar(p.count);pane.localToWorld(center);
+   const direction=new THREE.Vector3(0,1.97, .65).sub(center).normalize();
+   // First opaque obstruction must lie beyond the wall, not directly behind glass.
+   const ray=new THREE.Raycaster(center.clone().addScaledVector(direction,-.08),direction,.001,.16);
+   assert.equal(ray.intersectObjects(all).filter(h=>!h.object.material.transparent).length,0,pane.name+' té blindatge darrere');
+  }
+
   assert(size.x>2.4&&size.x<2.8,'Amplada Tigr amb retrovisors');
   assert(size.z>5.6&&size.z<5.9,'Longitud Tigr');
   assert.equal(candidate.userData.candidateParts.wheelbase,3.3);
@@ -44,6 +59,10 @@ for(const [type,needles,minMeshes] of [
  const json=candidate.toJSON();
  const restored=new THREE.ObjectLoader().parse(json);
  assert.equal(restored.userData.referenceCandidate,type);
+ if(type==='tigr-v1')for(const original of all){
+  const copy=restored.getObjectByProperty('uuid',original.uuid);
+  assert.deepEqual(Array.from(copy.geometry.attributes.position.array),Array.from(original.geometry.attributes.position.array),'Geometria editable preservada: '+original.name);
+ }
  assert(new THREE.Box3().setFromObject(restored).getSize(new THREE.Vector3()).distanceTo(size)<1e-4,
   'La geometria ha de poder-se exportar i importar per l’editor');
 }
