@@ -59,8 +59,8 @@ export function bunkerBasementPlan(seed,b){
  stair:{axis:'x',z:centralDoorZ,xTop:16.6,xBottom:6.8,width:4.3,enclosed:true},stairExitZ:centralDoorZ,
  generalLocal:{x:-19,z:variant%2?15:-15},
  upperGuards:[{x:-7,z:10},{x:7,z:10}],
- guardLocal:[{x:-4.8,z:-15,patrolZ:-7},{x:4.8,z:14,patrolZ:7},
-  {x:19,z:16},{x:-19,z:0.5*(-7+(variant%2)*1.3+6.4+Math.floor(variant/2)*1.3)}]};
+ guardLocal:[{x:-4.8,z:-15,patrolZ:-7},{x:3.5,z:14,patrolZ:7},
+  {x:13,z:12},{x:-19,z:0.5*(-7+(variant%2)*1.3+6.4+Math.floor(variant/2)*1.3)}]};
 }
 
 // Four basement guards in every mode; no global RNG consumption.
