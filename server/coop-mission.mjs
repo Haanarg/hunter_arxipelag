@@ -16,6 +16,7 @@ import {createNativeOptionals} from './coop-optionals.mjs';
 import {createNativeFauna} from './coop-fauna.mjs';
 import {createCoopIntel} from '../src/coop-intel-core.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
+import {advanceBunkerGate} from '../src/building-shell.mjs';
 import {VEHICLE_SIGNAL_SOUNDS} from '../src/enemy-perception-core.mjs';
 import {COOP_CHEAT_KEYS,normalizeCoopCheats,grantCoopCheatItems,moveCoopCheatFly} from '../src/coop-cheats.mjs';
 export const MISSION_VERSION='relay:22';
@@ -60,6 +61,10 @@ export function restoreRelayMission(record,geometry){
   const meta=structuredClone(record.meta),canonical=structuredClone(geometry),physical=structuredClone(geometry),b=meta.bounds,
     doorStates=new Map((record.doors||meta.doors.map(d=>({id:d.id,open:false}))).map(d=>[d.id,!!d.open])),
     cooldowns=new Map((record.doorCooldowns||[]).map(c=>[c.actorId,c.tick])),results=structuredClone(record.commandResults||[]);
+  const gateMotions=new Map(meta.doors.filter(d=>physical.walls[d.wallIndex]?.bunkerGate).map(d=>{
+    const row=record.doors?.find(r=>r.id===d.id),open=doorStates.get(d.id)??false;
+    return [d.id,{progress:Number.isFinite(row?.openProgress)?Math.max(0,Math.min(1,row.openProgress)):(open?1:0),desiredOpen:row?.desiredOpen??open}];
+  }));
   for(const d of meta.doors)physical.walls[d.wallIndex].open=doorStates.get(d.id)??false;
   const removedWalls=new Set(record.removedWalls||[]);for(const i of removedWalls)if(physical.walls[i])physical.walls[i].open=true;
   // La roca que substitueix el pou ha de persistir després de reconnectar.
@@ -296,7 +301,7 @@ export function restoreRelayMission(record,geometry){
     if(meta.mode!=='native'||!goal)return false;
     const dx=goal.x-unit.x,dz=goal.z-unit.z,len2=dx*dx+dz*dz;
     if(len2<.01)return false;
-    const choice=meta.doors.filter(d=>!doorStates.get(d.id)&&!removedWalls.has(d.wallIndex))
+    const choice=meta.doors.filter(d=>!gateMotions.has(d.id)&&!doorStates.get(d.id)&&!removedWalls.has(d.wallIndex))
       .map(d=>{
         const distance=Math.hypot(unit.x-d.cx,unit.z-d.cz),
           projection=Math.max(0,Math.min(1,((d.cx-unit.x)*dx+(d.cz-unit.z)*dz)/len2)),
@@ -307,7 +312,7 @@ export function restoreRelayMission(record,geometry){
       .sort((a,b)=>a.distance-b.distance)[0];
     if(!choice)return false;
     const d=choice.d,wall=physical.walls[d.wallIndex];
-    if(!wall||wall.locked||wall.alwaysOpen||wall.open)return false;
+    if(!wall||wall.locked||wall.bunkerGate||wall.alwaysOpen||wall.open)return false;
     // Un jugador que passa pel llindar impedeix que la IA li tanqui
     // la porta, però obrir-la no suposa cap perill de col·lisió.
     physical.walls[d.wallIndex]={...wall,open:true};
@@ -322,7 +327,28 @@ export function restoreRelayMission(record,geometry){
     visiblePlayers:()=>cheats.invisible?[]:sim.snapshot().players,
     damagePlayer:(id,amount)=>cheats.immune?false:
       rescue.canDamage(id,sim.snapshot().tick)?sim.damage(id,amount):false,geometry:()=>physical,world:()=>world,active:()=>status==='running'&&['relay','extract'].includes(phase)&&Date.now()<meta.expiresAt});
-  const doors=()=>meta.doors.map(d=>({id:d.id,open:removedWalls.has(d.wallIndex)||(doorStates.get(d.id)??false),destroyed:removedWalls.has(d.wallIndex)}));
+  const doors=()=>meta.doors.map(d=>{
+    const destroyed=removedWalls.has(d.wallIndex),gate=gateMotions.get(d.id);
+    return {id:d.id,open:destroyed||(doorStates.get(d.id)??false),destroyed,
+      ...(gate?{openProgress:destroyed?1:gate.progress,desiredOpen:destroyed||gate.desiredOpen}:{})};
+  });
+  function doorOccupied(wall,players){
+    return vehicles.live().some(v=>v.x>wall.x0-1.8&&v.x<wall.x1+1.8&&v.z>wall.z0-1.8&&v.z<wall.z1+1.8&&v.y+2>wall.y0&&v.y<wall.y1)||
+      players.some(p=>p.x>wall.x0-.8&&p.x<wall.x1+.8&&p.z>wall.z0-.8&&p.z<wall.z1+.8&&p.y+3.1>wall.y0&&p.y+.15<wall.y1);
+  }
+  function updateBunkerGates(players){
+    let changed=false;
+    for(const d of meta.doors){
+      const gate=gateMotions.get(d.id);if(!gate||removedWalls.has(d.wallIndex))continue;
+      if(gate.progress===(gate.desiredOpen?1:0))continue;
+      const wall=physical.walls[d.wallIndex];
+      if(!gate.desiredOpen&&doorOccupied(wall,players))gate.desiredOpen=true;
+      gate.progress=advanceBunkerGate(gate.progress,gate.desiredOpen,1/30,meta.difficulty);
+      const open=gate.progress===1;
+      if(open!==doorStates.get(d.id)){wall.open=open;doorStates.set(d.id,open);changed=true;doorRevision++;}
+    }
+    if(changed)world=buildWorld();
+  }
   const reviveLine=(a,b)=>!vehicles.mounted(a.id)&&!vehicles.mounted(b.id)&&traceArena({x:a.x,y:a.y+1.5,z:a.z},{x:b.x,y:b.y+.75,z:b.z},physical,world).fraction>=1;
   function snapshot(){const state=sim.snapshot(),help=rescue.snapshot(state.tick);help.down=help.down.map(d=>({...d,helpers:state.players.filter(p=>reviveReachable(p,state.players.find(p=>p.id===d.actorId),reviveLine)).map(p=>p.id)}));return {...state,removedWalls:[...removedWalls],removedRoofs:[...removedRoofs],brokenWindows:[...brokenWindows],palmHealth:[...palmHealth],vehicles:vehicles.snapshot(),rescue:help,combat:combat.snapshot(),...(meta.mode==='native'&&meta.optional?{optionals:optionals.snapshot()}:{}),...(meta.mode==='native'&&meta.sharks?{fauna:fauna.snapshot()}:{}),...(meta.mode==='native'&&meta.intel?{intel:intel.snapshot()}:{}),missionId:meta.id,phase,hold,status,doorRevision,doors:doors(),inventories:inventories(),supplies:supplies(),claimedSupplies:[...claimed],cheats:{...cheats},remaining:Math.max(0,(meta.timeLimitTicks-state.tick)/30)};}
 
@@ -335,11 +361,12 @@ export function restoreRelayMission(record,geometry){
       else if(!door)code='UNKNOWN_DOOR';
       else if(removedWalls.has(door.wallIndex))code='DESTROYED';
       else if(Math.hypot(actor.x-door.cx,actor.z-door.cz)>4.5||Math.abs(actor.y-door.floor)>2)code='TOO_FAR';
-      else if(doorStates.get(door.id)===message.open){ok=true;code='UNCHANGED';}
+      else if((gateMotions.get(door.id)?.desiredOpen??doorStates.get(door.id))===message.open){ok=true;code='UNCHANGED';}
       else if(state.tick-(cooldowns.get(actorId)??-Infinity)<18)code='COOLDOWN';
       else{
-        const wall=physical.walls[door.wallIndex],occupied=!message.open&&(vehicles.live().some(v=>v.x>wall.x0-1.8&&v.x<wall.x1+1.8&&v.z>wall.z0-1.8&&v.z<wall.z1+1.8&&v.y+2>wall.y0&&v.y<wall.y1)||state.players.some(p=>p.x>wall.x0-.8&&p.x<wall.x1+.8&&p.z>wall.z0-.8&&p.z<wall.z1+.8&&p.y+3.1>wall.y0&&p.y+.15<wall.y1));
+        const wall=physical.walls[door.wallIndex],gate=gateMotions.get(door.id),occupied=!message.open&&doorOccupied(wall,state.players);
         if(occupied)code='OCCUPIED';
+        else if(gate){gate.desiredOpen=message.open;cooldowns.set(actorId,state.tick);doorRevision++;ok=true;code=message.open?'OPENING':'CLOSING';}
         else{
           const updated={...physical,walls:physical.walls.map((w,i)=>i===door.wallIndex?{...w,open:message.open}:w)},next=createStaticWorldAdapter(updated);
           next.setPalmHealth(palmHealth);physical.walls=updated.walls;world=next;doorStates.set(door.id,message.open);cooldowns.set(actorId,state.tick);doorRevision++;ok=true;code=message.open?'OPENED':'CLOSED';
@@ -362,6 +389,7 @@ export function restoreRelayMission(record,geometry){
     refillCheats();
     const before=sim.snapshot(),ferries=meta.mode==='native'?
       vehicles.snapshot().filter(v=>v.t==='ferry'&&!v.destroyed):[];
+    updateBunkerGates(before.players);
     vehicles.step(before.tick+1);
     if(meta.mode==='native')for(const p of before.players){
       if(p.fall||p.swimming||vehicles.mounted(p.id))continue;

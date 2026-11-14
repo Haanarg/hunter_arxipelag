@@ -334,6 +334,10 @@
 - [ ] Per habilitar la càrrega automàtica a la web, encara cal pujar el GLB original a `assets/vehicle-candidates/tanqueta/btr82-original.glb`; el connector GitHub no permet transferir directament el binari del contenidor. Es pot importar al visor amb IndexedDB sense pujar-lo.
 - [ ] Verificar les UV, les 8 rodes, el perfil de la torreta i el rendiment real; després triar un LOD i integrar-lo en SOLO/COOP.
 
+**2026-11-14 · porta blindada temporitzada:**
+- [x] Obertura manual E/botó contextual, progressiva segons dificultat: 3/5/10 s; mateix temporitzador compartit SOLO/COOP, col·lisió fins a obertura completa i persistència del progrés cooperatiu.
+- [ ] Validar en partida real SOLO i dos dispositius COOP després de reconstruir el runtime.
+
 **2026-11-09 · búnquer blindat (v0.6.200):**
 - [x] Excepció al balanç general: **30 PV** a cada paret exterior/interior i al sostre del búnquer; **20 PV** a la porta blindada, immune a armes lleugeres.
 - [x] Aplicació al generador físic SOLO i COOP, incloses parets interiors especials i serialització de la porta blindada al Worker.

@@ -1166,7 +1166,7 @@ function mkB(x,z,w,d,h,col,roof,opt={}){const fy=hAt(x,z),visual=seedSearchMode
  {dw,ds,wallH,wallHp,roofHp}=shell,structuralWalls=[],buildingWallStart=Wl.length;
 let entranceDoor=null;
 const seg=(lx,lz,sx,sz,dr,windows=false,supportSide=null,supportWeight=0,level=0)=>{if(!dr){const parts=seedSearchMode?[new THREE.Object3D()]:windows?buildingVisual.addWindowedWall(g,{lx,lz,sx,sz,height:wallH,material:wm}):[buildingVisual.addWall(g,{lx,lz,sx,sz,height:wallH,material:wm})],m=parts[0],layout=windows?window.HUNTER_BUILDING_SHELL.windowLayout(sx,sz,wallH):null,glassMeshes=parts.filter(mesh=>mesh.userData.windowPane!==undefined),o={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:fy+level-(level?0:1),y1:fy+level+wallH,hp:wallHp,m,parts:windows?parts:null,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,supportSide,supportWeight,upperFloorWindow:!!layout&&level>0,...(layout?{windowPanes:layout.centers.map(c=>({axis:layout.alongX?'z':'x',x:x+lx+(layout.alongX?c:0),z:z+lz+(layout.alongX?0:c),y0:fy+level+layout.bottom+.09,y1:fy+level+layout.bottom+layout.height-.09,width:layout.width-.18})),glassMeshes}: {})};for(const mesh of parts)mesh.position.y+=level;Wl.push(o);if(supportWeight>0)structuralWalls.push(o);return o}
-const doorHeight=Math.min(opt.doorHeight||window.HUNTER_BUILDING_SHELL.STANDARD_BUILDING_DOOR.height,Math.max(2.8,wallH-.65)),parts=seedSearchMode?{door:new THREE.Object3D(),doorHeight}:buildingVisual.addDoor(g,{lx,lz,sx,sz,height:wallH,wallMaterial:wm,doorMaterial:dm,doorHeight,thinWoodDoor:!opt.bunker&&!opt.hangar&&!opt.workshop}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],woodenDoor=!opt.bunker&&!opt.hangar&&!opt.workshop,thickness=window.HUNTER_BUILDING_SHELL.WOODEN_DOOR_THICKNESS,door={x0:x+lx-(woodenDoor&&ds>=2?thickness:sx)/2,x1:x+lx+(woodenDoor&&ds>=2?thickness:sx)/2,z0:z+lz-(woodenDoor&&ds<2?thickness:sz)/2,z1:z+lz+(woodenDoor&&ds<2?thickness:sz)/2,y0:fy-1,y1:fy+parts.doorHeight,hp:opt.bunker?window.HUNTER_BUILDING_SHELL.BUNKER_DOOR_HP:window.HUNTER_BUILDING_SHELL.WOODEN_DOOR_HP,woodenDoor:!opt.bunker&&!opt.hangar&&!opt.workshop,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,openDuration:opt.bunker?10:null,closedLocalY:parts.door.position.y,rammable:true};Wl.push(door);Dr.push(door);entranceDoor=door;
+const doorHeight=Math.min(opt.doorHeight||window.HUNTER_BUILDING_SHELL.STANDARD_BUILDING_DOOR.height,Math.max(2.8,wallH-.65)),parts=seedSearchMode?{door:new THREE.Object3D(),doorHeight}:buildingVisual.addDoor(g,{lx,lz,sx,sz,height:wallH,wallMaterial:wm,doorMaterial:dm,doorHeight,thinWoodDoor:!opt.bunker&&!opt.hangar&&!opt.workshop}),normal=[[0,1],[0,-1],[1,0],[-1,0]][ds],woodenDoor=!opt.bunker&&!opt.hangar&&!opt.workshop,thickness=window.HUNTER_BUILDING_SHELL.WOODEN_DOOR_THICKNESS,door={x0:x+lx-(woodenDoor&&ds>=2?thickness:sx)/2,x1:x+lx+(woodenDoor&&ds>=2?thickness:sx)/2,z0:z+lz-(woodenDoor&&ds<2?thickness:sz)/2,z1:z+lz+(woodenDoor&&ds<2?thickness:sz)/2,y0:fy-1,y1:fy+parts.doorHeight,hp:opt.bunker?window.HUNTER_BUILDING_SHELL.BUNKER_DOOR_HP:window.HUNTER_BUILDING_SHELL.WOODEN_DOOR_HP,woodenDoor:!opt.bunker&&!opt.hangar&&!opt.workshop,m:parts.door,door:true,open:!!opt.openDoor,alwaysOpen:!!opt.openDoor,locked:!!opt.lockedDoor,cx:x+lx,cz:z+lz,nx:normal[0],nz:normal[1],doorWidth:dw,doorHeight:parts.doorHeight,bunkerGate:!!opt.bunker,openProgress:opt.bunker?0:null,closedLocalY:parts.door.position.y,rammable:true};Wl.push(door);Dr.push(door);entranceDoor=door;
 let lintel=null;
 if(parts.lintel){
  lintel={x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,
@@ -1539,7 +1539,7 @@ function interactPlayerDoor(){
   d.desiredOpen=open;
   window.HUNTER_STEALTH.emit('door',d.cx,(d.y0??hAt(d.cx,d.cz))+1,d.cz);
   if(!d.bunkerGate&&!d.bunkerInteriorDoor){d.open=open;if(d.m)d.m.visible=!open;}
-  msg=open?'Porta oberta.':'Porta tancada.';if(d.bunkerGate||d.bunkerInteriorDoor)msg=open?'Obrint porta…':'Tancant porta…';msgT=2;
+  msg=open?'Porta oberta.':'Porta tancada.';if(d.bunkerGate)msg=(open?'Obrint porta… ':'Tancant porta… ')+window.HUNTER_BUILDING_SHELL.bunkerGateDuration(DIF)+' s';else if(d.bunkerInteriorDoor)msg=open?'Obrint porta…':'Tancant porta…';msgT=2;
   updateActionButton(cv?null:nearV());return true;
 }
 function updateDoors(dt){
@@ -1549,12 +1549,13 @@ function updateDoors(dt){
     if(d.alwaysOpen)d.desiredOpen=true;
     if(d.bunkerInteriorDoor||d.bunkerGate){
       if(!d.desiredOpen&&d.openProgress>0&&doorOccupied(d))d.desiredOpen=true;
-      const duration=d.bunkerGate?(d.openDuration||10):(d.desiredOpen?1.15:1.6);
-      d.openProgress=Math.max(0,Math.min(1,(d.openProgress||0)+(d.desiredOpen?dt/duration:-dt/duration)));
+      const duration=d.desiredOpen?1.15:1.6;
+      d.openProgress=d.bunkerGate?window.HUNTER_BUILDING_SHELL.advanceBunkerGate(d.openProgress||0,d.desiredOpen,dt,DIF):
+        Math.max(0,Math.min(1,(d.openProgress||0)+(d.desiredOpen?dt/duration:-dt/duration)));
       const p=d.openProgress,ease=p*p*(3-2*p);
-      if(d.bunkerGate){d.m.scale.y=Math.max(.025,1-ease);d.m.position.y=d.closedLocalY+d.doorHeight*ease*.5;d.open=p>=.999;}
+      if(d.bunkerGate){d.m.scale.y=Math.max(.025,1-ease);d.m.position.y=d.closedLocalY+d.doorHeight*ease*.5;d.open=p===1;}
       else{d.m.position.y=d.closedLocalY+(d.doorHeight+.55)*ease;d.open=p>.86;}
-      d.m.visible=p<.999;continue;
+      d.m.visible=d.hp>0&&p<1;continue;
     }
     d.open=!!d.desiredOpen;if(d.m)d.m.visible=!d.open;
   }

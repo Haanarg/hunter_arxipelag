@@ -862,7 +862,15 @@ function updateNativeCoopFrame(dt){
   }
  }
  if(s.appliedDoors!==state.doors){s.appliedDoors=state.doors;
- s.doors??=new Map(Dr.map(d=>[d.saveId,d]));for(const row of state.doors){const d=s.doors.get(row.id);if(d){d.desiredOpen=row.open;d.open=row.open;if(d.m)d.m.visible=!row.open&&!row.destroyed;}}
+ s.doors??=new Map(Dr.map(d=>[d.saveId,d]));for(const row of state.doors){
+   const d=s.doors.get(row.id);if(!d)continue;
+   d.desiredOpen=row.desiredOpen??row.open;d.open=row.open;
+   if(d.bunkerGate&&d.m){
+     const p=d.openProgress=row.openProgress??(row.open?1:0),ease=p*p*(3-2*p);
+     d.m.scale.y=Math.max(.025,1-ease);d.m.position.y=d.closedLocalY+d.doorHeight*ease*.5;
+     d.m.visible=p<1&&!row.destroyed;
+   }else if(d.m)d.m.visible=!row.open&&!row.destroyed;
+ }
  }
  if(s.appliedBrokenWindows!==state.brokenWindows){s.appliedBrokenWindows=state.brokenWindows;
  for(const id of state.brokenWindows||[]){const [index,pane]=id.split(':').map(Number),wall=s.walls[index];if(wall){wall.brokenWindows??=new Set();wall.brokenWindows.add(pane);if(wall.glassMeshes?.[pane])wall.glassMeshes[pane].visible=false;}}

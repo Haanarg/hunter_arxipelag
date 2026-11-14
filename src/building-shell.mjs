@@ -5,6 +5,12 @@ import {segmentAabbT} from './combat-rules.mjs';
 export const STANDARD_BUILDING_DOOR=Object.freeze({width:2.4,height:3.8});
 export const WOODEN_DOOR_HP=4;
 export const BUNKER_DOOR_HP=20;
+// Difficulty uses the canonical .6 / 1 / 1.5 values in both modes.
+export function bunkerGateDuration(difficulty){return difficulty<=.6?3:difficulty>=1.5?10:5;}
+export function advanceBunkerGate(progress,desiredOpen,dt,difficulty){
+ const next=Math.max(0,Math.min(1,progress+(desiredOpen?1:-1)*dt/bunkerGateDuration(difficulty)));
+ return next>=1-1e-9?1:next<=1e-9?0:next;
+}
 export const BUNKER_STRUCTURE_HP=30;
 export const REINFORCED_STRUCTURE_HP=10;
 export const WOODEN_STRUCTURE_HP=4;
