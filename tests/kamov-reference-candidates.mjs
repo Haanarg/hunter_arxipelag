@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as T from '../vendor/three-r186.module.mjs';
 import {createKamovCandidate,stepKamovRotors,KAMOV_VERSION} from '../src/kamov-reference-candidates.mjs';
-assert(KAMOV_VERSION.includes('rear-bench'));
+assert(KAMOV_VERSION.includes('belly-profile'));
 for(const type of ['ka60','ka52']){
  const root=createKamovCandidate(T,type),meshes=[],rotors=[];
  root.traverse(o=>{if(o.userData.kamovRotor)rotors.push(o);if(o.isMesh)meshes.push(o)});
@@ -46,6 +46,19 @@ for(const type of ['ka60','ka52']){
    for(const frame of meshes.filter(o=>/^(Muntant porta lateral integrat|Llinda porta lateral integrada|Llindar porta lateral integrat)$/.test(o.name)))
     assert(new Set(vertsOf(frame).filter(v=>shellVerts.has(v))).size>=2,'Marc comparteix aresta amb fuselatge');
   }
+  const lowerShell=meshes.filter(o=>/^(Fuselatge Ka-60 panell|Botaló Ka-60 panell)/.test(o.name));
+  const bottomAt=z=>{
+   const hit=new T.Raycaster(new T.Vector3(0,-1,z),new T.Vector3(0,1,0)).intersectObjects(lowerShell)[0];
+   assert(hit,'Ventre tancat a Z='+z);return hit.point.y;
+  };
+  assert(bottomAt(-2.22)<.48,'Ventre prop de les rodes davanteres');
+  const bottoms=[-2.22,-1,.4,1.84,3.14,4.64,6.74].map(bottomAt);
+  for(let i=1;i<bottoms.length;i++)assert(bottoms[i]>bottoms[i-1],'Perfil inferior progressivament ascendent');
+  assert(bottoms.at(-1)>1.5,'Cua afuada per sota');
+  const frontWheels=root.children.filter(o=>o.name==='Roda tren aterratge'&&o.position.z<0);
+  assert.equal(frontWheels.length,2);
+  for(const wheel of frontWheels)assert.deepEqual(wheel.position.toArray(),[Math.sign(wheel.position.x)*1.15,.35,-2.22]);
+  assert(!root.getObjectByName('Fuselatge Ka-60 tapa posterior')&&!root.getObjectByName('Botaló Ka-60 tapa frontal'),'Unió contínua sense tapes internes');
   const panel=root.getObjectByName('Planxa posterior cabina Ka-60'),
    innerPanel=root.getObjectByName('Cara interior planxa posterior Ka-60'),
    bench=root.getObjectByName('Banc posterior · seient'),

@@ -1,10 +1,10 @@
 // Original low-poly geometry, based on photographs linked in the lab catalogue.
 // Nose = -Z, metres before the lab's uniform comparison scale. No external assets.
-export const KAMOV_VERSION='kamov-20261114-rear-bench-8';
+export const KAMOV_VERSION='kamov-20261114-belly-profile-9';
 export function createKamovCandidate(T,type){
  if(!['ka60','ka52'].includes(type))throw new Error('Kamov desconegut: '+type);
  const combat=type==='ka52',root=new T.Group();
- root.name=combat?'Kamov Ka-52 · candidat 1':'Kamov Ka-60 · candidat 8';
+ root.name=combat?'Kamov Ka-52 · candidat 1':'Kamov Ka-60 · candidat 9';
  root.userData.kamovCandidate=type;
  const c={body:combat?0x63725b:0x536655,top:0x75816b,dark:0x252c2c,metal:0x727a76,glass:0x789da5,light:0xe4ddbc,beacon:0xcb5148,navGreen:0x538e74};
  const materials=new Map();
@@ -27,7 +27,8 @@ export function createKamovCandidate(T,type){
   // cross-section. Ordinary four-value rings (Ka-52 etc.) stay identical.
   if(s.length===4)return [cs*s[1],(s[2]+s[3])/2+sn*(s[3]-s[2])/2,s[0]];
   const [z,w,bottom,top,belt,sweep=0,roundness=1]=s;
-  const power=v=>Math.sign(v)*Math.pow(Math.abs(v),roundness);
+  const exponent=sn<0?(s[7]??roundness):roundness;
+  const power=v=>Math.sign(v)*Math.pow(Math.abs(v),exponent);
   return [power(cs)*w,belt+power(sn)*(sn>=0?top-belt:belt-bottom),
     z+sweep*Math.abs(cs)*(sn>=0?1:.35)];
  });
@@ -98,8 +99,8 @@ export function createKamovCandidate(T,type){
  const wheel=(x,y,z,r)=>{
   const g=new T.Group();g.name='Roda tren aterratge';g.position.set(x,y,z);root.add(g);
   cyl(g,'Pneumàtic',r,.23,0,0,0,c.dark,'x',16);cyl(g,'Llanta',r*.57,.245,0,0,0,c.metal,'x');
-  rod(root,'Amortidor tren',[x,y+.08,z],[x*(combat?.52:.78),1.22,z-.16],.052,c.metal);
-  rod(root,'Tirant tren',[x,y+.12,z],[x*.58,1.10,z+.40],.035,c.dark);
+  rod(root,'Amortidor tren',[x,y+.08,z],[x*(combat?.52:.64),combat?1.22:.92,z-.16],.052,c.metal);
+  rod(root,'Tirant tren',[x,y+.12,z],[x*.58,combat?1.10:.92,z+.40],.035,c.dark);
  };
  const seat=(x,z,y=1.25)=>{
   box(root,'Coixí seient',.45,.13,.48,x,y,z,c.dark);
@@ -129,12 +130,14 @@ export function createKamovCandidate(T,type){
   // Three-view drawing: broad rounded bonnet, sloping windscreen with
   // swept outer corners, opaque roof behind the small upper front lights.
   // z, half-width, bottom, top, belt, sweep, cross-section exponent.
+  const bellySection=(s,bottom)=>[s[0],s[1],bottom,s[3],
+   s[4]??(s[2]+s[3])/2,s[5]??0,s[6]??1,.78];
   const noseSections=[
    [-4.60,.08,1.20,1.58,1.39,0,1],
    [-4.56,.42,1.04,1.73,1.45,.025,.90],
-   [-4.44,.69,.91,1.85,1.48,.06,.85],
-   [-4.25,.87,.85,1.95,1.52,.13,.82],
-   [-4.02,.95,.83,2.01,1.57,.23,.79]
+   bellySection([-4.44,.69,.91,1.85,1.48,.06,.85],.84),
+   bellySection([-4.25,.87,.85,1.95,1.52,.13,.82],.72),
+   bellySection([-4.02,.95,.83,2.01,1.57,.23,.79],.62)
   ];
   // A single continuous shell at the bonnet/cabin junction: no internal
   // cross-wall, duplicate cap or z-fighting.
@@ -144,15 +147,16 @@ export function createKamovCandidate(T,type){
    rod(root,'Junta visible morro-cabina',junction[k],junction[(k+1)%12],.011,c.dark);
   // Extend the solid side panel by 45 cm into the original door bay,
   // without stretching or moving the existing square windows.
-  const oldDoorFront=[-1.15,1.11,.82,3.06],doorMiddle=[.40,1.11,.83,3.02],
-   doorRear=[1.85,.97,.90,2.78],sheetExtension=.45,
+  const oldDoorFront=bellySection([-1.15,1.11,.82,3.06],.44),doorMiddle=bellySection([.40,1.11,.83,3.02],.62),
+   doorRear=bellySection([1.85,.97,.90,2.78],.88),sheetExtension=.45,
    doorFront=oldDoorFront.map((v,i)=>v+(doorMiddle[i]-v)*sheetExtension/(doorMiddle[0]-oldDoorFront[0]));
+  const tailJoin=bellySection([3.15,.62,1.13,2.36],1.16);
   loft(root,'Fuselatge Ka-60',[
    noseSections.at(-1),
-   [-3.27,1.04,.83,2.71,1.65,.22,.79],
-   [-2.86,1.09,.83,2.97,1.70,.12,.85],
-   [-2.30,1.10,.83,3.01,1.82,0,.92],
-   oldDoorFront,doorFront,doorMiddle,doorRear,[3.15,.62,1.13,2.36]
+   bellySection([-3.27,1.04,.83,2.71,1.65,.22,.79],0.47),
+   bellySection([-2.86,1.09,.83,2.97,1.70,.12,.85],0.42),
+   bellySection([-2.30,1.10,.83,3.01,1.82,0,.92],0.4),
+   oldDoorFront,doorFront,doorMiddle,doorRear,tailJoin
   ],(j,k)=>{
    if((j===5||j===6)&&[0,5,6,11].includes(k))return 'open';
    // Preserve front and pilot-side glazing. Behind the pilot seats,
@@ -160,15 +164,17 @@ export function createKamovCandidate(T,type){
    if(j<=1&&k<6||j===2&&[0,1,4,5].includes(k))return 'panoramic-glass';
    if(j===3&&[0,5].includes(k))return 'square-windows';
    return false;
-  },c.body,[false,true]);
-  loft(root,'Botaló Ka-60',[[2.85,.65,1.16,2.4],[4.65,.39,1.32,2.02],[6.75,.25,1.40,1.92],[6.87,.25,1.39,1.93]]);
+  },c.body,[false,false]);
+  // Continuous rising underside, with a shared ring at the tail root.
+  loft(root,'Botaló Ka-60',[tailJoin,bellySection([4.65,.39,1.32,2.02],1.38),
+   bellySection([6.75,.25,1.40,1.92],1.55),bellySection([6.87,.25,1.39,1.93],1.56)],()=>false,c.body,[false,true]);
   cockpit(-2.65,1.34);
   // Contoured floor fits inside the cross-sections, including the last
   // centimetres up to the new rear bulkhead. No individual cargo seats.
   const floorY=1.15,floorSections=[
-   [-3.27,1.04,.83,2.71,1.65,.22,.79],
-   [-2.86,1.09,.83,2.97,1.70,.12,.85],
-   [-2.30,1.10,.83,3.01,1.82,0,.92],
+   bellySection([-3.27,1.04,.83,2.71,1.65,.22,.79],0.47),
+   bellySection([-2.86,1.09,.83,2.97,1.70,.12,.85],0.42),
+   bellySection([-2.30,1.10,.83,3.01,1.82,0,.92],0.4),
    oldDoorFront,doorFront,doorMiddle,doorRear
   ];
   const floorEdges=s=>{
@@ -204,7 +210,7 @@ export function createKamovCandidate(T,type){
   // floating on a straight chord. Use the very same vertices as the
   // neighbouring loft panels, including the bulging middle of the jamb.
   const doorSections=[doorFront,doorMiddle,doorRear],doorRings=doorSections.map(ring);
-  const inward=(p,s)=>[p[0]*.92,(s[2]+s[3])/2+(p[1]-(s[2]+s[3])/2)*.92,p[2]];
+  const inward=(p,s)=>{const belt=s[4]??(s[2]+s[3])/2;return [p[0]*.92,belt+(p[1]-belt)*.92,p[2]]};
   const rim=(name,p,q,s,t)=>poly(root,name,[p,q,inward(q,t),inward(p,s)],c.body);
   for(const side of [-1,1]){
    const [lo,mid,hi]=side===1?[11,0,1]:[7,6,5];

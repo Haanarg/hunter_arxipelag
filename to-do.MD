@@ -1,3 +1,9 @@
+**2026-11-14 · Ka-60 candidat 9 · perfil inferior segons vista lateral:**
+- [x] Ventre més profund i ple sota la cabina, pròxim a les rodes davanteres, amb aprimament progressiu per sota fins al botaló. Unió del casc i cua amb secció compartida, sense solapament de tapes.
+- [x] Adaptats terra i retorns dels marcs a les noves seccions; muntants del tren davanter més curts. Posició i geometria de les rodes conservades, igual que parabrisa, finestrons, sostre, pilots i banc.
+- [x] Comparació visual lateral de les malles abans/després; verificades continuïtat del ventre, obertures, marcs i JSON. Ka-52 intacte. Revisió `live-editor-20261114-ka60-belly-profile-1`.
+- [ ] Valoració visual de l’usuari al visor WebGL.
+
 **2026-11-14 · Protagonista com a referència de mida al laboratori:**
 - [x] Substituïda la càpsula humana genèrica pel cos real del protagonista: geometria compartida, cap compactD, articulacions, gorra, ulleres, equipament i colors del joc; postura neutra sense arma.
 - [x] Escala idèntica a `characters.createPlayer`: unitScale 1,2 i escala exterior 2/3. Soles arran de terra i referència independent del grup dels vehicles, a tots els visors.
