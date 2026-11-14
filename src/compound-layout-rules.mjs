@@ -7,10 +7,10 @@ export function siteBounds(l){
 // Includes asymmetric flag cloth, not just the position of its pole.
 export function propFootprint(kind){return kind==='flag'?[-.3,5.3,-.3,.3]:kind==='fuel'?[-3,3,-1.5,1.5]:kind==='generator'?[-3.5,3.5,-2.25,2.25]:kind==='sandbag'?[-3.55,3.55,-.5,.5]:kind==='crate'?[-1.4,1.4,-1.33,1.33]:kind==='bench'?[-2,2,-.7,.7]:kind==='well'?[-2.2,2.2,-1.8,1.8]:kind==='lamp'?[-1,1,-.4,.4]:[-.8,.8,-.8,.8]}
 export function widenHQPatrols(l){
- const extent=Math.ceil(Math.max(116,...l.buildings.map(b=>Math.abs(b.z)+b.d/2+65))/4)*4,
+ const extent=Math.ceil(Math.max(124,...l.buildings.map(b=>Math.abs(b.z)+b.d/2+73))/4)*4,
   north=Math.min(-58,...l.buildings.map(b=>b.z-b.d/2-13)),
   south=Math.max(58,...l.buildings.map(b=>b.z+b.d/2+13)),
-  x=extent-28,z=extent-12,r=19;
+  x=extent-28,z=extent-16,r=19;
  function oval(minZ,maxZ,reverse=false){
   const points=[],corners=[[x-r,minZ+r,-Math.PI/2,0],[x-r,maxZ-r,0,Math.PI/2],[-x+r,maxZ-r,Math.PI/2,Math.PI],[-x+r,minZ+r,Math.PI,1.5*Math.PI]];
   for(const [cx,cz,a,b] of corners)for(let i=0;i<=6;i++){const t=a+(b-a)*i/6;points.push([cx+r*Math.cos(t),cz+r*Math.sin(t)])}
