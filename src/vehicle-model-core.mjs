@@ -1,5 +1,5 @@
 import {turretSpecs,advanceTurret,stepManualTurret} from './vehicle-turret-core.mjs';
-import {installBtr82Model3B} from './btr82-3b-native.mjs';
+import {installBtr82Model3B} from './btr82-3b-native.mjs?rev=btr82-distant-1';
 export {createBtr82DistantGeometry} from './btr82-3b-native.mjs?rev=btr82-distant-1';
 import {installT90MModel} from './t90m-runtime.mjs?rev=t90m-game-double-1';
 import {vehicleSpecs} from './vehicle-specs.mjs';
