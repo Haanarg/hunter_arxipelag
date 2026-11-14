@@ -110,6 +110,45 @@ function shared(THREE){
  return result;
 }
 
+// Cheap distant silhouette, in the SAME local coordinates as the full rig.
+// Keep the closed angular hull and compact turret exactly; omit 97 small
+// fittings and replace each of the eight detailed tires by a low-sided tire.
+// Bake every component into one vertex-colored geometry (one draw call).
+export function createBtr82DistantGeometry(THREE){
+ const p=shared(THREE),positions=[],normals=[],colors=[],wheelCenters=[];
+ function add(source,hex,x=0,y=0,z=0,rx=0,rz=0,temporary=false){
+  const flat=source.index?source.toNonIndexed():source.clone();
+  if(rx)flat.rotateX(rx);if(rz)flat.rotateZ(rz);flat.translate(x,y,z);
+  // Face normals preserve the angular planes without smooth highlights.
+  flat.computeVertexNormals();
+  const a=flat.getAttribute('position'),n=flat.getAttribute('normal'),c=new THREE.Color(hex);
+  for(let i=0;i<a.count;i++){
+   positions.push(a.getX(i),a.getY(i),a.getZ(i));
+   normals.push(n.getX(i),n.getY(i),n.getZ(i));colors.push(c.r,c.g,c.b);
+  }
+  flat.dispose();if(temporary)source.dispose();
+ }
+ add(p.hullGeometry,0x5f6c53);
+ add(p.turretGeometry,0x56624d,0,p.turretPivotY,p.turretPivotZ);
+ const width=BTR82_3B_GAME_FIT.sourceWheelHalfWidth*2*p.sx;
+ for(const z of WHEEL_Z)for(const side of [-1,1]){
+  const x=side*1.688*p.sx,zz=z*p.sz,y=p.wheelCentreY;
+  wheelCenters.push([x,y,zz]);
+  add(new THREE.CylinderGeometry(p.tireRadius,p.tireRadius,width,8),0x242924,x,y,zz,0,Math.PI/2,true);
+  add(new THREE.CylinderGeometry(p.tireRadius*.57,p.tireRadius*.57,.055,6),0x717b70,x+side*(width/2+.015),y,zz,0,Math.PI/2,true);
+ }
+ const gunY=p.wheelCentreY+(GUN_SOURCE_Y-BTR82_3B_GAME_FIT.bodyDrop)*p.sy;
+ add(new THREE.CylinderGeometry(.085*p.sx,.085*p.sx,2.90*p.sz,6),0x101010,0,gunY,BARREL_CENTER_Z*p.sz,Math.PI/2,0,true);
+ add(new THREE.CylinderGeometry(.115*p.sx,.115*p.sx,.28*p.sz,6),0x101010,0,gunY,MUZZLE_CENTER_Z*p.sz,Math.PI/2,0,true);
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+ g.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));
+ g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+ g.computeBoundingBox();g.computeBoundingSphere();
+ g.userData.btr82Distant={wheels:8,axles:4,wheelCenters,model:'3B',hardware:false};
+ return g;
+}
+
 // Retorna un rig amb els mateixos contractes que la tanqueta original:
 // g.userData.wheels, turretPivot, turretPitch i turretMuzzle.
 export function installBtr82Model3B(THREE,g,{resources=null}={}){

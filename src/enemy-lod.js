@@ -97,8 +97,11 @@ function proxy(T,type,level){
       box(x,2.85,1.22,.44,.46,.44,0xc18b64);
       box(x,2.08,-.65,.44,.35,1.4,0x363c39);
     }
+  }else if(type==='tanqueta'){
+    const geo=window.HUNTER_SHARED_VEHICLE_MODELS.createBtr82DistantGeometry(T);
+    proxyCache.set(key,geo);return geo;
   }else{
-    const heavy=type==='tanc'||type==='tanqueta',
+    const heavy=type==='tanc',
       humvee=type==='jeep',
       // Enemy jeep maps to the exact same cotxe D3.1 at 175% as the player.
       // Distant proxy must preserve its ~4.6 × 8.2 metre footprint.
@@ -188,9 +191,9 @@ function optimize(T,model,type){
   // Compartim les geometries LOD marítimes: proa en punta, cabina i
   // radar, amb 2 tripulants al nivell mitjà. S'evita el rectangle
   // genèric i el salt visual en acostar-se des d'un helicòpter.
-  const marineLOD=['patrulla_marina','jeep'].includes(type)?model.userData.distantVehicleLOD:null;
-  const mid=new T.Mesh(marineLOD?.variants?.[2]||proxy(T,type,'mid'),mat),
-    far=new T.Mesh(marineLOD?.variants?.[0]||proxy(T,type,'far'),mat);
+  const vehicleLOD=['patrulla_marina','jeep','tanqueta'].includes(type)?model.userData.distantVehicleLOD:null;
+  const mid=new T.Mesh(vehicleLOD?.variants?.[2]||proxy(T,type,'mid'),mat),
+    far=new T.Mesh(vehicleLOD?.variants?.[0]||proxy(T,type,'far'),mat);
   mid.name='hunter-enemy-mid';far.name='hunter-enemy-far';
   if(type==='soldat'&&model.userData.eliteSoldier){
     const armor=new T.MeshLambertMaterial({color:0x303a34}),mark=new T.MeshLambertMaterial({color:0xb83f38});

@@ -1,3 +1,8 @@
+**2026-11-14 · LOD distant BTR-82:**
+- [x] Substituïts els proxies genèrics de blindat per una única malla derivada del 3B aprovat: casc i torreta originals, vuit pneumàtics separats i canó cilíndric; sense els 97 detalls petits.
+- [x] Mateixa geometria compartida per tanquetes buides i enemigues (nivell mitjà i llunyà). Física, IA, pivots, escala del model complet i bandera enemiga intactes.
+- [ ] Validació visual en partida i execució de la regressió Three.js completa.
+
 **2026-11-13 · Retirada temporal del T-90M i la BTR-82 de l'editor 3D:**
 - [x] Eliminades les entrades `tanc` i `tanqueta` del catàleg visible del laboratori; en queden cinc: Kamov Ka-60, Kamov Ka-52, llanxa ràpida, llanxa llançamíssils i ferri.
 - [x] Mantinguts intactes els models definitius T-90M i BTR-82, les fàbriques i els controls al joc; el codi de l'editor es conserva per poder recuperar les pestanyes més endavant.

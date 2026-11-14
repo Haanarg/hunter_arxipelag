@@ -1,6 +1,7 @@
 // LOD visual distant de la flota civil i militar. La física i les
 // referències de canons, rodes i ocupants sempre romanen al grup complet.
 import {vehicleSpecs} from './vehicle-specs.mjs';
+import {createBtr82DistantGeometry} from './btr82-3b-native.mjs?rev=btr82-distant-1';
 export const distantVehicleRanges=Object.freeze({
   ferry:[720,850],heli:[650,780],heli_combat:[650,780],
   tanc:[550,670],tanqueta:[520,640],
@@ -30,10 +31,14 @@ export function createDistantVehicleFactory(THREE,resources=null){
   const unit=new THREE.BoxGeometry(1,1,1).toNonIndexed();
   const positions=unit.getAttribute('position'),normals=unit.getAttribute('normal');
   const material=new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true});
-  resources?.retain(material);
+  const btrMaterial=new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true,side:THREE.DoubleSide});
+  resources?.retain(material);resources?.retain(btrMaterial);
   function build(type,seats){
-    const key=type+':'+seats;
+    const key=type+':'+(type==='tanqueta'?0:seats);
     if(geometries.has(key))return geometries.get(key);
+    if(type==='tanqueta'){
+      const geo=createBtr82DistantGeometry(THREE);resources?.retain(geo);geometries.set(key,geo);return geo;
+    }
     const [physicalW,physicalD]=vehicleSpecs.hitboxes[type],
       scale=vehicleSpecs.scales[type]||1,
       w=physicalW/scale,d=physicalD/scale,
@@ -166,7 +171,7 @@ export function createDistantVehicleFactory(THREE,resources=null){
     if(!hasDistantVehicleLOD(type))return null;
     const full=new THREE.Group();full.name='hunter-vehicle-full-detail';
     for(const child of [...model.children])full.add(child);
-    const proxy=new THREE.Mesh(build(type,0),material);
+    const proxy=new THREE.Mesh(build(type,0),type==='tanqueta'?btrMaterial:material);
     proxy.name='hunter-vehicle-distant-proxy';
     proxy.visible=false;proxy.castShadow=false;proxy.receiveShadow=false;
     proxy.userData.noCastShadow=true;
