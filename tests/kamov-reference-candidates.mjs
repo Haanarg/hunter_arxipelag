@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as T from '../vendor/three-r186.module.mjs';
 import {createKamovCandidate,stepKamovRotors,KAMOV_VERSION} from '../src/kamov-reference-candidates.mjs';
-assert(KAMOV_VERSION.includes('square-windows'));
+assert(KAMOV_VERSION.includes('extended-sheet'));
 for(const type of ['ka60','ka52']){
  const root=createKamovCandidate(T,type),meshes=[],rotors=[];
  root.traverse(o=>{if(o.userData.kamovRotor)rotors.push(o);if(o.isMesh)meshes.push(o)});
@@ -30,6 +30,15 @@ for(const type of ['ka60','ka52']){
    const doorRay=new T.Raycaster(new T.Vector3(side*2.2,1.89,.79),new T.Vector3(-side,0,0),0,1.22);
    const shell=meshes.filter(o=>o.name.startsWith('Fuselatge Ka-60 panell'));
    assert.equal(doorRay.intersectObjects(shell).length,0,'La porta continua tapada a la banda '+side);
+   const covered=new T.Raycaster(new T.Vector3(side*2.2,1.89,-.92),new T.Vector3(-side,0,0),0,1.22);
+   const hit=covered.intersectObjects(shell)[0];
+   assert(hit&&hit.object.name.startsWith('Fuselatge Ka-60 panell 4 '),'Xapa nova davant la porta');
+   const open=new T.Raycaster(new T.Vector3(side*2.2,1.89,-.52),new T.Vector3(-side,0,0),0,1.22);
+   assert.equal(open.intersectObjects(shell).length,0,'Obertura després de la xapa');
+   const step=meshes.find(o=>o.name==='Esglaó accés porta oberta'&&Math.sign(o.position.x)===side);
+   assert(Math.abs(step.geometry.parameters.depth-2.17)<1e-8);
+   const posts=meshes.filter(o=>o.name==='Muntant porta lateral oberta'&&Math.sign(o.position.x)===side);
+   assert(posts.some(o=>Math.abs(o.position.z+.7)<1e-8),'Muntant recol·locat');
   }
   const panes=meshes.filter(o=>o.name.startsWith('Vidre panoràmic Fuselatge Ka-60'));
   assert.equal(panes.length,16,'Parabrisa i vidres dels pilots preservats');
@@ -142,4 +151,4 @@ for(const type of ['ka60','ka52']){
  console.log(type,Math.round(triangles)+' triangles',meshes.length+' peces',size.toArray().map(x=>x.toFixed(2)).join(' × '));
 }
 assert.throws(()=>createKamovCandidate(T,'unknown'));
-console.log('PASS Kamov: finestrons quadrats amb xapa verda i fil negre, parabrisa i cua preservats');
+console.log('PASS Kamov: xapa allargada, finestrons quadrats, obertures i esglaons ajustats');

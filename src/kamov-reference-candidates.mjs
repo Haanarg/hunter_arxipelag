@@ -1,10 +1,10 @@
 // Original low-poly geometry, based on photographs linked in the lab catalogue.
 // Nose = -Z, metres before the lab's uniform comparison scale. No external assets.
-export const KAMOV_VERSION='kamov-20261114-square-windows-6';
+export const KAMOV_VERSION='kamov-20261114-extended-sheet-7';
 export function createKamovCandidate(T,type){
  if(!['ka60','ka52'].includes(type))throw new Error('Kamov desconegut: '+type);
  const combat=type==='ka52',root=new T.Group();
- root.name=combat?'Kamov Ka-52 · candidat 1':'Kamov Ka-60 · candidat 6';
+ root.name=combat?'Kamov Ka-52 · candidat 1':'Kamov Ka-60 · candidat 7';
  root.userData.kamovCandidate=type;
  const c={body:combat?0x63725b:0x536655,top:0x75816b,dark:0x252c2c,metal:0x727a76,glass:0x789da5,light:0xe4ddbc,beacon:0xcb5148,navGreen:0x538e74};
  const materials=new Map();
@@ -142,15 +142,19 @@ export function createKamovCandidate(T,type){
   const junction=ring(noseSections.at(-1));
   for(let k=6;k<12;k++)
    rod(root,'Junta visible morro-cabina',junction[k],junction[(k+1)%12],.011,c.dark);
+  // Extend the solid side panel by 45 cm into the original door bay,
+  // without stretching or moving the existing square windows.
+  const oldDoorFront=[-1.15,1.11,.82,3.06],doorMiddle=[.40,1.11,.83,3.02],
+   doorRear=[1.85,.97,.90,2.78],sheetExtension=.45,
+   doorFront=oldDoorFront.map((v,i)=>v+(doorMiddle[i]-v)*sheetExtension/(doorMiddle[0]-oldDoorFront[0]));
   loft(root,'Fuselatge Ka-60',[
    noseSections.at(-1),
    [-3.27,1.04,.83,2.71,1.65,.22,.79],
    [-2.86,1.09,.83,2.97,1.70,.12,.85],
    [-2.30,1.10,.83,3.01,1.82,0,.92],
-   [-1.15,1.11,.82,3.06],[.40,1.11,.83,3.02],
-   [1.85,.97,.90,2.78],[3.15,.62,1.13,2.36]
+   oldDoorFront,doorFront,doorMiddle,doorRear,[3.15,.62,1.13,2.36]
   ],(j,k)=>{
-   if((j===4||j===5)&&[0,5,6,11].includes(k))return 'open';
+   if((j===5||j===6)&&[0,5,6,11].includes(k))return 'open';
    // Preserve front and pilot-side glazing. Behind the pilot seats,
    // restore the opaque green shoulders and two square portholes per side.
    if(j<=1&&k<6||j===2&&[0,1,4,5].includes(k))return 'panoramic-glass';
@@ -163,7 +167,7 @@ export function createKamovCandidate(T,type){
   box(root,'Terra cabina',1.75,.07,4.0,0,1.01,-.40,c.dark);
   // Marc de les dues grans obertures: només llindar, muntants i llinda.
   // No hi ha cap porta opaca ni vidre al centre; els sis seients són visibles.
-  const doorSections=[[-1.15,1.11,.82,3.06],[.40,1.11,.83,3.02],[1.85,.97,.90,2.78]];
+  const doorSections=[doorFront,doorMiddle,doorRear];
   for(const side of [-1,1]){
    const edge=(s,upper)=>[side*s[1]*Math.cos(Math.PI/6),
      (s[2]+s[3])/2+(upper?1:-1)*(s[3]-s[2])/4,s[0]];
@@ -173,7 +177,7 @@ export function createKamovCandidate(T,type){
     rod(root,'Llindar porta lateral oberta',lower[i],lower[i+1],.035,c.dark);
    }
    for(const i of [0,2])rod(root,'Muntant porta lateral oberta',lower[i],upper[i],.040,c.body);
-   box(root,'Esglaó accés porta oberta',.16,.065,2.62,side*.94,.99,.40,c.dark);
+   box(root,'Esglaó accés porta oberta',.16,.065,2.62-sheetExtension,side*.94,.99,.40+sheetExtension/2,c.dark);
   }
   // Carenat dorsal continu: un sol conjunt aerodinàmic, no dues nacel·les
   // cilíndriques damunt de la cabina. El pal de rotor hi queda encastat.

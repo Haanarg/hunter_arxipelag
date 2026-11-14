@@ -1,3 +1,8 @@
+**2026-11-14 · Ka-60 candidat 7, petició 7f9f89d6:**
+- [x] Allargada la xapa lateral darrere els finestrons 0,45 m cap a l'obertura de transport; finestrons, parabrisa i silueta conservats. Muntants, llindes i esglaons ajustats a l'obertura resultant.
+- [x] Revisió `live-editor-20261114-ka60-extended-sheet-1`; Huey i Ka-52 intactes. Permís GitHub push confirmat.
+- [ ] Validació visual al visor i desplegament Cloudflare.
+
 **2026-11-14 · Ka-60 candidat 6, petició 07eabd4a:**
 - [x] Interpretada la petició de la pestanya heli relativa al Ka-60 en refinament; el camp variant deia Huey actual, que no s'ha modificat.
 - [x] Xapa verda opaca darrere dels pilots amb dos finestrons quadrats per banda i juntes negres fines al contorn dels vidres; parabrisa, portes obertes i cua preservats.
