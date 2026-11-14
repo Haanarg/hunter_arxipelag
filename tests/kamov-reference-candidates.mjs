@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as T from '../vendor/three-r186.module.mjs';
 import {createKamovCandidate,stepKamovRotors,KAMOV_VERSION} from '../src/kamov-reference-candidates.mjs';
-assert(KAMOV_VERSION.includes('rounded-nose-panoramic'));
+assert(KAMOV_VERSION.includes('three-view'));
 for(const type of ['ka60','ka52']){
  const root=createKamovCandidate(T,type),meshes=[],rotors=[];
  root.traverse(o=>{if(o.userData.kamovRotor)rotors.push(o);if(o.isMesh)meshes.push(o)});
@@ -36,15 +36,23 @@ for(const type of ['ka60','ka52']){
   assert(panes.every(o=>o.material.transparent&&o.material.opacity<.5));
   assert.equal(meshes.filter(o=>o.name==='Estabilitzador superior en T').length,2);
   const noseParts=meshes.filter(o=>o.name.startsWith('Morro independent Ka-60'));
-  assert.equal(noseParts.length,50);
+  assert.equal(noseParts.length,49);
   assert(noseParts.every(o=>!o.material.transparent),'Morro sòlid i opac');
   const noseBounds=new T.Box3();for(const part of noseParts)noseBounds.expandByObject(part);
   const glassBounds=new T.Box3();for(const pane of panes)glassBounds.expandByObject(pane);
-  assert(noseBounds.min.z> -4.54&&noseBounds.min.z< -4.50,'Posició frontal del morro');
-  assert(noseBounds.max.z-noseBounds.min.z<.52,'Morro curt');
-  assert(noseBounds.max.x-noseBounds.min.x>1.70,'Morro ample i arrodonit');
-  assert(Math.abs(glassBounds.min.z-noseBounds.max.z)<1e-5,'Vidre just damunt del morro');
-  assert(glassBounds.max.y-glassBounds.min.y>1.48,'Altura panoràmica '+(glassBounds.max.y-glassBounds.min.y));
+  assert(noseBounds.min.z> -4.62&&noseBounds.min.z< -4.58,'Posició frontal del morro');
+  assert(noseBounds.max.z-noseBounds.min.z<.83,'Morro curt, amb cantonades recuades');
+  assert(noseBounds.max.x-noseBounds.min.x>1.88,'Morro ample i arrodonit');
+  assert(glassBounds.min.z<noseBounds.max.z&&glassBounds.min.z>=-4.021,'Vidre just damunt del morro amb cantonades recuades');
+  assert(!root.getObjectByName('Morro independent Ka-60 tapa posterior'));
+  assert(!root.getObjectByName('Fuselatge Ka-60 tapa frontal'));
+  const glassFront=panes.filter(o=>o.name.endsWith(' 0 2')||o.name.endsWith(' 0 3'));
+  assert.equal(glassFront.length,2);
+  for(const h of [1.35,1.65]){
+   const ray=new T.Raycaster(new T.Vector3(0,h,-8),new T.Vector3(0,0,1));
+   assert(noseParts.includes(ray.intersectObjects(noseParts)[0]?.object),'Morro opac al frontal');
+  }
+  assert(glassBounds.max.y-glassBounds.min.y>1.39,'Altura panoràmica '+(glassBounds.max.y-glassBounds.min.y));
   const byPanel=new Map(panes.map(o=>[o.name.split(' ').slice(-2).join(':'),o]));
   const verts=o=>{const p=o.geometry.attributes.position;return Array.from({length:p.count},(_,i)=>[p.getX(i),p.getY(i),p.getZ(i)].map(v=>v.toFixed(5)).join(','))};
   for(const [key,o] of byPanel){
@@ -61,6 +69,21 @@ for(const type of ['ka60','ka52']){
   assert(root.getObjectByName('Junta visible morro-cabina'));
   assert(!root.getObjectByName('Aleta terminal T de cua'));
   assert(!root.getObjectByName('Estabilitzador horitzontal inferior'));
+  const lateral=meshes.filter(o=>o.name==='Estabilitzador lateral botaló Ka-60');
+  const endplates=meshes.filter(o=>o.name==='Aleta vertical botaló Ka-60');
+  assert.equal(lateral.length,2);assert.equal(endplates.length,2);
+  for(const side of [-1,1]){
+   const xRange=o=>new T.Box3().setFromObject(o);
+   const wing=lateral.find(o=>Math.sign(xRange(o).getCenter(new T.Vector3()).x)===side);
+   const plate=endplates.find(o=>Math.sign(xRange(o).getCenter(new T.Vector3()).x)===side);
+   assert(wing&&plate);
+   const w=xRange(wing),p=xRange(plate);
+   assert(w.min.z>4.5&&w.max.z<5.7&&w.getSize(new T.Vector3()).x>1.3);
+   assert(p.getSize(new T.Vector3()).y>1&&p.min.z>4.5&&p.max.z<5.7);
+   assert(side>0?w.max.x>=p.min.x-.06:w.min.x<=p.max.x+.06);
+  }
+  const tTail=new T.Box3();for(const o of meshes.filter(o=>o.name==='Estabilitzador superior en T'))tTail.expandByObject(o);
+  assert(tTail.getSize(new T.Vector3()).x<2.6,'T superior més estreta que les aletes laterals');
   const fins=meshes.filter(o=>o.name==='Aleró triangular descendent Ka-60');
   assert.equal(fins.length,2,'Aletes triangulars a les dues puntes de la T');
   for(const fin of fins){
@@ -97,4 +120,4 @@ for(const type of ['ka60','ka52']){
  console.log(type,Math.round(triangles)+' triangles',meshes.length+' peces',size.toArray().map(x=>x.toFixed(2)).join(' × '));
 }
 assert.throws(()=>createKamovCandidate(T,'unknown'));
-console.log('PASS Kamov: morro Ka-60 curt i arrodonit, parabrisa panoràmic continu, alerons descendents, portes i animació');
+console.log('PASS Kamov: frontal segons tres vistes, vidres continus, estabilitzadors laterals i T superior, portes i animació');

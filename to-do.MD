@@ -1,3 +1,9 @@
+**2026-11-14 · Ka-60 candidat 5, esquema ortogràfic aportat:**
+- [x] Frontal remodelat amb morro ovalat i ample, vidres inclinats amb cantonades recuades i divisió superior fina; eliminades les tapes internes coincidents entre morro i cabina.
+- [x] Parell d'estabilitzadors horitzontals al botaló amb aletes verticals inclinades a les puntes; T superior més estreta. Conservats el fenestron, les portes obertes, motor, rotors i Ka-52.
+- [x] Permisos d'escriptura a main confirmats (GitHub push=true); revisió del laboratori `live-editor-20261114-ka60-three-view-1`. Sense substituir el Huey del joc.
+- [ ] Validació visual WebGL i desplegament Cloudflare.
+
 **2026-11-14 · Ka-60, nou frontal segons la fotografia aportada:**
 - [x] Morro opac escurçat de 1,06 a 0,50 m; seccions més arrodonides i amples, amb una junta exacta amb la cabina.
 - [x] Vint facetes de vidre contigües al parabrisa i laterals, sense xapa interior; marcs fins al perímetre i divisor central.

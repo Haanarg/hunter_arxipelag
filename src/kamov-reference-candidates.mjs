@@ -1,10 +1,10 @@
 // Original low-poly geometry, based on photographs linked in the lab catalogue.
 // Nose = -Z, metres before the lab's uniform comparison scale. No external assets.
-export const KAMOV_VERSION='kamov-20261114-rounded-nose-panoramic-4';
+export const KAMOV_VERSION='kamov-20261114-three-view-5';
 export function createKamovCandidate(T,type){
  if(!['ka60','ka52'].includes(type))throw new Error('Kamov desconegut: '+type);
  const combat=type==='ka52',root=new T.Group();
- root.name=combat?'Kamov Ka-52 · candidat 1':'Kamov Ka-60 · candidat 4';
+ root.name=combat?'Kamov Ka-52 · candidat 1':'Kamov Ka-60 · candidat 5';
  root.userData.kamovCandidate=type;
  const c={body:combat?0x63725b:0x536655,top:0x75816b,dark:0x252c2c,metal:0x727a76,glass:0x789da5,light:0xe4ddbc,beacon:0xcb5148,navGreen:0x538e74};
  const materials=new Map();
@@ -21,7 +21,16 @@ export function createKamovCandidate(T,type){
  // Loft facetat: els vidres substitueixen la xapa, i les obertures
  // laterals són buits REALS, sense cares ocultes al darrere.
  // Rings: [z, half-width, bottom, top]. Angles des de l'espatlla dreta.
- const ring=s=>Array.from({length:12},(_,i)=>{const a=i*Math.PI/6;return [Math.cos(a)*s[1],(s[2]+s[3])/2+Math.sin(a)*(s[3]-s[2])/2,s[0]]});
+ const ring=s=>Array.from({length:12},(_,i)=>{
+  const a=i*Math.PI/6,cs=Math.cos(a),sn=Math.sin(a);
+  // Optional cockpit-only belt height, swept corners and rounded-square
+  // cross-section. Ordinary four-value rings (Ka-52 etc.) stay identical.
+  if(s.length===4)return [cs*s[1],(s[2]+s[3])/2+sn*(s[3]-s[2])/2,s[0]];
+  const [z,w,bottom,top,belt,sweep=0,roundness=1]=s;
+  const power=v=>Math.sign(v)*Math.pow(Math.abs(v),roundness);
+  return [power(cs)*w,belt+power(sn)*(sn>=0?top-belt:belt-bottom),
+    z+sweep*Math.abs(cs)*(sn>=0?1:.35)];
+ });
  // Finestra reduïda: quatre tires de carrosseria envolten el vidre.
  // No pintem una finestra damunt d'una paret opaca.
  const smallWindow=(g,name,pts,col)=>{
@@ -35,7 +44,7 @@ export function createKamovCandidate(T,type){
   poly(g,'Vidre reduït '+name,inner,c.glass,true);
   for(let n=0;n<4;n++)rod(g,'Marc petit '+name,inner[n],inner[(n+1)%4],.023,c.dark);
  };
- const loft=(g,name,sections,windowPanel=()=>false,col=c.body)=>{
+ const loft=(g,name,sections,windowPanel=()=>false,col=c.body,caps=[true,true])=>{
   const rings=sections.map(ring);
   for(let j=0;j<rings.length-1;j++)for(let k=0;k<12;k++){
    const points=[rings[j][k],rings[j+1][k],rings[j+1][(k+1)%12],rings[j][(k+1)%12]];
@@ -51,11 +60,15 @@ export function createKamovCandidate(T,type){
      const [jj,kk]=neighbours[n];
      const boundary=jj<0||jj>=rings.length-1||windowPanel(jj,kk)!=='panoramic-glass';
      const central=n===0&&k===3&&j<2;
-     if(boundary||central)rod(g,'Marc fi panoràmic '+name,points[n],points[(n+1)%4],central?.017:.022,c.dark);
+     const corner=n===0&&[1,5].includes(k)&&j<2;
+     // The drawing shows two upper lights above the main front panes.
+     const brow=n===1&&j===0&&[1,2,3,4].includes(k);
+     if(boundary||central||corner||brow)rod(g,'Marc fi panoràmic '+name,points[n],points[(n+1)%4],central?.024:brow?.026:.022,c.dark);
     }
    }else if(glazed)for(let n=0;n<4;n++)rod(g,'Marc '+name,points[n],points[(n+1)%4],.027,c.dark);
   }
-  poly(g,name+' tapa frontal',rings[0].slice().reverse(),col);poly(g,name+' tapa posterior',rings.at(-1),col);
+  if(caps[0])poly(g,name+' tapa frontal',rings[0].slice().reverse(),col);
+  if(caps[1])poly(g,name+' tapa posterior',rings.at(-1),col);
  };
  const fin=(name,profile,thickness,x=0,col=c.body)=>{
   const shape=new T.Shape(profile.map(([z,y])=>new T.Vector2(z,y)));
@@ -93,29 +106,37 @@ export function createKamovCandidate(T,type){
  };
  if(!combat){
   // Ka-60 prototype: 4 main blades, 11-blade fenestron, no coaxial mast.
-  // Short, broad rounded nose. Its aft ring mates exactly to the cabin.
+  // Three-view drawing: broad rounded bonnet, sloping windscreen with
+  // swept outer corners, opaque roof behind the small upper front lights.
+  // z, half-width, bottom, top, belt, sweep, cross-section exponent.
   const noseSections=[
-   [-4.52,.10,1.37,1.57],[-4.47,.36,1.23,1.66],
-   [-4.36,.59,1.08,1.78],[-4.20,.77,.97,1.91],
-   [-4.02,.86,.88,1.98]
+   [-4.60,.08,1.20,1.58,1.39,0,1],
+   [-4.56,.42,1.04,1.73,1.45,.025,.90],
+   [-4.44,.69,.91,1.85,1.48,.06,.85],
+   [-4.25,.87,.85,1.95,1.52,.13,.82],
+   [-4.02,.95,.83,2.01,1.57,.23,.79]
   ];
-  loft(root,'Morro independent Ka-60',noseSections);
+  // A single continuous shell at the bonnet/cabin junction: no internal
+  // cross-wall, duplicate cap or z-fighting.
+  loft(root,'Morro independent Ka-60',noseSections,()=>false,c.body,[true,false]);
   const junction=ring(noseSections.at(-1));
   for(let k=6;k<12;k++)
    rod(root,'Junta visible morro-cabina',junction[k],junction[(k+1)%12],.011,c.dark);
-  // Windscreen starts directly above the nose and sweeps into the sides.
-  // Shared ring vertices ensure continuous glazing with no opaque backing.
   loft(root,'Fuselatge Ka-60',[
-   [-4.02,.86,.88,1.98],[-3.65,.96,.91,2.57],
-   [-2.80,1.04,.85,2.94],[-2.30,1.10,.83,3.01],
+   noseSections.at(-1),
+   [-3.27,1.04,.83,2.71,1.65,.22,.79],
+   [-2.86,1.09,.83,2.97,1.70,.12,.85],
+   [-2.30,1.10,.83,3.01,1.82,0,.92],
    [-1.15,1.11,.82,3.06],[.40,1.11,.83,3.02],
    [1.85,.97,.90,2.78],[3.15,.62,1.13,2.36]
   ],(j,k)=>{
    if((j===4||j===5)&&[0,5,6,11].includes(k))return 'open';
+   // Six wrap-around facets per front band, then the side door windows.
+   // The crown past the upper lights is metal, not a transparent roof.
    if(j<=1&&k<6|| (j===2||j===3)&&[0,1,4,5].includes(k))
     return 'panoramic-glass';
    return false;
-  });
+  },c.body,[false,true]);
   loft(root,'Botaló Ka-60',[[2.85,.65,1.16,2.4],[4.65,.39,1.32,2.02],[6.75,.25,1.40,1.92],[6.87,.25,1.39,1.93]]);
   cockpit(-2.65,1.34);
   for(const x of [-.64,.64])for(const z of [-.2,.65,1.45])seat(x,z,1.16);
@@ -153,6 +174,25 @@ export function createKamovCandidate(T,type){
    [2.82,.34,2.20,2.43],[4.30,.22,1.91,2.18],
    [6.16,.15,1.75,2.01],[6.79,.13,1.74,2.05]
   ],()=>false,c.top);
+  // Low tailplane shown in all three projections: horizontal panels
+  // anchored at the boom, with swept vertical endplates, separate from
+  // the high T-tail. Symmetric closed meshes, no floating plates.
+  for(const side of [-1,1]){
+   const wing=[[side*.23,1.70,4.68],[side*1.61,1.70,4.83],
+    [side*1.61,1.70,5.47],[side*.22,1.70,5.53]];
+   const lower=wing.map(p=>[p[0],p[1]-.075,p[2]]);
+   poly(root,'Estabilitzador lateral botaló Ka-60',wing,c.top);
+   poly(root,'Intrados estabilitzador botaló Ka-60',lower.slice().reverse(),c.body);
+   for(let i=0;i<4;i++)poly(root,'Cantell estabilitzador botaló Ka-60',
+    [wing[i],lower[i],lower[(i+1)%4],wing[(i+1)%4]],c.body);
+   const profile=[[4.89,2.17],[5.57,2.13],[5.35,1.07],[4.68,1.13]];
+   const outside=profile.map(([z,y])=>[side*1.66,y,z]),
+    inside=profile.map(([z,y])=>[side*1.58,y,z]);
+   poly(root,'Aleta vertical botaló Ka-60',outside,c.body);
+   poly(root,'Cara interior aleta botaló Ka-60',inside.slice().reverse(),c.body);
+   for(let i=0;i<4;i++)poly(root,'Cantell aleta botaló Ka-60',
+    [outside[i],inside[i],inside[(i+1)%4],outside[(i+1)%4]],c.body);
+  }
   // Duct is an annular solid with a genuine through-hole along X.
   const shape=new T.Shape(),hole=new T.Path();shape.absarc(7.63,1.94,.91,0,Math.PI*2,false);hole.absarc(7.63,1.94,.70,0,Math.PI*2,true);shape.holes.push(hole);
   const duct=new T.ExtrudeGeometry(shape,{depth:.42,steps:1,bevelEnabled:false,curveSegments:18});duct.rotateY(-Math.PI/2);duct.translate(.21,0,0);
@@ -163,14 +203,14 @@ export function createKamovCandidate(T,type){
   // i PENGEN cap avall des de les puntes, no són caixes verticals cap amunt.
   // Les superfícies són peces editables separades per cada costat.
   for(const side of [-1,1]){
-   const wing=[[side*.11,3.94,7.93],[side*1.76,3.91,7.86],
-               [side*1.92,3.90,8.36],[side*.11,3.94,8.45]];
+   const wing=[[side*.11,3.94,7.93],[side*1.12,3.91,7.86],
+               [side*1.25,3.90,8.36],[side*.11,3.94,8.45]];
    poly(root,'Estabilitzador superior en T',wing,c.top);
    poly(root,'Intrados estabilitzador superior',wing.map(p=>[p[0],p[1]-.055,p[2]]).reverse(),c.body);
    rod(root,'Vora atac estabilitzador superior',wing[0],wing[1],.035,c.dark);
    // Perfil de tres vèrtexs, elevació del punta (3.90) > punta inferior (3.17).
    // Petit gruix real perquè no desaparegui vist de perfil.
-   const outerX=side*1.90,innerX=side*1.83;
+   const outerX=side*1.23,innerX=side*1.16;
    const outer=[[outerX,3.90,7.87],[outerX,3.90,8.38],[outerX,3.17,8.27]];
    const inner=outer.map(p=>[innerX,p[1],p[2]]);
    poly(root,'Aleró triangular descendent Ka-60',outer,c.top);
@@ -180,7 +220,7 @@ export function createKamovCandidate(T,type){
       inner[(i+1)%3],inner[i]],c.body);
    rod(root,'Costella aleró descendent',outer[0],outer[2],.025,c.dark);
    cyl(root,'Llum posició aleta descendent',.053,.045,
-       side*1.87,3.20,8.25,side<0?c.beacon:c.navGreen,'y',8);
+       side*1.20,3.20,8.25,side<0?c.beacon:c.navGreen,'y',8);
   }
   rod(root,'Frontissa timó de cua',[0,2.86,8.34],[0,3.99,8.37],.018,c.dark);
   cyl(root,'Balisa superior deriva',.105,.13,0,4.20,8.19,c.beacon,'y',10);
@@ -199,7 +239,7 @@ export function createKamovCandidate(T,type){
    rod(root,'Tirant tren posterior al botaló',[0,.70,3.81],[side*.24,1.36,3.48],.041,c.dark);
   box(root,'Carenat fixació tren posterior',.34,.23,.62,0,1.25,3.93,c.body);
   cyl(root,'Eix rotor principal',.105,.75,0,3.48,0,c.metal);mainRotor(3.91,4,6.75,1);
-  rod(root,'Pitot',[-.42,1.55,-4.25],[-.42,1.55,-4.62],.018,c.metal);
+  rod(root,'Pitot',[-.52,1.48,-4.39],[-.52,1.48,-4.66],.018,c.metal);
  }else{
   // Ka-52: wide side-by-side canopy, flattened radar nose, short stub wings.
   loft(root,'Fuselatge Ka-52',[
