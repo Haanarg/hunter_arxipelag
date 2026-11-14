@@ -1,10 +1,10 @@
 // Original low-poly geometry, based on photographs linked in the lab catalogue.
 // Nose = -Z, metres before the lab's uniform comparison scale. No external assets.
-export const KAMOV_VERSION='kamov-20261113-separate-nose-downfins-3';
+export const KAMOV_VERSION='kamov-20261114-rounded-nose-panoramic-4';
 export function createKamovCandidate(T,type){
  if(!['ka60','ka52'].includes(type))throw new Error('Kamov desconegut: '+type);
  const combat=type==='ka52',root=new T.Group();
- root.name=combat?'Kamov Ka-52 · candidat 1':'Kamov Ka-60 · candidat 1';
+ root.name=combat?'Kamov Ka-52 · candidat 1':'Kamov Ka-60 · candidat 4';
  root.userData.kamovCandidate=type;
  const c={body:combat?0x63725b:0x536655,top:0x75816b,dark:0x252c2c,metal:0x727a76,glass:0x789da5,light:0xe4ddbc,beacon:0xcb5148,navGreen:0x538e74};
  const materials=new Map();
@@ -42,9 +42,18 @@ export function createKamovCandidate(T,type){
    const state=windowPanel(j,k);
    if(state==='open')continue;
    if(state==='small-glass'){smallWindow(g,name+' '+j+' '+k,points,col);continue}
-   const glazed=state===true;
-   poly(g,glazed?'Vidre '+name+' '+j+' '+k:name+' panell '+j+' '+k,points,glazed?c.glass:col,glazed);
-   if(glazed)for(let n=0;n<4;n++)rod(g,'Marc '+name,points[n],points[(n+1)%4],.027,c.dark);
+   const panoramic=state==='panoramic-glass',glazed=state===true||panoramic;
+   poly(g,panoramic?'Vidre panoràmic '+name+' '+j+' '+k:glazed?'Vidre '+name+' '+j+' '+k:name+' panell '+j+' '+k,points,glazed?c.glass:col,glazed);
+   if(panoramic){
+    // Contiguous facets, with only the outline and a fine central mullion.
+    const neighbours=[[j,(k+11)%12],[j+1,k],[j,(k+1)%12],[j-1,k]];
+    for(let n=0;n<4;n++){
+     const [jj,kk]=neighbours[n];
+     const boundary=jj<0||jj>=rings.length-1||windowPanel(jj,kk)!=='panoramic-glass';
+     const central=n===0&&k===3&&j<2;
+     if(boundary||central)rod(g,'Marc fi panoràmic '+name,points[n],points[(n+1)%4],central?.017:.022,c.dark);
+    }
+   }else if(glazed)for(let n=0;n<4;n++)rod(g,'Marc '+name,points[n],points[(n+1)%4],.027,c.dark);
   }
   poly(g,name+' tapa frontal',rings[0].slice().reverse(),col);poly(g,name+' tapa posterior',rings.at(-1),col);
  };
@@ -84,30 +93,27 @@ export function createKamovCandidate(T,type){
  };
  if(!combat){
   // Ka-60 prototype: 4 main blades, 11-blade fenestron, no coaxial mast.
-  // Morro propi, completament OPAC, com a volum frontal independent.
-  // La junta de darrere del morro queda 36 cm davant l'inici del parabrisa.
+  // Short, broad rounded nose. Its aft ring mates exactly to the cabin.
   const noseSections=[
-   [-5.00,.11,1.27,1.47],[-4.82,.35,1.13,1.68],
-   [-4.31,.60,1.00,1.96],[-3.94,.76,.95,2.24]
+   [-4.52,.10,1.37,1.57],[-4.47,.36,1.23,1.66],
+   [-4.36,.59,1.08,1.78],[-4.20,.77,.97,1.91],
+   [-4.02,.86,.88,1.98]
   ];
   loft(root,'Morro independent Ka-60',noseSections);
   const junction=ring(noseSections.at(-1));
-  for(let k=0;k<12;k++)
-   rod(root,'Junta visible morro-cabina',junction[k],junction[(k+1)%12],.014,c.dark);
-  // La cabina comença amb un marc OPAC. Les finestres són peces separades,
-  // més endarrerides que el morro i envoltades per carrosseria.
+  for(let k=6;k<12;k++)
+   rod(root,'Junta visible morro-cabina',junction[k],junction[(k+1)%12],.011,c.dark);
+  // Windscreen starts directly above the nose and sweeps into the sides.
+  // Shared ring vertices ensure continuous glazing with no opaque backing.
   loft(root,'Fuselatge Ka-60',[
-   [-3.94,.76,.95,2.24],[-3.58,.86,.91,2.46],
-   [-2.80,1.02,.85,2.88],[-2.30,1.10,.83,3.01],
+   [-4.02,.86,.88,1.98],[-3.65,.96,.91,2.57],
+   [-2.80,1.04,.85,2.94],[-2.30,1.10,.83,3.01],
    [-1.15,1.11,.82,3.06],[.40,1.11,.83,3.02],
    [1.85,.97,.90,2.78],[3.15,.62,1.13,2.36]
   ],(j,k)=>{
-   // Mantenir les dues obertures reals de les portes de transport.
    if((j===4||j===5)&&[0,5,6,11].includes(k))return 'open';
-   // Quatre vidres més petits al parabrisa, dos a cada lateral.
-   // El primer tram de la cabina (j=0) és xapa, no vidre.
-   if(j===1&&[1,2,3,4].includes(k)||
-      (j===2||j===3)&&[0,5].includes(k))return 'small-glass';
+   if(j<=1&&k<6|| (j===2||j===3)&&[0,1,4,5].includes(k))
+    return 'panoramic-glass';
    return false;
   });
   loft(root,'Botaló Ka-60',[[2.85,.65,1.16,2.4],[4.65,.39,1.32,2.02],[6.75,.25,1.40,1.92],[6.87,.25,1.39,1.93]]);
@@ -193,7 +199,7 @@ export function createKamovCandidate(T,type){
    rod(root,'Tirant tren posterior al botaló',[0,.70,3.81],[side*.24,1.36,3.48],.041,c.dark);
   box(root,'Carenat fixació tren posterior',.34,.23,.62,0,1.25,3.93,c.body);
   cyl(root,'Eix rotor principal',.105,.75,0,3.48,0,c.metal);mainRotor(3.91,4,6.75,1);
-  rod(root,'Pitot',[-.35,1.55,-4.12],[-.35,1.55,-4.91],.018,c.metal);
+  rod(root,'Pitot',[-.42,1.55,-4.25],[-.42,1.55,-4.62],.018,c.metal);
  }else{
   // Ka-52: wide side-by-side canopy, flattened radar nose, short stub wings.
   loft(root,'Fuselatge Ka-52',[

@@ -1,3 +1,9 @@
+**2026-11-14 · Ka-60, nou frontal segons la fotografia aportada:**
+- [x] Morro opac escurçat de 1,06 a 0,50 m; seccions més arrodonides i amples, amb una junta exacta amb la cabina.
+- [x] Vint facetes de vidre contigües al parabrisa i laterals, sense xapa interior; marcs fins al perímetre i divisor central.
+- [x] Revisió del laboratori `live-editor-20261114-ka60-panoramic-1`; Ka-52, rotors, motor, portes laterals i tren d'aterratge intactes. El Huey del joc no se substitueix fins a l'aprovació del candidat.
+- [ ] Validació visual al visor i desplegament Cloudflare.
+
 **2026-11-14 · LOD distant BTR-82:**
 - [x] Substituïts els proxies genèrics de blindat per una única malla derivada del 3B aprovat: casc i torreta originals, vuit pneumàtics separats i canó cilíndric; sense els 97 detalls petits.
 - [x] Mateixa geometria compartida per tanquetes buides i enemigues (nivell mitjà i llunyà). Física, IA, pivots, escala del model complet i bandera enemiga intactes.

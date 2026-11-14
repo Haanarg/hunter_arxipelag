@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as T from '../vendor/three-r186.module.mjs';
 import {createKamovCandidate,stepKamovRotors,KAMOV_VERSION} from '../src/kamov-reference-candidates.mjs';
-assert(KAMOV_VERSION.includes('separate-nose-downfins'));
+assert(KAMOV_VERSION.includes('rounded-nose-panoramic'));
 for(const type of ['ka60','ka52']){
  const root=createKamovCandidate(T,type),meshes=[],rotors=[];
  root.traverse(o=>{if(o.userData.kamovRotor)rotors.push(o);if(o.isMesh)meshes.push(o)});
@@ -31,17 +31,33 @@ for(const type of ['ka60','ka52']){
    const shell=meshes.filter(o=>o.name.startsWith('Fuselatge Ka-60 panell'));
    assert.equal(doorRay.intersectObjects(shell).length,0,'La porta continua tapada a la banda '+side);
   }
-  const panes=meshes.filter(o=>o.name.startsWith('Vidre reduït Fuselatge Ka-60'));
-  assert.equal(panes.length,8,'Vidres més petits, només a la cabina davantera');
+  const panes=meshes.filter(o=>o.name.startsWith('Vidre panoràmic Fuselatge Ka-60'));
+  assert.equal(panes.length,20,'Parabrisa envoltant i vidres laterals grans');
   assert(panes.every(o=>o.material.transparent&&o.material.opacity<.5));
   assert.equal(meshes.filter(o=>o.name==='Estabilitzador superior en T').length,2);
-  // Nou morro: és xapa opaca pròpia i queda per davant dels vidres.
   const noseParts=meshes.filter(o=>o.name.startsWith('Morro independent Ka-60'));
-  assert(noseParts.length>24&&noseParts.every(o=>!o.material.transparent),'Morro separat, sòlid i opac');
+  assert.equal(noseParts.length,50);
+  assert(noseParts.every(o=>!o.material.transparent),'Morro sòlid i opac');
   const noseBounds=new T.Box3();for(const part of noseParts)noseBounds.expandByObject(part);
   const glassBounds=new T.Box3();for(const pane of panes)glassBounds.expandByObject(pane);
-  assert(noseBounds.min.z< -4.98,'El morro ha de sobresortir davant del parabrisa');
-  assert(glassBounds.min.z>noseBounds.min.z+.95,'Els vidres davanters han de començar més enrere');
+  assert(noseBounds.min.z> -4.54&&noseBounds.min.z< -4.50,'Posició frontal del morro');
+  assert(noseBounds.max.z-noseBounds.min.z<.52,'Morro curt');
+  assert(noseBounds.max.x-noseBounds.min.x>1.70,'Morro ample i arrodonit');
+  assert(Math.abs(glassBounds.min.z-noseBounds.max.z)<1e-5,'Vidre just damunt del morro');
+  assert(glassBounds.max.y-glassBounds.min.y>1.48,'Altura panoràmica '+(glassBounds.max.y-glassBounds.min.y));
+  const byPanel=new Map(panes.map(o=>[o.name.split(' ').slice(-2).join(':'),o]));
+  const verts=o=>{const p=o.geometry.attributes.position;return Array.from({length:p.count},(_,i)=>[p.getX(i),p.getY(i),p.getZ(i)].map(v=>v.toFixed(5)).join(','))};
+  for(const [key,o] of byPanel){
+   const [j,k]=key.split(':').map(Number);
+   for(const neighbour of [byPanel.get(j+':'+(k+1)),byPanel.get((j+1)+':'+k)]){
+    if(neighbour)assert(new Set(verts(o).filter(v=>verts(neighbour).includes(v))).size>=2,'Vidres contigus sense separacions');
+   }
+  }
+  for(const side of [-1,1]){
+   const ray=new T.Raycaster(new T.Vector3(side*.35,2.35,-8),new T.Vector3(0,0,1));
+   const first=ray.intersectObjects([...noseParts,...panes,...meshes.filter(o=>o.name.startsWith('Fuselatge Ka-60 panell'))])[0];
+   assert(first&&panes.includes(first.object),'Parabrisa frontal lliure de xapa a banda '+side);
+  }
   assert(root.getObjectByName('Junta visible morro-cabina'));
   assert(!root.getObjectByName('Aleta terminal T de cua'));
   assert(!root.getObjectByName('Estabilitzador horitzontal inferior'));
@@ -81,4 +97,4 @@ for(const type of ['ka60','ka52']){
  console.log(type,Math.round(triangles)+' triangles',meshes.length+' peces',size.toArray().map(x=>x.toFixed(2)).join(' × '));
 }
 assert.throws(()=>createKamovCandidate(T,'unknown'));
-console.log('PASS Kamov: morro Ka-60 separat, parabrisa reculat, alerons de cua triangulars descendents, portes i animació');
+console.log('PASS Kamov: morro Ka-60 curt i arrodonit, parabrisa panoràmic continu, alerons descendents, portes i animació');
