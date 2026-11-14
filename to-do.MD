@@ -1,3 +1,8 @@
+**2026-11-14 · Protagonista com a referència de mida al laboratori:**
+- [x] Substituïda la càpsula humana genèrica pel cos real del protagonista: geometria compartida, cap compactD, articulacions, gorra, ulleres, equipament i colors del joc; postura neutra sense arma.
+- [x] Escala idèntica a `characters.createPlayer`: unitScale 1,2 i escala exterior 2/3. Soles arran de terra i referència independent del grup dels vehicles, a tots els visors.
+- [x] Prova de paritat amb la fàbrica real del protagonista (dimensions del cos i escala), terra i independència de l’escala del vehicle. Revisió `live-editor-20261114-player-reference-1`.
+
 **2026-11-14 · Ka-60 candidat 8, petició a7cd2c52:**
 - [x] Eliminats els sis seients de transport individuals; conservats pilot i copilot. Planxa posterior que tanca la cabina, amb banc transversal orientat endavant i ancoratges.
 - [x] Marcs de les portes construïts amb les mateixes arestes del fuselatge; terra ajustat al contorn. Finestrons, parabrisa, cua i Huey intactes.

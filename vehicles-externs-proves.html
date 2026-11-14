@@ -97,7 +97,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <section id="info"><div><h2 id="vehicleName">Carregant el taller…</h2><div id="warning"></div><div id="referenceLinks" class="reference-links" aria-label="Fotografies de referència"></div></div>
 <div class="toolbar"><label><input id="fitScale" type="checkbox" checked> Ajustar candidates a l'escala del model actual</label>
 <label><input id="animate" type="checkbox" checked> Animacions disponibles</label>
-<label><input id="showGrid" type="checkbox" checked> Graella i referència humana</label>
+<label><input id="showGrid" type="checkbox" checked> Graella i protagonista</label>
 
 </div></section>
 <section id="t90Motion" class="t90-motion" hidden aria-label="Provar la torreta del T-90M">
@@ -152,7 +152,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <script type="module">
 // Carrega asíncronament per poder mostrar l'error si qualsevol import està
 // trencat. Un error de sintaxi al catàleg ja no deixa un visor en blanc.
-import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261114-ka60-rear-bench-1&t90m=1')
+import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261114-player-reference-1&t90m=1')
  .catch(error=>{
   console.error('Error en arrencar el laboratori de vehicles:',error);
   const reason=error instanceof Error?error.message:String(error);

@@ -1,5 +1,6 @@
+import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
 import {createKamovCandidate,stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261114-rear-bench-8';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261114-ka60-rear-bench-1';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261114-player-reference-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs';
@@ -16,7 +17,7 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261114-ka60-rear-bench-1';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261114-player-reference-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -104,11 +105,7 @@ for(let i=0;i<5;i++){
  ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;ground.position.y=-.07;scene.add(ground);
  const lines=new THREE.GridHelper(230,230,0xacc3ab,0x819788);
  lines.position.y=.015;lines.material.transparent=true;lines.material.opacity=.24;scene.add(lines);
- const person=new THREE.Group();
- const human=new THREE.Mesh(new THREE.CapsuleGeometry(.25,1.17,4,8),material(0x243c34));
- human.position.y=.92;human.castShadow=true;person.add(human);
- const head=new THREE.Mesh(new THREE.SphereGeometry(.18,10,8),material(0xf0c7a2));
- head.position.y=1.73;head.castShadow=true;person.add(head);scene.add(person);
+ const person=createLabPlayerReference(THREE);scene.add(person);
  const camera=new THREE.PerspectiveCamera(36,1,.05,1300);
  const slot={outer,viewport,scene,camera,ground,lines,person,status,source,bold,sub,upload,downloadBtr,model:null,mixer:null,kind:null,sourceFrame:null};
  slots.push(slot);
