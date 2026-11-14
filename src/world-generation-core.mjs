@@ -70,7 +70,7 @@ export function bunkerGuardIsElite(difficulty,index){
 // Canonical local rectangles used by the rendered bunker and server geometry.
 export function bunkerEntranceLayout(p){
  const rows=[],width=p.stairWidth,half=width/2,top=.22,bottom=-9.15,
-  z0=p.stairTop,z1=p.stairBottom,doorZ=z1+.65,partitionZ=5,
+  z0=p.stairTop,z1=p.stairBottom,doorZ=z1+1.25,partitionZ=6.2,
   wallTop=9.6,doorHeight=4.1;
  const add=(x,z,w,d,base,height,kind,extra={})=>rows.push({x,z,w,d,base,height,kind,...extra});
  const door=(z,base,gap,basement)=>add(0,z,gap,.75,base,doorHeight,'door',{basement});
@@ -90,7 +90,7 @@ export function bunkerEntranceLayout(p){
  }
  // Block the solid underside from the rear and prevent access from the
  // upper front edge. The sole lower exit is its elevating door.
- add(0,z0-.35,width,.7,bottom,top-bottom,'shaft',{basement:true});
+ add(0,z0-.35,width,.7,bottom,top-bottom-.85,'shaft',{basement:true});
  add(0,doorZ,width,.75,bottom+doorHeight,top-bottom-doorHeight,'shaft',{basement:true});
  add(0,doorZ,width,.75,top,4.6-top,'shaft');
  door(doorZ,bottom,width,true);
