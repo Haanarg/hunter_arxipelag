@@ -6,6 +6,13 @@ export const STANDARD_BUILDING_DOOR=Object.freeze({width:2.4,height:3.8});
 export const WOODEN_DOOR_HP=4;
 export const BUNKER_DOOR_HP=20;
 // Difficulty uses the canonical .6 / 1 / 1.5 values in both modes.
+// Retraction into the top of the opening: no translation through the
+// lintel and no exposed panel above the wall, including reinforced trim.
+export function bunkerDoorPose(progress,closedY,height){
+ const p=Math.max(0,Math.min(1,progress||0)),ease=p*p*(3-2*p);
+ const scaleY=Math.max(.025,1-ease);
+ return {scaleY,y:closedY+height*(1-scaleY)*.5,visible:p<1};
+}
 export function bunkerGateDuration(difficulty){return difficulty<=.6?3:difficulty>=1.5?10:5;}
 export function advanceBunkerGate(progress,desiredOpen,dt,difficulty){
  const next=Math.max(0,Math.min(1,progress+(desiredOpen?1:-1)*dt/bunkerGateDuration(difficulty)));

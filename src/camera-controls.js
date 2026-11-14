@@ -65,6 +65,24 @@ window.HUNTER_CAMERA_CONTROLS=Object.freeze({
     }
     return far>=near&&far>0&&near<1;
   },
+  // Keep the camera's entire overhead sightline within the stair aperture.
+  bunkerStairCamera(bounds,desiredLocal,playerY,floorY,roofHeight){
+    const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
+    return {
+      x:clamp(desiredLocal.x,bounds.left+.18,bounds.right-.18),
+      z:clamp(desiredLocal.z,bounds.near+.18,bounds.far-.18),
+      y:Math.min(floorY+roofHeight-1.3,playerY+10.4)
+    };
+  },
+  // Test opaque physical walls, even when their render mesh is hidden.
+  bunkerEnemyVisible(eye,target,walls,intersect){
+    return [1.25,2.25].some(height=>!walls.some(w=>{
+      if(w.open||w.destroyedWall||w.hp<=0||w.barbed)return false;
+      const t=intersect(eye.x,eye.y,eye.z,target.x,target.y+height,target.z,
+        w.x0,w.x1,w.y0,w.y1,w.z0,w.z1);
+      return t!==null&&t>=0&&t<.998;
+    }));
+  },
   createOcclusion(){
     const hidden=[];
     return {

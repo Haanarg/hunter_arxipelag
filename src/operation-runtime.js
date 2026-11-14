@@ -195,11 +195,9 @@ function applyOperationSnapshot(snapshot){
     if(record.kind==='walls'&&entity.door&&record.active&&entity.m){
       if(!Object.hasOwn(record.state,'desiredOpen'))entity.desiredOpen=!!entity.alwaysOpen||!!entity.open||(entity.openProgress||0)>0;
       if(entity.bunkerGate||entity.bunkerInteriorDoor){
-        const progress=entity.openProgress||0,ease=progress*progress*(3-2*progress);
-        if(entity.bunkerGate){entity.m.scale.y=Math.max(.025,1-ease);entity.m.position.y=entity.closedLocalY+entity.doorHeight*ease*.5;}
-        else entity.m.position.y=entity.closedLocalY+(entity.doorHeight+.55)*ease;
-      }
-      entity.m.visible=!entity.open;
+        if(entity.openProgress==null)entity.openProgress=entity.open?1:0;
+        applyBunkerDoorPose(entity);
+      }else entity.m.visible=!entity.open;
     }
     if(record.kind==='buildings'){
       if(entity.rb){entity.roof.visible=false;if(entity.upperFloor)entity.upperFloor.visible=false;for(const mesh of entity.extraRoofs||[])mesh.visible=false;}

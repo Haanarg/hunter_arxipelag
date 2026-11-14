@@ -1574,6 +1574,12 @@ function interactPlayerDoor(){
   msg=open?'Porta oberta.':'Porta tancada.';if(d.bunkerGate)msg=(open?'Obrint porta… ':'Tancant porta… ')+window.HUNTER_BUILDING_SHELL.bunkerGateDuration(DIF)+' s';else if(d.bunkerInteriorDoor)msg=open?'Obrint porta…':'Tancant porta…';msgT=2;
   updateActionButton(cv?null:nearV());return true;
 }
+function applyBunkerDoorPose(d){
+  const pose=window.HUNTER_BUILDING_SHELL.bunkerDoorPose(d.openProgress,d.closedLocalY,d.doorHeight);
+  d.m.scale.y=pose.scaleY;
+  d.m.position.y=pose.y;
+  d.m.visible=d.hp>0&&!d.destroyedWall&&pose.visible;
+}
 function updateDoors(dt){
   for(const d of Dr){
     // Legacy saves have only open/openProgress. Initialise intent once, never by proximity.
@@ -1584,10 +1590,9 @@ function updateDoors(dt){
       const duration=d.desiredOpen?1.15:1.6;
       d.openProgress=d.bunkerGate?window.HUNTER_BUILDING_SHELL.advanceBunkerGate(d.openProgress||0,d.desiredOpen,dt,DIF):
         Math.max(0,Math.min(1,(d.openProgress||0)+(d.desiredOpen?dt/duration:-dt/duration)));
-      const p=d.openProgress,ease=p*p*(3-2*p);
-      if(d.bunkerGate){d.m.scale.y=Math.max(.025,1-ease);d.m.position.y=d.closedLocalY+d.doorHeight*ease*.5;d.open=p===1;}
-      else{d.m.position.y=d.closedLocalY+(d.doorHeight+.55)*ease;d.open=p>.86;}
-      d.m.visible=d.hp>0&&p<1;continue;
+      const p=d.openProgress;
+      d.open=d.bunkerGate?p===1:p>.86;
+      applyBunkerDoorPose(d);continue;
     }
     d.open=!!d.desiredOpen;if(d.m)d.m.visible=!d.open;
   }
@@ -2053,7 +2058,7 @@ window.HUNTER_SIMULATION_STATS={gameplay:simulationClock.stats,cinematic:cinemat
 const vehicleLook=window.HUNTER_CAMERA_CONTROLS.createVehicleLook(),
       turretLook=window.HUNTER_CAMERA_CONTROLS.createTurretFollow(),
       cameraOcclusion=window.HUNTER_CAMERA_CONTROLS.createOcclusion();
-let drag=null,cameraVehicle=null,cameraBasement=null,cameraTurretMode=false;
+let drag=null,cameraVehicle=null,cameraBasement=null,cameraStair=false,cameraTurretMode=false;
 function restoreCameraWalls(){
   cameraOcclusion.restore();
   if(activeBunker?.basement)activeBunker.basement.cameraHiddenWalls.length=0;
@@ -2897,7 +2902,21 @@ function renderCombatFeedback(){
 }
 let stealthVisibilityFrame=0;
 const stealthVehicleBounds=new WeakMap();
+function bunkerPhysicalView(){
+  const b=activeBunker;
+  if(!started||over||cv||!b?.basement||
+    !(cameraBasement===b||playerInsideBunkerBasement(P.x,P.z,P.y)))return null;
+  return {eye:{x:P.x,y:P.y+(playerCrouched?1.05:1.76),z:P.z},
+    walls:wallCandidates(b.x,b.z,Math.hypot(b.basement.halfX,b.basement.halfZ)+3)
+      .filter(w=>w.owner===b)};
+}
+function bunkerCanSeeEnemy(e,view){
+  if(!view||!e?.o)return true;
+  const q=e.o.position;
+  return window.HUNTER_CAMERA_CONTROLS.bunkerEnemyVisible(view.eye,q,view.walls,segmentAabbT);
+}
 function stealthFeedbackVisible(u,body,marker){
+  if(!bunkerCanSeeEnemy(u,bunkerPhysicalView()))return false;
   const from=cam.position;
   function clear(to){
     const reach=Math.hypot(to.x-from.x,to.z-from.z)/2+3,
@@ -3752,7 +3771,7 @@ const scopeNow=scopeActive&&sniperEquipped&&!cv&&!playerFall&&!swimming;
 const fieldOfView=scopeNow?2*Math.atan(Math.tan(58*Math.PI/360)/8)*180/Math.PI:58;
 if(Math.abs(cam.fov-fieldOfView)>.001){cam.fov=fieldOfView;cam.updateProjectionMatrix()}
 if(scopeNow){
-  cameraBasement=null;
+  cameraBasement=null;cameraStair=false;
   const fx=-Math.sin(scopeYaw),fz=-Math.cos(scopeYaw),vertical=Math.tan(scopePitch);
   cam.position.set(P.x-fx*.12,P.y+1.76,P.z-fz*.12);
   cam.lookAt(P.x+fx*160,P.y+1.76+vertical*160,P.z+fz*160);
@@ -3779,13 +3798,30 @@ if(scopeNow){
         inside=!!local&&Math.abs(local.x)<b.basement.halfX-.5&&
         Math.abs(local.z)<b.basement.halfZ-.5;
   const stair=b?.basement?.stair;
-  const descending=!!local&&window.HUNTER_WALK_SURFACES.bunkerStairProgress(stair,local,.45)!==null&&P.y<b.fy+.18;
-  const bunkerBelow=!!inside&&(P.y<b.fy-3.9||descending);
+  const onStair=!!inside&&window.HUNTER_WALK_SURFACES.bunkerStairProgress(stair,local,.04)!==null&&P.y<=b.fy+.35;
+  const bunkerBelow=!!inside&&(P.y<b.fy-3.9||onStair);
   // El forjat ÉS el sostre del soterrani. No s'ha d'amagar:
   // ara que la càmera és sempre a sota, es veu el plafó i no es
   // produeix cap obstrucció; els llums queden ancorats al sostre real.
   if(b?.basement)for(const slab of b.basement.upperSlabMeshes)slab.visible=true;
-  if(bunkerBelow){
+  if(onStair){
+    // A steep overhead camera follows the player through the actual opening.
+    // Never remove shaft walls, including when the player reverses direction.
+    const bounds=window.HUNTER_WALK_SURFACES.bunkerStairBounds(stair),
+      controls=window.HUNTER_CAMERA_CONTROLS,
+      desired=buildingLocalPoint(b,P.x+Math.sin(heading)*1.05,P.z+Math.cos(heading)*1.05),
+      target=controls.bunkerStairCamera(bounds,desired,P.y,b.fy,b.h),
+      worldTarget=buildingWorldPoint(b,target.x,target.z);
+    w.set(worldTarget.x,target.y,worldTarget.z);
+    if(cameraBasement!==b||!cameraStair)cam.position.copy(w);
+    else cam.position.lerp(w,1-Math.exp(-10*dt));
+    const safeLocal=buildingLocalPoint(b,cam.position.x,cam.position.z),
+      safe=controls.bunkerStairCamera(bounds,safeLocal,P.y,b.fy,b.h),
+      safeWorld=buildingWorldPoint(b,safe.x,safe.z);
+    cam.position.set(safeWorld.x,Math.max(P.y+5,Math.min(b.fy+b.h-1.3,cam.position.y)),safeWorld.z);
+    b.basement.cameraInside=true;
+    cameraBasement=b;cameraStair=true;
+  }else if(bunkerBelow){
     // Distància normal i suavitzat dins el volum segur del soterrani.
     // L'entrada es fixa sota el forjat: interpolar des de fora creuaria
     // el sostre opac. La resta del recorregut no pot tornar-hi a passar.
@@ -3807,7 +3843,7 @@ if(scopeNow){
       const q=buildingWorldPoint(b,clampedX,clampedZ);
       w.x=q.x;w.z=q.z;
     }
-    if(cameraBasement!==b)cam.position.copy(w);
+    if(cameraBasement!==b||cameraStair)cam.position.copy(w);
     else cam.position.lerp(w,1-Math.exp(-7*dt));
     const smoothLocal=buildingLocalPoint(b,cam.position.x,cam.position.z),
       safe=buildingWorldPoint(b,
@@ -3820,7 +3856,7 @@ if(scopeNow){
     // de tota la cambra ni les col·lisions del personatge.
     hideCameraObstructions(b,targetEye,true);
     b.basement.cameraInside=true;
-    cameraBasement=b;
+    cameraBasement=b;cameraStair=false;
   }else{
     if(b?.basement)b.basement.cameraInside=false;
     // Vista d'artiller: en línia amb la torreta, darrere seu i una mica
@@ -3833,7 +3869,7 @@ if(scopeNow){
     if(cameraBasement)cam.position.copy(w);
     else cam.position.lerp(w,1-Math.pow(.001,dt));
     cam.position.y=Math.max(cam.position.y,hAt(cam.position.x,cam.position.z)+3,2.5);
-    cameraBasement=null;
+    cameraBasement=null;cameraStair=false;
     if(ib&&!cv)hideCameraObstructions(ib,bunkerEye.set(P.x,P.y+1.65,P.z),false);
   }
   let lookY=Math.min(bunkerBelow?b.fy-1.0:Infinity,ty+(bunkerBelow?2.0:2));
@@ -3844,7 +3880,8 @@ if(scopeNow){
       lookY=Math.max(ty+2,turretCameraPivot.y+.35*viewScale);
     }
   }
-  cam.lookAt(T.x-Math.sin(heading)*(bunkerBelow?3.5:8),lookY,
+  if(onStair)cam.lookAt(T.x-Math.sin(heading)*.18,P.y+1.25,T.z-Math.cos(heading)*.18);
+  else cam.lookAt(T.x-Math.sin(heading)*(bunkerBelow?3.5:8),lookY,
     T.z-Math.cos(heading)*(bunkerBelow?3.5:8));
   if(cv){
     // Es recalcula a cada fotograma: el LOD (.2 s) és massa lent
@@ -4389,7 +4426,8 @@ if(originalSceneMatrixUpdate)scene.updateMatrixWorld=function(...args){
 const roadFrameStats=world?.userData?.pathRenderStats;
 frameDiagnostics.resetDrawCounters(roadFrameStats);
 hiddenMatrixCull.beginRender();
-const bunkerDryRender=!!(activeBunker?.basement&&!cv&&cam.position.y<activeBunker.fy-.2&&playerInsideBunkerBasement(P.x,P.z,P.y));
+const bunkerDryRender=!!(activeBunker?.basement&&!cv&&
+  (cameraStair||cam.position.y<activeBunker.fy-.2&&playerInsideBunkerBasement(P.x,P.z,P.y)));
 const bunkerWaterLayers=bunkerDryRender?[water.mesh,water.deep,water.shore].filter(Boolean).map(o=>[o,o.visible]):[];
 for(const [o] of bunkerWaterLayers)o.visible=false;
 try{
@@ -4400,7 +4438,19 @@ try{
    // Mantenim la mateixa càmera i el mateix cos, però sense la superfície
    // opaca del mar ni el cel exterior mentre el personatge s'enfonsa.
    ren.render(deathCinematic.underwaterScene,cam);
- }else ren.render(scene,cam);
+ }else{
+   // This is a render-only mask: AI, damage, movement, LOD and COOP
+   // snapshots never see a change to the enemies' visibility.
+   const view=bunkerPhysicalView(),hiddenEnemies=[];
+   try{
+     if(view&&!victoryCinematic?.active&&!deathCinematic?.active){
+       for(const e of E)if(e.o?.visible&&!bunkerCanSeeEnemy(e,view)){
+         hiddenEnemies.push(e.o);e.o.visible=false;
+       }
+     }
+     ren.render(scene,cam);
+   }finally{for(const mesh of hiddenEnemies)mesh.visible=true;}
+ }
 }finally{
  for(const [o,visible] of bunkerWaterLayers)o.visible=visible;
  hiddenMatrixCull.endRender();

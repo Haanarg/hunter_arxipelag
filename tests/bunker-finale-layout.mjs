@@ -1,8 +1,21 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {runInNewContext} from 'node:vm';
+import {segmentAabbT} from '../src/combat-rules.mjs';
+const cameraContext={window:{}};
+runInNewContext(readFileSync(new URL('../src/camera-controls.js',import.meta.url),'utf8'),cameraContext);
+const controls=cameraContext.window.HUNTER_CAMERA_CONTROLS;
 import {bunkerBasementPlan,bunkerEntranceLayout,bunkerGuardIsElite,bunkerEastWallSections} from '../src/world-generation-core.mjs';
 import {bunkerFloorAt,buildingWorldPoint,bunkerStairBounds,bunkerStairProgress} from '../src/walk-surfaces.mjs';
 import {pushWalls} from '../src/world-physics.mjs';
 import {addCoopBunker} from '../server/coop-bunker.mjs';
+// The overhead view stays inside the aperture, above the character and
+// below the roof. Closed walls occlude enemies regardless of mesh visibility.
+const eye={x:0,y:1.76,z:0},enemy={x:5,y:0,z:0},
+ opaque={x0:2,x1:2.7,y0:0,y1:4,z0:-3,z1:3,hp:10,m:{visible:false}};
+assert.equal(controls.bunkerEnemyVisible(eye,enemy,[opaque],segmentAabbT),false);
+assert.equal(controls.bunkerEnemyVisible(eye,enemy,[{...opaque,open:true}],segmentAabbT),true);
+assert.equal(controls.bunkerEnemyVisible(eye,enemy,[{...opaque,hp:0}],segmentAabbT),true);
 const b={id:'test',x:10,z:-5,fy:20,w:40,d:34,h:10};
 for(const seed of [1,2,3,4,67,148,999,1731603374]){
  const p=bunkerBasementPlan(seed,b),rows=bunkerEntranceLayout(p),st=p.stair;
@@ -35,6 +48,10 @@ for(const seed of [1,2,3,4,67,148,999,1731603374]){
  for(const angle of [0,Math.PI/2,Math.PI,3*Math.PI/2]){
   const model={...b,angle,basement:{halfX:p.halfX,halfZ:p.halfZ,floorY:p.floorY,stair:st}};
   for(let i=0;i<=19;i++){
+   const py=b.fy+.22-i/19*9.37;
+   const pose=controls.bunkerStairCamera(bounds,{x:st.xTop+5,z:st.z+5},py,b.fy,b.h);
+   assert(pose.x<bounds.right&&pose.x>bounds.left&&pose.z<bounds.far&&pose.z>bounds.near);
+   assert(pose.y>=py+5&&pose.y<b.fy+b.h);
    const t=i/19,q=buildingWorldPoint(model,st.xTop+t*(st.xBottom-st.xTop),st.z);
    assert(Math.abs(bunkerFloorAt(model,q.x,q.z,20)-(b.fy+.22-t*9.37))<1e-6);
   }

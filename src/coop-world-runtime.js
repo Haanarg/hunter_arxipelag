@@ -866,9 +866,15 @@ function updateNativeCoopFrame(dt){
    const d=s.doors.get(row.id);if(!d)continue;
    d.desiredOpen=row.desiredOpen??row.open;d.open=row.open;
    if(d.bunkerGate&&d.m){
-     const p=d.openProgress=row.openProgress??(row.open?1:0),ease=p*p*(3-2*p);
-     d.m.scale.y=Math.max(.025,1-ease);d.m.position.y=d.closedLocalY+d.doorHeight*ease*.5;
-     d.m.visible=p<1&&!row.destroyed;
+     d.openProgress=row.openProgress??(row.open?1:0);
+     applyBunkerDoorPose(d);
+     if(row.destroyed)d.m.visible=false;
+   }else if(d.bunkerInteriorDoor&&d.m){
+     // Interior doors use the shared client retraction on each frame;
+     // a new/reconnected client starts at the authoritative state.
+     if(!s.projectedState)d.openProgress=row.open?1:0;
+     applyBunkerDoorPose(d);
+     if(row.destroyed)d.m.visible=false;
    }else if(d.m)d.m.visible=!row.open&&!row.destroyed;
  }
  }
