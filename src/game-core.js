@@ -999,7 +999,7 @@ function vehiclePushPlayer(){
           sweep=runoverSweepHit(v.impactFromX??v.x,v.impactFromZ??v.z,
             v.x,v.z,P.x,P.z,vehicleRadius(v.t)*.68+.62*.45);
     if(!overlap&&!sweep)continue;
-    if(v.t==='ferry'&&(terminalRampHeight(P.x,P.z)!==null||pedestrianFerry(P.x,P.z,P.y)?.f===v))continue;
+    if(v.t==='ferry'&&(terminalRampHeight(P.x,P.z)!==null||pedestrianFerry(P.x,P.z,P.y,true)?.f===v))continue;
     // Només apartam el jugador si el buc l'ocupa ara; un pas ràpid
     // que ja l'ha travessat conserva el dany sense teletransportar-lo.
     if(overlap){
@@ -1910,60 +1910,26 @@ function executePlayerOptionalAction(){
 function optionalMapMarkers(){return [...radioRelay.markers(),...prisonerSystem.markers()]}
 const FERRY_DECK=window.HUNTER_VEHICLES.decks?.ferry;
 const wrapAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));
-const ferryLocal=(f,x,z)=>{const dx=x-f.x,dz=z-f.z,s=Math.sin(f.hd),co=Math.cos(f.hd);return{x:dx*co-dz*s,z:dx*s+dz*co}};
-const ferryWorld=(f,lx,lz)=>{const s=Math.sin(f.hd),co=Math.cos(f.hd);return{x:f.x+lx*co+lz*s,z:f.z-lx*s+lz*co}};
-const ferryCabinContains=(lx,lz,margin=0)=>{
-  const c=FERRY_DECK?.cabin;
-  return !!c&&Math.abs(lx-c.x)<c.halfW+margin&&Math.abs(lz-c.z)<c.halfL+margin
-};
-const ferryWalkable=(lx,lz,margin=0)=>{
-  if(!FERRY_DECK)return false;
-  const d=FERRY_DECK,sc=VS.ferry||1,ax=Math.abs(lx),az=Math.abs(lz);
-  return ax+margin<=((az+margin<=d.halfL*sc)?d.halfW:d.rampHalfW)*sc&&
-    az+margin<= (d.halfL+d.ramp)*sc;
-};
-function ferryCabinVehicleHit(f,box){
-  const c=FERRY_DECK?.cabin;if(!c)return false;
-  const p=ferryWorld(f,c.x*(VS.ferry||1),c.z*(VS.ferry||1));
-  return obbOverlap(box,{...p,hd:f.hd,w:c.halfW*2*(VS.ferry||1),d:c.halfL*2*(VS.ferry||1)})
-}
-function ferryCabinPushPlayer(){
-  const deck=pedestrianFerry(P.x,P.z,P.y),c=FERRY_DECK?.cabin;
-  if(!deck||!c||!ferryCabinContains(deck.q.x,deck.q.z,.62))return;
-  const q=deck.q,m=.65,dx=deck.q.x-c.x,dz=deck.q.z-c.z,
-    ex=c.halfW+m-Math.abs(dx),ez=c.halfL+m-Math.abs(dz);
-  if(ex<ez)q.x=c.x+(dx<0?-1:1)*(c.halfW+m);
-  else q.z=c.z+(dz<0?-1:1)*(c.halfL+m);
-  const p=ferryWorld(deck.f,q.x,q.z);P.x=p.x;P.z=p.z
-}
-const ferryLocalSurfaceY=(f,lz)=>{
-  const sc=VS.ferry||1,d=FERRY_DECK;if(!d)return f.o.position.y;
-  const az=Math.abs(lz),deck=d.y*sc,edge=d.halfL*sc,ramp=d.ramp*sc;
-  if(az<=edge)return f.o.position.y+deck;
-  const q=Math.max(0,Math.min(1,(az-edge)/Math.max(.01,ramp)));
-  const hinge=f.o?.userData?.ferryRamps?.find(a=>a.side===Math.sign(lz))?.hinge;
-  const tip=hinge?deck-Math.sin(hinge.rotation.x)*Math.sign(lz)*ramp:d.rampY*sc;
-  return f.o.position.y+deck+(tip-deck)*q
-};
-function ferryForVehicle(v,x=v.x,z=v.z,includeRamp=true){
-  if(!FERRY_DECK||v.t==='ferry')return null;
-  const hb=vehicleBox(v,x,z,v.hd),sc=VS.ferry||1;
-  for(const f of V){
-    if(f===v||f.destroyed||f.t!=='ferry')continue;
-    const q=ferryLocal(f,x,z),fw=FERRY_DECK.halfW*sc,fl=FERRY_DECK.halfL*sc,r=includeRamp?FERRY_DECK.ramp*sc:0,
-          rel=wrapAngle(v.hd-f.hd),ca=Math.abs(Math.cos(rel)),sa=Math.abs(Math.sin(rel)),
-          ex=ca*hb.w*.5+sa*hb.d*.5,ez=sa*hb.w*.5+ca*hb.d*.5;
-    // Coberta ampla i rampa estreta: el morro del vehicle comença
-    // l'embarcament abans que el buc sòlid el bloquegi. Els laterals
-    // segueixen limitats per la projecció de la hitbox del vehicle.
-    const ax=Math.abs(q.x),az=Math.abs(q.z),rampHalf=FERRY_DECK.rampHalfW*sc;
-    if(ax+ex>fw-.18)continue;
-    if(az+ez<=fl)return f;
-    if(includeRamp&&Math.abs(f.v||0)<.8&&Math.abs(f.driveInput||0)<.2&&
-       az-ez<=fl+r+.65&&az<=fl+r+ez+.65&&
-       ax+ex<=rampHalf+.45)return f
+const ferryCore=window.HUNTER_FERRY_DECK;
+const ferryLocal=ferryCore.ferryLocal,ferryWorld=ferryCore.ferryWorld,
+      ferryCabinContains=ferryCore.ferryCabinContains,ferryWalkable=ferryCore.ferryWalkable,
+      ferryLocalSurfaceY=ferryCore.ferrySurfaceY;
+function pedestrianFerry(x,z,previousY,allowCabin=false){
+  for(const f of V)if(f.t==='ferry'&&!f.destroyed){
+    const hit=ferryCore.ferryPedestrianAt(f,x,z,previousY,.62,allowCabin);
+    if(hit)return hit;
   }
-  return null
+  return null;
+}
+function ferryCabinVehicleHit(f,box){return obbOverlap(box,ferryCore.ferryCabinBox(f))}
+function ferryCabinPushPlayer(){
+  const deck=pedestrianFerry(P.x,P.z,P.y,true);
+  if(!deck)return;
+  const p=ferryCore.ferryCabinPush(deck.f,P.x,P.z);
+  P.x=p.x;P.z=p.z;
+}
+function ferryForVehicle(v,x=v.x,z=v.z,includeRamp=true){
+  return ferryCore.ferryForVehicle(v,V,x,z,includeRamp);
 }
 function attachToFerry(v,f){
   if(!f||f.destroyed){v.carrier=null;return}
@@ -3261,7 +3227,7 @@ if(v.sunk&&v.t!=='bici'){v.v=0;v.sideV=0;v.strafeV=0;if(cv===v)escapeSubmergedVe
 // la profunditat es mesura des de la superfície que sosté el vehicle,
 // no des del fons de la mar. A la mar oberta groundAt continua
 // retornant el terreny físic i la inundació funciona igual que abans.
-const onFerryDeck=land&&(v.carrier||ferryForVehicle(v,v.x,v.z,true)),
+const onFerryDeck=land&&ferryForVehicle(v,v.x,v.z,true),
   depth=land&&!onFerryDeck?shore.depth(v.x,v.z,groundAt,(x,z)=>wy(x,z,elapsed)):-Infinity,
   flooded=land?shore.wetLand(v,depth,dt):null,
   input=window.HUNTER_VEHICLE_DYNAMICS.inputs(v,f,tr,dt);
@@ -3426,7 +3392,8 @@ if(ok){
   if(land){
     const f2=ferryForVehicle(v,v.x,v.z,true);if(f2)attachToFerry(v,f2);else if(v.carrier)detachFromFerry(v)
   }
-  handleVehicleImpacts(v,dt,oldX,oldZ);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta'||v.t==='camio')crush(nx,nz,window.HUNTER_VEHICLE_ENVIRONMENT.palmCrushRadius(v.t,VS[v.t]))
+  if(!v.carrier){handleVehicleImpacts(v,dt,oldX,oldZ);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta'||v.t==='camio')crush(nx,nz,window.HUNTER_VEHICLE_ENVIRONMENT.palmCrushRadius(v.t,VS[v.t]))}
+   else{v.impactFromX=oldX;v.impactFromZ=oldZ;v.envCd=Math.max(0,(v.envCd||0)-dt);v.bump=0;}
 }else{v.v*=Math.exp(-12*dt);v.sideV*=Math.exp(-10*dt);v.strafeV*=Math.exp(-12*dt)}
 if(a){
   const g2=Math.max(0,groundAt(v.x,v.z)),previousAlt=window.HUNTER_SHARED_VEHICLES.stepHelicopterLift(v,ud,dt,helicopterLandedAltitude(v,g2));
@@ -3554,14 +3521,17 @@ else if(c.m==='w'){
    }
  }
 else if(c.m==='wl'){y=Math.max(g,wy(v.x,v.z,t))+.6;ro=-(v.yawRate||0)*.08-(v.strafeV||0)*.008}
-else if(v.carrier){const q=ferryLocal(v.carrier,v.x,v.z);y=ferryLocalSurfaceY(v.carrier,q.z)+.05;pi=0;ro=0}
+else if(c.m==='l'&&(v.carrier||ferryForVehicle(v))){
+   const carrier=v.carrier||ferryForVehicle(v),pose=ferryCore.ferryVehiclePose(v,carrier,groundAt);
+   y=pose.y;pi=pose.pitch;ro=0;
+ }
 else{
   const s2=Math.sin(v.hd),k=Math.cos(v.hd);
   // Suport al centre del vehicle: ni el màxim físic ni les rodes
   // del darrere han de fixar una alçada antiga en una baixada.
   // La inclinació continua seguint la diferència de les mostres frontal/darrere.
   y=groundAt(v.x,v.z)+.05;
-  pi=Math.atan((groundAt(v.x-s2*3,v.z-k*3)-groundAt(v.x+s2*3,v.z+k*3))/6);ro=-(v.sideV||0)*.018;
+  pi=Math.max(-.55,Math.min(.55,Math.atan2(groundAt(v.x-s2*3,v.z-k*3)-groundAt(v.x+s2*3,v.z+k*3),6)));ro=-(v.sideV||0)*.018;
   if(v.waterIngress){
     const state=v.waterIngress,surface=wy(v.x,v.z,t),bed=hAt(v.x,v.z);
     const floated=Math.max(y,surface-.5);
@@ -3575,18 +3545,13 @@ if(v.bump>0)y+=Math.sin((1-v.bump/.22)*Math.PI)*.34;o.position.set(v.x,y,v.z);o.
 // Les rampes del ferri reposen sobre el moll o la platja quan s'atura.
 // La superfície física empra el mateix angle que les peces animades.
 if(v.t==='ferry'&&o.userData.ferryRamps){
-  const deck=FERRY_DECK,sc=VS.ferry||1,length=deck.ramp*sc,
-    deckY=y+deck.y*sc,moving=Math.abs(v.v)>.8||Math.abs(v.driveInput||0)>.2;
+  const support=(x,z)=>{
+    const ground=window.HUNTER_WALK_SURFACES.walkingHeightAt({physical:hAt(x,z),visible:null,stairs:[],piers,buildings:[]},x,z);
+    return Math.max(ground,terminalRampHeight(x,z)??-Infinity);
+  };
   for(const ramp of o.userData.ferryRamps){
-    const side=ramp.side,tip=ferryWorld(v,0,side*(deck.halfL+deck.ramp)*sc);
-    const supportGround=window.HUNTER_WALK_SURFACES.walkingHeightAt({
-      physical:hAt(tip.x,tip.z),visible:null,stairs:[],piers,buildings:[]
-    },tip.x,tip.z);
-    let support=Math.max(wy(tip.x,tip.z,t),supportGround);
-    const bridge=terminalRampHeight(tip.x,tip.z);
-    if(bridge!==null)support=Math.max(support,bridge);
-    const down=Math.max(-.16,Math.min(.58,Math.atan2(deckY-support,length))),
-      target=side*(moving?-.88:down),blend=1-Math.exp(-5*Math.max(0,dt));
+    const target=ramp.side*ferryCore.ferryRampAngle(v,ramp.side,support,(x,z)=>wy(x,z,t));
+    const blend=1-Math.exp(-5*Math.max(0,dt));
     ramp.hinge.rotation.x+=(target-ramp.hinge.rotation.x)*blend;
   }
 }

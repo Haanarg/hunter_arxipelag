@@ -218,7 +218,8 @@
 - [x] Dalla de la Mort col·locada dins el puny dret a l'escena de mort.
 - [x] Sortida de vehicles per la dreta, amb alternatives a la mateixa banda i, només si està bloquejada per parets, filferrades o altres obstacles, provar l'esquerra (individual i COOP).
 - [x] Runtime reconstruït manualment el 2026-11-12 amb 70 mòduls; sintaxi validada i manifest actualitzat. Sense activar el workflow d'Actions.
-- [ ] Validació al navegador amb llavor 148, proves de còpia de partida COOP i ferri estacionat/embarcant/navegant; la reconstrucció del runtime no és una prova de desplegament.
+- [x] 2026-11-14 · restaurada la detecció física de vianants sobre la rampa, suport i inclinació per distància entre eixos dels vehicles, punta de rampa basada en l'angle real, protecció durant la transició amb el camió i exclusions de contactes amb el terreny sota coberta. Regressió específica de geometria compartida.
+- [ ] Validació al navegador amb llavor 148: a peu en ambdues rampes; embarcar GAZ i camió, baixar i tornar a pujar-hi; navegar amb càrrega, desembarcar a platja sense dany fictici; repetir amb dos clients. La reconstrucció del runtime no és una prova de desplegament.
 
 **2026-11-12 · Refinat interactiu de models (tots els vehicles editables):**
 - [x] Controls de posició, rotació, escala i color per peça/grup/model; selecció amb clic o arbre; comparació amb original; 20 passos de desfer/refer.

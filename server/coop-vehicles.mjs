@@ -7,7 +7,7 @@ import {vehicleDamage,combatBalance,tankCanCrush,barrierRam,tankCivicRam,vehicle
 import {towerLegRamDamage} from '../src/tower-model.mjs';
 import {vehicleDynamics,advanceVehicle} from '../src/vehicle-dynamics-core.mjs';
 import {ferryLocal,ferryWorld,ferrySurfaceY,ferryPedestrianAt,
-  ferryForVehicle,ferryCarriedPose} from '../src/ferry-deck-core.mjs';
+  ferryForVehicle,ferryCarriedPose,ferryVehiclePose,ferryRampAngle} from '../src/ferry-deck-core.mjs';
 // Trusted two-seat transport on the relay pad. No client coordinates or seat claims.
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),validId=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(id);
 export function vehicleClear(position,world,bounds,previous=position){
@@ -65,7 +65,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
   v.carrierHD=Math.atan2(Math.sin(v.hd-f.hd),Math.cos(v.hd-f.hd));
  }
  function onFerry(v,f){
-  return !!f&&Math.abs(v.y-ferrySurfaceY(f,ferryLocal(f,v.x,v.z).z))<3.1;
+  return !!f&&!v.sunk&&!v.waterIngress?.dead&&Math.abs(v.y-ferryVehiclePose(v,f,(x,z)=>world().groundAt?.(x,z)??world().heightAt(x,z)).y)<3.1;
  }
  function vehicleWorld(v){
   const base=world();
@@ -73,7 +73,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    const ground=base.groundAt?.(x,z,previous)??base.heightAt(x,z);
    if(vehicleDynamics.types[v.t]?.m!=='l')return ground;
    const f=ferryForVehicle(v,vehicles,x,z,true);
-   return f?Math.max(ground,ferrySurfaceY(f,ferryLocal(f,x,z).z)):ground;
+   return f?ferryVehiclePose(v,f,(px,pz)=>base.groundAt?.(px,pz)??base.heightAt(px,pz),x,z).y-.06:ground;
   }};
  }
  function position(actor){const v=mounted(actor.id);return v?{x:v.x,y:v.y,z:v.z,hd:v.hd,hp:actor.hp,fall:null,swimming:false}:null;}
@@ -194,8 +194,12 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
   }return {kind:'vehicle',actorId,commandId:msg.commandId,ok,code};
  }
  function step(tick){if(!active())return;
+   if(meta.mode==='native')for(const f of vehicles)if(f.t==='ferry'&&!f.destroyed){
+     const w=world(),ground=(x,z)=>w.groundAt?.(x,z)??w.heightAt(x,z),surface=(x,z)=>water.surfaceAt(x,z,tick/30);
+     f.rampAngles=Object.fromEntries([-1,1].map(side=>[side,ferryRampAngle(f,side,ground,surface)]));
+   }
   if(meta.mode==='native')for(const v of vehicles){
-   if(v.destroyed||vehicleDynamics.types[v.t]?.m!=='l')continue;
+   if(v.destroyed||v.sunk||v.waterIngress?.dead||vehicleDynamics.types[v.t]?.m!=='l')continue;
    const f=v.carrierId?vehicles.find(a=>a.id===v.carrierId&&!a.destroyed):ferryFor(v);
    if(!f){clearCarrier(v);continue;}
    if(!v.carrierId&&onFerry(v,f))attachCarrier(v,f);
@@ -208,7 +212,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
      driving=!!((v.seats[0]||v.enemyCrew?.[0])&&driverEntry&&tick-driverEntry.tick<=8);
    if(v.carrierId&&!carrier)clearCarrier(v);
    if(carrier&&!driving){v.v=0;v.sideV=0;v.strafeV=0;continue;}
-   if(carrier&&driving)Object.assign(v,ferryCarriedPose(v,carrier));
+   if(carrier&&driving)Object.assign(v,ferryCarriedPose(v,carrier,(x,z)=>world().groundAt?.(x,z)??world().heightAt(x,z)));
    // L'helicòpter sense pilot perd sustentació, com al joc individual.
    // No introduïm cap simulador alternatiu: només gravetat autoritativa.
    if(v.crashing&&!v.seats[0]&&['heli','heli_combat'].includes(v.t)){
@@ -312,7 +316,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    if(!f){clearCarrier(v);continue;}
    const entry=inputs.get(v.seats[0]);
    if(v.seats[0]&&entry&&tick-entry.tick<=8)continue;
-   Object.assign(v,ferryCarriedPose(v,f));
+   Object.assign(v,ferryCarriedPose(v,f,(x,z)=>world().groundAt?.(x,z)??world().heightAt(x,z)));
   }
  }
  function damage(id,amount,shotClass='light'){
