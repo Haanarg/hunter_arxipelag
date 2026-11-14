@@ -1,3 +1,9 @@
+**2026-11-14 · Ka-60 candidat 6, petició 07eabd4a:**
+- [x] Interpretada la petició de la pestanya heli relativa al Ka-60 en refinament; el camp variant deia Huey actual, que no s'ha modificat.
+- [x] Xapa verda opaca darrere dels pilots amb dos finestrons quadrats per banda i juntes negres fines al contorn dels vidres; parabrisa, portes obertes i cua preservats.
+- [x] Revisió del laboratori `live-editor-20261114-ka60-square-windows-1`.
+- [ ] Validació visual WebGL i desplegament Cloudflare.
+
 **2026-11-14 · Ka-60 candidat 5, esquema ortogràfic aportat:**
 - [x] Frontal remodelat amb morro ovalat i ample, vidres inclinats amb cantonades recuades i divisió superior fina; eliminades les tapes internes coincidents entre morro i cabina.
 - [x] Parell d'estabilitzadors horitzontals al botaló amb aletes verticals inclinades a les puntes; T superior més estreta. Conservats el fenestron, les portes obertes, motor, rotors i Ka-52.

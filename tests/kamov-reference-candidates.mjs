@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as T from '../vendor/three-r186.module.mjs';
 import {createKamovCandidate,stepKamovRotors,KAMOV_VERSION} from '../src/kamov-reference-candidates.mjs';
-assert(KAMOV_VERSION.includes('three-view'));
+assert(KAMOV_VERSION.includes('square-windows'));
 for(const type of ['ka60','ka52']){
  const root=createKamovCandidate(T,type),meshes=[],rotors=[];
  root.traverse(o=>{if(o.userData.kamovRotor)rotors.push(o);if(o.isMesh)meshes.push(o)});
@@ -32,7 +32,29 @@ for(const type of ['ka60','ka52']){
    assert.equal(doorRay.intersectObjects(shell).length,0,'La porta continua tapada a la banda '+side);
   }
   const panes=meshes.filter(o=>o.name.startsWith('Vidre panoràmic Fuselatge Ka-60'));
-  assert.equal(panes.length,20,'Parabrisa envoltant i vidres laterals grans');
+  assert.equal(panes.length,16,'Parabrisa i vidres dels pilots preservats');
+  assert(panes.every(o=>!o.name.includes(' 3 ')),'No hi ha vidre panoràmic darrere els pilots');
+  const squares=meshes.filter(o=>o.name.startsWith('Finestró quadrat Fuselatge Ka-60'));
+  assert.equal(squares.length,4,'Dos finestrons per banda');
+  const metal=meshes.filter(o=>o.name.includes('Fuselatge Ka-60 3 ')&&o.name.includes('xapa verda'));
+  assert.equal(metal.length,26);
+  assert(metal.every(o=>!o.material.transparent&&o.material.color.getHex()===0x536655));
+  const seals=meshes.filter(o=>o.name.startsWith('Fil negre finestró')||o.name.startsWith('Marc fi panoràmic Fuselatge Ka-60'));
+  assert(seals.length>=16&&seals.every(o=>o.material.color.getHex()===0x111512));
+  for(const side of [-1,1]){
+   const windows=squares.filter(o=>Math.sign(new T.Box3().setFromObject(o).getCenter(new T.Vector3()).x)===side);
+   assert.equal(windows.length,2);
+   for(const pane of windows){
+    const bounds=new T.Box3().setFromObject(pane),size=bounds.getSize(new T.Vector3()),center=bounds.getCenter(new T.Vector3());
+    assert(pane.material.transparent&&size.y>.32&&size.z>.35&&Math.abs(size.y-size.z)<.16,'Geometria quadrada');
+    const ray=new T.Raycaster(new T.Vector3(side*3,center.y,center.z),new T.Vector3(-side,0,0));
+    const first=ray.intersectObjects([...squares,...metal])[0];
+    assert(first?.object===pane,'Finestró real sense xapa al darrere');
+   }
+   const center=new T.Box3().setFromObject(windows[0]).getCenter(new T.Vector3());
+   const between=new T.Raycaster(new T.Vector3(side*3,center.y,-1.725),new T.Vector3(-side,0,0));
+   assert(metal.includes(between.intersectObjects([...squares,...metal])[0]?.object),'Xapa opaca entre finestres');
+  }
   assert(panes.every(o=>o.material.transparent&&o.material.opacity<.5));
   assert.equal(meshes.filter(o=>o.name==='Estabilitzador superior en T').length,2);
   const noseParts=meshes.filter(o=>o.name.startsWith('Morro independent Ka-60'));
@@ -120,4 +142,4 @@ for(const type of ['ka60','ka52']){
  console.log(type,Math.round(triangles)+' triangles',meshes.length+' peces',size.toArray().map(x=>x.toFixed(2)).join(' × '));
 }
 assert.throws(()=>createKamovCandidate(T,'unknown'));
-console.log('PASS Kamov: frontal segons tres vistes, vidres continus, estabilitzadors laterals i T superior, portes i animació');
+console.log('PASS Kamov: finestrons quadrats amb xapa verda i fil negre, parabrisa i cua preservats');

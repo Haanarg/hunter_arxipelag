@@ -13,7 +13,7 @@ export const CATALOG=[
    // Retirades totes les referències URL externes antigues. Les dues
    // imatges aportades per l’usuari són les úniques referències de disseny.
    references:[],
-   options:[C('ka60','Kamov Ka-60 · candidat 5','Frontal segons tres vistes · parabrisa inclinat · estabilitzadors laterals i T superior')]},
+   options:[C('ka60','Kamov Ka-60 · candidat 6','Xapa verda rere els pilots · quatre finestrons quadrats · juntes negres')]},
  {id:'heli_combat',name:'Helicòpter de combat · Kamov Ka-52',kind:'aire',
    note:'Ka-52 candidat Three.js propi: cabina ampla amb dos pilots de costat, nas aplanat, rotors coaxials contrarotatius i ales curtes. Apache actual al costat per comparar.',
    references:[

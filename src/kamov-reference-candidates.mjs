@@ -1,10 +1,10 @@
 // Original low-poly geometry, based on photographs linked in the lab catalogue.
 // Nose = -Z, metres before the lab's uniform comparison scale. No external assets.
-export const KAMOV_VERSION='kamov-20261114-three-view-5';
+export const KAMOV_VERSION='kamov-20261114-square-windows-6';
 export function createKamovCandidate(T,type){
  if(!['ka60','ka52'].includes(type))throw new Error('Kamov desconegut: '+type);
  const combat=type==='ka52',root=new T.Group();
- root.name=combat?'Kamov Ka-52 · candidat 1':'Kamov Ka-60 · candidat 5';
+ root.name=combat?'Kamov Ka-52 · candidat 1':'Kamov Ka-60 · candidat 6';
  root.userData.kamovCandidate=type;
  const c={body:combat?0x63725b:0x536655,top:0x75816b,dark:0x252c2c,metal:0x727a76,glass:0x789da5,light:0xe4ddbc,beacon:0xcb5148,navGreen:0x538e74};
  const materials=new Map();
@@ -44,6 +44,25 @@ export function createKamovCandidate(T,type){
   poly(g,'Vidre reduït '+name,inner,c.glass,true);
   for(let n=0;n<4;n++)rod(g,'Marc petit '+name,inner[n],inner[(n+1)%4],.023,c.dark);
  };
+ // Two square windows cut into the green sheet behind each pilot.
+ // Subdivide the actual shell, rather than overlay glass on opaque faces.
+ const squareWindows=(g,name,pts,col)=>{
+  const mix=(a,b,t)=>a.map((n,i)=>n+(b[i]-n)*t);
+  const at=(u,v)=>mix(mix(pts[0],pts[1],u),mix(pts[3],pts[2],u),v);
+  const u=[0,.09,.45,.55,.91,1],v=[0,.17,.83,1];
+  const quad=(i,j)=>[at(u[i],v[j]),at(u[i+1],v[j]),at(u[i+1],v[j+1]),at(u[i],v[j+1])];
+  for(let i=0;i<u.length-1;i++)for(let j=0;j<v.length-1;j++){
+   const points=quad(i,j),window=j===1&&(i===1||i===3);
+   if(window){
+    const pane=mesh(g,'Finestró quadrat '+name+' '+i,(()=>{
+     const geo=new T.BufferGeometry();
+     geo.setAttribute('position',new T.Float32BufferAttribute([...points[0],...points[1],...points[2],...points[0],...points[2],...points[3]],3));
+     geo.computeVertexNormals();return geo;
+    })(),c.glass,true);
+    for(let n=0;n<4;n++)rod(g,'Fil negre finestró '+name+' '+i,points[n],points[(n+1)%4],.016,0x111512);
+   }else poly(g,name+' xapa verda '+i+' '+j,points,col);
+  }
+ };
  const loft=(g,name,sections,windowPanel=()=>false,col=c.body,caps=[true,true])=>{
   const rings=sections.map(ring);
   for(let j=0;j<rings.length-1;j++)for(let k=0;k<12;k++){
@@ -51,6 +70,7 @@ export function createKamovCandidate(T,type){
    const state=windowPanel(j,k);
    if(state==='open')continue;
    if(state==='small-glass'){smallWindow(g,name+' '+j+' '+k,points,col);continue}
+   if(state==='square-windows'){squareWindows(g,name+' '+j+' '+k,points,col);continue}
    const panoramic=state==='panoramic-glass',glazed=state===true||panoramic;
    poly(g,panoramic?'Vidre panoràmic '+name+' '+j+' '+k:glazed?'Vidre '+name+' '+j+' '+k:name+' panell '+j+' '+k,points,glazed?c.glass:col,glazed);
    if(panoramic){
@@ -63,7 +83,7 @@ export function createKamovCandidate(T,type){
      const corner=n===0&&[1,5].includes(k)&&j<2;
      // The drawing shows two upper lights above the main front panes.
      const brow=n===1&&j===0&&[1,2,3,4].includes(k);
-     if(boundary||central||corner||brow)rod(g,'Marc fi panoràmic '+name,points[n],points[(n+1)%4],central?.024:brow?.026:.022,c.dark);
+     if(boundary||central||corner||brow)rod(g,'Marc fi panoràmic '+name,points[n],points[(n+1)%4],central?.020:brow?.020:.016,0x111512);
     }
    }else if(glazed)for(let n=0;n<4;n++)rod(g,'Marc '+name,points[n],points[(n+1)%4],.027,c.dark);
   }
@@ -131,10 +151,10 @@ export function createKamovCandidate(T,type){
    [1.85,.97,.90,2.78],[3.15,.62,1.13,2.36]
   ],(j,k)=>{
    if((j===4||j===5)&&[0,5,6,11].includes(k))return 'open';
-   // Six wrap-around facets per front band, then the side door windows.
-   // The crown past the upper lights is metal, not a transparent roof.
-   if(j<=1&&k<6|| (j===2||j===3)&&[0,1,4,5].includes(k))
-    return 'panoramic-glass';
+   // Preserve front and pilot-side glazing. Behind the pilot seats,
+   // restore the opaque green shoulders and two square portholes per side.
+   if(j<=1&&k<6||j===2&&[0,1,4,5].includes(k))return 'panoramic-glass';
+   if(j===3&&[0,5].includes(k))return 'square-windows';
    return false;
   },c.body,[false,true]);
   loft(root,'Botaló Ka-60',[[2.85,.65,1.16,2.4],[4.65,.39,1.32,2.02],[6.75,.25,1.40,1.92],[6.87,.25,1.39,1.93]]);
