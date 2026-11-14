@@ -15,9 +15,9 @@ export function bunkerFloorAt(b,x,z,previous=-Infinity){if(!b?.basement)return n
   if(Math.abs(p.x)>b.basement.halfX-.4||Math.abs(p.z)>b.basement.halfZ-.4)return null;
   const st=b.basement.stair;
   if(Math.abs(p.x-st.x)<=st.width/2&&
-     p.z>=Math.min(st.zTop,st.zBottom)&&
-     p.z<=Math.max(st.zTop,st.zBottom)){
-    const t=(p.z-st.zTop)/(st.zBottom-st.zTop);
+     p.z>=Math.min(st.zTop,st.zBottom)-1e-6&&
+     p.z<=Math.max(st.zTop,st.zBottom)+1e-6){
+    const t=Math.max(0,Math.min(1,(p.z-st.zTop)/(st.zBottom-st.zTop)));
     return b.fy+.22-t*(b.fy+.22-b.basement.floorY);
   }
   if(previous<b.fy-3.9)return b.basement.floorY;

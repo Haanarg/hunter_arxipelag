@@ -50,8 +50,8 @@ window.HUNTER_TERRAIN=Object.freeze({
     const cutoutBounds=cutouts.length?cutouts.map(cut=>{
       const c=Math.cos(cut.angle),s=Math.sin(cut.angle);
       return {x:cut.x,z:cut.z,
-        hx:Math.abs(c)*cut.halfWidth+Math.abs(s)*cut.halfDepth,
-        hz:Math.abs(s)*cut.halfWidth+Math.abs(c)*cut.halfDepth};
+        hx:Math.abs(c)*(cut.basementHalfWidth??cut.halfWidth)+Math.abs(s)*(cut.basementHalfDepth??cut.halfDepth),
+        hz:Math.abs(s)*(cut.basementHalfWidth??cut.halfWidth)+Math.abs(c)*(cut.basementHalfDepth??cut.halfDepth)};
     }):[];
     if(cutoutMaterial){
       const cut=cutouts[0],c=Math.cos(cut.angle),s=Math.sin(cut.angle);
@@ -61,14 +61,16 @@ window.HUNTER_TERRAIN=Object.freeze({
       cutoutMaterial.onBeforeCompile=shader=>{
         shader.uniforms.hunterCutout={value:new THREE.Vector4(cut.x,cut.z,c,s)};
         shader.uniforms.hunterCutoutSize={value:new THREE.Vector2(cut.halfWidth,cut.halfDepth)};
+        shader.uniforms.hunterBasementSize={value:new THREE.Vector2(cut.basementHalfWidth??cut.halfWidth,cut.basementHalfDepth??cut.halfDepth)};
+        shader.uniforms.hunterBasementTop={value:cut.basementTop??-1e6};
         shader.vertexShader='varying vec2 hunterTerrainXZ;\n'+shader.vertexShader.replace(
           '#include <begin_vertex>',
           '#include <begin_vertex>\n hunterTerrainXZ=(modelMatrix*vec4(position,1.0)).xz;');
-        shader.fragmentShader='varying vec2 hunterTerrainXZ;\nuniform vec4 hunterCutout;\nuniform vec2 hunterCutoutSize;\n'+
+        shader.fragmentShader='varying vec2 hunterTerrainXZ;\nuniform vec4 hunterCutout;\nuniform vec2 hunterCutoutSize;\nuniform vec2 hunterBasementSize;\nuniform float hunterBasementTop;\n'+
           shader.fragmentShader.replace('#include <clipping_planes_fragment>',
-            '#include <clipping_planes_fragment>\n vec2 hunterD=hunterTerrainXZ-hunterCutout.xy;\n vec2 hunterL=vec2(dot(hunterD,hunterCutout.zw),dot(hunterD,vec2(-hunterCutout.w,hunterCutout.z)));\n if(all(lessThan(abs(hunterL),hunterCutoutSize)))discard;');
+            '#include <clipping_planes_fragment>\n vec2 hunterD=hunterTerrainXZ-hunterCutout.xy;\n vec2 hunterL=vec2(dot(hunterD,hunterCutout.zw),dot(hunterD,vec2(-hunterCutout.w,hunterCutout.z)));\n vec2 cutSize=cameraPosition.y<hunterBasementTop?hunterBasementSize:hunterCutoutSize;\n if(all(lessThan(abs(hunterL),cutSize)))discard;');
       };
-      cutoutMaterial.customProgramCacheKey=()=>`hunter-bunker-cutout-v2`;
+      cutoutMaterial.customProgramCacheKey=()=>`hunter-bunker-cutout-v3`;
     }
     const tileSize=800,side=Math.ceil(size/tileSize),cellSize=size/side,half=size/2;
     // Conservam la resolució propera per mantenir el contacte amb peus i

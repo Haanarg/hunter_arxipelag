@@ -1200,6 +1200,21 @@ for(const indices of shell.assemblies){
 g.position.set(x,fy,z);if(!seedSearchMode)world.add(g);
 const b={o:g,x,z,hw:w/2+1.5,hd:d/2+1.5,w,d,h,fy,wm,dm,roof:visual.roof,foundation:visual.foundation,rhp:roofHp,hangar:!!opt.hangar,civilianHut:!!opt.civilianHut,weakWood:!!(opt.weakWalls||opt.civilianHut),door:entranceDoor,doorSide:ds,doorWidth:dw,kind:opt.kind||'house',structuralWalls,destroyedWallSupport:0};for(const piece of Wl.slice(buildingWallStart)){piece.owner=b;if(b.weakWood&&!piece.door)piece.weakWood=true;}
 structuralWalls.forEach(w=>w.owner=b);B.push(b);if(opt.hangar)addRampAccess(b,ds);else if(!opt.workshop)addStairs(b,ds);return b}
+function reinforceBunkerDoor(mesh,w,h,d){
+  if(seedSearchMode||!mesh)return;
+  const alongX=w>d,span=alongX?w:d,thickness=alongX?d:w;
+  const panel=(u,y,ww,hh,depth,side,col)=>{
+    const off=side*(thickness/2+depth/2+.01);
+    bx(mesh,alongX?ww:depth,hh,alongX?depth:ww,col,alongX?u:off,y,alongX?off:u,'metal');
+  };
+  mesh.material=M(0x59615f,'metal');
+  for(const side of [-1,1]){
+    for(const u of [-span*.43,span*.43])panel(u,0,span*.09,h*.94,.12,side,0x303b3d);
+    for(const y of [-h*.41,0,h*.41])panel(0,y,span*.88,h*.095,.15,side,0x394648);
+    for(const u of [-span*.35,span*.35])for(const y of [-h*.29,h*.29])
+      panel(u,y,.13,.13,.20,side,0x969c91);
+  }
+}
 function mkEnemyBunker(x,z){
   const firstWall=Wl.length,b=mkB(x,z,40,34,10,0xd9ded2,0xbfc6bb,{kind:'enemy_bunker',bunker:true,doorSide:0,doorWidth:4,doorHeight:4.4,lockedDoor:true}),g=b.o,inset=3.5;
   if(seedSearchMode){
@@ -1223,6 +1238,7 @@ function mkEnemyBunker(x,z){
     }
     p.needsUpdate=true;mesh.geometry.computeVertexNormals();mesh.geometry.computeBoundingSphere();
   }
+  for(const d of Dr)if(d.owner===b&&d.bunkerGate)reinforceBunkerDoor(d.m,d.doorWidth||4,d.doorHeight||4.4,.8);
   b.roof.scale.set((b.w-2*inset)/(b.w+1.35),1,(b.d-2*inset)/(b.d+1.35));g.userData.bunkerWallInset=inset;
   // Physical footprints cover the inward lean at character height.
   for(const w of b.structuralWalls){const lean=inset*2.2/b.h;if(w.supportSide===0)w.z0-=lean;if(w.supportSide===1)w.z1+=lean;if(w.supportSide===2)w.x0-=lean;if(w.supportSide===3)w.x1+=lean;}
@@ -1295,7 +1311,7 @@ function addBunkerBasement(b){
   slab(shaftRight,19.2,-16.2,16.2);
   slab(shaftLeft,shaftRight,-16.2,shaftNear);
   slab(shaftLeft,shaftRight,shaftFar,16.2);
-  floorPanel(-halfX+.4,halfX-.4,-halfZ+.4,halfZ-.4,-9.27,0x434c49);
+  floorPanel(-halfX+.4,halfX-.4,-halfZ+.4,halfZ-.4,-9.15,0x434c49);
   // Sostre continu, independent dels envans destructibles del búnquer.
   // La única obertura és la caixa d'escala.
   slab(-halfX,-19.2,-halfZ,halfZ);
@@ -1308,6 +1324,7 @@ function addBunkerBasement(b){
       bx(b.o,q.w,q.height,q.d,isDoor?0x899990:q.kind==='step'?0x8b9289:0x68756d,
         q.x,q.base+q.height/2,q.z,isDoor?'metal':'masonry');
     mesh.name='bunker-'+q.kind;
+    if(isDoor)reinforceBunkerDoor(mesh,q.w,q.height,q.d);
     if(!seedSearchMode&&q.kind==='partition'){
       // The internal partition meets the sloping outer shell, without
       // protruding through it above character height.
@@ -1345,6 +1362,7 @@ function addBunkerBasement(b){
     const mesh=seedSearchMode?new THREE.Object3D():
       bx(b.o,.88,doorHeight,gap+.04,0x899990,lx,base+doorHeight/2,doorZ,'metal');
     mesh.name='bunker-porta-interior-elevable';
+    reinforceBunkerDoor(mesh,.88,doorHeight,gap+.04);
     const d={x0:b.x+lx-.44,x1:b.x+lx+.44,
       z0:b.z+lo,z1:b.z+hi,y0:b.fy+base,y1:b.fy+base+doorHeight,
       hp:Infinity,m:mesh,door:true,open:false,rammable:false,
@@ -1356,8 +1374,10 @@ function addBunkerBasement(b){
   };
   const limits=[-halfZ+.65,...divisions,halfZ-.65];
   for(let i=0;i<3;i++)doorway(-7.5,limits[i],limits[i+1],westDoors[i]);
-  doorway(7.5,-halfZ+.65,eastDivider,-16);
-  doorway(7.5,eastDivider,halfZ-.65,16);
+  for(const seg of window.HUNTER_WORLD_GENERATION.bunkerEastWallSections(plan)){
+    if(seg.to>seg.from)wall(7.5,(seg.from+seg.to)/2,.7,seg.to-seg.from,-9.15,9);
+    if(seg.room)doorway(7.5,seg.doorZ-2.15,seg.doorZ+2.15,seg.doorZ);
+  }
   if(!seedSearchMode){
     // Sales amb funció pròpia: comandament, ràdio, infermeria, dipòsit
     // d'armes i control de la porta. Tot el mobiliari gran registra una
@@ -1449,7 +1469,7 @@ function addBunkerBasement(b){
     piece('visors-control',9.2,accessSide*19.83,1.54,.17,.4,
       0x8eb0a1,-6.58,false);
     piece('guixeta-seguretat',25.5,accessSide*19.3,.9,.82,2.9,0x697a74);
-    piece('consola-acces',9.2,accessSide*6.3,1.1,1.0,1.12,0x576662);
+    piece('consola-acces',23.2,accessSide*6.3,1.1,1.0,1.12,0x576662);
     // Lluminàries subjectes a l'intradós del forjat y=+.22:
     // cap focus ni plafó no pot quedar flotant a mitja altura.
     for(const [lx,lz] of [[0,-19],[0,-8],[0,8],[0,19],[18,-18],[-19,0],[-19,-18],[-19,18],[19,18],[19,0]]){
@@ -4361,6 +4381,9 @@ if(originalSceneMatrixUpdate)scene.updateMatrixWorld=function(...args){
 const roadFrameStats=world?.userData?.pathRenderStats;
 frameDiagnostics.resetDrawCounters(roadFrameStats);
 hiddenMatrixCull.beginRender();
+const bunkerDryRender=!!(activeBunker?.basement&&!cv&&cam.position.y<activeBunker.fy-.2&&playerInsideBunkerBasement(P.x,P.z,P.y));
+const bunkerWaterLayers=bunkerDryRender?[water.mesh,water.deep,water.shore].filter(Boolean).map(o=>[o,o.visible]):[];
+for(const [o] of bunkerWaterLayers)o.visible=false;
 try{
  if(deathVoidReady()){
    const v=deathCinematic;v.voidCamera.aspect=cam.aspect;v.voidCamera.updateProjectionMatrix();
@@ -4371,6 +4394,7 @@ try{
    ren.render(deathCinematic.underwaterScene,cam);
  }else ren.render(scene,cam);
 }finally{
+ for(const [o,visible] of bunkerWaterLayers)o.visible=visible;
  hiddenMatrixCull.endRender();
  if(originalSceneMatrixUpdate)scene.updateMatrixWorld=originalSceneMatrixUpdate;
  if(gpuSample)performanceGpuTimer.end(gpuSample);

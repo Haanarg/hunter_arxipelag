@@ -188,7 +188,7 @@ function optimize(T,model,type){
   // Compartim les geometries LOD marítimes: proa en punta, cabina i
   // radar, amb 2 tripulants al nivell mitjà. S'evita el rectangle
   // genèric i el salt visual en acostar-se des d'un helicòpter.
-  const marineLOD=type==='patrulla_marina'?model.userData.distantVehicleLOD:null;
+  const marineLOD=['patrulla_marina','jeep'].includes(type)?model.userData.distantVehicleLOD:null;
   const mid=new T.Mesh(marineLOD?.variants?.[2]||proxy(T,type,'mid'),mat),
     far=new T.Mesh(marineLOD?.variants?.[0]||proxy(T,type,'far'),mat);
   mid.name='hunter-enemy-mid';far.name='hunter-enemy-far';

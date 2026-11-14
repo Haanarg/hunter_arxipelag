@@ -91,6 +91,20 @@ export function createDistantVehicleFactory(THREE,resources=null){
       box(0,1.75,0,w*.72,1.35,d*.65,main);
       box(0,2.85,0,w*1.65,.075,.30,0x292d2d);
       box(0,2.2,d*.34,.3,.37,d*.46,main);
+    }else if(type==='cotxe'){
+      const W=3.12,L=5.55,paint=0x687658,rubber=0x25292a,glass=0x3b4c4f;
+      box(0,1.03,0,W*.92,.86,L*.91,paint);
+      box(0,1.64,-L*.31,W*.85,.43,L*.32,paint);
+      box(0,2.02,L*.12,W*.86,1.05,L*.55,paint);
+      box(0,2.61,L*.12,W*.86,.19,L*.55,paint);
+      for(const side of [-1,1]){
+        for(const z of [-L*.33,L*.33])box(side*W*.46,.62,z,.58,1.14,1.12,rubber);
+        box(side*W*.438,2.10,L*.12,.035,.47,L*.40,glass);
+        box(side*W*.20,2.10,-L*.157,W*.35,.48,.045,glass);
+        box(side*W*.33,1.36,-L*.465,.32,.19,.10,0xd8d5ac);
+      }
+      box(0,.92,-L*.49,W*.85,.23,.18,0x333938);
+      box(0,1.40,-L*.475,W*.35,.35,.07,0x303936);
     }else{
       // La malla llunyana manté les proporcions: el mateix grup de
       // vehicle escala x2 tant aquest proxy com el T-90M complet.

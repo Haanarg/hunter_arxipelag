@@ -6,9 +6,38 @@ export function siteBounds(l){
 }
 // Includes asymmetric flag cloth, not just the position of its pole.
 export function propFootprint(kind){return kind==='flag'?[-.3,5.3,-.3,.3]:kind==='fuel'?[-3,3,-1.5,1.5]:kind==='generator'?[-3.5,3.5,-2.25,2.25]:kind==='sandbag'?[-3.55,3.55,-.5,.5]:kind==='crate'?[-1.4,1.4,-1.33,1.33]:kind==='bench'?[-2,2,-.7,.7]:kind==='well'?[-2.2,2.2,-1.8,1.8]:kind==='lamp'?[-1,1,-.4,.4]:[-.8,.8,-.8,.8]}
+export function widenHQPatrols(l){
+ const extent=Math.ceil(Math.max(116,...l.buildings.map(b=>Math.abs(b.z)+b.d/2+65))/4)*4,
+  north=Math.min(-58,...l.buildings.map(b=>b.z-b.d/2-13)),
+  south=Math.max(58,...l.buildings.map(b=>b.z+b.d/2+13)),
+  x=extent-28,z=extent-12,r=19;
+ function oval(minZ,maxZ,reverse=false){
+  const points=[],corners=[[x-r,minZ+r,-Math.PI/2,0],[x-r,maxZ-r,0,Math.PI/2],[-x+r,maxZ-r,Math.PI/2,Math.PI],[-x+r,minZ+r,Math.PI,1.5*Math.PI]];
+  for(const [cx,cz,a,b] of corners)for(let i=0;i<=6;i++){const t=a+(b-a)*i/6;points.push([cx+r*Math.cos(t),cz+r*Math.sin(t)])}
+  if(reverse){const shift=Math.floor(points.length/2);points.push(...points.splice(0,shift))}
+  points.push([...points[0]]);return points;
+ }
+ const oldGate=l.entrances?.[0]?.[0]??0,gate=Math.max(-extent+30,Math.min(extent-30,oldGate)),oldExtent=Math.max(...l.fence.flat().map(p=>Math.abs(p[1])));
+ l.fence=[[[-extent,-extent],[extent,-extent]],[[extent,-extent],[extent,extent]],[[extent,extent],[gate+12,extent]],[[gate-12,extent],[-extent,extent]],[[-extent,extent],[-extent,-extent]]];
+ l.size=[Math.max(l.size[0],2*(extent+20)),Math.max(l.size[1],2*(extent+20))];
+ l.entrances=[[gate,extent+10]];
+ for(const route of l.routes)for(const point of route.points)if(point[1]>=oldExtent&&Math.abs(point[0]-gate)<5)point[1]=extent+10;
+ l.towers=[[-1,-1],[1,-1],[-1,1],[1,1]].map(([a,b])=>({x:a*(extent-5),z:b*(extent-5)}));
+ const courses=[oval(-z,north),oval(south,z,true)];
+ for(let i=0;i<2;i++){
+   const p=courses[i],a=p[0],b=p[1],v=l.vehicles[i];
+   Object.assign(v,{x:a[0],z:a[1],hd:Math.atan2(a[0]-b[0],a[1]-b[1])});
+   l.vehiclePatrols[i]={...l.vehiclePatrols[i],points:p,width:14};
+ }
+ const j=extent+11;
+ for(let i=2;i<4;i++){const v=l.vehicles[i];v.x=i===2?-j:j;v.z=0;}
+ l.vehiclePatrols[2]={...l.vehiclePatrols[2],points:[[-j,0],[-j,-j],[j,-j],[j,j],[-j,j],[-j,0]]};
+ return l;
+}
 export function refineCompoundLayout(input){
  const l=JSON.parse(JSON.stringify(input)),type=l.type||l.id;
  l.buildings=l.buildings.map(b=>({...b,warehouse:warehouseIds.has(b.id),floors:l.variant===4&&b.replacement&&!warehouseIds.has(b.id)?2:1}));
+ if(type==='hq')widenHQPatrols(l);
  const bounds=siteBounds(l),placed=[];
  l.props=l.props.map(([kind,ox,oz])=>{
   const [left,right,back,front]=propFootprint(kind),radius=Math.max(-left,right,-back,front),shore=l.waterfront?.shore??(type==='port'?8:Infinity);

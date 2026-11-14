@@ -339,6 +339,12 @@
 - [x] Obertura manual E/botó contextual, progressiva segons dificultat: 3/5/10 s; mateix temporitzador compartit SOLO/COOP, col·lisió fins a obertura completa i persistència del progrés cooperatiu.
 - [ ] Validar en partida real SOLO i dos dispositius COOP després de reconstruir el runtime.
 
+**2026-11-14 · revisió visual del final (llavor 1731603374):**
+- [x] Caixa d'escala lateral oriental i vestíbul amb porta cap al passadís central lliure; portes amb plaques reforçades; cota de paviment revisada.
+- [x] Render subterrani sec: excloure superfície marina i ampliar retall visual del terreny segons cota de càmera; autoapuntat consulta la superfície excavada.
+- [x] Silueta GAZ amb rodes, capó i cabina al LOD; patrulles BTR-82 arrodonides i perímetre amb més marge.
+- [ ] Validació visual i conducció IA a llavor 1731603374 i variants, SOLO/COOP. La planxa verda podria ser terreny, falta confirmació.
+
 **2026-11-14 · final del joc més accessible:**
 - [x] Dues sales consecutives a la planta superior, dos soldats normals a la primera, porta interior i escala de formigó tancada al fons de la segona; porta inferior directa al passadís central.
 - [x] Quatre soldats al soterrani: 4 normals (fàcil), 2 normals + 2 elit (normal), 4 elit (difícil). Despatx del general i distribució variable de la resta de sales conservats.

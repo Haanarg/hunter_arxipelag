@@ -1,4 +1,4 @@
-import {bunkerBasementPlan,bunkerEntranceLayout} from '../src/world-generation-core.mjs';
+import {bunkerBasementPlan,bunkerEntranceLayout,bunkerEastWallSections} from '../src/world-generation-core.mjs';
 // Physical counterpart of the original basement's walls, doors and perforated slab.
 export function addCoopBunker(b,seed,geometry){
  const first=geometry.walls.length,p=bunkerBasementPlan(seed,b),{halfX,halfZ,divisions,westDoors,eastDivider}=p,st={x:p.stairX,zTop:p.stairTop,zBottom:p.stairBottom,width:p.stairWidth,enclosed:true};
@@ -18,7 +18,10 @@ export function addCoopBunker(b,seed,geometry){
  wall(-halfX+.4,0,.8,halfZ*2-.8);wall(halfX-.4,0,.8,halfZ*2-.8);wall(0,-halfZ+.4,halfX*2-.8,.8);wall(0,halfZ-.4,halfX*2-.8,.8);
  const span=halfX-7.9,roomX=(halfX+7.1)/2;for(const z of divisions)wall(-roomX,z,span,.65,-9.1,8.75);wall(roomX,eastDivider,span,.65,-9.1,8.75);
  function doorway(x,from,to,z){const gap=4.3,lo=z-gap/2,hi=z+gap/2;if(lo>from)wall(x,(from+lo)/2,.7,lo-from,-9.15,9);if(hi<to)wall(x,(hi+to)/2,.7,to-hi,-9.15,9);wall(x,z,.82,gap,-5.05,4.9);wall(x,z,.88,gap,-9.15,4.1,true);}
- const limits=[-halfZ+.65,...divisions,halfZ-.65];for(let i=0;i<3;i++)doorway(-7.5,limits[i],limits[i+1],westDoors[i]);doorway(7.5,-halfZ+.65,eastDivider,-16);doorway(7.5,eastDivider,halfZ-.65,16);
+ const limits=[-halfZ+.65,...divisions,halfZ-.65];for(let i=0;i<3;i++)doorway(-7.5,limits[i],limits[i+1],westDoors[i]);for(const seg of bunkerEastWallSections(p)){
+ if(seg.to>seg.from)wall(7.5,(seg.from+seg.to)/2,.7,seg.to-seg.from,-9.15,9);
+ if(seg.room)doorway(7.5,seg.doorZ-2.15,seg.doorZ+2.15,seg.doorZ);
+ }
  const c=Math.round(Math.cos(b.angle||0)),s=Math.round(Math.sin(b.angle||0)),
   point=(x,z)=>[b.x+(x-b.x)*c-(z-b.z)*s,b.z+(x-b.x)*s+(z-b.z)*c];
  for(const w of geometry.walls.slice(first)){

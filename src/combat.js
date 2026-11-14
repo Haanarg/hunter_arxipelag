@@ -963,7 +963,7 @@ function weaponAimClear(x,y,z,tx,ty,tz,ignoreWall=null,ignoreBuilding=null,check
           horizontal=Math.hypot(dx,dz),steps=Math.min(96,Math.max(2,Math.ceil(horizontal/6)));
     for(let i=1;i<steps;i++){
       const t=i/steps,px=x+dx*t,py=y+dy*t,pz=z+dz*t;
-      if(py<hAt(px,pz)+.18)return false;
+      if(py<bunkerProjectileSurface(px,pz,py)+.02)return false;
     }
   }
   return true;
@@ -1241,7 +1241,7 @@ function bazookaFirstSolidHit(x,y,z,dx,dy,dz,range=BAZOOKA_AIM_RANGE,sourceVehic
   for(let k=1;k<=steps;k++){
     const t=k/steps;if(t>=best)break;
     const px=x+(tx-x)*t,pz=z+(tz-z)*t,py=y+(ty-y)*t;
-    if(py<Math.max(hAt(px,pz),0)+.2){consider(t);break}
+    if(py<bunkerProjectileSurface(px,pz,py)+.04){consider(t);break}
   }
   if(!Number.isFinite(best))return null;
   return {x:x+(tx-x)*best,y:y+(ty-y)*best,z:z+(tz-z)*best};

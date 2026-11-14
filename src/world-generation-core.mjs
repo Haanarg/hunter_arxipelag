@@ -50,16 +50,16 @@ export function generateTerrainFoundation({seed:requestedSeed,mapScale}){
 
 // Original seed-local bunker layout; independent of the global generation RNG.
 export function bunkerBasementPlan(seed,b){
- const random=createWorldRandom((seed^Math.imul(Math.round(b.x),73856093)^Math.imul(Math.round(b.z),19349663)^0x6e7b32e1)>>>0),variant=Math.floor(random()*4),stairSide=(variant&1)?-1:1;
+ const random=createWorldRandom((seed^Math.imul(Math.round(b.x),73856093)^Math.imul(Math.round(b.z),19349663)^0x6e7b32e1)>>>0),variant=Math.floor(random()*4),stairSide=-1;
  return {variant,floorY:b.fy-9.15,halfX:27,halfZ:23,stairSide,
  divisions:[-7+(variant%2)*1.3,6.4+Math.floor(variant/2)*1.3],westDoors:[-15+(variant%2)*.7,Math.floor(variant/2)*.7,15-(variant%2)],eastDivider:-stairSide*7,
  // La planta superior té entrada a +Z. L'escala comença al fons (-Z)
- // i baixa cap a +Z, sempre dins la franja del passadís central.
- stairX:0,stairTop:-12.8,stairBottom:1.7,stairWidth:4.3,
+ // i baixa per la cambra oriental; només el vestíbul desemboca al passadís.
+ stairX:12,stairTop:-12.8,stairBottom:.4,stairWidth:4.3,stairExitZ:3.1,
  generalLocal:{x:-19,z:variant%2?15:-15},
  upperGuards:[{x:-7,z:10},{x:7,z:10}],
  guardLocal:[{x:-4.8,z:-15,patrolZ:-7},{x:4.8,z:14,patrolZ:7},
-  {x:17,z:stairSide>0?-16:16},{x:-19,z:0.5*(-7+(variant%2)*1.3+6.4+Math.floor(variant/2)*1.3)}]};
+  {x:19,z:16},{x:-19,z:0.5*(-7+(variant%2)*1.3+6.4+Math.floor(variant/2)*1.3)}]};
 }
 
 // Four basement guards in every mode; no global RNG consumption.
@@ -82,28 +82,36 @@ export function bunkerEntranceLayout(p){
  add(0,partitionZ,gap,.75,top+doorHeight,wallTop-top-doorHeight,'partition');
  door(partitionZ,top,gap,false);
  // A closed stairwell with the exact clear width of the treads.
- const length=doorZ-z0;
- for(const side of [-1,1]){
-   const x=side*(half+.35),z=(z0+doorZ)/2;
-   add(x,z,.7,length,bottom,top-bottom,'shaft',{basement:true});
-   add(x,z,.7,length,top,4.6-top,'shaft');
- }
- // Block the solid underside from the rear and prevent access from the
- // upper front edge. The sole lower exit is its elevating door.
- add(0,z0-.35,width,.7,bottom,top-bottom-.85,'shaft',{basement:true});
- add(0,doorZ,width,.75,bottom+doorHeight,top-bottom-doorHeight,'shaft',{basement:true});
- add(0,doorZ,width,.75,top,4.6-top,'shaft');
- door(doorZ,bottom,width,true);
+ const sx=p.stairX,exitZ=p.stairExitZ,exitHalf=width/2,
+  exitLo=exitZ-exitHalf,exitHi=exitZ+exitHalf,far=exitHi+.35;
+ add(sx+half+.35,(z0+far)/2,.7,far-z0,bottom,top-bottom,'shaft',{basement:true});
+ add(sx-half-.35,(z0+exitLo)/2,.7,exitLo-z0,bottom,top-bottom,'shaft',{basement:true});
+ for(const side of [-1,1])
+   add(sx+side*(half+.35),(z0+z1)/2,.7,z1-z0,top,4.6-top,'shaft');
+ add(sx,z0-.35,width,.7,bottom,top-bottom-.85,'shaft',{basement:true});
+ const inner=7.5+.35,outer=sx+half+.35;
+ add((inner+outer)/2,exitHi+.35,outer-inner,.7,bottom,top-bottom,'shaft',{basement:true});
+ add((inner+sx-half-.35)/2,exitLo-.35,sx-half-.35-inner,.7,bottom,top-bottom,'shaft',{basement:true});
+ add(sx,z1+.35,width,.7,top,4.6-top,'shaft');
+ add(7.5,exitZ,.82,width,bottom+doorHeight,top-bottom-doorHeight,'shaft',{basement:true});
+ add(7.5,exitZ,.88,width,bottom,doorHeight,'door',{basement:true});
  // Broad, solid masonry treads extending all the way down to the basement.
  // The walk surface interpolates their height, avoiding step impulses.
  const steps=16,run=(z1-z0)/steps;
  for(let i=0;i<steps;i++){
    const y=top-(i+.5)*(top-bottom)/steps;
-   add(0,z0+(i+.5)*run,width,run,bottom-.12,y-bottom+.12,'step',{basement:true,playerBlock:false});
+   add(sx,z0+(i+.5)*run,width,run,bottom-.12,y-bottom+.12,'step',{basement:true,playerBlock:false});
  }
  return rows;
 }
 
+// Preserve the opening of the independent staircase near the room doors.
+export function bunkerEastWallSections(p){
+ const lo=-p.halfZ+.65,hi=p.halfZ-.65,gap=p.stairWidth/2,
+   holes=[{z:-16,room:true},{z:p.stairExitZ,room:false},{z:16,room:true}],rows=[];
+ let from=lo;for(const h of holes){rows.push({from,to:h.z-gap,doorZ:h.z,room:h.room});from=h.z+gap;}
+ rows.push({from,to:hi});return rows;
+}
 // Planificació lògica dels indicis del HQ. Sense THREE, escenes ni desaments.
 // El creador de l'RNG local (mul) s'injecta deliberadament per conservar
 // exactament la seqüència anterior i no consumir cap valor de l'R() global.
