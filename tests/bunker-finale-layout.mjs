@@ -13,6 +13,24 @@ for(const seed of [1,2,3,4,67,148,999,1731603374]){
  assert.equal(exit.x,p.eastWallX);assert.equal(exit.z,p.westDoors[1]);assert.equal(exit.d,st.width);
  assert.equal(rows.filter(r=>r.kind==='door').length,2);
  assert(rows.filter(r=>r.kind==='step').every(r=>r.base<=-9.15&&r.playerBlock===false&&r.height>0));
+ // Keep shaft surfaces out of the slab's top plane, and avoid coplanar
+ // step sides. The three upper parapets must have a closed U-shaped joint.
+ const near=(a,b)=>Math.abs(a-b)<1e-8;
+ const upperParapets=rows.filter(r=>r.kind==='shaft'&&!r.basement);
+ assert.equal(upperParapets.length,3);
+ assert(upperParapets.every(r=>near(r.base,.22)&&near(r.height,2.1)));
+ const cap=upperParapets.find(r=>near(r.x+r.w/2,st.xBottom)&&near(r.z,st.z));
+ assert(cap&&near(cap.d,st.width+1.4));
+ for(const side of upperParapets.filter(r=>r!==cap)){
+  assert(near(side.x-side.w/2,cap.x+cap.w/2));
+  assert(near(Math.abs(side.z-st.z)+side.d/2,cap.d/2));
+ }
+ const lowerSides=rows.filter(r=>r.kind==='shaft'&&r.basement&&near(r.d,.7));
+ assert.equal(lowerSides.length,2);
+ assert(lowerSides.every(r=>near(r.base+r.height,-.04)));
+ const steps=rows.filter(r=>r.kind==='step');
+ assert.equal(steps.length,19);
+ assert(steps.every(r=>near(r.d,st.width-.05)&&near(r.z,st.z)));
  const bounds=bunkerStairBounds(st);assert(bounds.left>p.eastWallX&&bounds.right<19);
  for(const angle of [0,Math.PI/2,Math.PI,3*Math.PI/2]){
   const model={...b,angle,basement:{halfX:p.halfX,halfZ:p.halfZ,floorY:p.floorY,stair:st}};

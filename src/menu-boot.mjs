@@ -105,7 +105,7 @@ function loadGame(){
       background.hidden=true;
     }
     window.dispatchEvent(new Event('hunter:menu-background-stop'));
-    bootPromise=import('./bootstrap.mjs?v=0.6.216&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1').then(()=>{
+    bootPromise=import('./bootstrap.mjs?v=0.6.216&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1&bunkerParapet=1').then(()=>{
     if(!window.HUNTER_READY)throw new Error('El motor 3D no ha acabat de carregar');
   }).catch(error=>{bootPromise=null;throw error});
   }

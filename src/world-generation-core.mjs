@@ -84,22 +84,26 @@ export function bunkerEntranceLayout(p){
  door(partitionZ,top,gap,false);
  // This narrow strip IS the separator between the two eastern rooms.
  // No dedicated room, no turn or corridor obstruction at the exit.
- const inner=p.eastWallX,outer=p.halfX-.4;
+ const inner=p.eastWallX,thickness=.7,outer=p.halfX-.8,
+  slabUnderside=top-.26,parapetHeight=2.1,treadWidth=width-.05;
+ // The lower walls finish against the underside of the slab, not its
+ // visible top. Their ends meet the corridor and exterior wall faces.
+ const innerFace=inner+thickness/2;
  for(const side of [-1,1]){
-   const zz=z+side*(half+.35);
-   add((inner+outer)/2,zz,outer-inner,.7,bottom,top-bottom,'shaft',{basement:true});
-   add((x0+x1)/2,zz,x0-x1,.7,top,4.6-top,'shaft');
+   const zz=z+side*(half+thickness/2);
+   add((innerFace+outer)/2,zz,outer-innerFace,thickness,bottom,slabUnderside-bottom,'shaft',{basement:true});
+   add((x0+x1)/2,zz,x0-x1,thickness,top,parapetHeight,'shaft');
  }
- // Solid underside behind the staircase, rather than unused room space.
- add((x0+outer)/2,z,outer-x0,width,bottom,top-bottom-.85,'shaft',{basement:true});
- // Upper parapet at the low end; bottom landing is inside the shaft.
- add(x1-.35,z,.7,width,top,4.6-top,'shaft');
- add(inner,z,.82,width,bottom+doorHeight,top-bottom-doorHeight,'shaft',{basement:true});
+ // Keep hidden masonry slightly clear of the exposed side-wall planes.
+ add((x0+outer)/2,z,outer-x0,treadWidth,bottom,top-bottom-.85,'shaft',{basement:true});
+ // Full-width end cap: the side walls meet its face, with no gap or overlap.
+ add(x1-thickness/2,z,thickness,width+2*thickness,top,parapetHeight,'shaft');
+ add(inner,z,.82,width,bottom+doorHeight,slabUnderside-bottom-doorHeight,'shaft',{basement:true});
  add(inner,z,.88,width,bottom,doorHeight,'door',{basement:true});
  const steps=19,run=(x0-x1)/steps;
  for(let i=0;i<steps;i++){
    const y=top-(i+.5)*(top-bottom)/steps;
-   add(x0-(i+.5)*run,z,run,width,bottom-.12,y-bottom+.12,'step',{basement:true,playerBlock:false});
+   add(x0-(i+.5)*run,z,run,treadWidth,bottom-.12,y-bottom+.12,'step',{basement:true,playerBlock:false});
  }
  return rows;
 }

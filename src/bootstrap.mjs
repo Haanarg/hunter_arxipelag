@@ -71,7 +71,7 @@ import * as buildingShell from './building-shell.mjs?v=0.6.216';
 window.HUNTER_BUILDING_SHELL=buildingShell;
 import * as compoundPlanning from './compound-planning.mjs?v=0.6.216';
 window.HUNTER_COMPOUND_PLANNING=compoundPlanning;
-import * as worldGeneration from './world-generation-core.mjs?v=0.6.216&visual=6';
+import * as worldGeneration from './world-generation-core.mjs?v=0.6.216&visual=7';
 import * as canonicalWater from './canonical-water.mjs?v=0.6.216';
 window.HUNTER_WORLD_GENERATION=worldGeneration;window.HUNTER_CANONICAL_WATER=canonicalWater;
 import * as walkSurfaces from './walk-surfaces.mjs?v=0.6.216';
