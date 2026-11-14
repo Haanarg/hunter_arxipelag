@@ -3,11 +3,12 @@ import {readFileSync} from 'node:fs';
 import {CATALOG} from '../src/vehicle-candidate-catalog.mjs';
 
 const names=CATALOG.map(x=>x.id);
-assert(!names.includes('cotxe_civil'),'El C1A aprovat ja no pertany al laboratori');
+assert(names.includes('cotxe_civil'),'Cal el model C1A actual editable');
+assert.equal(CATALOG.find(x=>x.id==='cotxe_civil').options.length,0);
 assert(!names.includes('cotxe'),'El GAZ aprovat ha de desaparèixer de les pestanyes');
 assert(!names.includes('tanc'),'El T-90M ja no ha de sortir al laboratori');
 assert(!names.includes('tanqueta'),'La BTR-82 3B ja no ha de sortir al laboratori');
-assert.deepEqual(names,['heli','heli_combat','llanxa','llanxa_coets','ferry']);
+assert.deepEqual(names,['cotxe_civil','heli','heli_combat','llanxa','llanxa_coets','ferry']);
 for(const id of ['heli','heli_combat']){
  assert(names.includes(id),'Cal la pestanya '+id);
  const config=CATALOG.find(x=>x.id===id);

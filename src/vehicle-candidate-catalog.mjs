@@ -7,6 +7,7 @@ const Q=(query)=>({query});
 // Candidats procedimentals que es poden editar sense dependre de GLB externs.
 const C=(variant,title,note)=>({provider:'procedural',variant,title,note});
 export const CATALOG=[
+ {id:'cotxe_civil',name:'Cotxe utilitari',kind:'terra',note:'Model C1A actual del joc · Three.js natiu, disponible per editar i aprovar candidats.',options:[]},
  {id:'heli',name:'Helicòpter · Kamov Ka-60',kind:'aire',
    note:'Candidat Three.js ajustat exclusivament a les dues imatges facilitades a la conversa: morro opac diferenciat dels vidres davanters, parabrisa endarrerit i alerons triangulars de cua orientats cap avall. Conservar portes laterals obertes, motor dorsal i tren posterior.',
    // Retirades totes les referències URL externes antigues. Les dues
