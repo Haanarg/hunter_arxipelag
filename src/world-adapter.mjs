@@ -1,7 +1,7 @@
 import {vegetationLayout} from './vegetation-layout.mjs';
 import {createWorldRandom} from './world-generation-core.mjs';
 const vegetationCache=new WeakMap();
-import {walkingHeightAt,solidRoofAt,buildingLocalPoint,bunkerFloorAt,stairContains} from './walk-surfaces.mjs';
+import {walkingHeightAt,solidRoofAt,buildingLocalPoint,bunkerFloorAt,stairContains,bunkerStairProgress} from './walk-surfaces.mjs';
 import {sweptRoofLanding} from './player-vertical.mjs';
 import {rawTerrainAt,levelHeight,pushWalls,pushTree} from './world-physics.mjs';
 const finite=Number.isFinite,key=(x,z)=>x+','+z;
@@ -25,15 +25,20 @@ function normalizeBuilding(b){
     roof:{scale:{x:number(b.roof?.scale?.x||1),z:number(b.roof?.scale?.z||1)}},upperFloor:!!b.upperFloor,
     ...(b.upperFloor?{storey:number(b.storey),interiorStair:normalizeStair(b.interiorStair)}:{})};
 }
+function normalizeBunkerStair(s){
+ const axis=s?.axis==='x'?'x':'z',out=pick(s,axis==='x'?['z','width','xTop','xBottom']:['x','width','zTop','zBottom']);
+ if(out.width<=0||(axis==='x'?out.xTop===out.xBottom:out.zTop===out.zBottom))throw new RangeError('Invalid bunker stair');
+ return {...out,axis,enclosed:!!s.enclosed};
+}
 function normalizeSurfaces(source){
   if(source.format===1)return {stairs:[],piers:[],buildings:[],bunker:null,terminalRamps:[]};
   const bunker=source.bunker;
-  if(bunker&&(!bunker.basement||bunker.basement.halfX<=0||bunker.basement.halfZ<=0||bunker.basement.stair?.width<=0||bunker.basement.stair?.zTop===bunker.basement.stair?.zBottom))throw new RangeError('Invalid bunker');
+  if(bunker&&(!bunker.basement||bunker.basement.halfX<=0||bunker.basement.halfZ<=0||!bunker.basement.stair))throw new RangeError('Invalid bunker');
   return {stairs:rows(source.stairs,20000).map(normalizeStair),
     piers:rows(source.piers,20000).map(p=>{const out=pick(p,['x','z','ux','uz','px','pz','length','width','y']);if(out.length<=0||out.width<=0)throw new RangeError('Invalid pier');return out;}),
     buildings:rows(source.buildings,20000).map(normalizeBuilding),
     terminalRamps:rows(source.terminalRamps,1000).map(p=>{const out=pick(p,['x','z','ux','uz','length','startY','endY']);if(out.length<=0)throw new RangeError('Invalid terminal ramp');return out;}),
-    bunker:bunker?{...normalizeBuilding(bunker),basement:{...pick(bunker.basement,['halfX','halfZ','floorY']),stair:{...pick(bunker.basement.stair,['x','width','zTop','zBottom']),enclosed:!!bunker.basement.stair.enclosed}}}:null};
+    bunker:bunker?{...normalizeBuilding(bunker),basement:{...pick(bunker.basement,['halfX','halfZ','floorY']),stair:normalizeBunkerStair(bunker.basement.stair)}}:null};
 }
 export function normalizeWorldGeometry(source){
   if(!source||![1,2].includes(source.format)||source.generatorVersion!=='world:0.6.2'||!Number.isInteger(source.seed)||source.seed<0||source.seed>4294967295||![1,2].includes(source.mapScale))throw new RangeError('Invalid world geometry');
@@ -103,7 +108,7 @@ export function createStaticWorldAdapter(source){
       physical=groundAt(x,z,y),floor=interior&&!interiorBunker?Math.max(interior.fy+.3,physical):physical;
     let drop=false;
     if(b&&!b.basement.stair.enclosed&&y>b.fy-1){const st=b.basement.stair;
-      drop=Math.abs(q.x-st.x)<st.width/2&&q.z>Math.min(st.zTop,st.zBottom)&&q.z<Math.max(st.zTop,st.zBottom)&&y-bunkerFloorAt(b,x,z,y)>.7;
+      drop=bunkerStairProgress(st,q)!==null&&y-bunkerFloorAt(b,x,z,y)>.7;
     }
     if(!drop)drop=candidates.some(b=>b.upperFloor&&!b.rb&&b.interiorStair&&!b.interiorStair.destroyed&&y>=b.fy+b.storey+.15-.6&&stairContains(b.interiorStair,x,z)&&y-physical>.7);
     return {floor,terrain:heightAt(x,z),interior:!!interior,basement,drop};

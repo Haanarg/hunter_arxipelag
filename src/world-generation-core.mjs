@@ -50,12 +50,13 @@ export function generateTerrainFoundation({seed:requestedSeed,mapScale}){
 
 // Original seed-local bunker layout; independent of the global generation RNG.
 export function bunkerBasementPlan(seed,b){
- const random=createWorldRandom((seed^Math.imul(Math.round(b.x),73856093)^Math.imul(Math.round(b.z),19349663)^0x6e7b32e1)>>>0),variant=Math.floor(random()*4),stairSide=-1;
+ const random=createWorldRandom((seed^Math.imul(Math.round(b.x),73856093)^Math.imul(Math.round(b.z),19349663)^0x6e7b32e1)>>>0),variant=Math.floor(random()*4),stairSide=-1,
+  centralDoorZ=Math.floor(variant/2)*.7,eastWallX=5.5;
  return {variant,floorY:b.fy-9.15,halfX:27,halfZ:23,stairSide,
- divisions:[-7+(variant%2)*1.3,6.4+Math.floor(variant/2)*1.3],westDoors:[-15+(variant%2)*.7,Math.floor(variant/2)*.7,15-(variant%2)],eastDivider:-stairSide*7,
- // La planta superior té entrada a +Z. L'escala comença al fons (-Z)
- // i baixa per la cambra oriental; només el vestíbul desemboca al passadís.
- stairX:12,stairTop:-12.8,stairBottom:.4,stairWidth:4.3,stairExitZ:3.1,
+ divisions:[-7+(variant%2)*1.3,6.4+Math.floor(variant/2)*1.3],westDoors:[-15+(variant%2)*.7,centralDoorZ,15-(variant%2)],eastDivider:centralDoorZ,eastWallX,
+ // Single straight flight: from the east side of the rear upper room
+ // straight west to the central corridor, directly opposite its middle door.
+ stair:{axis:'x',z:centralDoorZ,xTop:16.6,xBottom:6.8,width:4.3,enclosed:true},stairExitZ:centralDoorZ,
  generalLocal:{x:-19,z:variant%2?15:-15},
  upperGuards:[{x:-7,z:10},{x:7,z:10}],
  guardLocal:[{x:-4.8,z:-15,patrolZ:-7},{x:4.8,z:14,patrolZ:7},
@@ -69,8 +70,8 @@ export function bunkerGuardIsElite(difficulty,index){
 }
 // Canonical local rectangles used by the rendered bunker and server geometry.
 export function bunkerEntranceLayout(p){
- const rows=[],width=p.stairWidth,half=width/2,top=.22,bottom=-9.15,
-  z0=p.stairTop,z1=p.stairBottom,doorZ=z1+1.25,partitionZ=6.2,
+ const rows=[],st=p.stair,width=st.width,half=width/2,top=.22,bottom=-9.15,
+  x0=st.xTop,x1=st.xBottom,z=st.z,partitionZ=6.2,
   wallTop=9.6,doorHeight=4.1;
  const add=(x,z,w,d,base,height,kind,extra={})=>rows.push({x,z,w,d,base,height,kind,...extra});
  const door=(z,base,gap,basement)=>add(0,z,gap,.75,base,doorHeight,'door',{basement});
@@ -81,33 +82,31 @@ export function bunkerEntranceLayout(p){
  }
  add(0,partitionZ,gap,.75,top+doorHeight,wallTop-top-doorHeight,'partition');
  door(partitionZ,top,gap,false);
- // A closed stairwell with the exact clear width of the treads.
- const sx=p.stairX,exitZ=p.stairExitZ,exitHalf=width/2,
-  exitLo=exitZ-exitHalf,exitHi=exitZ+exitHalf,far=exitHi+.35;
- add(sx+half+.35,(z0+far)/2,.7,far-z0,bottom,top-bottom,'shaft',{basement:true});
- add(sx-half-.35,(z0+exitLo)/2,.7,exitLo-z0,bottom,top-bottom,'shaft',{basement:true});
- for(const side of [-1,1])
-   add(sx+side*(half+.35),(z0+z1)/2,.7,z1-z0,top,4.6-top,'shaft');
- add(sx,z0-.35,width,.7,bottom,top-bottom-.85,'shaft',{basement:true});
- const inner=7.5+.35,outer=sx+half+.35;
- add((inner+outer)/2,exitHi+.35,outer-inner,.7,bottom,top-bottom,'shaft',{basement:true});
- add((inner+sx-half-.35)/2,exitLo-.35,sx-half-.35-inner,.7,bottom,top-bottom,'shaft',{basement:true});
- add(sx,z1+.35,width,.7,top,4.6-top,'shaft');
- add(7.5,exitZ,.82,width,bottom+doorHeight,top-bottom-doorHeight,'shaft',{basement:true});
- add(7.5,exitZ,.88,width,bottom,doorHeight,'door',{basement:true});
- // Broad, solid masonry treads extending all the way down to the basement.
- // The walk surface interpolates their height, avoiding step impulses.
- const steps=16,run=(z1-z0)/steps;
+ // This narrow strip IS the separator between the two eastern rooms.
+ // No dedicated room, no turn or corridor obstruction at the exit.
+ const inner=p.eastWallX,outer=p.halfX-.4;
+ for(const side of [-1,1]){
+   const zz=z+side*(half+.35);
+   add((inner+outer)/2,zz,outer-inner,.7,bottom,top-bottom,'shaft',{basement:true});
+   add((x0+x1)/2,zz,x0-x1,.7,top,4.6-top,'shaft');
+ }
+ // Solid underside behind the staircase, rather than unused room space.
+ add((x0+outer)/2,z,outer-x0,width,bottom,top-bottom-.85,'shaft',{basement:true});
+ // Upper parapet at the low end; bottom landing is inside the shaft.
+ add(x1-.35,z,.7,width,top,4.6-top,'shaft');
+ add(inner,z,.82,width,bottom+doorHeight,top-bottom-doorHeight,'shaft',{basement:true});
+ add(inner,z,.88,width,bottom,doorHeight,'door',{basement:true});
+ const steps=19,run=(x0-x1)/steps;
  for(let i=0;i<steps;i++){
    const y=top-(i+.5)*(top-bottom)/steps;
-   add(sx,z0+(i+.5)*run,width,run,bottom-.12,y-bottom+.12,'step',{basement:true,playerBlock:false});
+   add(x0-(i+.5)*run,z,run,width,bottom-.12,y-bottom+.12,'step',{basement:true,playerBlock:false});
  }
  return rows;
 }
 
 // Preserve the opening of the independent staircase near the room doors.
 export function bunkerEastWallSections(p){
- const lo=-p.halfZ+.65,hi=p.halfZ-.65,gap=p.stairWidth/2,
+ const lo=-p.halfZ+.65,hi=p.halfZ-.65,gap=p.stair.width/2,
    holes=[{z:-16,room:true},{z:p.stairExitZ,room:false},{z:16,room:true}],rows=[];
  let from=lo;for(const h of holes){rows.push({from,to:h.z-gap,doorZ:h.z,room:h.room});from=h.z+gap;}
  rows.push({from,to:hi});return rows;

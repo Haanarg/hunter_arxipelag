@@ -339,6 +339,11 @@
 - [x] Obertura manual E/botó contextual, progressiva segons dificultat: 3/5/10 s; mateix temporitzador compartit SOLO/COOP, col·lisió fins a obertura completa i persistència del progrés cooperatiu.
 - [ ] Validar en partida real SOLO i dos dispositius COOP després de reconstruir el runtime.
 
+**2026-11-14 · escala transversal i dormitori presidencial:**
+- [x] Escala recta integrada a la separació de les dues sales orientals (sense sala d'accés dedicada), porta inferior exactament davant la porta de comunicacions. Passadís central lliure, paret oriental a x=5,5 per mantenir una escala transitable i accés superior dins l'edifici existent.
+- [x] Armeria nord i dormitori presidencial sud, llit doble, tauletes, catifa, armari, còmoda i butaca; suport, forjat i serialització de l'escala compatibles amb eixos X/Z.
+- [ ] Validar visualment partida nova i dos clients COOP; conservar la composició dels guàrdies per dificultat.
+
 **2026-11-14 · revisió visual del final (llavor 1731603374):**
 - [x] Caixa d'escala lateral oriental i vestíbul amb porta cap al passadís central lliure; portes amb plaques reforçades; cota de paviment revisada.
 - [x] Render subterrani sec: excloure superfície marina i ampliar retall visual del terreny segons cota de càmera; autoapuntat consulta la superfície excavada.

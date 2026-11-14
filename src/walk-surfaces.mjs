@@ -10,16 +10,27 @@ export function upperFloorHeight(b,x,z,previous=-Infinity){
 }
 export function stairLocal(s,x,z){const dx=x-s.x,dz=z-s.z;return{along:dx*s.nx+dz*s.nz,side:dx*s.nz-dz*s.nx}}
 export function stairContains(s,x,z,margin=0){const q=stairLocal(s,x,z);return q.along>=-margin&&q.along<=s.length+margin&&Math.abs(q.side)<=s.width/2+margin}
+// Local progress along the bunker stair, regardless of its direction or
+// rotation in the world. Legacy longitudinal stair records still load.
+export function bunkerStairProgress(st,p,margin=0){
+ if(!st||!p)return null;
+ const transverse=st.axis==='x',along=transverse?p.x:p.z,cross=transverse?p.z:p.x,
+       start=transverse?st.xTop:st.zTop,end=transverse?st.xBottom:st.zBottom,
+       center=transverse?st.z:st.x;
+ if(![along,cross,start,end,center,st.width].every(Number.isFinite)||start===end||
+    Math.abs(cross-center)>st.width/2+margin+1e-6||
+    along<Math.min(start,end)-margin-1e-6||along>Math.max(start,end)+margin+1e-6)return null;
+ return Math.max(0,Math.min(1,(along-start)/(end-start)));
+}
+export function bunkerStairBounds(st){
+ return st.axis==='x'?{left:Math.min(st.xTop,st.xBottom),right:Math.max(st.xTop,st.xBottom),near:st.z-st.width/2,far:st.z+st.width/2}:
+  {left:st.x-st.width/2,right:st.x+st.width/2,near:Math.min(st.zTop,st.zBottom),far:Math.max(st.zTop,st.zBottom)};
+}
 export function bunkerFloorAt(b,x,z,previous=-Infinity){if(!b?.basement)return null;
   const p=buildingLocalPoint(b,x,z);
   if(Math.abs(p.x)>b.basement.halfX-.4||Math.abs(p.z)>b.basement.halfZ-.4)return null;
-  const st=b.basement.stair;
-  if(Math.abs(p.x-st.x)<=st.width/2&&
-     p.z>=Math.min(st.zTop,st.zBottom)-1e-6&&
-     p.z<=Math.max(st.zTop,st.zBottom)+1e-6){
-    const t=Math.max(0,Math.min(1,(p.z-st.zTop)/(st.zBottom-st.zTop)));
-    return b.fy+.22-t*(b.fy+.22-b.basement.floorY);
-  }
+  const t=bunkerStairProgress(b.basement.stair,p);
+  if(t!==null)return b.fy+.22-t*(b.fy+.22-b.basement.floorY);
   if(previous<b.fy-3.9)return b.basement.floorY;
   // El forjat superior només existeix sota l'edifici visible, no sobre
   // tot el soterrani ampliat: a fora deixam actuar el terreny natural.

@@ -1,7 +1,8 @@
 import {bunkerBasementPlan,bunkerEntranceLayout,bunkerEastWallSections} from '../src/world-generation-core.mjs';
+import {bunkerStairBounds} from '../src/walk-surfaces.mjs';
 // Physical counterpart of the original basement's walls, doors and perforated slab.
 export function addCoopBunker(b,seed,geometry){
- const first=geometry.walls.length,p=bunkerBasementPlan(seed,b),{halfX,halfZ,divisions,westDoors,eastDivider}=p,st={x:p.stairX,zTop:p.stairTop,zBottom:p.stairBottom,width:p.stairWidth,enclosed:true};
+ const first=geometry.walls.length,p=bunkerBasementPlan(seed,b),{halfX,halfZ,divisions,westDoors,eastWallX}=p,st={...p.stair};
  b.roof={scale:{x:(b.w-7)/(b.w+1.35),z:(b.d-7)/(b.d+1.35)}};
  for(const wall of geometry.walls)if(wall.buildingId===b.id&&wall.supportWeight){const lean=3.5*2.2/b.h;if(wall.supportSide===0)wall.z0-=lean;if(wall.supportSide===1)wall.z1+=lean;if(wall.supportSide===2)wall.x0-=lean;if(wall.supportSide===3)wall.x1+=lean;}
  b.basement={variant:p.variant,floorY:p.floorY,halfX,halfZ,stair:st};geometry.bunker=b;
@@ -12,15 +13,15 @@ export function addCoopBunker(b,seed,geometry){
    if(q.playerBlock===false)w.playerBlock=false;
  }
  const slab=(xa,xb,za,zb)=>{if(xb<=xa||zb<=za)return;const w=wall((xa+xb)/2,(za+zb)/2,xb-xa,zb-za,-.03,.25);w.playerBlock=false;};
- const left=st.x-st.width/2,right=st.x+st.width/2,near=Math.min(st.zTop,st.zBottom),far=Math.max(st.zTop,st.zBottom);
+ const {left,right,near,far}=bunkerStairBounds(st);
  slab(-19.2,left,-16.2,16.2);slab(right,19.2,-16.2,16.2);slab(left,right,-16.2,near);slab(left,right,far,16.2);
  slab(-halfX,-19.2,-halfZ,halfZ);slab(19.2,halfX,-halfZ,halfZ);slab(-19.2,19.2,-halfZ,-16.2);slab(-19.2,19.2,16.2,halfZ);
  wall(-halfX+.4,0,.8,halfZ*2-.8);wall(halfX-.4,0,.8,halfZ*2-.8);wall(0,-halfZ+.4,halfX*2-.8,.8);wall(0,halfZ-.4,halfX*2-.8,.8);
- const span=halfX-7.9,roomX=(halfX+7.1)/2;for(const z of divisions)wall(-roomX,z,span,.65,-9.1,8.75);wall(roomX,eastDivider,span,.65,-9.1,8.75);
+ const span=halfX-7.9,roomX=(halfX+7.1)/2;for(const z of divisions)wall(-roomX,z,span,.65,-9.1,8.75);
  function doorway(x,from,to,z){const gap=4.3,lo=z-gap/2,hi=z+gap/2;if(lo>from)wall(x,(from+lo)/2,.7,lo-from,-9.15,9);if(hi<to)wall(x,(hi+to)/2,.7,to-hi,-9.15,9);wall(x,z,.82,gap,-5.05,4.9);wall(x,z,.88,gap,-9.15,4.1,true);}
  const limits=[-halfZ+.65,...divisions,halfZ-.65];for(let i=0;i<3;i++)doorway(-7.5,limits[i],limits[i+1],westDoors[i]);for(const seg of bunkerEastWallSections(p)){
- if(seg.to>seg.from)wall(7.5,(seg.from+seg.to)/2,.7,seg.to-seg.from,-9.15,9);
- if(seg.room)doorway(7.5,seg.doorZ-2.15,seg.doorZ+2.15,seg.doorZ);
+ if(seg.to>seg.from)wall(eastWallX,(seg.from+seg.to)/2,.7,seg.to-seg.from,-9.15,9);
+ if(seg.room)doorway(eastWallX,seg.doorZ-2.15,seg.doorZ+2.15,seg.doorZ);
  }
  const c=Math.round(Math.cos(b.angle||0)),s=Math.round(Math.sin(b.angle||0)),
   point=(x,z)=>[b.x+(x-b.x)*c-(z-b.z)*s,b.z+(x-b.x)*s+(z-b.z)*c];
