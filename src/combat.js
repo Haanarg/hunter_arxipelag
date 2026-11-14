@@ -1002,11 +1002,20 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
       weaponAimClear(ox,oy,oz,tx,ty,tz,ignoreWall,ignoreBuilding,true),
     isOnScreen:isPersonalBazooka?bazookaTargetOnScreen:undefined
   }),{consider}=selector;
+  const armoredLocks=new Set();
+  const considerArmor=(v,kind,priority)=>{
+    if(!v||v.destroyed||(kind==='enemy'&&v.hp<=0)||v===cv||armoredLocks.has(v))return;
+    armoredLocks.add(v);
+    const baseY=v.o?.position?.y??v.gy??hAt(v.x,v.z);
+    window.HUNTER_SHARED_AIMING.considerArmoredBazooka(selector,v,kind,priority,baseY);
+  };
   for(const e of E){
     const seated=e.nativeBoardedVehicle||
       (e.enemyVehicleClaim&&['riding','waiting'].includes(e.enemyVehicleClaim.phase)
         ?e.enemyVehicleClaim.vehicle:null);
     if(seated){
+      if(isPersonalBazooka&&e.hp>0&&!e.destroyed&&['tanc','tanqueta'].includes(seated.t))
+        considerArmor(seated,'vehicle',weaponTargetPriority(seated,'heavy',true));
       if(!seated.destroyed&&!['tanc','tanqueta'].includes(seated.t)){
         const seat=e.nativeBoardedVehicle?e.nativeEnemySeat||0:e.enemyVehicleClaim.seat,
           point=window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.vehicleOccupantHeadWorld(
@@ -1041,8 +1050,11 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
         consider({t:'soldat',patrolCar:e,patrolSeat:seat},'enemy',0,p.x,p.y,p.z);
       }
     }
-    const priority=weaponTargetPriority(e,shotClass);
+    const priority=weaponTargetPriority(e,shotClass,isPersonalBazooka);
     if(priority>=3||shotClass==='heavy'&&priority>selector.priority)continue;
+    if(isPersonalBazooka&&['tanqueta','tanc'].includes(e.t)){
+      considerArmor(e,'enemy',priority);continue;
+    }
     const modelY=e.o?.position?.y??(e.gy??0),
           groundTarget=['soldat','general','jeep','tanqueta','tanc'].includes(e.t),
           underground=!!e.basement&&(e.gy??modelY)<e.basement.fy-3.9,
@@ -1087,6 +1099,9 @@ function autoAimWeaponShot(x,y,z,fx,fy,fz,range,cone=.97,shotClass='light',focus
     // al camp de tir. Un filferro transversal no segresta el coet.
     for(const v of vehicleCandidatesAt(x,z,range,true)){
       if(v.destroyed||v===cv)continue;
+      if(isPersonalBazooka&&['tanqueta','tanc'].includes(v.t)){
+        considerArmor(v,'vehicle',fallbackPriority);continue;
+      }
       const vy=v.o?.position?.y??Math.max(0,hAt(v.x,v.z));
       consider(v,'vehicle',fallbackPriority,v.x,vy+Math.min(2.3,vehicleRadius(v.t)*.3),v.z);
     }

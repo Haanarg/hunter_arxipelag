@@ -26,7 +26,9 @@ export function limitBazookaHorizontalAim(direction,fx,fz,focus=null){
 }
 
 
-export function weaponTargetPriority(enemy,shotClass='light'){
+// Infantry bazooka: armour competes with the existing high-threat category.
+export function weaponTargetPriority(enemy,shotClass='light',personalBazooka=false){
+  if(shotClass==='heavy'&&personalBazooka&&['tanqueta','tanc'].includes(enemy.t))return 0;
   if(shotClass==='attackCannon'){
     // La metralladora/canó lleuger de l'heli només segueix enemics
     // vulnerables: els míssils pesants s'encarreguen de torres i blindats.
@@ -47,6 +49,19 @@ export function weaponTargetPriority(enemy,shotClass='light'){
   return 3;
 }
 
+// A large hull can be partly visible. Every point still passes the
+// normal screen, cone, range and physical occlusion checks.
+export function armoredBazookaPoints(target,baseY){
+ const {x,z}=target,hd=target.hd??target.heading??0,
+   fx=-Math.sin(hd),fz=-Math.cos(hd),
+   heights=target.t==='tanqueta'?[3.15,2.1,4.05]:[2.8,1.9,3.8];
+ return [...heights.map(h=>({x,y:baseY+h,z})),
+   ...[-2.3,2.3].map(d=>({x:x+fx*d,y:baseY+heights[0],z:z+fz*d}))];
+}
+export function considerArmoredBazooka(selector,target,kind,priority,baseY){
+ for(const point of armoredBazookaPoints(target,baseY))
+   selector.consider(target,kind,priority,point.x,point.y,point.z);
+}
 export function smallArmsAimHorizontalCone(baseCone,pitchError){
   const steep=Math.max(0,Math.min(1,(pitchError-.17)/(.98-.17))),
         blend=steep*steep*(3-2*steep),

@@ -16,7 +16,7 @@ import {limitBazookaHorizontalAim} from '../src/aiming-core.mjs';
 import {enemyAccuracy} from '../src/enemy-accuracy-core.mjs';
 import {createWorldRandom} from '../src/world-generation-core.mjs';
 import {launchProjectile,projectileStep,SMALL_ARMS_PROJECTILE_SPEED} from '../src/projectile-core.mjs';
-import {createAimSelector,weaponTargetPriority,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,SMALL_ARMS_RANGE} from '../src/aiming-core.mjs';
+import {createAimSelector,weaponTargetPriority,considerArmoredBazooka,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,SMALL_ARMS_RANGE} from '../src/aiming-core.mjs';
 import {damageHealth} from '../src/player-simulation.mjs';
 import {runoverDamage,runoverSweepHit,VEHICLE_DESTRUCTION,beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,directRocketHitDamage,towerExplosionAim,segmentAabbT,segmentSphereT,inView,ballisticStep,friendlyVehicleBlocksLine} from '../src/combat-rules.mjs';
 // Índex immutable per posició: les portes poden obrir-se i destruir-se,
@@ -531,11 +531,22 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
     const profile=weaponCatalog[weapon],hd=vehicle?.hd??p.hd,dx=-Math.sin(hd),dz=-Math.cos(hd),range=profile.range,focus={},heavy=!!profile.splash;
     const aim=createAimSelector({origin:from,direction:[dx,0,dz],range,cone:profile.cone,shotClass:heavy?'heavy':weapon,focus,verticalCone:profile.vertical,
       isClear:(x,y,z,tx,ty,tz)=>traceArena({x,y,z},{x:tx,y:ty,z:tz},geometry(),world()).fraction>=1});
+    const personalBazooka=!vehicle&&weapon==='bazooka',armoredLocks=new Set();
+    const considerArmor=(v,kind,priority)=>{
+      if(!v||v.destroyed||v===vehicle||armoredLocks.has(v))return;
+      armoredLocks.add(v);considerArmoredBazooka(aim,v,kind,priority,v.y);
+    };
     for(const t of targets)if(t.hp>0){
       // Un soldat embarcat es representa i s'adquireix al seient.
       const carrier=t.enemyVehicleId&&vehicles.live().find(v=>v.id===t.enemyVehicleId),
         point=carrier?vehicleOccupantHeadWorld(carrier,t.enemySeat||0,carrier.y):null;
-      if(carrier&&['tanc','tanqueta'].includes(carrier.t))continue;
+      if(carrier&&['tanc','tanqueta'].includes(carrier.t)){
+        if(personalBazooka)considerArmor(carrier,'vehicle',weaponTargetPriority(carrier,'heavy',true));
+        continue;
+      }
+      if(personalBazooka&&['tanc','tanqueta'].includes(t.t)){
+        considerArmor(t,'enemy',weaponTargetPriority(t,'heavy',true));continue;
+      }
       if(!heavy&&['patrulla_marina','jeep'].includes(t.t)){
         for(let seat=0;seat<2;seat++){
           const hp=t.t==='patrulla_marina'?
@@ -553,8 +564,11 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         point?.x??t.x,point?.y??(t.y+(t.t==='torre'?9.4:t.towerGuard?2.9:1.5)),point?.z??t.z);
     }
     for(const v of vehicles.live())if(v!==vehicle&&!v.destroyed&&
-      (heavy?!v.seats.some(Boolean):true))
-      aim.consider(v,'vehicle',heavy?3:1,v.x,v.y+1.5,v.z);
+      (heavy?!v.seats.some(Boolean):true)){
+      if(personalBazooka&&['tanc','tanqueta'].includes(v.t)){
+        if(!aim.hasTarget||aim.priority>=3)considerArmor(v,'vehicle',3);
+      }else aim.consider(v,'vehicle',heavy?3:1,v.x,v.y+1.5,v.z);
+    }
     // Without a visible enemy, aim light weapons at intact upper-floor
     // glass. The same physics trace checks the aperture, in both directions.
     if(!aim.hasTarget&&!vehicle&&!heavy&&['pistol','assault','sniper'].includes(weapon)){
