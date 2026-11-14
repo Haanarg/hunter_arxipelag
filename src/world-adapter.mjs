@@ -33,7 +33,7 @@ function normalizeSurfaces(source){
     piers:rows(source.piers,20000).map(p=>{const out=pick(p,['x','z','ux','uz','px','pz','length','width','y']);if(out.length<=0||out.width<=0)throw new RangeError('Invalid pier');return out;}),
     buildings:rows(source.buildings,20000).map(normalizeBuilding),
     terminalRamps:rows(source.terminalRamps,1000).map(p=>{const out=pick(p,['x','z','ux','uz','length','startY','endY']);if(out.length<=0)throw new RangeError('Invalid terminal ramp');return out;}),
-    bunker:bunker?{...normalizeBuilding(bunker),basement:{...pick(bunker.basement,['halfX','halfZ','floorY']),stair:pick(bunker.basement.stair,['x','width','zTop','zBottom'])}}:null};
+    bunker:bunker?{...normalizeBuilding(bunker),basement:{...pick(bunker.basement,['halfX','halfZ','floorY']),stair:{...pick(bunker.basement.stair,['x','width','zTop','zBottom']),enclosed:!!bunker.basement.stair.enclosed}}}:null};
 }
 export function normalizeWorldGeometry(source){
   if(!source||![1,2].includes(source.format)||source.generatorVersion!=='world:0.6.2'||!Number.isInteger(source.seed)||source.seed<0||source.seed>4294967295||![1,2].includes(source.mapScale))throw new RangeError('Invalid world geometry');
@@ -102,7 +102,7 @@ export function createStaticWorldAdapter(source){
     const interiorBunker=interior&&b&&['x','z','w','d','fy'].every(k=>interior[k]===b[k]),
       physical=groundAt(x,z,y),floor=interior&&!interiorBunker?Math.max(interior.fy+.3,physical):physical;
     let drop=false;
-    if(b&&y>b.fy-1){const st=b.basement.stair;
+    if(b&&!b.basement.stair.enclosed&&y>b.fy-1){const st=b.basement.stair;
       drop=Math.abs(q.x-st.x)<st.width/2&&q.z>Math.min(st.zTop,st.zBottom)&&q.z<Math.max(st.zTop,st.zBottom)&&y-bunkerFloorAt(b,x,z,y)>.7;
     }
     if(!drop)drop=candidates.some(b=>b.upperFloor&&!b.rb&&b.interiorStair&&!b.interiorStair.destroyed&&y>=b.fy+b.storey+.15-.6&&stairContains(b.interiorStair,x,z)&&y-physical>.7);

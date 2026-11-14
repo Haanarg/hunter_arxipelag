@@ -1210,11 +1210,6 @@ function mkEnemyBunker(x,z){
       if(w.supportSide===2)w.x0-=lean;
       if(w.supportSide===3)w.x1+=lean;
     }
-    const wall=(lx,lz,sx,sz)=>Wl.push({x0:x+lx-sx/2,x1:x+lx+sx/2,
-      z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8,hp:window.HUNTER_BUILDING_SHELL.BUNKER_STRUCTURE_HP,
-      door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,owner:b});
-    for(const lx of[-4,4])for(const [lz,d]of[[-12.5,3],[-4,6],[7,10]])wall(lx,lz,.6,d);
-    for(const lx of[-11,11])wall(lx,-7,12,.6);
     b.generalSpots=[{x,z:z-9}];addBunkerBasement(b);return b;
   }
   // Taper every exterior face; keep the gate vertical and independently animated.
@@ -1231,12 +1226,8 @@ function mkEnemyBunker(x,z){
   b.roof.scale.set((b.w-2*inset)/(b.w+1.35),1,(b.d-2*inset)/(b.d+1.35));g.userData.bunkerWallInset=inset;
   // Physical footprints cover the inward lean at character height.
   for(const w of b.structuralWalls){const lean=inset*2.2/b.h;if(w.supportSide===0)w.z0-=lean;if(w.supportSide===1)w.z1+=lean;if(w.supportSide===2)w.x0-=lean;if(w.supportSide===3)w.x1+=lean;}
-  const wall=(lx,lz,sx,sz)=>{const m=buildingVisual.addWall(g,{lx,lz,sx,sz,height:8,material:b.wm});Wl.push({x0:x+lx-sx/2,x1:x+lx+sx/2,z0:z+lz-sz/2,z1:z+lz+sz/2,y0:b.fy-1,y1:b.fy+8,hp:window.HUNTER_BUILDING_SHELL.BUNKER_STRUCTURE_HP,m,door:false,open:false,rammable:true,cx:x+lx,cz:z+lz,owner:b})};
-  for(const lx of[-4,4])for(const [lz,d]of[[-12.5,3],[-4,6],[7,10]])wall(lx,lz,.6,d);
-  for(const lx of[-11,11])wall(lx,-7,12,.6);
   for(const sign of[-1,1]){const shape=new THREE.Shape();shape.moveTo(sign*2,0);shape.lineTo(sign*3.5,0);shape.lineTo(sign*2.7,5.2);shape.lineTo(sign*2,5.2);shape.closePath();const post=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:3.3,bevelEnabled:false}),M(0x795337,'masonry'));post.position.z=b.d/2-2.8;g.add(post)}
   bx(g,5.4,.85,3.3,0x795337,0,4.8,b.d/2-1.15,'masonry');
-  bx(g,5,1.1,2.5,0x5a5944,0,.9,-12,'paint');
   b.generalSpots=[{x,z:z-9}];addBunkerBasement(b);return b;
 }
 // Soterrani integrat sota el model existent: ni la porta blindada ni les
@@ -1253,15 +1244,12 @@ function addBunkerBasement(b){
     b.foundation.material?.dispose();
     b.foundation=null;
   }
-  const {variant,floorY,halfX,halfZ,stairSide,divisions,westDoors,eastDivider,stairX,stairTop,stairBottom}=window.HUNTER_WORLD_GENERATION.bunkerBasementPlan(seed,b);
+  const plan=window.HUNTER_WORLD_GENERATION.bunkerBasementPlan(seed,b),
+    {variant,floorY,halfX,halfZ,stairSide,divisions,westDoors,eastDivider,stairX,stairTop,stairBottom,stairWidth,generalLocal,guardLocal,upperGuards}=plan;
   b.basement={variant,floorY,halfX,halfZ,upperSlabMeshes:[],lights:[],
     cameraHiddenWalls:[],lightsOn:false,doors:[],
-    stair:{x:stairX,zTop:stairTop,zBottom:stairBottom,width:3.3},
-    generalLocal:{x:-19,z:variant%2?15:-15},eliteLocal:[
-      {x:0,z:-15},{x:-1,z:14},
-      {x:17,z:stairSide>0?-16:16},
-      {x:-19,z:(divisions[0]+divisions[1])/2}
-    ]};
+    stair:{x:stairX,zTop:stairTop,zBottom:stairBottom,width:stairWidth,enclosed:true},
+    generalLocal,guardLocal,upperGuards};
   activeBunker=b;
   const wall=(lx,lz,w,d,base=-9.2,height=9.25,color=0x68756d)=>{
     const mesh=seedSearchMode?new THREE.Object3D():bx(b.o,w,height,d,color,lx,base+height/2,lz,'masonry');
@@ -1314,6 +1302,33 @@ function addBunkerBasement(b){
   slab(19.2,halfX,-halfZ,halfZ);
   slab(-19.2,19.2,-halfZ,-16.2);
   slab(-19.2,19.2,16.2,halfZ);
+  // Same entrance and solid stairwell in seed search, SOLO and native COOP.
+  for(const q of window.HUNTER_WORLD_GENERATION.bunkerEntranceLayout(plan)){
+    const isDoor=q.kind==='door',mesh=seedSearchMode?new THREE.Object3D():
+      bx(b.o,q.w,q.height,q.d,isDoor?0x899990:q.kind==='step'?0x8b9289:0x68756d,
+        q.x,q.base+q.height/2,q.z,isDoor?'metal':'masonry');
+    mesh.name='bunker-'+q.kind;
+    if(!seedSearchMode&&q.kind==='partition'){
+      // The internal partition meets the sloping outer shell, without
+      // protruding through it above character height.
+      const pos=mesh.geometry.attributes.position;
+      // bx may share its geometry; clone before editing a single mesh.
+      mesh.geometry=mesh.geometry.clone();
+      const own=mesh.geometry.attributes.position;
+      for(let i=0;i<own.count;i++){
+        const h=own.getY(i)+mesh.position.y,limit=19.7-3.5*Math.max(0,h)/10;
+        own.setX(i,Math.max(-limit,Math.min(limit,own.getX(i)+q.x))-q.x);
+      }
+      own.needsUpdate=true;mesh.geometry.computeVertexNormals();mesh.geometry.computeBoundingSphere();
+    }
+    const d={x0:b.x+q.x-q.w/2,x1:b.x+q.x+q.w/2,z0:b.z+q.z-q.d/2,z1:b.z+q.z+q.d/2,
+      y0:b.fy+q.base,y1:b.fy+q.base+q.height,hp:q.kind==='partition'?window.HUNTER_BUILDING_SHELL.BUNKER_STRUCTURE_HP:Infinity,
+      m:mesh,door:isDoor,open:false,rammable:q.kind==='partition',cx:b.x+q.x,cz:b.z+q.z,owner:b,
+      bunkerBasementWall:!!q.basement,playerBlock:q.playerBlock!==false,
+      ...(isDoor?{bunkerInteriorDoor:true,openProgress:0,doorHeight:q.height,closedLocalY:q.base+q.height/2}:{})};
+    Wl.push(d);
+    if(isDoor){Dr.push(d);b.basement.doors.push(d);}
+  }
   // Tres cambres a ponent, dues a llevant i passadís central.
   wall(-halfX+.4,0,.8,halfZ*2-.8);wall(halfX-.4,0,.8,halfZ*2-.8);
   wall(0,-halfZ+.4,halfX*2-.8,.8);wall(0,halfZ-.4,halfX*2-.8,.8);
@@ -1343,20 +1358,7 @@ function addBunkerBasement(b){
   for(let i=0;i<3;i++)doorway(-7.5,limits[i],limits[i+1],westDoors[i]);
   doorway(7.5,-halfZ+.65,eastDivider,-16);
   doorway(7.5,eastDivider,halfZ-.65,16);
-  // Graons a la cambra escollida, amb sentit de baixada nord o sud.
   if(!seedSearchMode){
-    const steps=15,run=Math.abs(st.zTop-st.zBottom);
-    for(let i=0;i<steps;i++){
-      const z=st.zTop+(i+.5)*(st.zBottom-st.zTop)/steps;
-      const y=.22-(i+1)*9.37/steps;
-      bx(b.o,st.width,.21,run/steps+.035,
-        i%2?0x797f79:0x8b9289,st.x,y-.1,z,'masonry');
-    }
-    for(const xx of[shaftLeft-.13,shaftRight+.13]){
-      const rail=bx(b.o,.12,1.3,run,0x3a4c49,
-        xx,-3.9,(st.zTop+st.zBottom)/2,'metal');
-      rail.rotation.x=Math.sign(st.zBottom-st.zTop)*Math.atan2(9.37,run);
-    }
     // Sales amb funció pròpia: comandament, ràdio, infermeria, dipòsit
     // d'armes i control de la porta. Tot el mobiliari gran registra una
     // caixa de col·lisió compartida per jugador, IA i projectils.
@@ -1493,7 +1495,7 @@ return y}
 function stairDropAt(x,z,previousY){
   if(!Number.isFinite(previousY))return false;
   const b=activeBunker;
-  if(b?.basement&&previousY>b.fy-1){
+  if(b?.basement&&!b.basement.stair.enclosed&&previousY>b.fy-1){
     const p=buildingLocalPoint(b,x,z),st=b.basement.stair;
     if(Math.abs(p.x-st.x)<st.width/2&&
       p.z>Math.min(st.zTop,st.zBottom)&&p.z<Math.max(st.zTop,st.zBottom)&&

@@ -339,6 +339,11 @@
 - [x] Obertura manual E/botó contextual, progressiva segons dificultat: 3/5/10 s; mateix temporitzador compartit SOLO/COOP, col·lisió fins a obertura completa i persistència del progrés cooperatiu.
 - [ ] Validar en partida real SOLO i dos dispositius COOP després de reconstruir el runtime.
 
+**2026-11-14 · final del joc més accessible:**
+- [x] Dues sales consecutives a la planta superior, dos soldats normals a la primera, porta interior i escala de formigó tancada al fons de la segona; porta inferior directa al passadís central.
+- [x] Quatre soldats al soterrani: 4 normals (fàcil), 2 normals + 2 elit (normal), 4 elit (difícil). Despatx del general i distribució variable de la resta de sales conservats.
+- [ ] Validar recorregut i càmera a la llavor 148 i variants, portes, baixada/pujada, dany i recompte de guàrdies en SOLO i COOP. Començar una partida nova; la geometria anterior no és compatible amb els IDs de parets del nou búnquer.
+
 **2026-11-09 · búnquer blindat (v0.6.200):**
 - [x] Excepció al balanç general: **30 PV** a cada paret exterior/interior i al sostre del búnquer; **20 PV** a la porta blindada, immune a armes lleugeres.
 - [x] Aplicació al generador físic SOLO i COOP, incloses parets interiors especials i serialització de la porta blindada al Worker.

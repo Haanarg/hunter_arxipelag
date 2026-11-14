@@ -53,7 +53,55 @@ export function bunkerBasementPlan(seed,b){
  const random=createWorldRandom((seed^Math.imul(Math.round(b.x),73856093)^Math.imul(Math.round(b.z),19349663)^0x6e7b32e1)>>>0),variant=Math.floor(random()*4),stairSide=(variant&1)?-1:1;
  return {variant,floorY:b.fy-9.15,halfX:27,halfZ:23,stairSide,
  divisions:[-7+(variant%2)*1.3,6.4+Math.floor(variant/2)*1.3],westDoors:[-15+(variant%2)*.7,Math.floor(variant/2)*.7,15-(variant%2)],eastDivider:-stairSide*7,
- stairX:(variant&2)?14.6:10.8,stairTop:stairSide*13.6,stairBottom:stairSide*1.3};
+ // La planta superior té entrada a +Z. L'escala comença al fons (-Z)
+ // i baixa cap a +Z, sempre dins la franja del passadís central.
+ stairX:0,stairTop:-12.8,stairBottom:1.7,stairWidth:4.3,
+ generalLocal:{x:-19,z:variant%2?15:-15},
+ upperGuards:[{x:-7,z:10},{x:7,z:10}],
+ guardLocal:[{x:-4.8,z:-15,patrolZ:-7},{x:4.8,z:14,patrolZ:7},
+  {x:17,z:stairSide>0?-16:16},{x:-19,z:0.5*(-7+(variant%2)*1.3+6.4+Math.floor(variant/2)*1.3)}]};
+}
+
+// Four basement guards in every mode; no global RNG consumption.
+export function bunkerGuardIsElite(difficulty,index){
+ const count=difficulty<=.6?0:difficulty>=1.5?4:2;
+ return index>=4-count&&index<4;
+}
+// Canonical local rectangles used by the rendered bunker and server geometry.
+export function bunkerEntranceLayout(p){
+ const rows=[],width=p.stairWidth,half=width/2,top=.22,bottom=-9.15,
+  z0=p.stairTop,z1=p.stairBottom,doorZ=z1+.65,partitionZ=5,
+  wallTop=9.6,doorHeight=4.1;
+ const add=(x,z,w,d,base,height,kind,extra={})=>rows.push({x,z,w,d,base,height,kind,...extra});
+ const door=(z,base,gap,basement)=>add(0,z,gap,.75,base,doorHeight,'door',{basement});
+ // Only this cross-wall divides the upper floor into entrance and rear rooms.
+ const gap=4.3,edge=19.7;
+ for(const side of [-1,1]){
+   add(side*(edge+gap/2)/2,partitionZ,edge-gap/2,.75,top,wallTop-top,'partition');
+ }
+ add(0,partitionZ,gap,.75,top+doorHeight,wallTop-top-doorHeight,'partition');
+ door(partitionZ,top,gap,false);
+ // A closed stairwell with the exact clear width of the treads.
+ const length=doorZ-z0;
+ for(const side of [-1,1]){
+   const x=side*(half+.35),z=(z0+doorZ)/2;
+   add(x,z,.7,length,bottom,top-bottom,'shaft',{basement:true});
+   add(x,z,.7,length,top,4.6-top,'shaft');
+ }
+ // Block the solid underside from the rear and prevent access from the
+ // upper front edge. The sole lower exit is its elevating door.
+ add(0,z0-.35,width,.7,bottom,top-bottom,'shaft',{basement:true});
+ add(0,doorZ,width,.75,bottom+doorHeight,top-bottom-doorHeight,'shaft',{basement:true});
+ add(0,doorZ,width,.75,top,4.6-top,'shaft');
+ door(doorZ,bottom,width,true);
+ // Broad, solid masonry treads extending all the way down to the basement.
+ // The walk surface interpolates their height, avoiding step impulses.
+ const steps=16,run=(z1-z0)/steps;
+ for(let i=0;i<steps;i++){
+   const y=top-(i+.5)*(top-bottom)/steps;
+   add(0,z0+(i+.5)*run,width,run,bottom-.12,y-bottom+.12,'step',{basement:true,playerBlock:false});
+ }
+ return rows;
 }
 
 // Planificació lògica dels indicis del HQ. Sense THREE, escenes ni desaments.

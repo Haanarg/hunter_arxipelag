@@ -413,7 +413,7 @@ function enemyVehicleRelease(u,leave=true){
   }
 }
 function enemyVehicleReserve(u,{fleeing=false}={}){
-  if(u.enemyVehicleClaim||u.elite||u.rocketSoldier||u.basement)return false;
+  if(u.enemyVehicleClaim||u.elite||u.rocketSoldier||u.basement||u.bunkerGuard)return false;
   const id=u.saveId??('soldat:'+Math.round(u.home?.x??u.x)+':'+Math.round(u.home?.z??u.z));
   // Cada intent, espaiat pel dubte de la dificultat, té una tirada nova.
    // Fer-la només per ID deixava alguns soldats permanentment incapaços

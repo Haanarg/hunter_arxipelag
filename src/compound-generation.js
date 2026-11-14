@@ -238,18 +238,18 @@ function* buildApprovedCompoundSteps(layout,q,{path,pier,prop,vehicles,rocketAss
   const bunker=record.buildings.find(b=>b.kind==='enemy_bunker'&&b.basement);
   if(bunker){
     const point=(p)=>buildingWorldPoint(bunker,p.x,p.z),level=bunker.basement.floorY;
-    // Guàrdia d'elit exclusiu del búnquer, amb la mateixa cadència que la
-    // metralladora de la tanqueta. Les rutes no surten del seu nivell.
-    for(const [i,p] of bunker.basement.eliteLocal.entries()){
-      const at=point(p),u=mkEn('soldat',at.x,at.z,level,{elite:true});
+    // Quatre defensors sota terra: 0/2/4 d'elit segons dificultat.
+    // Les rutes no surten del seu nivell ni travessen la caixa d'escala.
+    for(const [i,p] of bunker.basement.guardLocal.entries()){
+      const at=point(p),u=mkEn('soldat',at.x,at.z,level,{elite:window.HUNTER_WORLD_GENERATION.bunkerGuardIsElite(DIF,i)});
       u.basement=bunker;u.walkY=level;u.compound='hq';
-      if(i<2){const z2=i===0?-6:4.5;setPatrol(u,[point({x:p.x,z:p.z}),point({x:p.x,z:z2})].map(q=>[q.x,q.z]),true)}
+      if(Number.isFinite(p.patrolZ)){setPatrol(u,[point(p),point({x:p.x,z:p.patrolZ})].map(q=>[q.x,q.z]),true)}
       else setPatrol(u,[[at.x,at.z]],true);
       record.soldiers.push(u);
     }
-    for(const p of[{x:-11,z:0},{x:0,z:5}]){
-      const at=point(p),u=mkEn('soldat',at.x,at.z,bunker.fy+.3,{elite:true});
-      u.compound='hq';setPatrol(u,[[at.x,at.z]],true);record.soldiers.push(u);
+    for(const p of bunker.basement.upperGuards){
+      const at=point(p),u=mkEn('soldat',at.x,at.z,bunker.fy+.22,{elite:false});
+      u.bunkerGuard=true;u.walkY=bunker.fy+.22;u.compound='hq';setPatrol(u,[[at.x,at.z]],true);record.soldiers.push(u);
     }
   }
   if(layout.general){
