@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as T from '../vendor/three-r186.module.mjs';
 import {createKamovCandidate,stepKamovRotors,KAMOV_VERSION} from '../src/kamov-reference-candidates.mjs';
-assert(KAMOV_VERSION.includes('extended-sheet'));
+assert(KAMOV_VERSION.includes('rear-bench'));
 for(const type of ['ka60','ka52']){
  const root=createKamovCandidate(T,type),meshes=[],rotors=[];
  root.traverse(o=>{if(o.userData.kamovRotor)rotors.push(o);if(o.isMesh)meshes.push(o)});
@@ -16,7 +16,7 @@ for(const type of ['ka60','ka52']){
  const size=new T.Box3().setFromObject(root).getSize(new T.Vector3());
  assert(size.z>13&&size.z<17);assert(size.y>3.8&&size.y<5.1);
  const seats=[];root.traverse(o=>{if(o.name==='Coixí seient')seats.push(o)});
- assert.equal(seats.length,type==='ka60'?8:2);
+ assert.equal(seats.length,2);
  assert.equal(seats.filter(o=>o.position.z< -2).length,2,'Pilots de costat');
  assert.equal(meshes.filter(o=>o.name==='Pneumàtic').length,type==='ka60'?3:4);
  if(type==='ka60'){
@@ -37,9 +37,30 @@ for(const type of ['ka60','ka52']){
    assert.equal(open.intersectObjects(shell).length,0,'Obertura després de la xapa');
    const step=meshes.find(o=>o.name==='Esglaó accés porta oberta'&&Math.sign(o.position.x)===side);
    assert(Math.abs(step.geometry.parameters.depth-2.17)<1e-8);
-   const posts=meshes.filter(o=>o.name==='Muntant porta lateral oberta'&&Math.sign(o.position.x)===side);
-   assert(posts.some(o=>Math.abs(o.position.z+.7)<1e-8),'Muntant recol·locat');
+   const posts=meshes.filter(o=>o.name==='Muntant porta lateral integrat'&&Math.sign(new T.Box3().setFromObject(o).getCenter(new T.Vector3()).x)===side);
+   assert.equal(posts.length,4);
+   assert(posts.some(o=>Math.abs(new T.Box3().setFromObject(o).min.z+.7)<1e-6),'Muntant recol·locat');
+   const ext=meshes.filter(o=>o.name.startsWith('Fuselatge Ka-60 panell'));
+   const vertsOf=o=>{const p=o.geometry.attributes.position;return Array.from({length:p.count},(_,i)=>[p.getX(i),p.getY(i),p.getZ(i)].map(v=>v.toFixed(5)).join(','))};
+   const shellVerts=new Set(ext.flatMap(vertsOf));
+   for(const frame of meshes.filter(o=>/^(Muntant porta lateral integrat|Llinda porta lateral integrada|Llindar porta lateral integrat)$/.test(o.name)))
+    assert(new Set(vertsOf(frame).filter(v=>shellVerts.has(v))).size>=2,'Marc comparteix aresta amb fuselatge');
   }
+  const panel=root.getObjectByName('Planxa posterior cabina Ka-60'),
+   innerPanel=root.getObjectByName('Cara interior planxa posterior Ka-60'),
+   bench=root.getObjectByName('Banc posterior · seient'),
+   back=root.getObjectByName('Banc posterior · respatller');
+  assert(panel&&innerPanel&&bench&&back&&!panel.material.transparent);
+  const panelBox=new T.Box3().setFromObject(panel),benchBox=new T.Box3().setFromObject(bench),
+   backBox=new T.Box3().setFromObject(back);
+  assert(panelBox.getSize(new T.Vector3()).x>1.9&&panelBox.getSize(new T.Vector3()).y>1.85);
+  for(const x of [-.55,0,.55])for(const y of [1.4,1.9,2.25]){
+   const ray=new T.Raycaster(new T.Vector3(x,y,.7),new T.Vector3(0,0,1));
+   assert(ray.intersectObject(panel).length>0,'Planxa tanca la cabina');
+  }
+  assert(benchBox.getSize(new T.Vector3()).x>1.45&&benchBox.max.z<=panelBox.min.z+1e-6);
+  assert(backBox.max.z>=panelBox.min.z-.06&&backBox.max.z<=panelBox.min.z+1e-6);
+  assert.equal(meshes.filter(o=>o.name==='Banc posterior · suport al terra').length,2);
   const panes=meshes.filter(o=>o.name.startsWith('Vidre panoràmic Fuselatge Ka-60'));
   assert.equal(panes.length,16,'Parabrisa i vidres dels pilots preservats');
   assert(panes.every(o=>!o.name.includes(' 3 ')),'No hi ha vidre panoràmic darrere els pilots');
@@ -151,4 +172,4 @@ for(const type of ['ka60','ka52']){
  console.log(type,Math.round(triangles)+' triangles',meshes.length+' peces',size.toArray().map(x=>x.toFixed(2)).join(' × '));
 }
 assert.throws(()=>createKamovCandidate(T,'unknown'));
-console.log('PASS Kamov: xapa allargada, finestrons quadrats, obertures i esglaons ajustats');
+console.log('PASS Kamov: dos seients de pilot, banc posterior, planxa tancada i marcs integrats');

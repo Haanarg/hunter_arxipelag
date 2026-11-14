@@ -1,3 +1,9 @@
+**2026-11-14 · Ka-60 candidat 8, petició a7cd2c52:**
+- [x] Eliminats els sis seients de transport individuals; conservats pilot i copilot. Planxa posterior que tanca la cabina, amb banc transversal orientat endavant i ancoratges.
+- [x] Marcs de les portes construïts amb les mateixes arestes del fuselatge; terra ajustat al contorn. Finestrons, parabrisa, cua i Huey intactes.
+- [x] Revisió `live-editor-20261114-ka60-rear-bench-1`.
+- [ ] Validació visual WebGL i desplegament Cloudflare.
+
 **2026-11-14 · Ka-60 candidat 7, petició 7f9f89d6:**
 - [x] Allargada la xapa lateral darrere els finestrons 0,45 m cap a l'obertura de transport; finestrons, parabrisa i silueta conservats. Muntants, llindes i esglaons ajustats a l'obertura resultant.
 - [x] Revisió `live-editor-20261114-ka60-extended-sheet-1`; Huey i Ka-52 intactes. Permís GitHub push confirmat.

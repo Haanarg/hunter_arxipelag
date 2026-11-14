@@ -1,10 +1,10 @@
 // Original low-poly geometry, based on photographs linked in the lab catalogue.
 // Nose = -Z, metres before the lab's uniform comparison scale. No external assets.
-export const KAMOV_VERSION='kamov-20261114-extended-sheet-7';
+export const KAMOV_VERSION='kamov-20261114-rear-bench-8';
 export function createKamovCandidate(T,type){
  if(!['ka60','ka52'].includes(type))throw new Error('Kamov desconegut: '+type);
  const combat=type==='ka52',root=new T.Group();
- root.name=combat?'Kamov Ka-52 · candidat 1':'Kamov Ka-60 · candidat 7';
+ root.name=combat?'Kamov Ka-52 · candidat 1':'Kamov Ka-60 · candidat 8';
  root.userData.kamovCandidate=type;
  const c={body:combat?0x63725b:0x536655,top:0x75816b,dark:0x252c2c,metal:0x727a76,glass:0x789da5,light:0xe4ddbc,beacon:0xcb5148,navGreen:0x538e74};
  const materials=new Map();
@@ -163,20 +163,57 @@ export function createKamovCandidate(T,type){
   },c.body,[false,true]);
   loft(root,'Botaló Ka-60',[[2.85,.65,1.16,2.4],[4.65,.39,1.32,2.02],[6.75,.25,1.40,1.92],[6.87,.25,1.39,1.93]]);
   cockpit(-2.65,1.34);
-  for(const x of [-.64,.64])for(const z of [-.2,.65,1.45])seat(x,z,1.16);
-  box(root,'Terra cabina',1.75,.07,4.0,0,1.01,-.40,c.dark);
-  // Marc de les dues grans obertures: només llindar, muntants i llinda.
-  // No hi ha cap porta opaca ni vidre al centre; els sis seients són visibles.
-  const doorSections=[doorFront,doorMiddle,doorRear];
-  for(const side of [-1,1]){
-   const edge=(s,upper)=>[side*s[1]*Math.cos(Math.PI/6),
-     (s[2]+s[3])/2+(upper?1:-1)*(s[3]-s[2])/4,s[0]];
-   const upper=doorSections.map(s=>edge(s,true)),lower=doorSections.map(s=>edge(s,false));
-   for(let i=0;i<2;i++){
-    rod(root,'Llinda porta lateral oberta',upper[i],upper[i+1],.035,c.dark);
-    rod(root,'Llindar porta lateral oberta',lower[i],lower[i+1],.035,c.dark);
+  // Contoured floor fits inside the cross-sections, including the last
+  // centimetres up to the new rear bulkhead. No individual cargo seats.
+  const floorY=1.15,floorSections=[
+   [-3.27,1.04,.83,2.71,1.65,.22,.79],
+   [-2.86,1.09,.83,2.97,1.70,.12,.85],
+   [-2.30,1.10,.83,3.01,1.82,0,.92],
+   oldDoorFront,doorFront,doorMiddle,doorRear
+  ];
+  const floorEdges=s=>{
+   const r=ring(s),cut=[];
+   for(let i=0;i<12;i++){
+    const p=r[i],q=r[(i+1)%12];
+    if((p[1]-floorY)*(q[1]-floorY)>0||Math.abs(p[1]-q[1])<1e-9)continue;
+    const t=(floorY-p[1])/(q[1]-p[1]);
+    cut.push(p.map((v,j)=>v+(q[j]-v)*t));
    }
-   for(const i of [0,2])rod(root,'Muntant porta lateral oberta',lower[i],upper[i],.040,c.body);
+   return cut.sort((p,q)=>p[0]-q[0]);
+  };
+  for(let i=0;i<floorSections.length-1;i++){
+   const p=floorEdges(floorSections[i]),q=floorEdges(floorSections[i+1]);
+   poly(root,'Terra cabina integrat '+i,[p[0],q[0],q[1],p[1]],c.dark);
+  }
+  // Solid transverse sheet matches the rear cross-section vertex for
+  // vertex and closes the visible cargo bay (no view into the tail).
+  const rearRing=ring(doorRear);
+  const rearInside=rearRing.map(p=>[p[0],p[1],p[2]-.045]);
+  poly(root,'Planxa posterior cabina Ka-60',rearRing.slice().reverse(),c.body);
+  poly(root,'Cara interior planxa posterior Ka-60',rearInside,0x657365);
+  for(let i=0;i<12;i++)poly(root,'Cantell planxa posterior Ka-60',
+    [rearInside[i],rearRing[i],rearRing[(i+1)%12],rearInside[(i+1)%12]],c.body);
+  // One transverse bench, facing the front, attached to the bulkhead.
+  box(root,'Banc posterior · seient',1.50,.13,.59,0,1.49,1.48,0x333e33);
+  box(root,'Banc posterior · respatller',1.50,.48,.11,0,1.78,1.75,0x333e33);
+  for(const x of [-.45,.45]){
+   box(root,'Banc posterior · suport al terra',.085,.275,.40,x,1.2875,1.49,c.metal);
+   box(root,'Banc posterior · ancoratge a planxa',.13,.16,.11,x,1.49,1.77,c.metal);
+  }
+  // Open door frames are returns of the actual fuselage skin, not tubes
+  // floating on a straight chord. Use the very same vertices as the
+  // neighbouring loft panels, including the bulging middle of the jamb.
+  const doorSections=[doorFront,doorMiddle,doorRear],doorRings=doorSections.map(ring);
+  const inward=(p,s)=>[p[0]*.92,(s[2]+s[3])/2+(p[1]-(s[2]+s[3])/2)*.92,p[2]];
+  const rim=(name,p,q,s,t)=>poly(root,name,[p,q,inward(q,t),inward(p,s)],c.body);
+  for(const side of [-1,1]){
+   const [lo,mid,hi]=side===1?[11,0,1]:[7,6,5];
+   for(let i=0;i<2;i++){
+    rim('Llinda porta lateral integrada',doorRings[i][hi],doorRings[i+1][hi],doorSections[i],doorSections[i+1]);
+    rim('Llindar porta lateral integrat',doorRings[i][lo],doorRings[i+1][lo],doorSections[i],doorSections[i+1]);
+   }
+   for(const i of [0,2])for(const [p,q] of [[lo,mid],[mid,hi]])
+    rim('Muntant porta lateral integrat',doorRings[i][p],doorRings[i][q],doorSections[i],doorSections[i]);
    box(root,'Esglaó accés porta oberta',.16,.065,2.62-sheetExtension,side*.94,.99,.40+sheetExtension/2,c.dark);
   }
   // Carenat dorsal continu: un sol conjunt aerodinàmic, no dues nacel·les
