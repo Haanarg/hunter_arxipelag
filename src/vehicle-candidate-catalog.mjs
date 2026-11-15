@@ -8,12 +8,18 @@ const Q=(query)=>({query});
 const C=(variant,title,note)=>({provider:'procedural',variant,title,note});
 export const CATALOG=[
  {id:'heli_combat',name:'Helicòpter de combat · Kamov Ka-52',kind:'aire',
-   note:'Ka-52 candidat Three.js propi: cabina ampla amb dos pilots de costat, nas aplanat, rotors coaxials contrarotatius i ales curtes. Apache actual al costat per comparar.',
+   note:'Quatre propostes de forma basades en fotografies del Ka-52: radom arrodonit, dos pilots de costat, motors laterals i rotors coaxials. A/B/C/D són estudis del model, no variants reals de l’helicòpter.',
    references:[
-    {label:'Ka-52 · fotografia frontal / tres quarts',url:'https://commons.wikimedia.org/wiki/File:Kamov_Ka-52_at_the_MAKS-2013_(01).jpg'},
-    {label:'Ka-52 · fotografia lateral',url:'https://commons.wikimedia.org/wiki/File:Ka-52_at_MAKS-2009.jpg'},
-    {label:'Ka-52 · dimensions del fabricant / exportador',url:'https://roe.ru/pdfs/pdf_4679.pdf'}
-   ],options:[C('ka52','Kamov Ka-52 · candidat 1','Dos rotors de tres pales · pilots de costat · sensor frontal i canó lateral')]},
+    {label:'Frontal · cabina i amplada del radom · Fedor Leukhin, CC BY-SA 2.0',url:'https://commons.wikimedia.org/wiki/File:Russian_Air_Force_Kamov_Ka-52_(19442404960).jpg'},
+    {label:'Tres quarts · morro i cabina · Peer.Gynt, CC BY-SA 2.0',url:'https://commons.wikimedia.org/wiki/File:Kamov_Ka-52_Alligator_-_6816425231.jpg'},
+    {label:'Perfil en vol · motors i cua · Fedor Leukhin',url:'https://commons.wikimedia.org/wiki/File:Russian_Air_Force_Kamov_Ka-52_(19442404770).jpg'},
+    {label:'Dimensions del fabricant / exportador',url:'https://roe.ru/pdfs/pdf_4679.pdf'}
+   ],options:[
+    C('ka52-a','Ka-52 · A · Equilibrat','Morro arrodonit · cabina ampla · proporcions de referència'),
+    C('ka52-b','Ka-52 · B · Morro ample','Radom més ple · cabina més ampla i baixa'),
+    C('ka52-c','Ka-52 · C · Perfil afilat','Morro més llarg i baix · cabina més angular'),
+    C('ka52-d','Ka-52 · D · Facetat lleuger','Volums més simples · menys cares i detalls petits')
+   ]},
  {id:'llanxa',name:'Llanxa ràpida',kind:'mar',options:[
    P('transport-collection-hd','Open sport runabout'),
    P('powerboat-racing-and-launch-ramp','Offshore monohull racer'),

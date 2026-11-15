@@ -1,3 +1,10 @@
+**2026-11-15 · Ka-52: quatre propostes natives a l’editor:**
+- [x] Referències noves frontal (Fedor Leukhin), tres quarts (Peer.Gynt) i perfil en vol (Fedor Leukhin), amb enllaços al catàleg; diàmetre de rotor 14,5 m segons el fullet de Rosoboronexport.
+- [x] A equilibrat; B radom més ample i cabina baixa; C morro més llarg, baix i angular; D facetat i alleugerit. Són estudis de proporcions del Ka-52, no designacions reals. Quatre propostes al costat de l’Apache actual, mateixa escala i càmera compartida.
+- [x] Cabina transparent amb dos seients, radom diferenciat, motors laterals amb preses enfonsades, escapaments, dos rotors coaxials animats, ales curtes, càrrega, sensor inferior i canó dret. Peces agrupades per conjunts editables; cua sense rotor.
+- [x] Comprovacions Three.js: geometria finita, unions radom/cabina, parabrisa lliure, quatre geometries diferents, rotors i JSON. Model Ka-60 del joc intacte. Revisió `live-editor-20261115-ka52-four-proposals-1`.
+- [ ] Elecció de proposta i valoració de l’usuari al visor WebGL; cap integració al joc d’aquestes propostes.
+
 **2026-11-15 · Ka-60 A aprovat i neteja de cua:**
 - [x] Variant A nativa a la fàbrica del joc, escala mundial ×2 sense factor duplicat, rotors independents, contacte inferior i LOD distant. Retirats el Huey i la pestanya Ka-60 del laboratori; Ka-52/Apache conservats.
 - [x] Botó Esborrar resoltes, amb confirmació i persistència local; les pendents es conserven i la cua compartida s’actualitza amb el botó existent.

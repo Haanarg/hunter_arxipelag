@@ -33,6 +33,7 @@ jobs:
           node --check src/vehicle-reference-candidates.mjs
           node --check src/ka60-runtime.mjs
           node --check src/kamov-reference-candidates.mjs
+          node --check src/ka52-proposals.mjs
           node --check tests/kamov-reference-candidates.mjs
           node --check src/t90m-runtime.mjs
           node --check src/vehicle-specs.mjs
@@ -66,6 +67,7 @@ jobs:
           node tests/btr82-published-assets.cjs
           node tests/vehicle-candidate-studio.cjs
           node tests/kamov-reference-candidates.mjs
+          node tests/ka52-proposals.mjs
           node tests/ka60-game-integration.mjs
           node tests/vehicle-live-editor.mjs
           node tests/helicopter-engine-comparison.cjs

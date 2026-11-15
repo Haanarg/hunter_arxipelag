@@ -13,8 +13,8 @@ for(const id of ['heli_combat']){
  assert(names.includes(id),'Cal la pestanya '+id);
  const config=CATALOG.find(x=>x.id===id);
  assert.equal(config.kind,'aire');
- assert.equal(config.options.length,1,'Actual i candidat Kamov');
- assert.equal(config.options[0].variant,'ka52');
+ assert.equal(config.options.length,4,'Actual i quatre propostes Kamov');
+ assert.deepEqual(config.options.map(x=>x.variant),['ka52-a','ka52-b','ka52-c','ka52-d']);
 }
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8');
 assert(!lab.includes('prepareHueyDuaneRuntime'));
