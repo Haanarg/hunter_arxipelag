@@ -4,7 +4,7 @@ import {CATALOG} from '../src/vehicle-candidate-catalog.mjs';
 
 const names=CATALOG.map(x=>x.id);
 assert(names.includes('cotxe_civil'),'Cal el model C1A actual editable');
-assert.equal(CATALOG.find(x=>x.id==='cotxe_civil').options.length,0);
+assert.deepEqual(CATALOG.find(x=>x.id==='cotxe_civil').options.map(x=>x.variant),['civil-rounded-nose']);
 assert(!names.includes('cotxe'),'El GAZ aprovat ha de desaparèixer de les pestanyes');
 assert(!names.includes('tanc'),'El T-90M ja no ha de sortir al laboratori');
 assert(!names.includes('tanqueta'),'La BTR-82 3B ja no ha de sortir al laboratori');
