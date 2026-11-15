@@ -1,3 +1,7 @@
+**2026-11-15 · BTR-82 3B, petició e50a0eaa:**
+- [x] Reducció uniforme 20%: escala compartida 1,8125 → 1,45; geometria, triangles i pivots locals intactes. Hitbox, radi, LOD, rodes i origen de tret escalen amb el vehicle. Punts d'autoapuntat bazuca adaptats. Editor i joc SOLO/COOP comparteixen l'escala; pestanya verda conservada.
+- [ ] Validació visual i Cloudflare.
+
 **2026-11-15 · Recuperació de tota la flota al laboratori:**
 - [x] 16 tipus de `vehicleSpecs` recuperats, més Mi-24 experimental. Cinc pestanyes pendents en vermell davant de dotze aprovades en verd (camió/barca/windsurf conservats expressament a eaaaecf; hovercraft D seleccionat). Apache és referència del futur helicòpter de combat, Ka-52 i Mi-24 continuen pendents.
 - [x] Els validats mostren la fàbrica real del joc, inclosos GAZ, Ka-60 A, C1A, T-90M i BTR-82. Retirats del visor els proxies LOD ocults i les referències d'execució no serialitzables, sense canviar cap model del joc. Candidats existents i controls del tanc preservats.

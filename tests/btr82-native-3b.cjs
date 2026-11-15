@@ -11,7 +11,10 @@ const dimensions=read('src/vehicle-specs.mjs');
 const hb=dimensions.match(/tanqueta:\[([0-9.]+),([0-9.]+)\]/);
 assert(hb,'Falta la caixa física de la tanqueta');
 const [width,depth]=hb.slice(1).map(Number);
-const tanketteWorldScale=1.8125;
+const scaleMatch=dimensions.match(/tanqueta:([0-9.]+),tanc:2/);
+assert(scaleMatch);
+const tanketteWorldScale=Number(scaleMatch[1]);
+assert(Math.abs(tanketteWorldScale/1.8125-.8)<1e-9,'Reducció uniforme del 20%');
 const modelWidth=2*(1.688+.25*1.06)*(.65*1.5)*tanketteWorldScale;
 const modelLength=2*5.425*(.65*1.5)*tanketteWorldScale;
 assert(width*tanketteWorldScale>=modelWidth,
@@ -21,7 +24,7 @@ assert(depth*tanketteWorldScale>=modelLength,
 
 const factorySource=read('src/vehicle-model-core.mjs');
 const specsSource=read('src/vehicle-turret-core.mjs');
-assert(factorySource.includes("import {installBtr82Model3B} from './btr82-3b-native.mjs';"));
+assert(/import \{installBtr82Model3B\} from '\.\/btr82-3b-native\.mjs(?:\?[^']+)?';/.test(factorySource));
 assert(factorySource.includes("installBtr82Model3B(THREE,g,{resources})"));
 assert(factorySource.includes('tanqueta:25*Math.PI/180'),'El gir visual màxim ha de ser de 25 graus');
 assert(!factorySource.includes("for(const x of[-1.42,1.42])for(const z of[-1.55,0,1.55])"));
@@ -68,9 +71,9 @@ const sceneApi=new Function('THREE','createBtr82AngularGeometry','createBtr82Tur
  'BTR82_CABIN_SHIFT_Z','vehicleSpecs',
  strip(source)+';return {installBtr82Model3B,BTR82_3B_GAME_FIT};')
  (THREE,()=>fakeGeometry(),()=>fakeGeometry(),g=>g,()=>fakeGeometry(),
- -.65,-.96,2.1975,2.0325,.75,.33,.38,{scales:{tanqueta:1.8125}});
+ -.65,-.96,2.1975,2.0325,.75,.33,.38,{scales:{tanqueta:tanketteWorldScale}});
 const specApi=new Function('vehicleSpecs',strip(specsSource)+';return {turretSpecs,vehicleGunPose};')
- ({scales:{tanqueta:1.8125,tanc:2.25}});
+ ({scales:{tanqueta:tanketteWorldScale,tanc:2.25}});
 const first=new Group();
 sceneApi.installBtr82Model3B(THREE,first);
 assert.equal(first.userData.btr82Model,'3B');
@@ -134,7 +137,7 @@ assert(dimensions.includes('tanqueta:6.25'),'Ampliar el radi físic de la tanque
 assert(Math.hypot(width/2,depth/2)<6.25,'El radi de col·lisió ha de cobrir la nova hitbox');
 assert(Math.abs(first.children[0].geometry.getAttribute('position').getX(0)+xFit*1.5)<1e-8);
 assert(Math.abs(first.children[0].geometry.getAttribute('position').getZ(0)+zFit*1.5)<1e-8);
-const oldWheelRadius=.8125*yFit*1.8125;
+const oldWheelRadius=.8125*yFit*tanketteWorldScale;
 assert(Math.abs(frontWheels[0].userData.radius/oldWheelRadius-1.5)<1e-8,
  'Les rodes també creixen un 50%');
 assert.equal(spec.turretYawRate,2.05);

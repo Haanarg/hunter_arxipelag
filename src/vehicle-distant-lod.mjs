@@ -1,7 +1,7 @@
 // LOD visual distant de la flota civil i militar. La física i les
 // referències de canons, rodes i ocupants sempre romanen al grup complet.
-import {vehicleSpecs} from './vehicle-specs.mjs';
-import {createBtr82DistantGeometry} from './btr82-3b-native.mjs?rev=btr82-distant-1';
+import {vehicleSpecs} from './vehicle-specs.mjs?rev=btr82-scale-80-1';
+import {createBtr82DistantGeometry} from './btr82-3b-native.mjs?rev=btr82-scale-80-1';
 export const distantVehicleRanges=Object.freeze({
   ferry:[720,850],heli:[650,780],heli_combat:[650,780],
   tanc:[550,670],tanqueta:[520,640],

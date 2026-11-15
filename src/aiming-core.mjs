@@ -1,4 +1,5 @@
 // Target selection extracted from the individual game. Geometry is supplied by its adapter.
+import {vehicleSpecs} from './vehicle-specs.mjs?rev=btr82-scale-80-1';
 export const SMALL_ARMS_AIM_CONE=.82,SMALL_ARMS_AIM_VERTICAL=Math.PI/2;
 // Fusell d'assalt i franctirador: 80° horitzontals totals, ±40°.
 // No s'amplia el con quan el blanc és per damunt o per sota del jugador.
@@ -54,9 +55,10 @@ export function weaponTargetPriority(enemy,shotClass='light',personalBazooka=fal
 export function armoredBazookaPoints(target,baseY){
  const {x,z}=target,hd=target.hd??target.heading??0,
    fx=-Math.sin(hd),fz=-Math.cos(hd),
-   heights=target.t==='tanqueta'?[3.15,2.1,4.05]:[2.8,1.9,3.8];
+   factor=target.t==='tanqueta'?vehicleSpecs.scales.tanqueta/1.8125:1,
+   heights=(target.t==='tanqueta'?[3.15,2.1,4.05]:[2.8,1.9,3.8]).map(h=>h*factor);
  return [...heights.map(h=>({x,y:baseY+h,z})),
-   ...[-2.3,2.3].map(d=>({x:x+fx*d,y:baseY+heights[0],z:z+fz*d}))];
+   ...[-2.3*factor,2.3*factor].map(d=>({x:x+fx*d,y:baseY+heights[0],z:z+fz*d}))];
 }
 export function considerArmoredBazooka(selector,target,kind,priority,baseY){
  for(const point of armoredBazookaPoints(target,baseY))

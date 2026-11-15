@@ -12,9 +12,9 @@ for(const kind of ['enemy','vehicle']){
  selector.consider(soldier,'enemy',weaponTargetPriority(soldier,'heavy',true),1,1.5,-15);
  considerArmoredBazooka(selector,btr,kind,0,0);
  assert.equal(focus.target,btr);assert.equal(focus.kind,kind);
- const partial={},visible=make(partial,{isOnScreen:(x,y)=>y>=3.1,isClear:(x,y,z,tx,ty)=>ty>=3.1});
+ const partial={},visible=make(partial,{isOnScreen:(x,y)=>y>=2.5,isClear:(x,y,z,tx,ty)=>ty>=2.5});
  considerArmoredBazooka(visible,btr,kind,0,0);
- assert.equal(partial.target,btr);assert.ok(partial.point.y>=3.1);
+ assert.equal(partial.target,btr);assert.ok(partial.point.y>=2.5);
  for(const extra of [{isOnScreen:()=>false},{isClear:()=>false}]){
   const no={},blocked=make(no,extra);considerArmoredBazooka(blocked,btr,kind,0,0);assert.equal(no.target,null);
  }

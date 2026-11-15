@@ -7,7 +7,7 @@ import {shapeBtr823BTurret,BTR82_3B_TURRET_FORWARD_Z,
  BTR82_3B_TURRET_SCALE} from './btr82-3b-geometry.mjs';
 import {createBtr823BHardwareBatch} from './btr82-3b-details.mjs?rev=rear-side-mirrored-v5';
 import {createBtr82TurretV3Geometry,BTR82_CABIN_SHIFT_Z} from './btr82-hull-v3.mjs';
-import {vehicleSpecs} from './vehicle-specs.mjs';
+import {vehicleSpecs} from './vehicle-specs.mjs?rev=btr82-scale-80-1';
 
 // Conservam les proporcions EXACTES del 3B del visor: la compressió
 // longitudinal antiga (.46 contra .65 en X/Y) feia solapar pneumàtics.

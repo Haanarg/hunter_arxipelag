@@ -1,4 +1,4 @@
-import {vehicleSpecs} from './vehicle-specs.mjs';
+import {vehicleSpecs} from './vehicle-specs.mjs?rev=btr82-scale-80-1';
 // Tank/tankette rig coordinates and controller, shared by visual model and server.
 export const turretSpecs=Object.freeze({
  // Pivots del BTR-82 3B visual (mateixos en navegador i servidor COOP).
