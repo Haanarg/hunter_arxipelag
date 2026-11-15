@@ -1,3 +1,4 @@
+import {installFerryModel} from './ferry-proposals.mjs?rev=ferry-d-approved-1';
 import {turretSpecs,advanceTurret,stepManualTurret} from './vehicle-turret-core.mjs?rev=btr82-scale-80-1';
 import {installBtr82Model3B} from './btr82-3b-native.mjs?rev=btr82-scale-80-1';
 export {createBtr82DistantGeometry} from './btr82-3b-native.mjs?rev=btr82-scale-80-1';
@@ -6,7 +7,7 @@ import {vehicleSpecs} from './vehicle-specs.mjs?rev=btr82-scale-80-1';
 import {createKa60Runtime,KA60_RUNTIME_ID} from './ka60-runtime.mjs?rev=ka60-approved-1';
 import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs?rev=vivid-engine-cover-2';
 import {createStreetfighter25,STREETFIGHTER_25_META} from './streetfighter-25-geometry.mjs';
-import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?v=0.6.216&btr82=1&t90m=1&ka60=1';
+import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?v=0.6.216&btr82=1&t90m=1&ka60=1&ferryD=1';
 import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.mjs?v=0.6.81';
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 export const vehicleModels=Object.freeze({
@@ -697,28 +698,7 @@ export const vehicleModels=Object.freeze({
         rig.rotation.z=.055;
       }
       if(t==='ferry'){
-        const hullCol=0x4e6570,deckCol=0x8f9692,edge=0xd7d2bd,cabin=0xe7e3d5;
-        box(g,32,2.25,55,hullCol,0,.7,0,'paint');
-        box(g,30.4,.3,51.6,deckCol,0,2.12,0,'metal');
-        for(const x of[-15.05,15.05])box(g,.28,1.05,51.4,edge,x,2.58,0,'metal');
-        // Les rampes articulades pivoteixen al cantell de la coberta.
-        g.userData.ferryRamps=[];
-        for(const side of [-1,1]){
-          const hinge=new THREE.Group();hinge.position.set(0,2.2,side*25.6);
-          hinge.rotation.x=side*Math.atan2(2.2-.45,6.2);g.add(hinge);
-          box(hinge,13.6,.3,6.2,deckCol,0,-.15,side*3.1,'metal');
-          for(const x of[-6.55,6.55])box(hinge,.22,.24,6.0,edge,x,.07,side*3.1,'metal');
-          g.userData.ferryRamps.push({hinge,side});
-        }
-        box(g,3.35,3.7,7.6,cabin,11.5,4.05,1.8,'paint');
-        box(g,3.05,1.05,7.1,glass,11.5,4.62,1.8,'glass');
-        box(g,3.65,.28,8.05,hullCol,11.5,6.02,1.8,'metal');
-        g.userData.damageSmokeOrigin=[11.5,6.35,1.8]; // sobre el sostre de la cabina
-        for(const z of[-1.05,1.15,3.35])box(g,.16,1.05,.18,hullCol,9.87,4.62,z,'metal');
-        rod(g,[11.5,6.15,3.8],[11.5,9.4,3.8],.11,metal);box(g,1.25,.18,.18,0x30383a,11.5,9.42,3.8,'metal');
-        for(const x of[-14.3,14.3])for(const z of[-21,-14,-7,0,7,14,21])round(g,.18,.28,0x252d31,x,1.45,z,'z','rubber');
-        for(const z of[-24.5,24.5])for(const x of[-10,-5,0,5,10])box(g,2.2,.08,.28,0xf1e9c5,x,2.32,z,'paint');
-        g.userData.ferryDeck=true;
+        installFerryModel(THREE,g);
       }
       if(t==='hover'){
         // Variant D «Comandament» validada a hovercraft-proves.html.

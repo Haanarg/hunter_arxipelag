@@ -1,3 +1,8 @@
+**2026-11-15 · Ferri D aprovat:**
+- [x] Model D compartit per joc i laboratori; eliminats A/B/C i l'antic model de caixes. Ferri validat en verd, únic visor editable. Geometria de coberta i cabina conservada; longitud de rampes 6,2 m i angle segons física autoritativa. LOD llunyà blau amb cabina de dos nivells i fum adaptat.
+- [x] PASS ferri D 117 malles 1820 triangles 32.10 × 11.12 × 63.25; Ferry ramp geometry: walking, truck/GAZ transitions, cabin and submerged vehicles OK.
+- [ ] Validació visual en partida, cooperatiu complet i desplegament Cloudflare.
+
 **2026-11-15 · Ferri: quatre propostes natives:**\n- [x] Fotografies de Western Ferries, transbordador fluvial, ferri de pont elevat i Veidnes enllaçades al catàleg. Quatre estudis editables A/B/C/D, amb casc facetat, dos extrems, coberta contínua, rampes i ponts diferenciats.\n- [x] Dimensions físiques del joc compartides, escala fixa al comparador, secció central lliure; es conserva el ferri actual. Comprovacions Three.js: ferry-a 112 malles 1760 triangles 32.10 × 10.37 × 63.75; ferry-b 99 malles 1580 triangles 32.10 × 9.22 × 63.75; ferry-c 113 malles 1772 triangles 32.10 × 20.07 × 63.75; ferry-d 117 malles 1820 triangles 32.10 × 11.12 × 63.75.
 - [ ] Validació visual i desplegament Cloudflare; no integrat al joc.
 

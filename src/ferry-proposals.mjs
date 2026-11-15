@@ -1,17 +1,10 @@
-// Four original low-poly double-ended ferries inspired by photographs.
-// All share the existing game's vehicle deck and ramp landing coordinates.
+// Ferri costaner D aprovat. Geometria editable compartida pel joc i l'editor.
 import {vehicleSpecs} from './vehicle-specs.mjs';
-export const FERRY_VERSION='ferry-proposals-20261115-1';
-export const FERRY_MODELS=Object.freeze({
- 'ferry-a':{title:'A · Transbordador escocès',hull:0x963e34,trim:0xf0eee3,deck:0x626d70,style:'scottish',shoulder:13.0,keel:10.6,side:1.10},
- 'ferry-b':{title:'B · Ferri fluvial',hull:0x33715d,trim:0xf4efe1,deck:0x747d78,style:'river',shoulder:14.4,keel:12.2,side:.80},
- 'ferry-c':{title:'C · Pont elevat',hull:0x354e61,trim:0xe9ece8,deck:0x5a666a,style:'gantry',shoulder:12.5,keel:9.2,side:1.25},
- 'ferry-d':{title:'D · Ferri costaner',hull:0x294d70,trim:0xe8e8df,deck:0x747a7c,style:'coastal',shoulder:13.6,keel:10.0,side:1.35}
-});
-export function createFerryProposal(T,id){
- const p=FERRY_MODELS[id];if(!p)throw Error('Ferri desconegut: '+id);
+export const FERRY_MODEL_ID='ferry-d';
+const p=Object.freeze({title:'Ferri costaner · D',hull:0x294d70,trim:0xe8e8df,deck:0x747a7c,shoulder:13.6,keel:10.0,side:1.35});
+export function createFerryModel(T){
  const d=vehicleSpecs.decks.ferry, root=new T.Group();root.name=p.title;
- root.userData.ferryProposal=id;root.userData.labFixedScale=true;
+ root.userData.ferryModel=FERRY_MODEL_ID;root.userData.labFixedScale=true;
  const colors={metal:0x44535a,dark:0x263538,white:p.trim,glass:0x456973,yellow:0xe6c15c,red:0xc34e38,waterline:0x303c43,rubber:0x22282c};
  const materials=new Map();
  const mat=(color,glass=false)=>{const k=color+':'+glass;if(!materials.has(k))materials.set(k,new T.MeshStandardMaterial({color,roughness:glass?.2:.83,metalness:glass?.08:.12,transparent:glass,opacity:glass?.44:1,depthWrite:!glass,side:T.DoubleSide,flatShading:true}));return materials.get(k)};
@@ -53,9 +46,9 @@ export function createFerryProposal(T,id){
   for(const z of [-18,-9,0,9,18]){
    box(deck,'Defensa lateral',[.22,.58,1.65],[side*15.94,1.34,z],colors.rubber);
   }
-  if(p.style!=='river')for(const z of [-18,-9,0,9,18])
+  for(const z of [-18,-9,0,9,18])
    box(deck,'Muntant de barana',[.16,.54,.17],[edge,d.y+p.side+.27,z],p.trim);
-  if(p.style!=='river')rod(deck,'Barana lateral',[edge,d.y+p.side+.54,-20],[edge,d.y+p.side+.54,20],.065,colors.metal);
+  rod(deck,'Barana lateral',[edge,d.y+p.side+.54,-20],[edge,d.y+p.side+.54,20],.065,colors.metal);
  }
  for(const x of [-6.2,0,6.2]){
   for(const z of [-20,-10,0,10,20])box(deck,'Marca de carril',[.12,.014,4.2],[x,d.y+.009,z],0xe5dfc9);
@@ -63,9 +56,9 @@ export function createFerryProposal(T,id){
  for(const side of [-1,1]){
   const ramp=group(side<0?'Rampa de proa':'Rampa de popa');
   ramp.position.set(0,d.y,side*d.halfL);
-  ramp.rotation.x=side*Math.atan2(d.y-d.rampY,d.ramp);
+  ramp.rotation.x=side*Math.asin((d.y-d.rampY)/d.ramp);
   ramp.userData.ferryRamp=side;
-  const length=Math.hypot(d.ramp,d.y-d.rampY);
+  const length=d.ramp;
   box(ramp,'Planxa mòbil',[2*d.rampHalfW,.25,length],[0,-.125,side*length/2],p.deck);
   for(const x of [-6.54,6.54])box(ramp,'Vorada de rampa',[.22,.27,length],[x,.135,side*length/2],colors.yellow);
   for(const j of [1,2,3])box(ramp,'Nervi antilliscant',[12.7,.045,.085],[0,.02,side*length*j/4],colors.metal);
@@ -96,28 +89,13 @@ export function createFerryProposal(T,id){
   return roof+.19;
  };
  const house=group('Superestructura i pont de comandament');
- let mastX=11.5,mastZ=1.8,mastY=0;
- if(p.style==='gantry'){
-  // Portal supports stand outside the existing deck; the span keeps
-  // a high central opening (10.6 m above the driving surface).
-  for(const x of [-15.12,15.12]){
-   box(house,'Pilar del pont',[1.12,10.60,5.8],[x,d.y+5.30,1.8],p.trim);
-  }
-  box(house,'Travesser elevat',[31.4,1.0,5.9],[0,d.y+11.10,1.8],p.trim);
-  mastX=0;mastY=bridge(house,0,1.8,d.y+11.60,12.4,5.0,2.65,.8);
- }else if(p.style==='coastal'){
-  // Side accommodation keeps the original cabin footprint below deck
-  // clearance; the upper level is entirely over the same footprint.
-  box(house,'Bloc inferior de serveis',[3.45,2.8,7.6],[11.5,d.y+1.4,1.8],p.trim);
-  for(const z of [-.35,1.8,3.95])for(const x of [9.77,13.23])
-   box(house,'Finestra de serveis',[.025,.57,.83],[x,d.y+1.91,z],0x364e56);
-  mastY=bridge(house,11.5,1.8,d.y+2.8,3.45,6.8,2.50,.36);
- }else{
-  const pedestal=p.style==='river'?1.2:2.05;
-  box(house,'Caseta de suport',[3.4,pedestal,7.45],[11.5,d.y+pedestal/2,1.8],p.trim);
-  mastY=bridge(house,11.5,1.8,d.y+pedestal,3.34,p.style==='river'?5.5:7.05,p.style==='river'?2.2:2.50,.38);
-  if(p.style==='scottish')box(house,'Franja vermella lateral',[3.45,.25,7.5],[11.5,d.y+.30,1.8],p.hull);
- }
+ const mastX=11.5,mastZ=1.8;
+ // The two-level wheelhouse stays inside the original cabin footprint.
+ box(house,'Bloc inferior de serveis',[3.45,2.8,7.6],[11.5,d.y+1.4,1.8],p.trim);
+ for(const z of [-.35,1.8,3.95])for(const x of [9.77,13.23])
+  box(house,'Finestra de serveis',[.025,.57,.83],[x,d.y+1.91,z],0x364e56);
+ const mastY=bridge(house,11.5,1.8,d.y+2.8,3.45,6.8,2.50,.35);
+ root.userData.damageSmokeOrigin=[mastX,mastY+.15,mastZ];
  rod(house,'Màstil de navegació',[mastX,mastY,mastZ],[mastX,mastY+3,mastZ],.12,colors.metal);
  box(house,'Radar',[2.1,.17,.20],[mastX,mastY+2.85,mastZ],p.trim);
  for(const side of [-1,1]){
@@ -127,4 +105,14 @@ export function createFerryProposal(T,id){
  }
  root.userData.deckContract={...d,cabin:{...d.cabin}};
  return root;
+}
+
+export function installFerryModel(T,host){
+ const model=createFerryModel(T);
+ host.add(model);
+ host.userData.ferryModel=FERRY_MODEL_ID;
+ host.userData.ferryDeck=true;
+ host.userData.ferryRamps=model.children.filter(g=>g.userData.ferryRamp).map(hinge=>({hinge,side:hinge.userData.ferryRamp}));
+ host.userData.damageSmokeOrigin=model.userData.damageSmokeOrigin.slice();
+ return model;
 }

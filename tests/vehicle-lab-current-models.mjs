@@ -6,7 +6,7 @@ import {vehicleSpecs} from '../src/vehicle-specs.mjs';
 const names=CATALOG.map(x=>x.id);
 assert.deepEqual(names,["heli_combat","mi24","llanxa","llanxa_coets","ferry","heli","cotxe","cotxe_civil","camio","tanc","tanqueta","moto","bici","hover","moto_aquatica","barca_rems","windsurf"]);
 assert.deepEqual(CATALOG.filter(c=>!c.experimental).map(c=>c.id).sort(),Object.keys(vehicleSpecs.scales).sort());
-assert.deepEqual(CATALOG.filter(c=>!c.validated).map(c=>c.id),["heli_combat","mi24","llanxa","llanxa_coets","ferry"]);
+assert.deepEqual(CATALOG.filter(c=>!c.validated).map(c=>c.id),["heli_combat","mi24","llanxa","llanxa_coets"]);
 assert(CATALOG.filter(c=>c.validated).every(c=>c.options.length===0));
 assert(CATALOG.find(c=>c.id==='mi24').experimental);
 for(const id of ['heli_combat']){

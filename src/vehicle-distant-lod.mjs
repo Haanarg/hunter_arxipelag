@@ -14,7 +14,7 @@ const colorByType=Object.freeze({
   tanc:0x686f50,tanqueta:0x64694d,jeep:0x6b7758,
   heli:0x687660,heli_combat:0x535b4b,
   llanxa:0x667176,llanxa_coets:0x667176,
-  hover:0x838d7f,ferry:0x747e86
+  hover:0x838d7f,ferry:0x294d70
 });
 const OPEN=new Set(['bici','moto','moto_aquatica','windsurf','hover','llanxa','llanxa_coets']);
 export const hasDistantVehicleLOD=type=>type!=='barca_rems'&&!!vehicleSpecs.hitboxes[type];
@@ -86,10 +86,21 @@ export function createDistantVehicleFactory(THREE,resources=null){
           box(0,1.65,2.66,.80,.58,.68,0x424b50);
           box(0,2.09,2.25,.94,.34,1.45,0x20262a);
         }
+      }else if(type==='ferry'){
+        box(0,.9,0,32,2.2,51.2,main);
+        box(0,2.06,0,28.6,.28,51.2,0x747a7c);
+        for(const side of [-1,1]){
+          box(side*14.5,2.875,0,.48,1.35,40,0xe8e8df);
+          box(0,3.95,side*26.9,13.4,.28,3.0,0x747a7c);
+        }
+        box(11.5,3.6,1.8,3.45,2.8,7.6,0xe8e8df);
+        box(11.5,5.55,1.8,3.45,1.1,6.8,0xe8e8df);
+        box(11.5,6.65,1.8,3.45,1.1,6.8,0x456973);
+        box(11.5,7.55,1.8,3.8,.2,7.15,main);
+        box(11.5,9.05,1.8,.22,3,.22,0x44535a);
       }else{
         box(0,.52,0,w*.94,.85,d*.93,main);
-        if(type==='ferry')box(w*.20,2.25,d*.06,w*.25,2.2,d*.23,0xabb7bc);
-        else if(type==='hover')box(0,1.34,-d*.12,w*.67,.8,d*.46,0x627779);
+        if(type==='hover')box(0,1.34,-d*.12,w*.67,.8,d*.46,0x627779);
         else if(type==='windsurf')box(0,1.8,d*.06,.09,2.5,.12,0xc9c3a1);
       }
     }else if(type==='heli'){
