@@ -1,10 +1,77 @@
 // Original low-poly geometry, based on photographs linked in the lab catalogue.
 // Nose = -Z, metres before the lab's uniform comparison scale. No external assets.
-export const KAMOV_VERSION='kamov-20261115-double-scale-10';
-export function createKamovCandidate(T,type){
- if(!['ka60','ka52'].includes(type))throw new Error('Kamov desconegut: '+type);
+export const KAMOV_VERSION='kamov-20261115-double-scale-lod-11';
+export const KA60_LOD_VARIANTS=Object.freeze(['ka60-a','ka60-b','ka60-c']);
+// Batching is performed in each independent animation pivot's coordinates,
+// before the requested model scale is applied.
+function batchKa60(T,root,detail){
+ const rotorGroups=root.children.filter(n=>n.userData.kamovRotor);
+ const classify=(m)=>{
+  const n=m.name;
+  if(m.material.transparent){
+   // Keep windows on opposite sides in separate transparent draw calls.
+   const box=new T.Box3().setFromObject(m),center=box.getCenter(new T.Vector3());
+   return detail===1?n:(n.startsWith('Finestró')?'Finestrons':'Parabrisa')+(center.x<0?' esquerra':' dreta');
+  }
+  if(detail===3)return 'Estructura';
+  if(/^(Morro|Junta visible|Pitot)/.test(n))return 'Morro';
+  if(/^(Fuselatge|Marc fi|Fil negre|Muntant|Llinda|Esglaó)/.test(n))return 'Fuselatge i marcs';
+  if(/^(Terra|Planxa posterior|Cara interior planxa|Cantell planxa|Banc|Coixí|Respatller|Reposacaps|Palanca|Tauler|Pantalla)/.test(n))return 'Interior';
+  if(/^(Carenat dorsal|Entrada aire|Boca fosca|Tub escapament|Cèrcol|Lama|Eix rotor principal)/.test(n))return 'Motor';
+  if(/^(Pneumàtic|Llanta|Amortidor|Tirant|Carenat fixació)/.test(n))return 'Tren aterratge';
+  if(detail===1){
+   if(/^(Botaló|Espinada|Antena dorsal)/.test(n))return 'Botaló';
+   if(/^(Conducte|Deriva|Capçal deriva|Frontissa|Balisa)/.test(n))return 'Deriva i fenestron';
+   return 'Estabilitzadors i aletes';
+  }
+  return 'Cua';
+ };
+ root.updateMatrixWorld(true);
+ function merge(owner,skipRotors){
+  const list=[];
+  owner.traverse(n=>{if(!n.isMesh)return;
+   if(skipRotors){for(let p=n.parent;p&&p!==owner;p=p.parent)if(p.userData.kamovRotor)return}
+   list.push(n);
+  });
+  const inverse=owner.matrixWorld.clone().invert(),buckets=new Map();
+  for(const m of list){
+   const part=skipRotors?classify(m):'Rotor animat';
+   const key=part+'|'+m.material.uuid;
+   if(!buckets.has(key))buckets.set(key,{part,material:m.material,positions:[],normals:[],sources:[]});
+   const b=buckets.get(key),g=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();
+   g.applyMatrix4(new T.Matrix4().multiplyMatrices(inverse,m.matrixWorld));
+   if(!g.attributes.normal)g.computeVertexNormals();
+   for(const v of g.attributes.position.array)b.positions.push(v);
+   for(const v of g.attributes.normal.array)b.normals.push(v);
+   b.sources.push(m.name);g.dispose();
+  }
+  for(const m of list){m.removeFromParent();m.geometry.dispose()}
+  for(const b of buckets.values()){
+   const geometry=new T.BufferGeometry();
+   geometry.setAttribute('position',new T.Float32BufferAttribute(b.positions,3));
+   geometry.setAttribute('normal',new T.Float32BufferAttribute(b.normals,3));
+   geometry.computeBoundingSphere();
+   const m=new T.Mesh(geometry,b.material);
+   m.name=b.part+' · '+b.material.color.getHexString();
+   m.userData.batchedParts=b.sources;
+   m.castShadow=!b.material.transparent;m.receiveShadow=true;
+   owner.add(m);
+  }
+  // Remove now-empty wheel/blade groups but never the animation pivots.
+  const empty=[];
+  owner.traverse(n=>{if(n!==owner&&n.isGroup&&!n.userData.kamovRotor)empty.push(n)});
+  for(const n of empty.reverse())if(n.children.length===0)n.removeFromParent();
+ }
+ for(const rotor of rotorGroups)merge(rotor,false);
+ root.updateMatrixWorld(true);merge(root,true);
+}
+export function createKamovCandidate(T,variant){
+ const detail=KA60_LOD_VARIANTS.indexOf(variant)+1;
+ const type=detail?'ka60':variant;
+ if(!['ka60','ka52'].includes(type))throw new Error('Kamov desconegut: '+variant);
  const combat=type==='ka52',root=new T.Group();
- root.name=combat?'Kamov Ka-52 · candidat 1':'Kamov Ka-60 · candidat 10';
+ root.name=combat?'Kamov Ka-52 · candidat 1':detail?'Kamov Ka-60 · variant '+['','A','B','C'][detail]:'Kamov Ka-60 · candidat 10';
+ root.userData.kamovDetail=detail;
  root.userData.kamovCandidate=type;
  const c={body:combat?0x63725b:0x536655,top:0x75816b,dark:0x252c2c,metal:0x727a76,glass:0x789da5,light:0xe4ddbc,beacon:0xcb5148,navGreen:0x538e74};
  const materials=new Map();
@@ -15,7 +82,10 @@ export function createKamovCandidate(T,type){
  };
  const mesh=(g,name,geo,color=c.body,glass=false)=>{const m=new T.Mesh(geo,material(color,glass));m.name=name;m.castShadow=!glass;m.receiveShadow=true;g.add(m);return m};
  const box=(g,name,w,h,d,x,y,z,col=c.body)=>{const m=mesh(g,name,new T.BoxGeometry(w,h,d),col);m.position.set(x,y,z);return m};
- const cyl=(g,name,r,d,x,y,z,col=c.dark,axis='y',segments=12)=>{const m=mesh(g,name,new T.CylinderGeometry(r,r,d,segments),col);m.position.set(x,y,z);if(axis==='x')m.rotation.z=Math.PI/2;if(axis==='z')m.rotation.x=Math.PI/2;return m};
+ const cyl=(g,name,r,d,x,y,z,col=c.dark,axis='y',segments=12)=>{if(detail){
+   const large=name==='Pneumàtic'||name==='Llanta'||name==='Balisa superior deriva'||name.startsWith('Entrada aire')||name.startsWith('Tub escapament');
+   segments=Math.min(segments,detail===1?(large?12:8):detail===2?(large?8:6):(large?8:4));
+  }const m=mesh(g,name,new T.CylinderGeometry(r,r,d,segments),col);m.position.set(x,y,z);if(axis==='x')m.rotation.z=Math.PI/2;if(axis==='z')m.rotation.x=Math.PI/2;return m};
  const rod=(g,name,a,b,r=.03,col=c.dark)=>{const p=new T.Vector3(...a),q=new T.Vector3(...b),v=q.clone().sub(p);const m=cyl(g,name,r,v.length(),0,0,0,col);m.position.copy(p.add(q).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),v.normalize());return m};
  const poly=(g,name,pts,col=c.body,glass=false)=>{const data=[];for(let i=1;i<pts.length-1;i++)data.push(...pts[0],...pts[i],...pts[i+1]);const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(data,3));geo.computeVertexNormals();return mesh(g,name,geo,col,glass)};
  // Loft facetat: els vidres substitueixen la xapa, i les obertures
@@ -65,9 +135,14 @@ export function createKamovCandidate(T,type){
   }
  };
  const loft=(g,name,sections,windowPanel=()=>false,col=c.body,caps=[true,true])=>{
-  const rings=sections.map(ring);
-  for(let j=0;j<rings.length-1;j++)for(let k=0;k<12;k++){
-   const points=[rings[j][k],rings[j+1][k],rings[j+1][(k+1)%12],rings[j][(k+1)%12]];
+  // Only the closed engine and dorsal shells may reduce ring resolution.
+  // The main shell retains the exact door and window boundary vertices.
+  const simplify=detail>=2&&/^(Carenat dorsal motor Ka-60|Espinada superior cua Ka-60)$/.test(name);
+  if(simplify&&detail===3)sections=sections.filter((s,i)=>i===0||i===sections.length-1||i%2===0);
+  const sample=simplify?[0,2,3,4,6,8,9,10]:null;
+  const rings=sections.map(s=>{const r=ring(s);return sample?sample.map(i=>r[i]):r}),sides=rings[0].length;
+  for(let j=0;j<rings.length-1;j++)for(let k=0;k<sides;k++){
+   const points=[rings[j][k],rings[j+1][k],rings[j+1][(k+1)%sides],rings[j][(k+1)%sides]];
    const state=windowPanel(j,k);
    if(state==='open')continue;
    if(state==='small-glass'){smallWindow(g,name+' '+j+' '+k,points,col);continue}
@@ -119,7 +194,7 @@ export function createKamovCandidate(T,type){
    const blade=new T.Group();blade.name='Pala principal '+(i+1);blade.rotation.y=i*Math.PI*2/count+(sign<0?.40:0);group.add(blade);
    rod(blade,'Articulació pala',[.15,0,0],[.9,0,0],.055,c.metal);
    const shape=new T.Shape([new T.Vector2(.75,-.15),new T.Vector2(radius-.28,-.20),new T.Vector2(radius,-.06),new T.Vector2(radius,.14),new T.Vector2(1.1,.21)]);
-   const geo=new T.ExtrudeGeometry(shape,{depth:.035,bevelEnabled:false});geo.rotateX(-Math.PI/2);
+   const geo=detail===3?new T.ShapeGeometry(shape):new T.ExtrudeGeometry(shape,{depth:.035,bevelEnabled:false});geo.rotateX(-Math.PI/2);
    mesh(blade,'Superfície pala',new T.BufferGeometry().copy(geo),c.dark);
    box(blade,'Punta pala',.18,.037,.29,radius-.13,.018,-.005,0x969e8b);
   }
@@ -262,7 +337,7 @@ export function createKamovCandidate(T,type){
   }
   // Duct is an annular solid with a genuine through-hole along X.
   const shape=new T.Shape(),hole=new T.Path();shape.absarc(7.63,1.94,.91,0,Math.PI*2,false);hole.absarc(7.63,1.94,.70,0,Math.PI*2,true);shape.holes.push(hole);
-  const duct=new T.ExtrudeGeometry(shape,{depth:.42,steps:1,bevelEnabled:false,curveSegments:18});duct.rotateY(-Math.PI/2);duct.translate(.21,0,0);
+  const duct=new T.ExtrudeGeometry(shape,{depth:.42,steps:1,bevelEnabled:false,curveSegments:detail===1?12:detail===2?8:detail===3?6:18});duct.rotateY(-Math.PI/2);duct.translate(.21,0,0);
   mesh(root,'Conducte fenestron obert',new T.BufferGeometry().copy(duct),c.body);
   fin('Deriva Ka-60',[[7.04,2.61],[7.98,4.08],[8.46,4.08],[8.38,2.31]],.25);
   box(root,'Capçal deriva',.72,.07,.68,0,4.08,8.19,c.top);
@@ -294,7 +369,11 @@ export function createKamovCandidate(T,type){
   rod(root,'Antena dorsal cua',[0,2.02,5.70],[0,2.44,5.96],.018,c.metal);
   const tail=new T.Group();tail.name='Rotor fenestron';tail.position.set(0,1.94,7.63);tail.userData.kamovRotor={axis:'x',speed:19};root.add(tail);
   cyl(tail,'Boixa fenestron',.16,.49,0,0,0,c.metal,'x');
-  for(let i=0;i<11;i++){const blade=box(tail,'Pala fenestron',.08,.53,.095,0,Math.cos(i*Math.PI*2/11)*.40,Math.sin(i*Math.PI*2/11)*.40,c.dark);blade.rotation.x=i*Math.PI*2/11}
+  for(let i=0;i<11;i++){
+   const theta=i*Math.PI*2/11,y=Math.cos(theta)*.40,z=Math.sin(theta)*.40;
+   const blade=detail===3?poly(tail,'Pala fenestron',[[0,-.265,-.0475],[0,.265,-.0475],[0,.265,.0475],[0,-.265,.0475]],c.dark):box(tail,'Pala fenestron',.08,.53,.095,0,0,0,c.dark);
+   blade.position.set(0,y,z);blade.rotation.x=theta;
+  }
   wheel(-1.15,.35,-2.22,.35);wheel(1.15,.35,-2.22,.35);
   // Roda posterior sota el botaló: l'amortidor entra realment a la cua.
   const rearGear=new T.Group();rearGear.name='Roda tren aterratge';
@@ -349,6 +428,16 @@ export function createKamovCandidate(T,type){
   cyl(root,'Transmissió coaxial',.24,.48,0,3.50,0,c.body);
   mainRotor(3.87,3,7.25,1);mainRotor(4.85,3,7.25,-1);
   for(const side of [-1,1])rod(root,'Pitot frontal',[side*.8,1.98,-3.75],[side*.8,2.04,-4.49],.018,c.dark);
+ }
+ if(detail){
+  // Remove small cosmetic hardware before merging, never glazing,
+  // seating, the open door rims, landing wheels or the two rotors.
+  const remove=[];
+  const cosmeticB=/^(Lama refrigeració superior|Cèrcol escapament|Frontissa timó de cua|Costella aleró descendent|Tirant tren posterior al botaló)$/;
+  const cosmeticC=/^(Palanca cíclic|Pantalla instruments|Banc posterior · ancoratge a planxa|Vora atac estabilitzador superior|Tirant tren|Antena dorsal cua|Reposacaps)$/;
+  root.traverse(n=>{if(n.isMesh&&detail>=2&&(cosmeticB.test(n.name)||detail===3&&cosmeticC.test(n.name)))remove.push(n)});
+  for(const n of remove){n.removeFromParent();n.geometry.dispose()}
+  batchKa60(T,root,detail);
  }
  root.userData.referenceVersion=KAMOV_VERSION;
  // Apply the requested size uniformly to the complete aircraft, not

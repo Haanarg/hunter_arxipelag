@@ -1,6 +1,6 @@
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
-import {createKamovCandidate,stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-double-scale-10';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-civil-approved-1';
+import {createKamovCandidate,stepKamovRotors,KA60_LOD_VARIANTS} from './kamov-reference-candidates.mjs?rev=kamov-20261115-double-scale-lod-11';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-ka60-lod-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs';
@@ -17,7 +17,7 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-civil-approved-1';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-ka60-lod-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -253,11 +253,13 @@ function setModel(slot,obj,original,animations=[],keepNativeOrientation=false){
 async function loadExternal(slot,entry,used,token){
  if(entry.provider==='procedural'){
    if(token!==generation)return;
-   const model=['ka60','ka52'].includes(entry.variant)?createKamovCandidate(THREE,entry.variant):createReferenceVehicle(THREE,entry.variant);
+   const isKamov=['ka60','ka52',...KA60_LOD_VARIANTS].includes(entry.variant),
+     isKa60=entry.variant==='ka60'||KA60_LOD_VARIANTS.includes(entry.variant);
+   const model=isKamov?createKamovCandidate(THREE,entry.variant):createReferenceVehicle(THREE,entry.variant);
    setModel(slot,model,false,[],true);
    slot.bold.textContent=entry.title;
-   slot.sub.textContent='Model Three.js propi · editable per peces · sense GLB extern'+(entry.variant==='ka60'?' · escala ×2':'');
-   if(entry.variant==='ka60')slot.person.position.x=dimsOf(slot.model).x*.62+1;
+   slot.sub.textContent='Model Three.js propi · '+(model.userData.kamovDetail?'malles agrupades per materials i conjunts':'editable per peces')+' · sense GLB extern'+(isKa60?' · escala ×2':'');
+   if(isKa60)slot.person.position.x=dimsOf(slot.model).x*.62+1;
    slot.source.href=currentType.references?.[0]?.url||'https://commons.wikimedia.org/';
    slot.source.hidden=false;
    slot.status.textContent=metrics(slot.model)+' · '+entry.note;

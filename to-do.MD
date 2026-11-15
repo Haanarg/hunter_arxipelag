@@ -1,3 +1,9 @@
+**2026-11-15 · Ka-60: variants A/B/C optimitzades:**
+- [x] Candidat 10 original conservat; tres variants amb resolució de cilindres i conducte reduïda progressivament, eliminació selectiva de detalls i agrupació de malles. Rotors independents, finestrons, portes obertes, tren, cua i escala ×2 conservats.
+- [x] Regressions Three.js: ka60-a 56 malles 4672 triangles; ka60-b 34 malles 3472 triangles; ka60-c 18 malles 2454 triangles. Geometria del candidat 10 i del Ka-52 verificada idèntica.
+- [x] Revisió `live-editor-20261115-ka60-lod-1`, comparador amb quatre propostes Ka-60 més el Huey.
+- [ ] Validació visual WebGL, mesures FPS i desplegament Cloudflare.
+
 **2026-11-15 · C1A arrodonit aprovat:**
 - [x] Frontal del candidat integrat a la fàbrica civil nativa; conserva rodes, escala, física i habitacle. Pestanya de l’utilitari retirada del laboratori.
 - [ ] Validar visualment el model complet en una partida real i verificar el desplegament.

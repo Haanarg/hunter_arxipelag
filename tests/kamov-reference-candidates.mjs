@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as T from '../vendor/three-r186.module.mjs';
-import {createKamovCandidate,stepKamovRotors,KAMOV_VERSION} from '../src/kamov-reference-candidates.mjs';
+import {createKamovCandidate,stepKamovRotors,KAMOV_VERSION,KA60_LOD_VARIANTS} from '../src/kamov-reference-candidates.mjs';
 assert(KAMOV_VERSION.includes('double-scale'));
 for(const type of ['ka60','ka52']){
  const root=createKamovCandidate(T,type),meshes=[],rotors=[];
@@ -195,3 +195,33 @@ for(const type of ['ka60','ka52']){
 }
 assert.throws(()=>createKamovCandidate(T,'unknown'));
 console.log('PASS Kamov: escala uniforme doble Ka-60, geometria local, rotors i serialització');
+
+const baseline=createKamovCandidate(T,'ka60');
+const bounds=o=>new T.Box3().setFromObject(o).getSize(new T.Vector3());
+const counts=o=>{let meshes=0,triangles=0;o.traverse(n=>{if(n.isMesh){meshes++;triangles+=(n.geometry.index?.count??n.geometry.attributes.position.count)/3}});return {meshes,triangles}};
+const baseSize=bounds(baseline);
+let previous=counts(baseline);
+for(const variant of KA60_LOD_VARIANTS){
+ const root=createKamovCandidate(T,variant),result=counts(root),rotors=[];
+ assert.deepEqual(root.scale.toArray(),[2,2,2]);
+ assert.equal(root.userData.labSizeMultiplier,2);
+ assert(result.meshes<previous.meshes&&result.triangles<previous.triangles,'Reducció progressiva '+variant);
+ assert(bounds(root).distanceTo(baseSize)<.13,'Mateixa escala i silueta exterior '+variant);
+ root.traverse(n=>{if(n.userData.kamovRotor)rotors.push(n)});
+ assert.equal(rotors.length,2);
+ assert(rotors.every(n=>n.children.some(c=>c.isMesh)));
+ const parts=[];root.traverse(n=>{if(n.isMesh)parts.push(...(n.userData.batchedParts||[]))});
+ for(const name of ['Pneumàtic','Conducte fenestron obert','Banc posterior · seient','Coixí seient','Planxa posterior cabina Ka-60','Aleta vertical botaló Ka-60','Estabilitzador superior en T','Muntant porta lateral integrat'])assert(parts.includes(name),variant+' conserva '+name);
+ assert.equal(parts.filter(n=>n==='Pala fenestron').length,11);
+ assert.equal(parts.filter(n=>n==='Superfície pala').length,4);
+ assert.equal(parts.filter(n=>n.startsWith('Finestró quadrat')).length,4);
+ const ray=new T.Raycaster(new T.Vector3(5,3.78,1.58),new T.Vector3(-1,0,0),0,2.3);
+ assert.equal(ray.intersectObject(root,true).length,0,'Porta oberta '+variant);
+ const copy=new T.ObjectLoader().parse(root.toJSON());
+ assert.deepEqual(counts(copy),result);
+ assert(bounds(copy).distanceTo(bounds(root))<1e-6);
+ stepKamovRotors(root,.04);stepKamovRotors(copy,.04);
+ assert(bounds(copy).distanceTo(bounds(root))<1e-6);
+ console.log(variant,result.meshes+' malles',result.triangles+' triangles');
+ previous=result;
+}

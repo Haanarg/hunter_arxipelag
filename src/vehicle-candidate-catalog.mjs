@@ -12,7 +12,12 @@ export const CATALOG=[
    // Retirades totes les referències URL externes antigues. Les dues
    // imatges aportades per l’usuari són les úniques referències de disseny.
    references:[],
-   options:[C('ka60','Kamov Ka-60 · candidat 10','Escala ×2 en XYZ · ventre profund · banc posterior')]},
+   options:[
+    C('ka60','Kamov Ka-60 · candidat 10 (referència)','Escala ×2 · geometria completa'),
+    C('ka60-a','Ka-60 · variant A','Optimització conservadora · totes les peces visuals'),
+    C('ka60-b','Ka-60 · variant B','Menys segments · detalls petits simplificats'),
+    C('ka60-c','Ka-60 · variant C','Màxima simplificació · malles agrupades per material')
+   ]},
  {id:'heli_combat',name:'Helicòpter de combat · Kamov Ka-52',kind:'aire',
    note:'Ka-52 candidat Three.js propi: cabina ampla amb dos pilots de costat, nas aplanat, rotors coaxials contrarotatius i ales curtes. Apache actual al costat per comparar.',
    references:[
