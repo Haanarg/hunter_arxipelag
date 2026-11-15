@@ -1609,16 +1609,9 @@ function createItemVisual(t){const g=new THREE.Group(),metal=0x454b4e,dark=0x3d3
   else if(t==='med'){bx(g,1.35,.7,1,0xf4f4f0,0,.35,0,'paint');bx(g,1.05,.08,.28,0xd5aa76,0,.74,0,'paint');bx(g,.28,.08,.95,0xd5aa76,0,.75,0,'paint');for(const x of[-.18,.18])for(const z of[-.18,.18]){const d=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.03,6),M(0x9b734b,'paint'));d.position.set(x,.81,z);g.add(d)}}
   else if(t==='arma'){bx(g,1.45,.55,1.05,0x745539,0,.28,0,'paint');bx(g,1.5,.1,1.1,dark,0,.04,0,'metal');for(const x of[-.48,-.16,.16,.48])for(const z of[-.27,.27]){const bullet=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.48,8),M(0xc9a23f,'metal'));bullet.position.set(x,.72,z);g.add(bullet);const tip=new THREE.Mesh(new THREE.ConeGeometry(.08,.16,8),M(0xb7772b,'metal'));tip.position.set(x,1.04,z);g.add(tip)}}
   else if(t==='bazooka'){const tube=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,2.65,10),M(0x58664a,'paint'));tube.rotation.z=Math.PI/2;tube.position.set(0,.62,0);g.add(tube);const rear=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.18,10),M(0x252b27,'metal'));rear.rotation.z=Math.PI/2;rear.position.set(-1.37,.62,0);g.add(rear);const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.29,.22,.24,10),M(0x252b27,'metal'));muzzle.rotation.z=Math.PI/2;muzzle.position.set(1.42,.62,0);g.add(muzzle);bx(g,.16,.4,.22,0x252b27,-.35,.35,0,'metal');bx(g,.12,.2,.3,0x737b74,.35,.83,0,'metal')}
-  else if(t==='fusell_assalt'){
-    bx(g,.32,.27,2.1,0x55644e,0,.66,0,'paint');bx(g,.16,.15,1.28,0x303938,0,.65,-1.45,'metal');
-    bx(g,.3,.27,.8,0x88704f,0,.6,1.12,'paint');bx(g,.16,.45,.28,0x2b3430,0,.39,.12,'metal');
-    bx(g,.22,.4,.54,0x3a463b,0,.31,-.41,'metal');
-  }
-  else if(t==='franctirador'){
-    bx(g,.35,.3,2.25,0x586a5a,0,.62,0,'paint');bx(g,.16,.16,1.65,0x303736,0,.65,-1.55,'metal');
-    bx(g,.19,.24,.7,0x7c6247,0,.52,.95,'paint');bx(g,.28,.35,.45,0x7c6247,0,.56,1.58,'paint');
-    bx(g,.17,.19,.7,0x26322e,0,.95,-.18,'metal');bx(g,.15,.16,.3,0x26322e,0,1.06,-.45,'metal');
-    bx(g,.13,.28,.22,0x2d322d,0,.34,-.08,'metal');
+  else if(t==='fusell_assalt'||t==='franctirador'){
+    const prop=window.HUNTER_LONG_GUN_VISUAL.create(THREE,t==='fusell_assalt'?'assault':'sniper');
+    prop.rotation.z=Math.PI/2;prop.position.y=.45;g.add(prop);
   }
   else if(t==='paracaigudes'){
     // Motxilla de paracaigudes compacta de lona, no un bloc rectangular.
@@ -2480,7 +2473,7 @@ pickerToggle.onclick=()=>{if(!weaponPickerAvailable())return;pickerOpen=!pickerO
 function drawWeaponPicker(){const visible=pickerOpen&&weaponPickerAvailable(),weapons=visible?quickWeapons():[];
 const signature=visible?JSON.stringify([selectedWeapon(),ammo,sniperAmmo,bazookaAmmo,weapons.map(k=>[k,inv[k]])]):'hidden';
 if(signature===pickerSignature)return;pickerSignature=signature;
-picker.style.display=visible?'flex':'none';picker.replaceChildren();if(!visible)return;const names={pistola:'🔫 Pistola',ganivet:'🔪 Ganivet',fusell_assalt:'🔫 Fusell d’assalt',franctirador:'🔭 Rifle',bazooka:'🚀 Bazooka',granada:'💣 Granades',cisalla:'✂ Cisalla'};quickWeapons().forEach((k,i)=>{const b=document.createElement('button');b.textContent=(i+1)+' · '+names[k]+' · '+(k==='pistola'||k==='fusell_assalt'?ammo:k==='franctirador'?sniperAmmo:k==='bazooka'?bazookaAmmo:k==='ganivet'?'∞':inv[k]);b.style.cssText='padding:8px;color:white;background:'+(selectedWeapon()===k?'#356c51':'#364a52');b.onclick=()=>{selectWeapon(k);pickerOpen=false;drawWeaponPicker()};picker.appendChild(b)})}
+picker.style.display=visible?'flex':'none';picker.replaceChildren();if(!visible)return;const names={pistola:'🔫 Pistola',ganivet:'🔪 Ganivet',fusell_assalt:'Fusell d’assalt',franctirador:'Rifle',bazooka:'🚀 Bazooka',granada:'💣 Granades',cisalla:'✂ Cisalla'};quickWeapons().forEach((k,i)=>{const b=document.createElement('button');b.textContent=(i+1)+' · '+names[k]+' · '+(k==='pistola'||k==='fusell_assalt'?ammo:k==='franctirador'?sniperAmmo:k==='bazooka'?bazookaAmmo:k==='ganivet'?'∞':inv[k]);if(k==='fusell_assalt'||k==='franctirador'){b.insertAdjacentHTML('afterbegin',ICON[k]);b.classList.add('long-gun-picker');}b.style.cssText='padding:8px;color:white;background:'+(selectedWeapon()===k?'#356c51':'#364a52');b.onclick=()=>{selectWeapon(k);pickerOpen=false;drawWeaponPicker()};picker.appendChild(b)})}
 const act=c=>{if(generationPromise)return;if(ui?.isBombTimerOpen?.()){
   // No es pot tancar el programador ni detonar saltant-se la confirmació.
   if(c==='Escape'||c==='KeyP'||c==='KeyI'){panel('inventory');return}
@@ -3927,10 +3920,10 @@ if(fireButton){
         grenade=heliGrenade||personalWeapon&&grenadeEquipped&&(inv.granada||0)>0,
         cutters=personalWeapon&&cisallaEquipped&&(inv.cisalla||0)>0,
         knife=personalWeapon&&(knifeEquipped||!grenade&&!cutters&&!bazookaEquipped&&!sniperEquipped&&!assaultRifleEquipped&&ammo<=0),
-        weapon=cutters?'cisalla':grenade?'granada':knife?'ganivet':'normal';
+        weapon=cutters?'cisalla':grenade?'granada':knife?'ganivet':personalWeapon&&assaultRifleEquipped?'fusell_assalt':personalWeapon&&sniperEquipped?'franctirador':'normal';
   if(fireButton.dataset.weapon!==weapon){
     fireButton.dataset.weapon=weapon;
-    fireButton.innerHTML=(cutters?ICON.cisalla:grenade?ICON.granada:knife?ICON.ganivet:'🎯')+
+    fireButton.innerHTML=(ICON[weapon]||'🎯')+
       '<span class="fire-ammo-count" aria-hidden="true"></span>';
   }
   const ammoLeft=!personalWeapon?(heliGrenade?(inv.granada||0):'∞'):

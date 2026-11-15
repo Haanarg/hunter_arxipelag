@@ -1,5 +1,54 @@
 // Model i animació visual del jugador. No conté moviment, inventari ni combat.
 // Pistola del protagonista i IK de les dues mans. Els models enemics NO usen això.
+// Decorative low-poly long guns; same geometry for held and collectible models.
+// Local -Z faces forward. Keep existing animation/grip/muzzle anchors unchanged.
+function createHunterLongGunVisual(T,kind){
+ const g=new T.Group(),mats=new Map();
+ g.name=kind==='assault'?'AEK-971 inspired game prop':'SV-98 inspired game prop';
+ const material=c=>{if(!mats.has(c))mats.set(c,new T.MeshStandardMaterial({color:c,roughness:.82,metalness:.18,flatShading:true}));return mats.get(c)};
+ const steel=0x35403e,dark=0x202927,green=0x79865a,black=0x1b2423,edge=0x596361;
+ const add=(name,geo,c,x,y,z)=>{const p=new T.Mesh(geo,material(c));p.name=name;p.position.set(x,y,z);p.castShadow=p.receiveShadow=true;g.add(p);return p};
+ const box=(name,w,h,d,c,x,y,z)=>add(name,new T.BoxGeometry(w,h,d),c,x,y,z);
+ const tube=(name,r,len,c,y,z)=>{const p=add(name,new T.CylinderGeometry(r,r,len,8),c,0,y,z);p.rotation.x=Math.PI/2;return p};
+ const beam=(name,a,b,w,c)=>{const p=new T.Vector3(...a),q=new T.Vector3(...b),d=q.clone().sub(p),m=box(name,w,d.length(),w,c,0,0,0);m.position.copy(p.add(q).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());return m};
+ // Silhouette-only extruded polygon; no mechanical interior.
+ const sideShape=(name,outline,width,c)=>{const s=new T.Shape(outline.map(([z,y])=>new T.Vector2(-z,y)));const geo=new T.ExtrudeGeometry(s,{depth:width,bevelEnabled:false});geo.rotateY(Math.PI/2);geo.translate(-width/2,0,0);return add(name,geo,c,0,0,0)};
+ if(kind==='assault'){
+  box('Cos compacte',.27,.27,.94,steel,0,0,-.15);
+  box('Guardamà',.30,.25,.73,dark,0,.005,-.98);
+  box('Línia superior',.23,.10,.95,edge,0,.16,-.25);
+  tube('Canó visual',.065,1.00,steel,.02,-1.55);
+  tube('Punta visual',.085,.18,dark,.02,-2.045);
+  // Open triangular stock, deliberately unlike the solid precision stock.
+  beam('Culata superior',[0,.02,.32],[0,.08,1.30],.09,dark);
+  beam('Culata diagonal',[0,-.10,.34],[0,-.23,1.30],.09,dark);
+  box('Taló culata',.25,.35,.10,black,0,-.065,1.30);
+  const grip=box('Empunyadura',.18,.40,.23,dark,0,-.24,.16);grip.rotation.x=-.23;
+  sideShape('Carregador corb',[[-.58,-.105],[-.13,-.105],[-.15,-.43],[-.26,-.65],[-.47,-.76],[-.64,-.69],[-.69,-.53],[-.53,-.36]],.21,0x48534b);
+  box('Punt de mira',.09,.14,.10,edge,0,.18,-1.63);
+  box('Alça',.12,.12,.10,dark,0,.22,.03);
+ }else if(kind==='sniper'){
+  // Green continuous stock, long exposed barrel and prominent optic.
+  sideShape('Culata i guardamà SV',[[1.56,-.28],[1.56,.11],[.62,.10],[.42,-.04],[-.24,-.12],[-1.34,-.10],[-1.34,-.24],[-.10,-.29],[.34,-.34],[.58,-.21],[.86,-.27]],.30,green);
+  box('Cos rifle',.24,.19,1.40,steel,0,.025,-.42);
+  box('Taló culata',.30,.39,.08,dark,0,-.085,1.59);
+  tube('Canó llarg',.069,1.48,steel,.03,-1.93);
+  tube('Punta visual',.084,.16,black,.03,-2.665);
+  box('Carregador curt',.17,.20,.29,dark,0,-.28,-.28);
+  const grip=box('Empunyadura',.17,.27,.22,green,0,-.25,.28);grip.rotation.x=-.25;
+  for(const z of [-.69,-.11])box('Suport òptica',.10,.14,.12,black,0,.20,z);
+  tube('Mira telescòpica',.105,.94,black,.35,-.40);
+  tube('Objectiu òptica',.158,.29,dark,.35,-.92);
+  tube('Ocular',.139,.21,edge,.35,.13);
+  tube('Vidre òptica',.110,.012,0x648b9c,.35,-1.071);
+  box('Ajust visual òptica',.12,.10,.14,edge,0,.49,-.42);
+  // Folded bipod, kept clear of the existing hand animation.
+  for(const x of [-.17,.17])beam('Bípode plegat',[x,-.21,-1.25],[x,-.26,-.58],.055,dark);
+ }else throw Error('Unknown long gun: '+kind);
+ return g;
+}
+window.HUNTER_LONG_GUN_VISUAL={create:createHunterLongGunVisual};
+
 function createPlayerPistol(T,gun){
   const material=(color,metalness=.1,roughness=.8)=>new T.MeshStandardMaterial({color,metalness,roughness,flatShading:true});
   const steel=material(0x41494c,.58,.43),edge=material(0x7c8481,.65,.38),
@@ -391,12 +440,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     assault.userData.stockAnchor=new THREE.Vector3(.65,3.48-u.upperBodyPivotHeight,-.17);
     assault.userData.stockToReceiver=new THREE.Vector3(-.12,.04,-1.11);
     assault.position.copy(assault.userData.stockAnchor).add(assault.userData.stockToReceiver);
-    box(assault,.26,.24,1.9,0x4c5c4b,0,0,-.18,'paint');
-    box(assault,.14,.14,1.15,0x303938,0,.02,-1.55,'metal');
-    box(assault,.29,.26,.72,0x856d4a,0,-.04,.96,'paint');
-    box(assault,.18,.4,.22,0x2c3530,0,-.25,.16,'metal');
-    box(assault,.21,.48,.46,0x303b35,0,-.39,-.37,'metal');
-    box(assault,.28,.14,.24,0x252f2c,0,.18,-.32,'metal');
+    assault.add(createHunterLongGunVisual(THREE,'assault'));
     const assaultRightGrip=new THREE.Object3D(),assaultLeftGrip=new THREE.Object3D();
     assaultRightGrip.position.set(-.04,-.2,.25);
     // Mà esquerra sota el guardamans, per davant del gallet. El punt queda
@@ -418,13 +462,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     sniper.userData.stockAnchor=new THREE.Vector3(.73,3.48-u.upperBodyPivotHeight,-.17);
     sniper.userData.stockToReceiver=new THREE.Vector3(-.05,.12,-1.20);
     sniper.position.copy(sniper.userData.stockAnchor).add(sniper.userData.stockToReceiver);
-    box(sniper,.23,.24,2.2,0x596b5e,0,0,-.24,'paint');
-    box(sniper,.15,.15,1.55,0x303938,0,.03,-1.95,'metal');
-    box(sniper,.3,.32,.82,0x806847,0,-.07,1.05,'paint');
-    box(sniper,.22,.4,.32,0x806847,0,-.13,1.43,'paint');
-    box(sniper,.21,.21,.73,0x273232,0,.31,-.42,'metal');
-    box(sniper,.26,.24,.13,0x273232,0,.31,-.73,'metal');
-    box(sniper,.1,.22,.15,0x353b38,0,-.22,.1,'metal');
+    sniper.add(createHunterLongGunVisual(THREE,'sniper'));
     // Boca real a l'extrem del canó (centre z=-1.95, longitud 1.55).
     // El pivot hereta la rotació i l'escala del model del jugador.
     const sniperMuzzle=new THREE.Object3D();
