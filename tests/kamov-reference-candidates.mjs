@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as T from '../vendor/three-r186.module.mjs';
 import {createKamovCandidate,stepKamovRotors,KAMOV_VERSION} from '../src/kamov-reference-candidates.mjs';
-assert(KAMOV_VERSION.includes('belly-profile'));
+assert(KAMOV_VERSION.includes('double-scale'));
 for(const type of ['ka60','ka52']){
  const root=createKamovCandidate(T,type),meshes=[],rotors=[];
  root.traverse(o=>{if(o.userData.kamovRotor)rotors.push(o);if(o.isMesh)meshes.push(o)});
@@ -13,8 +13,15 @@ for(const type of ['ka60','ka52']){
   triangles+=(m.geometry.index?.count??p.count)/3;
  }
  assert(triangles<18000,'Pressupost low-poly');
+ const multiplier=type==='ka60'?2:1;
+ assert.deepEqual(root.scale.toArray(),[multiplier,multiplier,multiplier]);
+ assert.equal(root.userData.labSizeMultiplier,multiplier);
+ const scaledSize=new T.Box3().setFromObject(root).getSize(new T.Vector3());
+ // Existing structural tests use original local coordinates.
+ root.scale.setScalar(1);root.updateMatrixWorld(true);
  const size=new T.Box3().setFromObject(root).getSize(new T.Vector3());
  assert(size.z>13&&size.z<17);assert(size.y>3.8&&size.y<5.1);
+ assert(scaledSize.distanceTo(size.clone().multiplyScalar(multiplier))<1e-6,'Uniform scale on XYZ');
  const seats=[];root.traverse(o=>{if(o.name==='Coixí seient')seats.push(o)});
  assert.equal(seats.length,2);
  assert.equal(seats.filter(o=>o.position.z< -2).length,2,'Pilots de costat');
@@ -177,12 +184,14 @@ for(const type of ['ka60','ka52']){
   assert(root.getObjectByName('Canó lateral dret'));
   assert(!root.getObjectByName('Rotor fenestron'));
  }
+ root.scale.setScalar(multiplier);root.updateMatrixWorld(true);
  const restored=new T.ObjectLoader().parse(root.toJSON());
+ assert.deepEqual(restored.scale.toArray(),[multiplier,multiplier,multiplier]);
  for(const m of meshes){const copy=restored.getObjectByProperty('uuid',m.uuid);assert.deepEqual(Array.from(copy.geometry.attributes.position.array),Array.from(m.geometry.attributes.position.array),m.name+' JSON');}
  const before=rotors.map(o=>o.rotation[o.userData.kamovRotor.axis]);stepKamovRotors(root,.04);
  rotors.forEach((o,i)=>assert.equal(o.rotation[o.userData.kamovRotor.axis],before[i]+o.userData.kamovRotor.speed*.04));
  stepKamovRotors(restored,.04);assert(new T.Box3().setFromObject(restored).getSize(new T.Vector3()).distanceTo(new T.Box3().setFromObject(root).getSize(new T.Vector3()))<1e-5);
- console.log(type,Math.round(triangles)+' triangles',meshes.length+' peces',size.toArray().map(x=>x.toFixed(2)).join(' × '));
+ console.log(type,Math.round(triangles)+' triangles',meshes.length+' peces',scaledSize.toArray().map(x=>x.toFixed(2)).join(' × '));
 }
 assert.throws(()=>createKamovCandidate(T,'unknown'));
-console.log('PASS Kamov: dos seients de pilot, banc posterior, planxa tancada i marcs integrats');
+console.log('PASS Kamov: escala uniforme doble Ka-60, geometria local, rotors i serialització');

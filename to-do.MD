@@ -1,3 +1,8 @@
+**2026-11-15 · Ka-60 candidat 10, petició d051fee7:**
+- [x] Escala uniforme ×2 en X/Y/Z del candidat Ka-60 complet, sense afegir triangles ni alterar les peces. El visor conserva el factor ×2 amb l'ajust automàtic activat o desactivat; càmera compartida i soldat de referència a escala original.
+- [x] Huey, Ka-52 i candidat recent del cotxe C1A intactes. Revisió `live-editor-20261115-ka60-double-scale-1`.
+- [ ] Validació visual WebGL i desplegament Cloudflare.
+
 **2026-11-14 · Ka-60 candidat 9 · perfil inferior segons vista lateral:**
 - [x] Ventre més profund i ple sota la cabina, pròxim a les rodes davanteres, amb aprimament progressiu per sota fins al botaló. Unió del casc i cua amb secció compartida, sense solapament de tapes.
 - [x] Adaptats terra i retorns dels marcs a les noves seccions; muntants del tren davanter més curts. Posició i geometria de les rodes conservades, igual que parabrisa, finestrons, sostre, pilots i banc.

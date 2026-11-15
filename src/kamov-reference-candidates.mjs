@@ -1,10 +1,10 @@
 // Original low-poly geometry, based on photographs linked in the lab catalogue.
 // Nose = -Z, metres before the lab's uniform comparison scale. No external assets.
-export const KAMOV_VERSION='kamov-20261114-belly-profile-9';
+export const KAMOV_VERSION='kamov-20261115-double-scale-10';
 export function createKamovCandidate(T,type){
  if(!['ka60','ka52'].includes(type))throw new Error('Kamov desconegut: '+type);
  const combat=type==='ka52',root=new T.Group();
- root.name=combat?'Kamov Ka-52 · candidat 1':'Kamov Ka-60 · candidat 9';
+ root.name=combat?'Kamov Ka-52 · candidat 1':'Kamov Ka-60 · candidat 10';
  root.userData.kamovCandidate=type;
  const c={body:combat?0x63725b:0x536655,top:0x75816b,dark:0x252c2c,metal:0x727a76,glass:0x789da5,light:0xe4ddbc,beacon:0xcb5148,navGreen:0x538e74};
  const materials=new Map();
@@ -351,7 +351,13 @@ export function createKamovCandidate(T,type){
   for(const side of [-1,1])rod(root,'Pitot frontal',[side*.8,1.98,-3.75],[side*.8,2.04,-4.49],.018,c.dark);
  }
  root.userData.referenceVersion=KAMOV_VERSION;
- root.userData.rotorDiameter=combat?14.5:13.5;
+ // Apply the requested size uniformly to the complete aircraft, not
+ // individual vertices. Preserve the explicit multiplier when the lab
+ // fits candidates to the reference aircraft.
+ const sizeMultiplier=combat?1:2;
+ root.scale.setScalar(sizeMultiplier);
+ root.userData.labSizeMultiplier=sizeMultiplier;
+ root.userData.rotorDiameter=(combat?14.5:13.5)*sizeMultiplier;
  root.userData.crewSeats=2;
  return root;
 }

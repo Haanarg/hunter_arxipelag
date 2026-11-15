@@ -1,6 +1,6 @@
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
-import {createKamovCandidate,stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261114-belly-profile-9';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-civil-rounded-nose-1';
+import {createKamovCandidate,stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-double-scale-10';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-ka60-double-scale-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs';
@@ -18,7 +18,7 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-civil-rounded-nose-1';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-ka60-double-scale-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -127,6 +127,7 @@ for(let i=0;i<5;i++){
  });
 }
 let currentType=CATALOG[0],generation=0,originalDims=new THREE.Vector3(3,2,5);
+let comparisonDims=new THREE.Vector3(3,2,5);
 const vehicleEditor=createVehicleAnnotationEditor({slots,getType:()=>currentType.id});
 let yaw=.60,elev=.32,zoom=1,lookY=.6,defaultLookY=.6,panScreenX=0;
 let resumedView=null;
@@ -217,13 +218,14 @@ function dropPrevious(slot){
  }
  slot.mixer=null;
 }
-function normalize(obj,original){
+function normalize(obj,original,sizeMultiplier=1){
  obj.updateMatrixWorld(true);
  let bounds=new THREE.Box3().setFromObject(obj),sz=bounds.getSize(new THREE.Vector3());
  if(!original&&document.querySelector('#fitScale').checked){
    // Escala uniforme segons el millor encaix de les dues dimensions del xassís.
    // Manté les proporcions del fitxer i permet comparar les siluetes amb el joc.
-   const ratios=[originalDims.x/Math.max(.01,sz.x),originalDims.z/Math.max(.01,sz.z)];
+   // Fit the unscaled geometry, then retain its explicit design scale.
+   const ratios=[originalDims.x/Math.max(.01,sz.x/sizeMultiplier),originalDims.z/Math.max(.01,sz.z/sizeMultiplier)];
    const factor=Math.min(...ratios);
    obj.scale.multiplyScalar(Math.max(.08,Math.min(45,factor)));
    obj.updateMatrixWorld(true);bounds=new THREE.Box3().setFromObject(obj);
@@ -241,7 +243,7 @@ function setModel(slot,obj,original,animations=[],keepNativeOrientation=false){
  // la fàbrica del joc el dibuixa cap a -Z. Orientam sense deformar.
  if(!original&&!keepNativeOrientation)obj.rotation.y+=Math.PI;
  const wrap=new THREE.Group();wrap.add(obj);
- normalize(wrap,original);
+ normalize(wrap,original,obj.userData.labSizeMultiplier||1);
  wrap.traverse(o=>{if(o.isMesh){o.castShadow=!o.material?.transparent;o.receiveShadow=true}});
  slot.scene.add(wrap);slot.model=wrap;
  if(animations?.length){slot.mixer=new THREE.AnimationMixer(obj);for(const clip of animations)slot.mixer.clipAction(clip).play()}
@@ -265,7 +267,8 @@ async function loadExternal(slot,entry,used,token){
    const model=['ka60','ka52'].includes(entry.variant)?createKamovCandidate(THREE,entry.variant):createReferenceVehicle(THREE,entry.variant);
    setModel(slot,model,false,[],true);
    slot.bold.textContent=entry.title;
-   slot.sub.textContent='Model Three.js propi · editable per peces · sense GLB extern';
+   slot.sub.textContent='Model Three.js propi · editable per peces · sense GLB extern'+(entry.variant==='ka60'?' · escala ×2':'');
+   if(entry.variant==='ka60')slot.person.position.x=dimsOf(slot.model).x*.62+1;
    slot.source.href=currentType.references?.[0]?.url||'https://commons.wikimedia.org/';
    slot.source.hidden=false;
    slot.status.textContent=metrics(slot.model)+' · '+entry.note;
@@ -409,6 +412,7 @@ async function choose(config){
    originalDims.set(3,3,6);
  }
  for(let k=1;k<slots.length;k++)slots[k].person.position.x=originalDims.x*.62+1.0;
+ comparisonDims.copy(originalDims);
  lookY=Math.min(6,Math.max(.55,originalDims.y*.38));
  defaultLookY=lookY;
  panScreenX=0;
@@ -418,10 +422,19 @@ async function choose(config){
  if(!soloStudy){
    const used=new Set();
    await Promise.all(config.options.map((entry,i)=>loadExternal(slots[i+1],entry,used,token)));
+   if(token!==generation)return;
+   if(config.id==='heli'){
+     for(const slot of slots)if(slot.model&&!slot.outer.hidden)comparisonDims.max(dimsOf(slot.model));
+     // Same camera distance in both views: size comparison stays honest.
+     const oldLook=defaultLookY;
+     defaultLookY=Math.min(12,Math.max(.55,comparisonDims.y*.38));
+     if(Math.abs(lookY-oldLook)<1e-8)lookY=defaultLookY;
+     updateCamera();
+   }
  }
 }
 function updateCamera(){
- const size=Math.max(originalDims.x,originalDims.z,originalDims.y*.85,3);
+ const size=Math.max(comparisonDims.x,comparisonDims.z,comparisonDims.y*.85,3);
  // Zoom de precisió: sense el sòcol fix de +3 m que impedia apropar-se.
   const distance=Math.max(.35,size*1.85*zoom+.35);
  for(const slot of slots){
@@ -534,7 +547,7 @@ slots.forEach(slot=>{
   if(e.shiftKey||(e.buttons&2)){
    // Arrossegament lliure en ambdós eixos: el model segueix el cursor.
    // No es modifica ni la geometria ni la posició del vehicle.
-   const size=Math.max(originalDims.x,originalDims.z,originalDims.y*.85,3);
+   const size=Math.max(comparisonDims.x,comparisonDims.z,comparisonDims.y*.85,3);
    const distance=Math.max(.35,size*1.85*zoom+.35);
    lookY+=(e.clientY-old[1])*distance*.0017;
    panScreenX-=(e.clientX-old[0])*distance*.0017;
