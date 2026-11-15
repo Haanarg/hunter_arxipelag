@@ -106,8 +106,15 @@ jobs:
               if curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
                 "https://hunter.paradoxa.cat/src/vehicle-specs.mjs?release=$COMMIT" |
                 grep -Fq 'tanqueta:1.8125,tanc:2,heli:1.75'; then
-                echo "Paradoxa: versió $version i T-90M x2 desplegats i verificats"
-                exit 0
+                # Comprovar també la revisió de l'editor i l'adaptador real del Ka-60.
+                lab_revision="$(node -p "require('./assets/vehicle-candidates/lab-revision.json').revision")"
+                if curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+                    "https://hunter.paradoxa.cat/assets/vehicle-candidates/lab-revision.json?release=$COMMIT" | grep -Fq "$lab_revision" &&
+                   curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+                    "https://hunter.paradoxa.cat/src/ka60-runtime.mjs?release=$COMMIT" | grep -Fq "KA60_RUNTIME_ID='ka60-a-cockpit-body-13'"; then
+                  echo "Paradoxa: versió $version, revisió $lab_revision i Ka-60 A verificats"
+                  exit 0
+                fi
               fi
             fi
             sleep 3
