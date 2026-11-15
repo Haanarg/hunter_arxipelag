@@ -29,10 +29,11 @@ for(const record of manifest.models.llanxa){
  assert.equal(fs.statSync(path.join(assets,rel)).size,record.bytes);
 }
 const preview=fs.readFileSync(path.join(root,'src/btr82-3b-preview.mjs'),'utf8');
-const huey=fs.readFileSync(path.join(root,'src/huey-duane-runtime.mjs'),'utf8');
+const ka60=fs.readFileSync(path.join(root,'src/ka60-runtime.mjs'),'utf8');
+for(const old of ['src/huey-duane-runtime.mjs','src/huey-duane-native-geometry.mjs','assets/vehicle-models/huey-duane-native-atlas.png'])
+ assert(!fs.existsSync(path.join(root,old)),'El Huey retirat encara es publica: '+old);
 assert(preview.includes('createBtr823BPreview')&&!preview.includes('GLTFLoader'));
-assert(huey.includes('createNativeHuey')&&!/import\s+.*GLTFLoader/.test(huey)&&!/new\s+GLTFLoader\s*\(/.test(huey),
- 'El Huey no pot carregar un GLB (els comentaris històrics no compten)');
+assert(ka60.includes("createKamovCandidate(THREE,'ka60-a')")&&!ka60.includes('GLTFLoader'),'El Ka-60 ha de ser natiu');
 const fetcher=fs.readFileSync(path.join(root,'tools/fetch-vehicle-candidates.mjs'),'utf8');
 assert(fetcher.includes("REMOTE_ONLY_CATEGORIES=new Set(['llanxa_coets','ferry'])"));
 console.log('PASS inventari GLB: només 3 llanxes ràpides; BTR-82, Huey, combat i ferris retirats');
