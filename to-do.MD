@@ -1,3 +1,8 @@
+**2026-11-15 · Mi-24: fuselatge segons les vistes aportades:**
+- [x] Principal i A/B/C/D: unió curta ascendent entre cabines, sense el clot en V; cabina posterior i seients avançats, nou contorn dels vidres. Ventre ample i més pla, flancs més rectes, aprimament inferior progressiu i línia superior del botaló gairebé horitzontal. Preses avançades i carenats dels motors acabats dins la pell del fuselatge.
+- [x] Malles revisades de perfil, front, tres quarts i sota amb render de la geometria real. Comprovacions de vidres, perfil del pont, amplada de quilla, unió amb la cua, cinc propostes, rotors i serialització. Principal 7506 triangles, D 4873; revisió `live-editor-20261115-mi24-fuselage-2`.
+- [ ] Valoració de l’usuari al visor WebGL. Chromium local no pot iniciar-se en aquest entorn; comprovació visual feta amb rasterització CPU. Cap integració dels Mi-24 al joc.
+
 **2026-11-15 · v0.6.222, torres, mecànic i embestides:**
 - [x] Quatre parapets -25% mantenint la base; ruta al taller allunyada de la cantonada; braços cap endavant i orientació al vehicle, també amb snapshot COOP.
 - [x] Filferrada: conservació de velocitat, continuació pels trams adjacents durant recuperació sense doble càrrec de PV; maniobra lenta encara bloquejada amb desacceleració. Tanqueta immune al dany de palmeres i filferrada; atropellament de soldats ja no restava PV al vehicle. No s'ha ampliat la immunitat a altres obstacles ni armes.

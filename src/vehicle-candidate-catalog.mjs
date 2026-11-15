@@ -22,7 +22,7 @@ export const CATALOG=[
    ]},
  {id:'mi24',validated:false,experimental:true,name:'Helicòpter de combat · Mil Mi-24',kind:'aire',
    note:'Mi-24V com a base: cabines en tàndem, cos de transport, ales descendents, cinc pales principals i tres a la cua. Un model principal i quatre estudis de forma; A/B/C/D no són versions reals de l’aparell.',
-   base:C('mi24-main','Mil Mi-24V · Principal','Proporcions de referència · model complet'),
+   base:C('mi24-main','Mil Mi-24V · Principal','Cabines i fuselatge revisats · model complet'),
    references:[
     {label:'Perfil i volums · Chris Lofting',url:'https://commons.wikimedia.org/wiki/File:Macedonian_Air_Force_Mil_Mi-24V_Lofting.jpg'},
     {label:'Cabines, ales i tren · Mi-24V 7353',url:'https://commons.wikimedia.org/wiki/File:Mil_Mi-24V_Hind_7353_(9324310918).jpg'},

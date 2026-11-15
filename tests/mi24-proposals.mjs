@@ -31,9 +31,9 @@ for(const id of Object.keys(MI24_MODELS)){
  assert(rotors[1].position.z>9&&rotors[1].position.x<0,'Rotor de cua lateral al final del botaló');
  const glass=meshes.filter(n=>n.material.transparent),windows=glass.filter(n=>n.name.startsWith('Finestra càrrega'));
  assert.equal(windows.length,8);
- assert.equal(glass.length,32);
+ assert.equal(glass.length,38);
  assert(glass.every(n=>n.material.opacity<.5&&!n.material.depthWrite));
- for(const y of [2.55,3.15]){
+ for(const y of [2.4,3.15]){
   const hit=new T.Raycaster(new T.Vector3(.18,y,-9),new T.Vector3(0,0,1)).intersectObjects(meshes)[0];
   assert(hit?.object.material.transparent,'Vidres reals en les dues cabines '+id);
  }
@@ -41,6 +41,27 @@ for(const id of Object.keys(MI24_MODELS)){
   const hit=new T.Raycaster(new T.Vector3(side*4,2.40,-.65),new T.Vector3(-side,0,0)).intersectObjects(meshes)[0];
   assert(windows.includes(hit?.object),'Finestra de càrrega sense xapa al darrere '+id);
  }
+ // Profile rays check the visible surface, independently of the loft's
+ // section indices: no V-shaped notch between gunner and pilot canopies.
+ const hull=model.getObjectByName('Fuselatge i cabines en tàndem');
+ const surface=(x,z,fromAbove=true)=>new T.Raycaster(new T.Vector3(x,fromAbove?7:-2,z),new T.Vector3(0,fromAbove?-1:1,0)).intersectObject(hull).find(h=>h.object.material.color.getHex()!==0x242c27)?.point.y;
+ const bridge=[-4.50,-4.40,-4.30,-4.20,-4.10].map(z=>surface(.12,z));
+ assert(bridge.every(Number.isFinite)&&bridge.every((y,i)=>i===0||y>=bridge[i-1]-.015),'Unió curta ascendent sense clot '+id);
+ const keel=surface(0,0,false),wideKeel=surface(.70,0,false);
+ assert(wideKeel-keel<.12,'Ventre ample, sense quilla semicircular estreta '+id);
+ const bodyTail=[hull,model.getObjectByName('Botaló i deriva')];
+ const joins=new Map();
+ // Ignore frames and fin pieces; the loft skins must share every edge,
+ // including the junction with the tail and the perimeters of the glass.
+ for(const g of bodyTail)g.traverse(m=>{
+  if(!m.isMesh||m.material.color.getHex()===0x242c27)return;
+  const a=m.geometry.attributes.position.array;
+  for(let i=0;i<a.length;i+=9)for(let j=0;j<3;j++){
+   const point=k=>Array.from(a.slice(i+3*k,i+3*k+3)).map(v=>v.toFixed(4)).join(',');
+   const key=[point(j),point((j+1)%3)].sort().join('|');joins.set(key,(joins.get(key)||0)+1);
+  }
+ });
+ assert([...joins].filter(([edge,count])=>count===1&&edge.split('|').every(v=>Math.abs(Number(v.split(',')[2])-4.15)<1e-4)).length===0,'Unió fuselatge/botaló sense vores obertes '+id);
  let triangles=0;
  for(const m of meshes){const pos=m.geometry.attributes.position;assert([...pos.array].every(Number.isFinite));assert(m.geometry.userData.labOwned);triangles+=(m.geometry.index?.count??pos.count)/3}
  assert(triangles<8000&&meshes.length<110,'Pressupost de cada model');

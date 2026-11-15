@@ -1,8 +1,8 @@
 // Original Three.js geometry based on Mi-24V photographs in the lab catalogue.
 // Metres, +Y up, nose -Z. A-D are shape studies, not aircraft designations.
-export const MI24_VERSION='mi24-proposals-20261115-1';
+export const MI24_VERSION='mi24-proposals-20261115-2';
 export const MI24_MODELS=Object.freeze({
- 'mi24-main':{title:'Mil Mi-24V · Principal',note:'Proporcions de referència · model complet',width:1,bubble:1,nose:0,roundness:.85,segments:16},
+ 'mi24-main':{title:'Mil Mi-24V · Principal',note:'Cabines i fuselatge revisats · model complet',width:1,bubble:1,nose:0,roundness:.85,segments:16},
  'mi24-a':{title:'Mi-24 · A · Cabines arrodonides',note:'Cúpules més plenes · transicions més suaus',width:1,bubble:1.09,nose:0,roundness:1,segments:16},
  'mi24-b':{title:'Mi-24 · B · Cos robust',note:'Fuselatge més ample · ventre més profund',width:1.10,bubble:1.02,nose:0,roundness:.78,segments:12},
  'mi24-c':{title:'Mi-24 · C · Perfil estilitzat',note:'Morro més llarg · cabines més baixes i angulars',width:.96,bubble:.92,nose:.32,roundness:1.12,segments:12},
@@ -36,8 +36,14 @@ export function createMi24Proposal(T,id='mi24-main'){
  const sphere=(g,name,pos,size,color=c.body)=>{const m=mesh(g,name,new T.SphereGeometry(1,p.light?8:12,p.light?6:8),color);m.position.set(...pos);m.scale.set(...size);return m};
  // Cross sections share vertices at every join. Cargo windows and both
  // canopies replace body panels; no opaque wall sits behind the glass.
- const ring=(s,n=12,exponent=p.roundness)=>Array.from({length:n},(_,i)=>{
+ const ring=(s,n=12,exponent=p.roundness,body=false)=>Array.from({length:n},(_,i)=>{
   const a=i*2*Math.PI/n,cs=Math.cos(a),sn=Math.sin(a),q=v=>Math.sign(v)*Math.abs(v)**exponent;
+  // The cabin section is tall-sided with a broad keel. Circular sections
+  // made the underside too pointed and the cargo body look like a capsule.
+  if(body&&n===12&&i>=6){
+   const lower=[[ -1,0],[-.96,.57],[-.64,.94],[0,1],[.64,.94],[.96,.57]][i-6];
+   return [s[1]*lower[0],s[4]-(s[4]-s[2])*lower[1],s[0]];
+  }
   return [s[1]*q(cs),s[4]+q(sn)*(sn>=0?s[3]-s[4]:s[4]-s[2]),s[0]];
  });
  const cargoWindow=(g,name,q)=>{
@@ -46,8 +52,8 @@ export function createMi24Proposal(T,id='mi24-main'){
   for(let i=0;i<4;i++){const j=(i+1)%4;poly(g,'Xapa al voltant '+name,[q[i],q[j],win[j],win[i]]);rod(g,'Junta '+name,win[i],win[j],.016,c.dark)}
   poly(g,name,win,c.glass,true);
  };
- const loft=(g,name,sections,{n=12,exponent=p.roundness,color=c.body,state=()=>false,caps=[true,true],belly=false}={})=>{
-  const rings=sections.map(s=>ring(s,n,exponent));
+ const loft=(g,name,sections,{n=12,exponent=p.roundness,color=c.body,state=()=>false,caps=[true,true],belly=false,body=false}={})=>{
+  const rings=sections.map(s=>ring(s,n,exponent,body));
   for(let j=0;j<rings.length-1;j++)for(let k=0;k<n;k++){
    const q=[rings[j][k],rings[j+1][k],rings[j+1][(k+1)%n],rings[j][(k+1)%n]],mode=state(j,k),glass=mode==='glass';
    if(mode==='window'){cargoWindow(g,'Finestra càrrega '+j+'/'+k,q);continue}
@@ -56,7 +62,7 @@ export function createMi24Proposal(T,id='mi24-main'){
     const adjacent=[[j,(k+n-1)%n],[j+1,k],[j,(k+1)%n],[j-1,k]];
     for(let e=0;e<4;e++){
      const [jj,kk]=adjacent[e];
-     if(jj<0||jj>=rings.length-1||state(jj,kk)!=='glass'||e===0&&k===3||e===1&&[2,6].includes(j))
+     if(jj<0||jj>=rings.length-1||state(jj,kk)!=='glass'||e===0&&k===3||e===1&&[2,5].includes(j))
       rod(g,'Marc cabina',q[e],q[(e+1)%4],.025,c.dark);
     }
    }
@@ -66,28 +72,30 @@ export function createMi24Proposal(T,id='mi24-main'){
  };
  const hull=group('Fuselatge i cabines en tàndem'),tail=group('Botaló i deriva');
  const sections=[
-  [-6.15,.12,1.35,1.70,1.52],[-5.80,.50,1.10,2.05,1.62],
-  [-5.54,.64,1.01,2.20,1.72],[-4.90,.78,.95,2.90,1.86],[-4.10,.77,.93,2.87,1.89],
-  [-3.73,.79,.94,2.43,1.90],[-3.51,.84,.92,2.70,1.98],
-  [-2.76,.94,.91,3.51,2.10],[-1.92,1.05,.89,3.49,2.10],
-  [-1.10,1.26,.86,3.35,2.10],[-.20,1.30,.86,3.30,2.06],[.70,1.32,.88,3.25,2.04],
-  [1.60,1.27,.91,3.18,2.04],[2.50,1.14,1.01,3.04,2.04],
-  [3.45,.88,1.22,2.88,2.05],[4.15,.60,1.50,2.67,2.05]
+  [-6.15,.12,1.12,1.64,1.43],[-5.94,.42,.98,1.98,1.51],
+  [-5.72,.57,.88,2.10,1.61],[-5.17,.72,.82,2.68,1.79],[-4.48,.73,.80,2.73,1.85],
+  // A narrow rising bridge, rather than a deep saddle between two domes.
+  [-4.30,.75,.80,2.75,1.88],[-3.65,.84,.80,3.29,2.04],
+  [-3.14,.90,.80,3.47,2.10],[-2.53,.97,.80,3.43,2.11],
+  [-1.10,1.20,.80,3.49,2.08],[-.20,1.25,.80,3.43,2.08],[.70,1.26,.81,3.37,2.08],
+  [1.60,1.24,.85,3.31,2.10],[2.50,1.12,1.03,3.23,2.13],
+  [3.45,.91,1.35,3.16,2.18],[4.15,.67,1.72,3.08,2.32]
  ].map((s,i)=>{
   const out=[...s];out[1]*=p.width;
   if(i<=5)out[0]-=p.nose*(1-i/6);
   if(i>=2&&i<=8){out[3]=out[4]+(out[3]-out[4])*p.bubble;out[1]*=p.bubble**.3}
-  if(id==='mi24-b'&&i>=6&&i<=13)out[2]-=.12;
+  if(id==='mi24-b'&&i>=2&&i<=13)out[2]-=.12;
   return out;
  });
- loft(hull,'Fuselatge Mi-24',sections,{belly:true,caps:[true,false],state:(j,k)=>{
-  if([2,3,6,7].includes(j)&&k<6)return 'glass';
+ loft(hull,'Fuselatge Mi-24',sections,{belly:true,body:true,caps:[true,false],state:(j,k)=>{
+  if([2,3,5,6,7].includes(j)&&k<6)return 'glass';
   if(j>=9&&j<=12&&[0,5].includes(k))return 'window';
   return false;
  }});
- loft(tail,'Botaló',[sections.at(-1),[6.50,.38,1.90,2.65,2.22],[8.35,.25,2.17,2.72,2.43],[10.68,.14,2.45,2.91,2.68]],{belly:true,caps:[false,true]});
+ // Shared root ring: the broad belly rises into a long, nearly level roof.
+ loft(tail,'Botaló',[sections.at(-1),[5.25,.50,2.04,3.05,2.49],[6.50,.37,2.26,3.03,2.63],[8.35,.24,2.48,3.02,2.76],[10.68,.14,2.64,3.01,2.83]],{belly:true,body:true,caps:[false,true]});
  const inside=group('Interior');
- for(const [name,z,y] of [['Artiller',-4.45,1.46],['Pilot',-2.35,2.08]]){
+ for(const [name,z,y] of [['Artiller',-4.96,1.32],['Pilot',-3.08,1.98]]){
   box(inside,'Seient '+name,[.43,.14,.50],[0,y,z],c.dark);
   box(inside,'Respatller '+name,[.43,.57,.13],[0,y+.30,z+.25],c.dark);
   box(inside,'Reposacaps '+name,[.26,.19,.12],[0,y+.68,z+.25],c.dark);
@@ -104,9 +112,9 @@ export function createMi24Proposal(T,id='mi24-main'){
  // the engine housings. The dorsal hump flows into the cargo fuselage.
  for(const side of [-1,1]){
   const engine=group(side<0?'Motor esquerre':'Motor dret');engine.position.x=side*.57;
-  const first=[-1.70,.43,3.24,4.10,3.67],r=ring(first,p.segments,1);
-  loft(engine,'Carenat motor',[first,[-.75,.51,3.05,4.15,3.62],[.70,.49,3.02,4.02,3.58],[1.72,.34,3.02,3.70,3.36]],{n:p.segments,exponent:1,caps:[false,true]});
-  const lip=r.map(v=>[v[0]*.83,3.67+(v[1]-3.67)*.83,v[2]-.015]),inner=lip.map(v=>[v[0]*.86,3.67+(v[1]-3.67)*.86,v[2]+.24]);
+  const first=[-2.48,.39,3.24,4.02,3.63],r=ring(first,p.segments,1);
+  loft(engine,'Carenat motor',[first,[-1.62,.48,3.18,4.13,3.66],[-.75,.51,3.05,4.15,3.62],[.70,.49,3.02,4.02,3.58],[1.50,.40,3.02,3.80,3.40],[2.42,.22,2.97,3.36,3.16],[3.10,.06,2.94,3.05,3.0]],{n:p.segments,exponent:1,caps:[false,true]});
+  const lip=r.map(v=>[v[0]*.83,3.63+(v[1]-3.63)*.83,v[2]-.015]),inner=lip.map(v=>[v[0]*.86,3.63+(v[1]-3.63)*.86,v[2]+.24]);
   for(let i=0;i<r.length;i++){const j=(i+1)%r.length;poly(engine,'Llavi presa aire',[r[i],r[j],lip[j],lip[i]]);poly(engine,'Conducte presa aire',[lip[i],lip[j],inner[j],inner[i]],c.dark)}
   poly(engine,'Fons presa aire',inner,c.dark);
   cyl(engine,'Escapament lateral',.32,.65,[side*.54,3.50,.34],c.dark,'x');
