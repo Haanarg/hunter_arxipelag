@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as T from '../vendor/three-r186.module.mjs';
 import {createKamovCandidate,stepKamovRotors,KAMOV_VERSION,KA60_LOD_VARIANTS} from '../src/kamov-reference-candidates.mjs';
-assert(KAMOV_VERSION.includes('double-scale'));
+assert(KAMOV_VERSION.includes('integrated-engine'));
 for(const type of ['ka60','ka52']){
  const root=createKamovCandidate(T,type),meshes=[],rotors=[];
  root.traverse(o=>{if(o.userData.kamovRotor)rotors.push(o);if(o.isMesh)meshes.push(o)});
@@ -166,9 +166,13 @@ for(const type of ['ka60','ka52']){
   }
   assert(root.getObjectByName('Balisa superior deriva'));
   assert(root.getObjectByName('Espinada superior cua Ka-60 panell 0 0'));
-  assert(root.getObjectByName('Carenat dorsal motor Ka-60 panell 0 0'));
-  assert.equal(meshes.filter(o=>o.name==='Entrada aire motor amb contorn').length,2);
-  assert.equal(meshes.filter(o=>o.name==='Tub escapament dorsal').length,2);
+  assert(root.userData.integratedEngine);
+  assert(!meshes.some(o=>/^(Carenat dorsal motor|Entrada aire motor|Tub escapament dorsal|Cèrcol escapament)/.test(o.name)));
+  for(const kind of ['Presa aire integrada','Sortida escapament integrada']){
+   assert.equal(meshes.filter(o=>o.name.startsWith(kind)&&o.name.endsWith('fons')).length,2);
+   assert.equal(meshes.filter(o=>o.name.startsWith(kind)&&o.name.includes('transició')).length,16);
+  }
+
   assert(root.getObjectByName('Amortidor tren posterior ancorat'));
   assert(root.getObjectByName('Carenat fixació tren posterior'));
   assert(!root.getObjectByName('Motor Ka-60'),'Cal eliminar els dos carenats superiors antics');
@@ -205,6 +209,7 @@ for(const variant of KA60_LOD_VARIANTS){
  const root=createKamovCandidate(T,variant),result=counts(root),rotors=[];
  assert.deepEqual(root.scale.toArray(),[2,2,2]);
  assert.equal(root.userData.labSizeMultiplier,2);
+ assert(root.userData.integratedEngine,'Motor integrat en '+variant);
  assert(result.meshes<previous.meshes&&result.triangles<previous.triangles,'Reducció progressiva '+variant);
  assert(bounds(root).distanceTo(baseSize)<.13,'Mateixa escala i silueta exterior '+variant);
  root.traverse(n=>{if(n.userData.kamovRotor)rotors.push(n)});
@@ -212,6 +217,7 @@ for(const variant of KA60_LOD_VARIANTS){
  assert(rotors.every(n=>n.children.some(c=>c.isMesh)));
  const parts=[];root.traverse(n=>{if(n.isMesh)parts.push(...(n.userData.batchedParts||[]))});
  for(const name of ['Pneumàtic','Conducte fenestron obert','Banc posterior · seient','Coixí seient','Planxa posterior cabina Ka-60','Aleta vertical botaló Ka-60','Estabilitzador superior en T','Muntant porta lateral integrat'])assert(parts.includes(name),variant+' conserva '+name);
+ for(const kind of ['Presa aire integrada','Sortida escapament integrada'])assert.equal(parts.filter(n=>n.startsWith(kind)&&n.endsWith('fons')).length,2,variant+' conserva '+kind);
  assert.equal(parts.filter(n=>n==='Pala fenestron').length,11);
  assert.equal(parts.filter(n=>n==='Superfície pala').length,4);
  assert.equal(parts.filter(n=>n.startsWith('Finestró quadrat')).length,4);

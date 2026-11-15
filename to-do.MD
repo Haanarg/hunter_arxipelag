@@ -1,3 +1,9 @@
+**2026-11-15 · Ka-60 candidat 11, petició a3097fef:**
+- [x] Motor integrat al mateix loft del fuselatge: sostre elevat progressivament i transicions contínues. Preses d’aire i escapaments encaixats a la pell, amb conductes enfonsats; eliminats carenat superposat, tubs i cèrcols que formaven esglaons.
+- [x] Aplicat al model complet i a les variants A/B/C. Escala ×2, portes, vidres, rodes i rotors conservats; Ka-52 verificat idèntic. Render de comprovació de la geometria completa i de C.
+- [x] Regressions Three.js: complet 502 malles / 5644 triangles; A 55 / 4284; B 33 / 3348; C 18 / 2378. Revisió `live-editor-20261115-ka60-integrated-engine-1`.
+- [ ] Valoració visual de l’usuari al visor WebGL.
+
 **2026-11-15 · Ka-60: variants A/B/C optimitzades:**
 - [x] Candidat 10 original conservat; tres variants amb resolució de cilindres i conducte reduïda progressivament, eliminació selectiva de detalls i agrupació de malles. Rotors independents, finestrons, portes obertes, tren, cua i escala ×2 conservats.
 - [x] Regressions Three.js: ka60-a 56 malles 4672 triangles; ka60-b 34 malles 3472 triangles; ka60-c 18 malles 2454 triangles. Geometria del candidat 10 i del Ka-52 verificada idèntica.

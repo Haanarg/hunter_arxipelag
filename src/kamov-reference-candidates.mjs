@@ -1,6 +1,6 @@
 // Original low-poly geometry, based on photographs linked in the lab catalogue.
 // Nose = -Z, metres before the lab's uniform comparison scale. No external assets.
-export const KAMOV_VERSION='kamov-20261115-double-scale-lod-11';
+export const KAMOV_VERSION='kamov-20261115-integrated-engine-12';
 export const KA60_LOD_VARIANTS=Object.freeze(['ka60-a','ka60-b','ka60-c']);
 // Batching is performed in each independent animation pivot's coordinates,
 // before the requested model scale is applied.
@@ -17,7 +17,7 @@ function batchKa60(T,root,detail){
   if(/^(Morro|Junta visible|Pitot)/.test(n))return 'Morro';
   if(/^(Fuselatge|Marc fi|Fil negre|Muntant|Llinda|Esglaó)/.test(n))return 'Fuselatge i marcs';
   if(/^(Terra|Planxa posterior|Cara interior planxa|Cantell planxa|Banc|Coixí|Respatller|Reposacaps|Palanca|Tauler|Pantalla)/.test(n))return 'Interior';
-  if(/^(Carenat dorsal|Entrada aire|Boca fosca|Tub escapament|Cèrcol|Lama|Eix rotor principal)/.test(n))return 'Motor';
+  if(/^(Presa aire integrada|Sortida escapament integrada|Eix rotor principal)/.test(n))return 'Motor';
   if(/^(Pneumàtic|Llanta|Amortidor|Tirant|Carenat fixació)/.test(n))return 'Tren aterratge';
   if(detail===1){
    if(/^(Botaló|Espinada|Antena dorsal)/.test(n))return 'Botaló';
@@ -70,7 +70,7 @@ export function createKamovCandidate(T,variant){
  const type=detail?'ka60':variant;
  if(!['ka60','ka52'].includes(type))throw new Error('Kamov desconegut: '+variant);
  const combat=type==='ka52',root=new T.Group();
- root.name=combat?'Kamov Ka-52 · candidat 1':detail?'Kamov Ka-60 · variant '+['','A','B','C'][detail]:'Kamov Ka-60 · candidat 10';
+ root.name=combat?'Kamov Ka-52 · candidat 1':detail?'Kamov Ka-60 · variant '+['','A','B','C'][detail]:'Kamov Ka-60 · candidat 11';
  root.userData.kamovDetail=detail;
  root.userData.kamovCandidate=type;
  const c={body:combat?0x63725b:0x536655,top:0x75816b,dark:0x252c2c,metal:0x727a76,glass:0x789da5,light:0xe4ddbc,beacon:0xcb5148,navGreen:0x538e74};
@@ -102,6 +102,35 @@ export function createKamovCandidate(T,variant){
   return [power(cs)*w,belt+power(sn)*(sn>=0?top-belt:belt-bottom),
     z+sweep*Math.abs(cs)*(sn>=0?1:.35)];
  });
+ // The engine is the roof itself. Raise only the central roof vertices;
+ // shoulder/window/door edges stay on their approved coordinates.
+ const engineRing=s=>{
+  const r=ring(s),stations=[[-2.30,0],[-1.15,.34],[-.70,.48],[.40,.46],[1.85,.15],[3.15,0]];
+  let rise=0;
+  for(let i=1;i<stations.length;i++)if(s[0]>=stations[i-1][0]&&s[0]<=stations[i][0]){
+   const [z0,h0]=stations[i-1],[z1,h1]=stations[i];rise=h0+(h1-h0)*(s[0]-z0)/(z1-z0);break;
+  }
+  for(const i of [2,3,4])r[i][1]+=rise*(i===3?1:.85);
+  return r;
+ };
+ // Flush octagonal mouths replace roof panels. Their skin has the same
+ // perimeter as the adjacent fuselage: no added cylinder or raised collar.
+ const integratedDuct=(g,name,pts)=>{
+  const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+  const at=(u,v)=>mix(mix(pts[0],pts[1],u),mix(pts[3],pts[2],u),v);
+  const outline=[[0,0],[.5,0],[1,0],[1,.5],[1,1],[.5,1],[0,1],[0,.5]].map(([u,v])=>at(u,v));
+  const uv=[[.21,.21],[.5,.09],[.79,.21],[.91,.5],[.79,.79],[.5,.91],[.21,.79],[.09,.5]];
+  const lip=uv.map(([u,v])=>at(u,v)),center=new T.Vector3(...at(.5,.5));
+  const normal=new T.Vector3(...pts[1]).sub(new T.Vector3(...pts[0])).cross(new T.Vector3(...pts[3]).sub(new T.Vector3(...pts[0]))).normalize();
+  if(normal.dot(new T.Vector3(center.x,center.y-1.8,0))<0)normal.negate();
+  const throat=uv.map(([u,v])=>new T.Vector3(...at(.5+(u-.5)*.86,.5+(v-.5)*.86)).addScaledVector(normal,-.16).toArray());
+  for(let i=0;i<8;i++){
+   const j=(i+1)%8;
+   poly(g,name+' transició '+i,[outline[i],outline[j],lip[j],lip[i]],c.body);
+   poly(g,name+' conducte '+i,[lip[i],lip[j],throat[j],throat[i]],c.dark);
+  }
+  poly(g,name+' fons',throat,c.dark);
+ };
  // Finestra reduïda: quatre tires de carrosseria envolten el vidre.
  // No pintem una finestra damunt d'una paret opaca.
  const smallWindow=(g,name,pts,col)=>{
@@ -135,16 +164,17 @@ export function createKamovCandidate(T,variant){
   }
  };
  const loft=(g,name,sections,windowPanel=()=>false,col=c.body,caps=[true,true])=>{
-  // Only the closed engine and dorsal shells may reduce ring resolution.
+  // Only the separate dorsal tail spine may reduce ring resolution.
   // The main shell retains the exact door and window boundary vertices.
-  const simplify=detail>=2&&/^(Carenat dorsal motor Ka-60|Espinada superior cua Ka-60)$/.test(name);
+  const simplify=detail>=2&&/^Espinada superior cua Ka-60$/.test(name);
   if(simplify&&detail===3)sections=sections.filter((s,i)=>i===0||i===sections.length-1||i%2===0);
   const sample=simplify?[0,2,3,4,6,8,9,10]:null;
-  const rings=sections.map(s=>{const r=ring(s);return sample?sample.map(i=>r[i]):r}),sides=rings[0].length;
+  const rings=sections.map(s=>{const r=name==='Fuselatge Ka-60'?engineRing(s):ring(s);return sample?sample.map(i=>r[i]):r}),sides=rings[0].length;
   for(let j=0;j<rings.length-1;j++)for(let k=0;k<sides;k++){
    const points=[rings[j][k],rings[j+1][k],rings[j+1][(k+1)%sides],rings[j][(k+1)%sides]];
    const state=windowPanel(j,k);
    if(state==='open')continue;
+   if(state==='engine-intake'||state==='engine-exhaust'){integratedDuct(g,(state==='engine-intake'?'Presa aire integrada':'Sortida escapament integrada')+' '+k,points);continue}
    if(state==='small-glass'){smallWindow(g,name+' '+j+' '+k,points,col);continue}
    if(state==='square-windows'){squareWindows(g,name+' '+j+' '+k,points,col);continue}
    const panoramic=state==='panoramic-glass',glazed=state===true||panoramic;
@@ -233,6 +263,8 @@ export function createKamovCandidate(T,variant){
    bellySection([-2.30,1.10,.83,3.01,1.82,0,.92],0.4),
    oldDoorFront,doorFront,doorMiddle,doorRear,tailJoin
   ],(j,k)=>{
+   if(j===3&&[1,4].includes(k))return 'engine-intake';
+   if(j===6&&[1,4].includes(k))return 'engine-exhaust';
    if((j===5||j===6)&&[0,5,6,11].includes(k))return 'open';
    // Preserve front and pilot-side glazing. Behind the pilot seats,
    // restore the opaque green shoulders and two square portholes per side.
@@ -268,7 +300,7 @@ export function createKamovCandidate(T,variant){
   }
   // Solid transverse sheet matches the rear cross-section vertex for
   // vertex and closes the visible cargo bay (no view into the tail).
-  const rearRing=ring(doorRear);
+  const rearRing=engineRing(doorRear);
   const rearInside=rearRing.map(p=>[p[0],p[1],p[2]-.045]);
   poly(root,'Planxa posterior cabina Ka-60',rearRing.slice().reverse(),c.body);
   poly(root,'Cara interior planxa posterior Ka-60',rearInside,0x657365);
@@ -284,7 +316,7 @@ export function createKamovCandidate(T,variant){
   // Open door frames are returns of the actual fuselage skin, not tubes
   // floating on a straight chord. Use the very same vertices as the
   // neighbouring loft panels, including the bulging middle of the jamb.
-  const doorSections=[doorFront,doorMiddle,doorRear],doorRings=doorSections.map(ring);
+  const doorSections=[doorFront,doorMiddle,doorRear],doorRings=doorSections.map(engineRing);
   const inward=(p,s)=>{const belt=s[4]??(s[2]+s[3])/2;return [p[0]*.92,belt+(p[1]-belt)*.92,p[2]]};
   const rim=(name,p,q,s,t)=>poly(root,name,[p,q,inward(q,t),inward(p,s)],c.body);
   for(const side of [-1,1]){
@@ -297,20 +329,8 @@ export function createKamovCandidate(T,variant){
     rim('Muntant porta lateral integrat',doorRings[i][p],doorRings[i][q],doorSections[i],doorSections[i]);
    box(root,'Esglaó accés porta oberta',.16,.065,2.62-sheetExtension,side*.94,.99,.40+sheetExtension/2,c.dark);
   }
-  // Carenat dorsal continu: un sol conjunt aerodinàmic, no dues nacel·les
-  // cilíndriques damunt de la cabina. El pal de rotor hi queda encastat.
-  loft(root,'Carenat dorsal motor Ka-60',[
-   [-1.73,.47,2.58,3.09],[-1.12,.76,2.61,3.40],[-.38,.85,2.62,3.54],
-   [.49,.84,2.58,3.49],[1.27,.69,2.54,3.20],[2.10,.46,2.42,2.81]
-  ],()=>false,c.top);
-  for(const side of [-1,1]){
-   cyl(root,'Entrada aire motor amb contorn',.26,.09,side*.64,2.96,-1.22,c.body,'z',16);
-   cyl(root,'Boca fosca entrada aire',.20,.105,side*.64,2.96,-1.274,c.dark,'z',16);
-   cyl(root,'Tub escapament dorsal',.20,.47,side*.68,2.85,1.71,c.dark,'z',14);
-   cyl(root,'Cèrcol escapament',.225,.06,side*.68,2.85,1.96,c.metal,'z',14);
-   for(let i=0;i<3;i++)
-    box(root,'Lama refrigeració superior',.27,.025,.045,side*.35,3.30-i*.015,.66+i*.14,c.dark);
-  }
+  // Engine cowling, inlets and exhausts belong to the continuous fuselage loft.
+  root.userData.integratedEngine=true;
   // Nervi dorsal afuat damunt el botaló i detalls de la deriva del fenestron.
   loft(root,'Espinada superior cua Ka-60',[
    [2.82,.34,2.20,2.43],[4.30,.22,1.91,2.18],
@@ -433,7 +453,7 @@ export function createKamovCandidate(T,variant){
   // Remove small cosmetic hardware before merging, never glazing,
   // seating, the open door rims, landing wheels or the two rotors.
   const remove=[];
-  const cosmeticB=/^(Lama refrigeració superior|Cèrcol escapament|Frontissa timó de cua|Costella aleró descendent|Tirant tren posterior al botaló)$/;
+  const cosmeticB=/^(Frontissa timó de cua|Costella aleró descendent|Tirant tren posterior al botaló)$/;
   const cosmeticC=/^(Palanca cíclic|Pantalla instruments|Banc posterior · ancoratge a planxa|Vora atac estabilitzador superior|Tirant tren|Antena dorsal cua|Reposacaps)$/;
   root.traverse(n=>{if(n.isMesh&&detail>=2&&(cosmeticB.test(n.name)||detail===3&&cosmeticC.test(n.name)))remove.push(n)});
   for(const n of remove){n.removeFromParent();n.geometry.dispose()}
