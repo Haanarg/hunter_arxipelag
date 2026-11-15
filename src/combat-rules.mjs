@@ -220,7 +220,7 @@ export function tankCanCrush(v,other,ownMass,otherMass){
 
 export function ramSpeedFactor(type,barbed){
   if(type==='tanc')return .995;
-  if(type==='camio'&&barbed)return 1;
+  if(type==='camio'&&barbed)return .9;
   return barbed?.72:.55;
 }
 // Llindars d'embestida: una maniobra lenta no pot fer esclatar una moto
@@ -235,7 +235,7 @@ export function vehicleCanBreakBarrier(v,barbed){
   return v.t==='tanc'||Math.abs(v.v)>vehicleRamThreshold(v,barbed);
 }
 export function mayRamWhileRecovering(type,barbed,cooldown){
-  return cooldown<=0||type==='tanc'||(type==='camio'&&barbed);
+  return cooldown<=0||type==='tanc'||barbed;
 }
 // Original barrier outcomes, without renderer or mutable world references.
 // Els bancs i els pous són obstacles estructurals (rammable=false):
@@ -249,9 +249,10 @@ export function tankCivicRam(v,wall,cooldown=0){
 }
 export function barrierRam(v,wall,cooldown=0){
  const barbed=!!wall.barbed;
- if((!wall.rammable&&!barbed)||wall.open||!Number.isFinite(wall.hp)||wall.hp<=0||!mayRamWhileRecovering(v.t,barbed,cooldown)||!vehicleCanBreakBarrier(v,barbed))return null;
- const heavy=v.t==='tanc'||v.t==='camio'&&barbed;
- return {speedFactor:ramSpeedFactor(v.t,barbed),damage:heavy?0:barbed?2:3,bump:heavy?.06:barbed?.14:.2,cooldown:heavy?.08:.28};
+ const continuation=barbed&&cooldown>0&&Math.abs(v.v)>1;
+ if((!wall.rammable&&!barbed)||wall.open||!Number.isFinite(wall.hp)||wall.hp<=0||!mayRamWhileRecovering(v.t,barbed,cooldown)||!continuation&&!vehicleCanBreakBarrier(v,barbed))return null;
+ const heavy=v.t==='tanc'||barbed&&(v.t==='camio'||v.t==='tanqueta');
+ return {speedFactor:continuation?Math.max(.9,ramSpeedFactor(v.t,true)):ramSpeedFactor(v.t,barbed),damage:heavy||continuation?0:barbed?2:3,bump:heavy?.06:barbed?.14:.2,cooldown:heavy?.08:.28};
 }
 
 export function fenceVehicleContact(w,box){
@@ -276,3 +277,6 @@ export function fenceVehicleContact(w,box){
     t=d2>1e-9?Math.max(enter,Math.min(leave,((nose.x-a.x)*dx+(nose.z-a.z)*dz)/d2)):enter;
   return{x:w.ax+(w.bx-w.ax)*t,z:w.az+(w.bz-w.az)*t};
 }
+
+// Intact wire at manoeuvring speed stays solid, without an instant stop.
+export function fenceBlockedSpeedFactor(){return .65;}

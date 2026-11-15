@@ -3331,7 +3331,7 @@ if(c.m==='w'){
   v.shoreHitCd=Math.max(0,(v.shoreHitCd||0)-dt);
 }
 let raw=hAt(nx,nz),h=land?groundAt(nx,nz):raw,g=Math.max(0,h),
-    deckCarrier=(land||a)?ferryForVehicle(v,nx,nz,true):null,ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius;
+    deckCarrier=(land||a)?ferryForVehicle(v,nx,nz,true):null,ok=Math.abs(nx)<H-radius&&Math.abs(nz)<H-radius,fenceBlocked=false;
 if(ok&&a&&!deckCarrier){
   const structureHit=window.HUNTER_AIR_OBSTACLES.hit(THREE,world,v,
     {x:v.x,z:v.z,alt:v.alt},{x:nx,z:nz,alt:v.alt},VS[v.t]||1);
@@ -3405,6 +3405,7 @@ if((!a||v.alt-g<16)&&!deckCarrier){const footprint=vehicleBox(v,nx,nz,v.hd);for(
     }
   }
   if(a)return crashHelicopterStructure(v,{x:nx,z:nz,alt:v.alt,y:w.y1,kind:'roof'});
+  fenceBlocked=land&&!!w.barbed;
   ok=false;break
 }}
 if(ok&&deckCarrier&&ferryCabinVehicleHit(deckCarrier,vehicleBox(v,nx,nz,v.hd))){
@@ -3438,7 +3439,7 @@ if(ok){
   }
   if(!v.carrier){handleVehicleImpacts(v,dt,oldX,oldZ);if(v.destroyed)return false;if(v.t==='tanc'||v.t==='tanqueta'||v.t==='camio')crush(nx,nz,window.HUNTER_VEHICLE_ENVIRONMENT.palmCrushRadius(v.t,VS[v.t]))}
    else{v.impactFromX=oldX;v.impactFromZ=oldZ;v.envCd=Math.max(0,(v.envCd||0)-dt);v.bump=0;}
-}else{v.v*=Math.exp(-12*dt);v.sideV*=Math.exp(-10*dt);v.strafeV*=Math.exp(-12*dt)}
+}else{v.v*=fenceBlocked?window.HUNTER_SHARED_COMBAT.fenceBlockedSpeedFactor():Math.exp(-12*dt);v.sideV*=Math.exp(-10*dt);v.strafeV*=Math.exp(-12*dt)}
 if(a){
   const g2=Math.max(0,groundAt(v.x,v.z)),previousAlt=window.HUNTER_SHARED_VEHICLES.stepHelicopterLift(v,ud,dt,helicopterLandedAltitude(v,g2));
   if(!deckCarrier){

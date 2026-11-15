@@ -3,7 +3,7 @@ import {turretControllerId} from '../src/vehicle-turret-core.mjs';
 import {palmImpact,rockImpact} from '../src/vehicle-environment-core.mjs';
 import {firstVehicleContact,vehicleContactDamage} from './coop-vehicle-contacts.mjs';
 import {stepRangeVehicle} from './coop-vehicle-motion.mjs';
-import {vehicleDamage,combatBalance,tankCanCrush,barrierRam,tankCivicRam,vehicleHullDistance,vehicleHullSegmentT} from '../src/combat-rules.mjs';
+import {vehicleDamage,combatBalance,tankCanCrush,barrierRam,tankCivicRam,fenceBlockedSpeedFactor,vehicleHullDistance,vehicleHullSegmentT} from '../src/combat-rules.mjs';
 import {towerLegRamDamage} from '../src/tower-model.mjs';
 import {vehicleDynamics,advanceVehicle} from '../src/vehicle-dynamics-core.mjs';
 import {ferryLocal,ferryWorld,ferrySurfaceY,ferryPedestrianAt,
@@ -289,6 +289,8 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
        const response=hit.kind==='rock'?rockImpact(incoming,vehicleDynamics.types[v.t].mass||1):palmImpact(v.t,Math.min(incoming,10),vehicleDynamics.types[v.t].mass||1);
        v.v*=response.speedFactor;v.sideV=0;v.strafeV=0;v.bump=response.bump;
        if(tick>=(v.environmentUntilTick||0)){v.environmentUntilTick=tick+Math.ceil(response.cooldown*30);if(response.damage)onImpact(v.id,response.damage,tick);}
+     }else if(hit.kind==='wall'&&hit.target.barbed){
+       v.v=probe.v*fenceBlockedSpeedFactor();v.sideV=0;v.strafeV=0;v.bump=.12;
      }else if(hit.kind==='tower'){
         v.v=0;v.sideV=0;v.strafeV=0;
       }else if(hit.kind==='vehicle'){

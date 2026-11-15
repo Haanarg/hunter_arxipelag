@@ -201,7 +201,7 @@ export function createNativeOptionals({meta,record={},world,geometry,players,veh
   return {prison:{discovered,released,rescue:(()=>{const st=status(knownTargets);return {guards:st.guards,towers:st.towers,breach:st.breach};})(),
     entities:units.map(u=>({id:u.id,role:u.role,state:u.state,hp:u.hp,x:u.x,y:u.y,z:u.z,
       phase:u.phase,following:u.following,pose:u.pose})),repair:repair?
-      {vehicleId:repair.vehicleId,progress:repair.progress,duration:6}:null},
+      {vehicleId:repair.vehicleId,progress:repair.progress,duration:6,x:repair.x,z:repair.z}:null},
     radio:radio.map(({id,x,y,z,operational,discovered,disabledReason,reports,dispatches})=>
       ({id,x,y,z,operational,discovered,disabledReason,reports,dispatches})),
     events:events.slice()};

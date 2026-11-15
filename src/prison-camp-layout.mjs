@@ -42,10 +42,10 @@ export const prisonCampLayout={
  entrances:[[0,65]],
  routes:[
   {label:'Accés rodat · 14 m',points:[[0,65],[0,50]],width:14},
-  {label:'Accés al taller sense travessar l’heliport',points:[[0,50],[16,50],[16,29],[21,25],[28,19],[33,18]],width:6},
+  {label:'Accés al taller sense travessar l’heliport',points:[[0,50],[16,50],[16,31],[23,31],[25,27],[28,19],[33,18]],width:6},
   {label:'Accés a l’heliport',points:[[0,50],[16,50],[16,57],[36,57],[36,54]],width:6},
   {label:'Caseta de guàrdia',points:[[-40,32],[-40,36],[0,36]],width:4},
-  {label:'Mecànic alliberat',points:[[0,27],[16,29],[21,25],[28,19],[33,18],[40,8]],width:4},
+  {label:'Mecànic alliberat',points:[[0,27],[16,31],[23,31],[25,27],[28,19],[33,18],[40,8]],width:4},
   {label:'Porta dels presoners',points:[[0,36],[0,16],[0,-6]],width:5}
  ],
  zones:[
@@ -64,8 +64,8 @@ export const prisonCampLayout={
  ],
  rescuePoint:{x:0,z:27},
  mechanicStation:{x:40,z:8},
- mechanicAccess:[[16,29],[21,25],[28,19],[33,18],[40,8]],
- mechanicRoute:[[0,16],[0,27],[16,29],[21,25],[28,19],[33,18],[40,8]],
+ mechanicAccess:[[16,31],[23,31],[25,27],[28,19],[33,18],[40,8]],
+ mechanicRoute:[[0,16],[0,27],[16,31],[23,31],[25,27],[28,19],[33,18],[40,8]],
  escapeRoute:[[0,16],[0,30],[0,62],[0,86]],
  counts:'4 camperols · 1 mecànic · 4 soldats patrullant · 2 sentinelles · 4 torres',
  notes:'Oportunitat opcional: cap presoner és necessari per arribar al general. Una única entrada sud de 24 m travessa la filferrada exterior. Els captius són dins un segon recinte amb porta tancada, custodiada per dos soldats. En alliberar-los s’obre la porta interior. El mecànic alliberat és l’única font de reparació de vehicles; treballa a un costat del taller de tres parets i 12 m d’altura. El taller queda endarrerit fins al límit nord de la filferrada interior (z=-10) i l’heliport de 30 m se situa davant de la façana oberta del taller, no davant de la porta del recinte. El pas del mecànic voreja la plataforma. Cap fabricació ni diàleg llarg.'

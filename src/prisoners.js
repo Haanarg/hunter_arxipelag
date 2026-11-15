@@ -248,7 +248,7 @@ window.HUNTER_PRISONERS=Object.freeze({
    for(const u of entities){
     if(!alive(u))continue;
     if(u.role==='mechanic'){
-     u.path=[...exit,...(camp.layout.mechanicAccess||[[33,36],[33,16]]).map(localPoint)];u.state='to-station';
+     u.path=[...exit,...(camp.layout.mechanicAccess||[[16,31],[23,31],[25,27],[28,19],[33,18],[40,8]]).map(localPoint)];u.state='to-station';
     }else{
      // A small stagger avoids prisoners occupying exactly the same spot.
      u.path=[...exit,...farmersEnd];u.state='evacuating';u.phase=index++*.7;
@@ -344,11 +344,18 @@ window.HUNTER_PRISONERS=Object.freeze({
     u.arms[i].rotation.x=(i?1:-1)*stride*.65;
     u.arms[i].rotation.z=0;
    }
-   if(repair?.mechanic===u){u.arms[0].rotation.x=-1.1+Math.sin(repair.progress*14)*.18;u.arms[1].rotation.x=-.7}
+   if(repair?.mechanic===u){
+    const target=repair.vehicle||repair;
+    if(Number.isFinite(target.x)&&Number.isFinite(target.z)){
+     const dx=target.x-u.x,dz=target.z-u.z;
+     if(Math.hypot(dx,dz)>.01)u.o.rotation.y=Math.atan2(-dx,-dz);
+    }
+    u.arms[0].rotation.x=1.1+Math.sin(repair.progress*14)*.18;u.arms[1].rotation.x=.7;
+   }
    else if(u.role==='mechanic'&&u.state==='ready'&&!u.following){
     // Idle workshop behaviour: the rescued mechanic inspects his tools.
-    u.arms[0].rotation.x=-.45+Math.sin(u.phase)*.10;
-    u.arms[1].rotation.x=-.22;
+    u.arms[0].rotation.x=.45+Math.sin(u.phase)*.10;
+    u.arms[1].rotation.x=.22;
     u.phase+=dt*1.5;
    }
   }
@@ -460,7 +467,7 @@ window.HUNTER_PRISONERS=Object.freeze({
     discovered=!!shared.discovered;released=!!shared.released;
     const mechanicUnit=mechanic();
     repair=shared.repair&&mechanicUnit?
-      {mechanic:mechanicUnit,progress:shared.repair.progress}:null;
+      {mechanic:mechanicUnit,progress:shared.repair.progress,x:shared.repair.x,z:shared.repair.z}:null;
     for(const row of shared.entities||[]){
       const u=entities.find(u=>u.id===row.id);if(!u)continue;
       const prior={x:u.x,z:u.z,state:u.state};

@@ -15,8 +15,8 @@ export function towerLegRamDamage(speed,mass=1){
   if(!(speed>8))return 0;
   return Math.min(10,Math.max(1,Math.ceil((speed-8)*Math.sqrt(Math.max(.2,mass))/2)));
 }
-export const TOWER_SIDE_PARAPET_HEIGHT=1.75;
-export const TOWER_SIDE_PARAPET_Y=9.305; // base local: 8.43 .. 10.18
+export const TOWER_SIDE_PARAPET_HEIGHT=1.3125;
+export const TOWER_SIDE_PARAPET_Y=8.43+TOWER_SIDE_PARAPET_HEIGHT/2; // base intacta
 export const TOWER_SIDE_PARAPET_X=3.02;
 export const TOWER_END_PARAPET_Z=2.5;
 export const TOWER_SIDE_PARAPET_LENGTH=5.1;
