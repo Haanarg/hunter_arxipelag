@@ -90,7 +90,7 @@
         (v.t==='heli_combat'?3.3:3.9)*modelScale,
       topHeight=(v.t==='heli_combat'?3:3.45)*modelScale,
       bodyR=(v.t==='heli_combat'?1.45:1.65)*modelScale,
-      rotorR=(v.t==='heli_combat'?6.75:7.4)*modelScale,
+      rotorR=(v.t==='heli_combat'?8.65:7.4)*modelScale,
       dx=end.x-start.x,dz=end.z-start.z,da=end.alt-start.alt,
       steps=Math.max(1,Math.ceil(Math.hypot(dx,dz,da)/1.3));
     for(const e of obstacles){

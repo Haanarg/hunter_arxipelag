@@ -1,3 +1,8 @@
+**2026-11-15 · v0.6.223 · Mi-24 D al joc:**
+- [x] Fàbrica real provada amb Three.js r186: model D 99 malles/4.873 triangles; LOD 1 malla/216 triangles; dos rotors independents i contacte de rodes a zero. Escala del tipus `heli_combat` (1,82) conservada. Radi de disc del rotor actualitzat. Ka-60 intacte.
+- [x] Retirada de la càrrega Apache i del model de reserva; candidats antics fora del laboratori. L'arxiu històric de l'Apache resta disponible només al comparador independent de motors, no al joc.
+- [ ] Validació de vol i Cloudflare.
+
 **2026-11-15 · Mi-24 D aprovat i tres nivells d’optimització:**
 - [x] D original substitueix l'Apache a la fàbrica del joc i al LOD; retirada de càrrega d'Apache. Pestanya única Mi-24 de combat validada, tres estudis d'optimització, retirada del Ka-52 i estudis anteriors.
 - [x] mi24-d: 99 malles / 4873 triangles; mi24-d-a: 20 malles / 4585 triangles; mi24-d-b: 12 malles / 3725 triangles; mi24-d-c: 5 malles / 3245 triangles. Rotors, vidres i escala conservats; comprovacions amb Three.js, serialització i catàleg.

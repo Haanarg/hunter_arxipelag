@@ -1841,7 +1841,7 @@ const mkV=window.HUNTER_VEHICLES.createFactory(THREE,{box:bx,material:M,shadows:
 function seedVehicleStub(t){
   const g=new THREE.Group();
   g.userData.skidContactHeight=
-    t==='heli'||t==='heli_combat' ? (.48-.075)*VS[t] : 0;
+    t==='heli' ? (.48-.075)*VS[t] : 0;
   return g;
 }
 const riderSystem=window.HUNTER_RIDER.create(THREE,{scene,box:bx,material:M,scales:VS,heightAt:hAt,shadows:visualQuality.shadows});
@@ -3176,7 +3176,7 @@ function helicopterRoofCollision(v,x,z,alt){
         bodyTop=alt+(v.t==='heli_combat'?3.0:3.45)*scale*visualScale,
         bodyBottom=alt+skid,rotorY=alt+rotor,
         bodyRadius=(v.t==='heli_combat'?1.45:1.65)*scale*visualScale,
-        rotorRadius=(v.t==='heli_combat'?6.75:7.4)*scale*visualScale;
+        rotorRadius=v.t==='heli_combat'?8.65*scale:7.4*scale*visualScale;
   for(const b of buildingCandidates(x,z,rotorRadius+2)){
     const hull=roofNearXZ(b,x,z,bodyRadius);
     if(hull&&bodyBottom<hull.top+.08&&bodyTop>hull.bottom-.08)return hull;
@@ -3207,7 +3207,7 @@ function helicopterEnvironmentContact(v,from,to){
   const scale=VS[v.t]||1,visualScale=v.t==='heli_combat'?1.5:1.1,
     skid=v.o.userData.skidContactHeight||0,
     rotor=v.o.userData.rotorContactHeight||3.9*scale,
-    rotorRadius=(v.t==='heli_combat'?6.75:7.4)*scale*visualScale,
+    rotorRadius=v.t==='heli_combat'?8.65*scale:7.4*scale*visualScale,
     bodyRadius=(v.t==='heli_combat'?1.45:1.65)*scale*visualScale,
     bodyTop=(v.t==='heli_combat'?3:3.45)*scale*visualScale,
     steps=Math.min(12,Math.max(1,Math.ceil(Math.hypot(to.x-from.x,to.z-from.z)/2.5+Math.abs(to.alt-from.alt)/2.5)));
