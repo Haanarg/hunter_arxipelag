@@ -1,3 +1,9 @@
+**2026-11-15 · v0.6.222, torres, mecànic i embestides:**
+- [x] Quatre parapets -25% mantenint la base; ruta al taller allunyada de la cantonada; braços cap endavant i orientació al vehicle, també amb snapshot COOP.
+- [x] Filferrada: conservació de velocitat, continuació pels trams adjacents durant recuperació sense doble càrrec de PV; maniobra lenta encara bloquejada amb desacceleració. Tanqueta immune al dany de palmeres i filferrada; atropellament de soldats ja no restava PV al vehicle. No s'ha ampliat la immunitat a altres obstacles ni armes.
+- [x] Comprovacions de regles compartides, alçada i sintaxi; paquet executable regenerat.
+- [ ] Validació dins de partida, partides desades i Cloudflare.
+
 **2026-11-15 · Ferri D aprovat:**
 - [x] Model D compartit per joc i laboratori; eliminats A/B/C i l'antic model de caixes. Ferri validat en verd, únic visor editable. Geometria de coberta i cabina conservada; longitud de rampes 6,2 m i angle segons física autoritativa. LOD llunyà blau amb cabina de dos nivells i fum adaptat.
 - [x] PASS ferri D 117 malles 1820 triangles 32.10 × 11.12 × 63.25; Ferry ramp geometry: walking, truck/GAZ transitions, cabin and submerged vehicles OK.
