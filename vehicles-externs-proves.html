@@ -21,7 +21,11 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 .t90-motion p{margin:9px 0 0;font-size:11px;color:#c7d6ca}
 .t90-motion button{padding:8px 13px;border:1px solid #c3d997;border-radius:8px;background:#183d37;color:white;font-weight:750}
 .t90-motion button[aria-pressed="true"]{background:#477757}
-#vehicleList button{text-align:left;min-height:44px;min-width:140px;flex:0 0 148px}#vehicleList small{display:block;font-size:10px;opacity:.8;margin-top:3px}
+#vehicleList button{text-align:left;min-height:44px;min-width:140px;flex:0 0 148px}#vehicleList small{display:block;font-size:10px;opacity:.9;margin-top:3px}
+#vehicleList button[data-validation='validated']{background:#235b37;color:#effff0;border-color:#5e9d70}
+#vehicleList button[data-validation='pending']{background:#813838;color:#fff0ef;border-color:#ce7c75}
+#vehicleList button[data-validation]:hover{filter:brightness(1.16)}
+#vehicleList button[data-validation].active{box-shadow:inset 0 0 0 2px #f4e4a5;border-color:#f4e4a5}
 #info{display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:10px;margin:0 0 11px}
 #warning{color:#f0d9a8;font-size:12px;line-height:1.5;max-width:900px}
 #grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;position:relative}
@@ -152,7 +156,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <script type="module">
 // Carrega asíncronament per poder mostrar l'error si qualsevol import està
 // trencat. Un error de sintaxi al catàleg ja no deixa un visor en blanc.
-import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261115-mi24-five-models-1&t90m=1')
+import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261115-all-vehicles-status-1&t90m=1')
  .catch(error=>{
   console.error('Error en arrencar el laboratori de vehicles:',error);
   const reason=error instanceof Error?error.message:String(error);

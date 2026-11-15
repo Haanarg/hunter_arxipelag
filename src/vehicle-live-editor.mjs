@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {symmetrizeModel} from './vehicle-live-geometry.mjs';
-export const LAB_REVISION='live-editor-20261115-mi24-five-models-1';
+export const LAB_REVISION='live-editor-20261115-all-vehicles-status-1';
 export const removeResolvedRequests=queue=>queue.filter(item=>item?.status!=='resolta');
 const clone=root=>{const copy=root.clone(true),overlays=[];copy.traverse(o=>{if(o.userData.vehicleAnnotationOverlay)overlays.push(o)});for(const o of overlays)o.removeFromParent();return copy};
 const pathOf=(root,node)=>{const path=[];while(node&&node!==root){path.unshift(node.parent.children.indexOf(node));node=node.parent}return path};

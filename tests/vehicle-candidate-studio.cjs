@@ -12,12 +12,7 @@ const catalog=read('src/vehicle-candidate-catalog.mjs');
 const studio=read('src/vehicles-externs-proves.mjs');
 const html=read('vehicles-externs-proves.html');
 const types=[...catalog.matchAll(/\{id:'([^']+)'/g)].map(x=>x[1]);
-assert.deepEqual(new Set(types),new Set([
- 'heli_combat','mi24','llanxa','llanxa_coets','ferry'
-]));
-assert(!types.includes('cotxe_civil'),'El C1A aprovat no ha de ser al laboratori');
-assert(!types.includes('cotxe'),'El GAZ aprovat no ha de ser al laboratori');
-for(const type of ['tanc','tanqueta'])assert(!types.includes(type),'Blindat retirat temporalment del laboratori: '+type);
+assert.deepEqual(types,["heli_combat","mi24","llanxa","llanxa_coets","ferry","heli","cotxe","cotxe_civil","camio","tanc","tanqueta","moto","bici","hover","moto_aquatica","barca_rems","windsurf"]);
 for(const type of ['heli','heli_combat'])assert(!Object.hasOwn(manifest.models,type));
 assert.equal(manifest.savedModels,3);
 assert.equal(manifest.savedBytes,851208);
@@ -26,9 +21,10 @@ assert.deepEqual(manifest.models.ferry,[]);
 assert.deepEqual(manifest.models.llanxa_coets,[]);
 assert.deepEqual(manifest.models.tanqueta,[]);
 assert(!Object.hasOwn(manifest,'selectedForLod'));
-assert(studio.includes('previewFactory=createBtr823BPreview')&&studio.includes('btrStudy?previewFactory()'));
+assert(studio.includes('config.base?createProceduralModel(config.base.variant):await createCurrentVehicle(config.id)'));
+assert(studio.includes('button.dataset.validation='));
+assert(html.includes("data-validation='validated'")&&html.includes("data-validation='pending'"));
 assert(!studio.includes('prepareHueyDuaneRuntime'));
-assert(!types.includes('heli'));
 assert(html.includes('id="liveClearResolved"'));
 assert(studio.includes('prepareApacheAraonRuntime(THREE)'));
 assert(!studio.includes('studio.load(token)'));
@@ -49,4 +45,4 @@ for(const file of [
  'tests/vehicle-candidate-studio.cjs'
 ])execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
 execFileSync(process.execPath,[path.join(root,'tests/btr82-published-assets.cjs')],{stdio:'pipe'});
-console.log('PASS laboratori: cinc pestanyes; Ka-60, C1A, T-90M, BTR-82 i GAZ fora de l’editor, manifest coherent');
+console.log('PASS laboratori: 17 pestanyes, tota la flota, pendents primer, manifest coherent');

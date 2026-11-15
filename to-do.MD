@@ -1,3 +1,9 @@
+**2026-11-15 · Recuperació de tota la flota al laboratori:**
+- [x] 16 tipus de `vehicleSpecs` recuperats, més Mi-24 experimental. Cinc pestanyes pendents en vermell davant de dotze aprovades en verd (camió/barca/windsurf conservats expressament a eaaaecf; hovercraft D seleccionat). Apache és referència del futur helicòpter de combat, Ka-52 i Mi-24 continuen pendents.
+- [x] Els validats mostren la fàbrica real del joc, inclosos GAZ, Ka-60 A, C1A, T-90M i BTR-82. Retirats del visor els proxies LOD ocults i les referències d'execució no serialitzables, sense canviar cap model del joc. Candidats existents i controls del tanc preservats.
+- [x] Catàleg, cobertura de vehicleSpecs, ordre i estats verificats. Revisió `live-editor-20261115-all-vehicles-status-1`.
+- [ ] Validació al navegador de totes les pestanyes i desplegament Cloudflare.
+
 **2026-11-15 · Mil Mi-24V: pestanya pròpia, principal i quatre propostes:**
 - [x] Referències noves frontal, lateral i tres quarts; configuració contrastada amb el Ministeri de Defensa txec. Model principal Mi-24V i quatre estudis: A cúpules més arrodonides, B cos robust, C perfil estilitzat, D facetat lleuger. A-D són propostes del model, no versions reals.
 - [x] Cabines transparents en tàndem a diferent alçada, dos seients de pilotatge, vuit de transport, vuit finestres laterals reals, preses dobles, ales descendents, tren de tres potes/quatre rodes, torreta i rotors de cinc/tres pales animats. Conjunts editables i geometries alliberables en canviar de pestanya.

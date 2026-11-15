@@ -2,7 +2,7 @@ import {createMi24Proposal,MI24_MODELS} from './mi24-proposals.mjs?rev=mi24-prop
 import {createKa52Proposal,KA52_PROPOSALS} from './ka52-proposals.mjs?rev=ka52-proposals-20261115-1';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-mi24-five-models-1';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-all-vehicles-status-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs';
@@ -11,14 +11,14 @@ import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs?rev=c1a-approved-1';
 import {prepareApacheAraonRuntime} from './apache-araon-runtime.mjs';
 import {createVehicleAnnotationEditor} from './vehicle-annotation-editor.mjs?rev=live-editor-20261112-1';
-import {createBtr823BPreview} from './btr82-3b-preview.mjs?rev=btr82-3b-full-nose-restored-v9';
+import {prepareGazTigrRuntime} from './gaz-tigr-runtime.mjs?rev=gaz-final-1';
 import {createReferenceVehicle} from './vehicle-reference-candidates.mjs?rev=gaz-door-contours-v4';
 import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-mi24-five-models-1';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-all-vehicles-status-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -57,8 +57,33 @@ function box(parent,w,h,d,color,x=0,y=0,z=0,profile='paint'){
 }
 const makeOriginal=vehicleModels.createFactory(THREE,{
  box,material,shadows:true,civilianCar:createCivilianCarModel,
+ gaz:prepareGazTigrRuntime(THREE,{vehicleScale:vehicleModels.scales.cotxe}),
  truck:createTruckModel,batching:playerBatching
 });
+// Work on the real full-detail game model, not the hidden distant proxy.
+// Runtime-only Object3D/geometry references are unnecessary in the editor
+// and make JSON drafts enormous. Keep serializable animation tags.
+function prepareLabRuntimeModel(model){
+ const data=model.userData;
+ for(const lod of [data.distantVehicleLOD,data.rowboatVisualLod]){
+  (lod?.proxy||lod?.far)?.removeFromParent();
+ }
+ if(data.rotor&&!data.rotor.userData.kamovRotor)
+   data.rotor.userData.kamovRotor={axis:'y',speed:9};
+ if(data.tailRotor&&!data.tailRotor.userData.kamovRotor)
+   data.tailRotor.userData.kamovRotor={axis:'x',speed:19};
+ const clean=(v,ancestors=new Set())=>{
+  if(v==null||typeof v==='string'||typeof v==='boolean'||typeof v==='number')return v;
+  if(typeof v!=='object'||v.isObject3D||v.isBufferGeometry||v.isMaterial||v.isTexture||ancestors.has(v))return undefined;
+  if(ArrayBuffer.isView(v))return undefined;
+  const seen=new Set(ancestors);seen.add(v);
+  if(Array.isArray(v))return v.map(x=>clean(x,seen)).filter(x=>x!==undefined);
+  const out={};for(const [k,val] of Object.entries(v)){const c=clean(val,seen);if(c!==undefined)out[k]=c}return out;
+ };
+ delete data.distantVehicleLOD;delete data.rowboatVisualLod;
+ model.traverse(n=>{n.userData=clean(n.userData)});
+ return model;
+}
 // Només cal preparar l'Apache quan s'obre la pestanya del Ka-52.
 let apacheFactoryPromise=null;
 async function createCurrentVehicle(type){
@@ -68,7 +93,7 @@ async function createCurrentVehicle(type){
     .catch(error=>{apacheFactoryPromise=null;throw error});
   await apacheFactoryPromise;
  }
- return makeOriginal(type,{color:0x4b9fd1});
+ return prepareLabRuntimeModel(makeOriginal(type,{color:0x4b9fd1}));
 }
 const slots=[];
 for(let i=0;i<5;i++){
@@ -130,7 +155,6 @@ function refreshLab(){
  location.reload();
 }
 let suppressDraftRestore=false;
-let previewFactory=createBtr823BPreview;
 const liveEditor=createVehicleLiveEditor({slots,getType:()=>currentType.id,annotations:vehicleEditor,
  onChange:slot=>{slot.status.textContent=metrics(slot.model)+' · candidat editat'},resumeSelection:resumedView?.selection,
  getView:()=>({yaw,elev,zoom,lookY,panScreenX}),
@@ -139,7 +163,6 @@ const liveEditor=createVehicleLiveEditor({slots,getType:()=>currentType.id,annot
   const published=await fetch('./assets/vehicle-candidates/lab-revision.json',{cache:'no-store'}).then(r=>r.ok?r.json():null);
   if(published&&published.revision!==LAB_REVISION){refreshLab();return}
   const view={yaw,elev,zoom,lookY,panScreenX};
-  const module=await import('./btr82-3b-preview.mjs?live='+Date.now());previewFactory=module.createBtr823BPreview;
   suppressDraftRestore=true;
   try{await choose(currentType)}finally{suppressDraftRestore=false}
   ({yaw,elev,zoom,lookY,panScreenX}=view);updateCamera();
@@ -344,7 +367,7 @@ async function choose(config){
  grid.classList.remove('featured');
  const btrStudy=config.id==='tanqueta';
  const t90Study=config.id==='tanc';
- const soloStudy=btrStudy||t90Study;
+ const soloStudy=config.validated&&config.options.length===0;
  grid.classList.toggle('btr-study',soloStudy);
  document.querySelector('#fitScale').closest('label').hidden=soloStudy;
  document.querySelector('#t90Motion').hidden=!t90Study;
@@ -365,30 +388,30 @@ async function choose(config){
    slot.source.hidden=true;
  }
  try{
-   const model=config.base?createProceduralModel(config.base.variant):btrStudy?previewFactory():t90Study?createReferenceVehicle(THREE,config.candidate):await createCurrentVehicle(config.id);
+   const model=config.base?createProceduralModel(config.base.variant):await createCurrentVehicle(config.id);
    // No reintroduir models antics quan es canvia de pestanya durant la càrrega.
    if(token!==generation)return;
    setModel(slots[0],model,true,[],soloStudy);
-   if(config.id==='heli_combat')slots[0].bold.textContent='Actual · Apache AH-64';
+   if(config.currentName)slots[0].bold.textContent='Actual · '+config.currentName;
    if(config.base)slots[0].bold.textContent=config.base.title;
    originalDims=dimsOf(slots[0].model);
    slots[0].status.textContent=metrics(slots[0].model);
    slots[0].person.position.x=originalDims.x*.62+1.0;
    slots[0].sub.textContent=btrStudy?
      'Casc i torreta 3B, defenses i visors · SIpriv · CC BY 4.0':
-     t90Study?'Model Three.js propi · 150 % · torreta, canó i erugues animables':
+     t90Study?'Model real del joc · torreta, canó i erugues animables':
      config.id==='heli_combat'?'Apache AH-64 · model definitiu natiu · 3 rodes':
      config.base?'Model principal de referència · Three.js propi':
      'Fàbrica original · Three.js r186';
    if(config.base){slots[0].source.href=config.references?.[0]?.url;slots[0].source.hidden=false;slots[0].status.textContent+=' · '+config.base.note;}
    if(t90Study){
-     slots[0].bold.textContent='T-90M · model propi únic · 150 %';
+     slots[0].bold.textContent='Actual · T-90M · escala del joc';
      slots[0].source.href=config.references?.[0]?.url||'https://commons.wikimedia.org/wiki/Category:T-90M';
      slots[0].source.hidden=false;
      slots[0].status.textContent+=' · 12 rodes · prova de comandaments';
    }
    if(btrStudy){
-     slots[0].bold.textContent='BTR-82 · model 3B revisat';
+     slots[0].bold.textContent='Actual · BTR-82 · model 3B';
      slots[0].source.href='https://sketchfab.com/3d-models/low-poly-btr-82-6226acae68424d99bf03882b245ff7c5';
      slots[0].source.hidden=false;
      slots[0].status.textContent+=' · 8 rodes · detalls de prova';
@@ -602,8 +625,10 @@ syncLabTurretButton();
 const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
+ button.dataset.validation=config.validated?'validated':'pending';
  button.textContent=config.name;
- const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3B revisat · únic model':config.id==='tanc'?'Model propi · únic':config.id==='heli_combat'?'Apache definitiu · Three.js':config.base?'Principal + '+config.options.length+' propostes':config.options.length+' alternatives');
+ const small=document.createElement('small');
+ small.textContent=(config.validated?'✓ Validat':'● Pendent')+' · '+(config.experimental?'Experimental':kinds[config.kind]);
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }
