@@ -7,7 +7,6 @@ const Q=(query)=>({query});
 // Candidats procedimentals que es poden editar sense dependre de GLB externs.
 const C=(variant,title,note)=>({provider:'procedural',variant,title,note});
 export const CATALOG=[
- {id:'cotxe_civil',name:'Cotxe utilitari',kind:'terra',note:'C1A actual i candidat amb el frontal suavitzat · mateixa escala.',options:[C('civil-rounded-nose','C1A · frontal arrodonit','Capó corbat · cantonades suaus · fars i para-xocs adaptats')]},
  {id:'heli',name:'Helicòpter · Kamov Ka-60',kind:'aire',
    note:'Candidat Three.js ajustat exclusivament a les dues imatges facilitades a la conversa: morro opac diferenciat dels vidres davanters, parabrisa endarrerit i alerons triangulars de cua orientats cap avall. Conservar portes laterals obertes, motor dorsal i tren posterior.',
    // Retirades totes les referències URL externes antigues. Les dues

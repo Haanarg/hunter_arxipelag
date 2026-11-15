@@ -1,8 +1,7 @@
 // Comprovació de la carrosseria C1A aprovada al joc: sostre, juntes i rodes.
 import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three-r186.module.mjs';
-import {createCivilianCarModel} from '../src/civilian-car-model.mjs';
-import {createCivilianRoundedCandidate} from '../src/civilian-car-rounded-candidate.mjs';
+import {createCivilianCarModel,createCivilianCarBaseModel} from '../src/civilian-car-model.mjs';
 
 const car=createCivilianCarModel(THREE);
 const get=name=>car.getObjectByName(name);
@@ -47,18 +46,18 @@ const saved=new THREE.ObjectLoader().parse(car.toJSON());
 assert.equal(saved.userData.roofInset,.21);
 console.log('PASS C1A definitiu: sostre de 2.28m, 8 vidres ajustats, direcció i rodes');
 
-const rounded=createCivilianRoundedCandidate(THREE);
-assert.equal(rounded.userData.labOnly,true);
+const rounded=car,original=createCivilianCarBaseModel(THREE);
+assert(!rounded.userData.labOnly,'El frontal aprovat ha de ser el model del joc');
 assert.equal(rounded.userData.roundedNose,true);
 const bounds=o=>new THREE.Box3().setFromObject(o);
 for(const name of ['civil-c-roof-panel','civil-c-front-glass','civil-c-rear-glass','paraxocs-separat-darrere']){
- const a=bounds(car.getObjectByName(name)),b=bounds(rounded.getObjectByName(name));
+ const a=bounds(original.getObjectByName(name)),b=bounds(rounded.getObjectByName(name));
  assert(a.min.distanceTo(b.min)<1e-6&&a.max.distanceTo(b.max)<1e-6,name+' modificat');
 }
 assert.equal(rounded.userData.wheels.length,4);
 assert.equal(rounded.userData.steeringPivots.length,2);
 for(let i=0;i<4;i++){
- const a=bounds(car.userData.wheels[i]),b=bounds(rounded.userData.wheels[i]);
+ const a=bounds(original.userData.wheels[i]),b=bounds(rounded.userData.wheels[i]);
  assert(a.min.distanceTo(b.min)<1e-6&&a.max.distanceTo(b.max)<1e-6,'Roda modificada');
 }
 const hood=rounded.getObjectByName('civil-rounded-hood'),hp=hood.geometry.attributes.position;
@@ -74,8 +73,9 @@ for(const name of ['civil-rounded-side--1','civil-rounded-side-1','civil-rounded
  const pos=mesh.geometry.attributes.position;
  for(let i=0;i<pos.count;i++)assert([pos.getX(i),pos.getY(i),pos.getZ(i)].every(Number.isFinite));
 }
-const bb=bounds(rounded),ob=bounds(car);
+const bb=bounds(rounded),ob=bounds(original);
 assert(bb.getSize(new THREE.Vector3()).distanceTo(ob.getSize(new THREE.Vector3()))<.06,'L’escala global no ha de canviar');
-console.log('PASS C1A candidat: frontal corbat, cabina, escala i rodes conservades');
+console.log('PASS C1A definitiu: frontal corbat, cabina, escala i rodes conservades');
 const restored=new THREE.ObjectLoader().parse(rounded.toJSON());
 assert.deepEqual(Array.from(restored.getObjectByName('civil-rounded-hood').geometry.attributes.position.array),Array.from(hp.array),'El JSON del visor ha de conservar la forma del capó');
+assert.equal(createCivilianCarModel(THREE,0xd34e3d).userData.civilianColor,0xd34e3d);

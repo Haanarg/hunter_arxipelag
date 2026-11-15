@@ -1,5 +1,4 @@
-// C1A de proves: geometria del morro, sense tocar la fàbrica aprovada.
-import {createCivilianCarModel} from './civilian-car-model.mjs';
+// C1A definitiu: geometria del morro aprovada el 2026-11-15.
 const W=2.92,L=5.75,hw=W/2,frontZ=-L/2,rearZ=L/2,belt=1.75,
  hoodEnd=-1.425,wheelY=.72,archR=.83,wheelFront=-L*.33,wheelRear=L*.33;
 const clamp=t=>Math.max(0,Math.min(1,t));
@@ -10,9 +9,8 @@ function nose(x,y,z){
  const e=Math.min(1,Math.abs(x)/hw),outer=e**4,upper=clamp((y-1.30)/.45);
  return [x*(1-.065*t*e*e),y-upper*(.095*t+.065*long*outer),z+.12*t*outer];
 }
-export function createCivilianRoundedCandidate(THREE,color=0x4b9fd1){
- const car=createCivilianCarModel(THREE,color);
- car.name='civil-c1a-rounded-nose-candidate';
+export function applyCivilianRoundedNose(THREE,car){
+ car.name='hunter-civil-family-iteration-C1A';
  const children=car.children.slice();
  const find=(predicate,label)=>{
   const all=children.filter(predicate);
@@ -79,6 +77,6 @@ export function createCivilianRoundedCandidate(THREE,color=0x4b9fd1){
   const label=mesh.name==='paraxocs-separat-davant'?'civil-rounded-bumper':'civil-rounded-front-trim';
   segmented(mesh,label);
  }
- car.userData.labOnly=true;car.userData.roundedNose=true;
+ car.userData.roundedNose=true;
  return car;
 }

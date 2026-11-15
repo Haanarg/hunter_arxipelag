@@ -108,7 +108,7 @@ import {compoundLayouts} from './compound-layouts.mjs';
 window.HUNTER_COMPOUND_LAYOUTS=compoundLayouts;
 import {GAME_VERSION} from './version.mjs?v=0.6.218';
 import {createTruckModel} from './truck-model.mjs';
-import {createCivilianCarModel} from './civilian-car-model.mjs';
+import {createCivilianCarModel} from './civilian-car-model.mjs?rev=c1a-approved-1';
 window.HUNTER_CIVIL_C1A=createCivilianCarModel;
 // Mateixa geometria A4.3 que es mostra a camio-proves.html.
 window.HUNTER_TRUCK_CONCEPT=createTruckModel;

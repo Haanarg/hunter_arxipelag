@@ -1,3 +1,7 @@
+**2026-11-15 · C1A arrodonit aprovat:**
+- [x] Frontal del candidat integrat a la fàbrica civil nativa; conserva rodes, escala, física i habitacle. Pestanya de l’utilitari retirada del laboratori.
+- [ ] Validar visualment el model complet en una partida real i verificar el desplegament.
+
 **2026-11-15 · Ka-60 candidat 10, petició d051fee7:**
 - [x] Escala uniforme ×2 en X/Y/Z del candidat Ka-60 complet, sense afegir triangles ni alterar les peces. El visor conserva el factor ×2 amb l'ajust automàtic activat o desactivat; càmera compartida i soldat de referència a escala original.
 - [x] Huey, Ka-52 i candidat recent del cotxe C1A intactes. Revisió `live-editor-20261115-ka60-double-scale-1`.

@@ -1,13 +1,12 @@
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
 import {createKamovCandidate,stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-double-scale-10';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-ka60-double-scale-1';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-civil-approved-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs';
 import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
-import {createCivilianCarModel} from './civilian-car-model.mjs';
-import {createCivilianRoundedCandidate} from './civilian-car-rounded-candidate.mjs?rev=live-editor-20261115-civil-rounded-nose-1';
+import {createCivilianCarModel} from './civilian-car-model.mjs?rev=c1a-approved-1';
 import {prepareHueyDuaneRuntime} from './huey-duane-runtime.mjs';
 import {prepareApacheAraonRuntime} from './apache-araon-runtime.mjs';
 import {createVehicleAnnotationEditor} from './vehicle-annotation-editor.mjs?rev=live-editor-20261112-1';
@@ -18,7 +17,7 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-ka60-double-scale-1';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-civil-approved-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -254,16 +253,6 @@ function setModel(slot,obj,original,animations=[],keepNativeOrientation=false){
 async function loadExternal(slot,entry,used,token){
  if(entry.provider==='procedural'){
    if(token!==generation)return;
-   if(entry.variant==='civil-rounded-nose'){
-     const model=createCivilianRoundedCandidate(THREE,0x4b9fd1);
-     model.scale.setScalar(vehicleModels.scales.cotxe_civil);
-     setModel(slot,model,true,[],true);
-     slot.bold.textContent=entry.title;
-     slot.sub.textContent='Three.js · xapes editables · mateixa escala que l’original';
-     slot.source.hidden=true;
-     slot.status.textContent=metrics(slot.model)+' · '+entry.note;
-     return;
-   }
    const model=['ka60','ka52'].includes(entry.variant)?createKamovCandidate(THREE,entry.variant):createReferenceVehicle(THREE,entry.variant);
    setModel(slot,model,false,[],true);
    slot.bold.textContent=entry.title;
@@ -615,7 +604,7 @@ const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.textContent=config.name;
- const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3B revisat · únic model':config.id==='tanc'?'Model propi · únic':config.id==='heli'?'Huey definitiu · Three.js':config.id==='heli_combat'?'Apache definitiu · Three.js':config.id==='cotxe_civil'?'C1A actual + candidat':config.options.length+' alternatives');
+ const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3B revisat · únic model':config.id==='tanc'?'Model propi · únic':config.id==='heli'?'Huey definitiu · Three.js':config.id==='heli_combat'?'Apache definitiu · Three.js':config.options.length+' alternatives');
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }

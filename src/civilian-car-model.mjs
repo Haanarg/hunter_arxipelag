@@ -1,6 +1,12 @@
-// Shared C1 body; C1A default includes the approved tapered roof and sealed glazing.
+// Shared C1 body; C1A default includes the approved tapered roof, sealed glazing and rounded nose.
+import {applyCivilianRoundedNose} from './civilian-car-rounded-nose.mjs?rev=c1a-approved-1';
 const C1A={id:'C1A',name:'Maleter clàssic',description:'C1 original depurat: maleter baix, passadors interiors foscos i cromats fins.',length:5.75,width:2.92,roofY:2.73,roofFront:-.82,roofRear:2.02,frontBase:-1.37,rearBase:2.26,beltY:1.75,rWheel:.70,rArch:.83,trim:0xcbd0c7,upholstery:0x6e5743,rack:false,rails:false,cargoY:1.06,liner:0x414440,cargo:0x494e49,bumper:0xcbd0c7,roofInset:.21};
 export function createCivilianCarModel(THREE,color=0x4b9fd1,q=C1A,decorate=null,accessories=null){
+ const car=createCivilianCarBaseModel(THREE,color,q,decorate,accessories);
+ // Les variants històriques explícites continuen amb la geometria original.
+ return q===C1A?applyCivilianRoundedNose(THREE,car):car;
+}
+export function createCivilianCarBaseModel(THREE,color=0x4b9fd1,q=C1A,decorate=null,accessories=null){
  const g=new THREE.Group();g.name='hunter-civil-family-iteration-'+q.id;
  const L=q.length,W=q.width,hw=W/2,top=q.roofY,belt=q.beltY;
  // El C1A definitiu té sostre estret i vidres inclinats. Altres
