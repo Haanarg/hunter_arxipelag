@@ -1,3 +1,4 @@
+import {createMi24Runtime,MI24_RUNTIME_ID} from './mi24-proposals.mjs?rev=mi24-d-optimized-20261115-3';
 import {installFerryModel} from './ferry-proposals.mjs?rev=ferry-d-approved-1';
 import {turretSpecs,advanceTurret,stepManualTurret} from './vehicle-turret-core.mjs?rev=btr82-scale-80-1';
 import {installBtr82Model3B} from './btr82-3b-native.mjs?rev=btr82-scale-80-1';
@@ -7,7 +8,7 @@ import {vehicleSpecs} from './vehicle-specs.mjs?rev=btr82-scale-80-1';
 import {createKa60Runtime,KA60_RUNTIME_ID} from './ka60-runtime.mjs?rev=ka60-approved-1';
 import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs?rev=vivid-engine-cover-2';
 import {createStreetfighter25,STREETFIGHTER_25_META} from './streetfighter-25-geometry.mjs';
-import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?v=0.6.216&btr82=1&t90m=1&ka60=1&ferryD=1';
+import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?rev=mi24-d-approved-1';
 import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.mjs?v=0.6.81';
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 export const vehicleModels=Object.freeze({
@@ -717,79 +718,17 @@ export const vehicleModels=Object.freeze({
         g.userData.hovercraftWindows=hover.userData.windowPanes;
       }
       if(t==='heli'||t==='heli_combat'){
-        const combat=t==='heli_combat',bodyCol=combat?0x59634f:0x647768;
-        // Ka-60 A i Apache natius, rotors independents en SOLO/COOP.
-        const approvedKa60=!combat?createKa60Runtime(THREE,{vehicleScale:VS[t]}):null;
-        const apacheRuntime=combat?globalThis.HUNTER_APACHE_ARAON:null;
-        const approvedApache=apacheRuntime?.create?.()||null;
-        const approvedModel=approvedKa60||approvedApache;
-        if(approvedModel){
-          resources?.retainModel(approvedModel);
-          g.add(approvedModel);
-          g.userData.rotor=approvedModel.userData.rotor;
-          g.userData.tailRotor=approvedModel.userData.tailRotor;
-          if(approvedKa60){
-            g.userData.ka60Model=KA60_RUNTIME_ID;
-            g.userData.cockpitSeatCount=2;
-            g.userData.roundWheelCount=3;
-            g.userData.ka60Contact={skid:approvedKa60.userData.skidContactHeight,rotor:approvedKa60.userData.rotorContactHeight};
-          }else{
-            g.userData.apacheModel=approvedApache.userData.apacheModel||'araon-50-engine-native-round-wheels-150';
-            g.userData.roundWheelCount=3;
-          }
-        }else{
-          // Combat Compacte B3 · Apache: cabines igualades, fuselatge compacte i unió diagonal.
-          const fus=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(bodyCol,'paint'));fus.scale.set(.86,.86,2.51);fus.position.set(0,2.08,.2);g.add(fus);
-          roundedPrism(g,1.38,.48,1.9,.15,0x4f5949,0,2.68,-.12,'paint');
-
-          // Dues cabines de mida equivalent, més angulars, inspirades en l'Apache.
-          const front=roundedPrism(g,1.31,.78,.98,.025,glass,0,2.13,-2.45,'glass');front.rotation.x=-.11;
-          const rear=roundedPrism(g,1.31,.78,.98,.025,glass,0,2.46,-1.34,'glass');rear.rotation.x=.06;
-          box(g,1.45,.2,.3,bodyCol,0,1.84,-2.93,'paint');
-          const bridge=box(g,1.38,.56,.76,bodyCol,0,2.5,-1.87,'paint');bridge.rotation.x=-.5;
-          box(g,1.31,.26,.62,bodyCol,0,2.83,-.68,'paint');
-
-          // Aletes curtes i barquilles grans.
-          for(const x of[-1.57,1.57]){
-            const side=Math.sign(x);
-            rod(g,[side*.58,2.0,-.08],[x,1.8,.08],.085,metal);
-            box(g,.18,.13,1.9,0x4c5749,x,1.79,.18,'paint');
-            round(g,.26,1.9,0x39423a,x,1.68,.18,'z','metal');
-            box(g,.34,.18,.45,0x303638,x,1.68,-.86,'metal');
-          }
-
-          // Canó de morro.
-          rod(g,[0,1.72,-2.85],[0,1.72,-4.0],.11,metal);box(g,.3,.26,.52,0x343b35,0,1.72,-3.92,'metal');
-
-          // Patins connectats directament al fuselatge.
-          for(const x of[-1.17,1.17]){
-            const side=Math.sign(x);
-            rod(g,[x,.48,-1.72],[x,.48,1.42],.075,metal);
-            rod(g,[side*.55,1.85,-1.0],[x,.48,-1.0],.075,metal);
-            rod(g,[side*.62,1.88,.15],[x,.48,.15],.075,metal);
-            rod(g,[side*.58,1.82,.95],[x,.48,.95],.075,metal);
-          }
-
-          // Boom de cua afinat i estabilitzador del B3.
-          {const startZ=.95,endZ=6.99,y0=2.42,y1=2.95,L=Math.hypot(endZ-startZ,y1-y0),boom=new THREE.Mesh(new THREE.CylinderGeometry(.147,.35,L,6),material(bodyCol,'paint'));boom.position.set(0,(y0+y1)/2,(startZ+endZ)/2);boom.rotation.x=Math.PI/2-Math.atan2(y1-y0,endZ-startZ);g.add(boom)}
-          box(g,.12,1.35,.88,bodyCol,0,3.34,6.87,'paint');
-          box(g,2.25,.1,.58,bodyCol,0,2.9,5.94,'paint');
-        }
-        if(!approvedModel){
-          const rotorY=combat?3.22:3.82,mastBaseY=combat?2.94:3.02;
-          rod(g,[0,mastBaseY,0],[0,rotorY,0],.14,metal);
-          round(g,.3,.2,metal,0,rotorY,0,'y','metal');
-          const rotor=new THREE.Group();rotor.position.set(0,rotorY,0);
-          for(const a of(combat?[0]:[0,Math.PI/2])){
-            const blade=box(rotor,combat?13.5:14.8,.1,.36,rubber,0,0,0,'rubber');
-            blade.rotation.y=a;
-          }
-          g.add(rotor);g.userData.rotor=rotor;
-          const tail=new THREE.Group();tail.position.set(.38,3.45,combat?7:7.38);
-          box(tail,.1,1.9,.16,rubber,0,0,0,'rubber');
-          box(tail,.1,.16,1.9,rubber,0,0,0,'rubber');
-          g.add(tail);g.userData.tailRotor=tail;
-        }
+        const combat=t==='heli_combat';
+        const approvedModel=combat?createMi24Runtime(THREE):createKa60Runtime(THREE,{vehicleScale:VS[t]});
+        resources?.retainModel(approvedModel);
+        g.add(approvedModel);
+        g.userData.rotor=approvedModel.userData.rotor;
+        g.userData.tailRotor=approvedModel.userData.tailRotor;
+        g.userData.cockpitSeatCount=2;
+        g.userData.roundWheelCount=combat?4:3;
+        g.userData.aircraftContact={skid:approvedModel.userData.skidContactHeight,rotor:approvedModel.userData.rotorContactHeight};
+        if(combat)g.userData.mi24Model=MI24_RUNTIME_ID;
+        else {g.userData.ka60Model=KA60_RUNTIME_ID;g.userData.ka60Contact=g.userData.aircraftContact;}
       }
       if(t==='bici'){
         const crank=new THREE.Group();crank.position.set(0,.75,0);
@@ -816,10 +755,9 @@ export const vehicleModels=Object.freeze({
       // Les dues barres inferiors estan centrades a y=.48 i tenen radi .075.
       // Guardam el contacte inferior JA escalat per a la física d'aterratge.
       if(t==='heli'||t==='heli_combat'){
-        const aircraft=globalThis.HUNTER_APACHE_ARAON;
-        const ka60=g.userData.ka60Contact;
-        g.userData.skidContactHeight=(ka60?.skid??aircraft?.skidContactHeight??(.48-.075))*VS[t];
-        g.userData.rotorContactHeight=(ka60?.rotor??aircraft?.rotorContactHeight??3.27)*VS[t];
+        const contact=g.userData.aircraftContact;
+        g.userData.skidContactHeight=contact.skid*VS[t];
+        g.userData.rotorContactHeight=contact.rotor*VS[t];
       }
       g.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=shadows;o.receiveShadow=shadows}});
       // Fusionam només malles rígides germanes amb el mateix material.

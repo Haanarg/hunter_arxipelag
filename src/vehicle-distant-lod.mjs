@@ -12,7 +12,7 @@ const colorByType=Object.freeze({
   moto:0x9f663e,bici:0x42878a,moto_aquatica:0x39878e,windsurf:0xe2c98a,
   cotxe:0x6b7758,cotxe_civil:0x567f98,camio:0x6d735c,
   tanc:0x686f50,tanqueta:0x64694d,jeep:0x6b7758,
-  heli:0x687660,heli_combat:0x535b4b,
+  heli:0x687660,heli_combat:0x667451,
   llanxa:0x667176,llanxa_coets:0x667176,
   hover:0x838d7f,ferry:0x294d70
 });
@@ -120,10 +120,24 @@ export function createDistantVehicleFactory(THREE,resources=null){
       b(0,3.52,0,.20,.76,.20,0x555d57);
       b(0,3.91,0,13.5,.075,.30,0x292d2d);
       b(0,3.91,0,.30,.075,13.5,0x292d2d);
-    }else if(flyer){
-      box(0,1.75,0,w*.72,1.35,d*.65,main);
-      box(0,2.85,0,w*1.65,.075,.30,0x292d2d);
-      box(0,2.2,d*.34,.3,.37,d*.46,main);
+    }else if(type==='heli_combat'){
+      box(0,2.10,-.25,2.45,2.57,7.65,main);
+      box(0,1.85,-5.01,1.50,1.65,2.30,main);
+      box(0,2.24,-4.92,1.39,.78,1.39,0x456973);
+      box(0,2.92,-3.37,1.73,.96,1.75,0x456973);
+      box(0,3.61,-.05,1.82,.85,4.43,main);
+      box(0,2.79,7.10,.67,.64,6.95,main);
+      box(0,3.79,9.82,.26,2.2,1.38,main);
+      box(0,2.46,7.72,3.4,.12,1.12,main);
+      for(const side of [-1,1]){
+       box(side*2.17,2.3,1.65,2.45,.17,1.65,main);
+       box(side*2.55,1.49,1.38,.50,.50,1.72,0x3b4540);
+       box(side*1.61,.49,1.88,.25,.98,.98,0x202721);
+      }
+      box(0,.33,-4.48,.55,.66,.66,0x202721);
+      box(0,4.83,0,17.3,.08,.26,0x292d2d);
+      box(0,4.83,0,.26,.08,16.3,0x292d2d);
+      box(-.29,4.38,10.18,.075,3.908,.16,0x292d2d);
     }else if(type==='cotxe'){
       const W=3.12,L=5.55,paint=0x687658,rubber=0x25292a,glass=0x3b4c4f;
       box(0,1.03,0,W*.92,.86,L*.91,paint);

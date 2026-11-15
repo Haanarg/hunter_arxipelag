@@ -12,7 +12,7 @@ const catalog=read('src/vehicle-candidate-catalog.mjs');
 const studio=read('src/vehicles-externs-proves.mjs');
 const html=read('vehicles-externs-proves.html');
 const types=[...catalog.matchAll(/\{id:'([^']+)'/g)].map(x=>x[1]);
-assert.deepEqual(types,["heli_combat","mi24","llanxa","llanxa_coets","ferry","heli","cotxe","cotxe_civil","camio","tanc","tanqueta","moto","bici","hover","moto_aquatica","barca_rems","windsurf"]);
+assert.deepEqual(types,["llanxa","llanxa_coets","heli_combat","ferry","heli","cotxe","cotxe_civil","camio","tanc","tanqueta","moto","bici","hover","moto_aquatica","barca_rems","windsurf"]);
 for(const type of ['heli','heli_combat'])assert(!Object.hasOwn(manifest.models,type));
 assert.equal(manifest.savedModels,3);
 assert.equal(manifest.savedBytes,851208);
@@ -26,7 +26,7 @@ assert(studio.includes('button.dataset.validation='));
 assert(html.includes("data-validation='validated'")&&html.includes("data-validation='pending'"));
 assert(!studio.includes('prepareHueyDuaneRuntime'));
 assert(html.includes('id="liveClearResolved"'));
-assert(studio.includes('prepareApacheAraonRuntime(THREE)'));
+assert(!studio.includes('prepareApacheAraonRuntime'));
 assert(!studio.includes('studio.load(token)'));
 assert(studio.includes('slot.outer.hidden=slots.indexOf(slot)>(soloStudy?0:config.options.length)'));
 assert(studio.includes('createVehicleAnnotationEditor'));
@@ -45,4 +45,4 @@ for(const file of [
  'tests/vehicle-candidate-studio.cjs'
 ])execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
 execFileSync(process.execPath,[path.join(root,'tests/btr82-published-assets.cjs')],{stdio:'pipe'});
-console.log('PASS laboratori: 17 pestanyes, tota la flota, pendents primer, manifest coherent');
+console.log('PASS laboratori: 16 pestanyes, tota la flota, pendents primer, manifest coherent');

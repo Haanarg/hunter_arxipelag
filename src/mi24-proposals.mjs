@@ -1,16 +1,17 @@
 // Original Three.js geometry based on Mi-24V photographs in the lab catalogue.
 // Metres, +Y up, nose -Z. A-D are shape studies, not aircraft designations.
-export const MI24_VERSION='mi24-proposals-20261115-2';
+export const MI24_VERSION='mi24-d-optimized-20261115-3';
+export const MI24_RUNTIME_ID='mi24-d-approved';
+const D=Object.freeze({width:1.02,bubble:1,nose:.05,roundness:1,segments:8,light:true});
 export const MI24_MODELS=Object.freeze({
- 'mi24-main':{title:'Mil Mi-24V · Principal',note:'Cabines i fuselatge revisats · model complet',width:1,bubble:1,nose:0,roundness:.85,segments:16},
- 'mi24-a':{title:'Mi-24 · A · Cabines arrodonides',note:'Cúpules més plenes · transicions més suaus',width:1,bubble:1.09,nose:0,roundness:1,segments:16},
- 'mi24-b':{title:'Mi-24 · B · Cos robust',note:'Fuselatge més ample · ventre més profund',width:1.10,bubble:1.02,nose:0,roundness:.78,segments:12},
- 'mi24-c':{title:'Mi-24 · C · Perfil estilitzat',note:'Morro més llarg · cabines més baixes i angulars',width:.96,bubble:.92,nose:.32,roundness:1.12,segments:12},
- 'mi24-d':{title:'Mi-24 · D · Facetat lleuger',note:'Menys triangles · silueta i finestres conservades',width:1.02,bubble:1,nose:.05,roundness:1,segments:8,light:true}
+ 'mi24-d':{...D,title:'Mi-24 · D · Definitiu',detail:0},
+ 'mi24-d-a':{...D,title:'Mi-24 D · A · Lleuger',detail:1},
+ 'mi24-d-b':{...D,title:'Mi-24 D · B · Molt lleuger',detail:2,segments:6},
+ 'mi24-d-c':{...D,title:'Mi-24 D · C · Mínim',detail:3,segments:6}
 });
-
-export function createMi24Proposal(T,id='mi24-main'){
+export function createMi24Proposal(T,id='mi24-d'){
  const p=MI24_MODELS[id];if(!p)throw Error('Proposta Mi-24 desconeguda: '+id);
+ const detail=p.detail;
  const root=new T.Group();root.name=p.title;
  const c={body:0x667451,top:0x7b8564,belly:0x617a78,dark:0x242c27,metal:0x86918a,rubber:0x1b201b,glass:0x81b0ba};
  const mats=new Map();
@@ -27,13 +28,14 @@ export function createMi24Proposal(T,id='mi24-main'){
  };
  const box=(g,name,size,pos,color=c.body)=>{const m=mesh(g,name,new T.BoxGeometry(...size),color);m.position.set(...pos);return m};
  const cyl=(g,name,r,len,pos,color=c.metal,axis='y',segments=p.segments)=>{
+  if(detail)segments=Math.min(segments,detail===1?12:detail===2?8:6);
   const m=mesh(g,name,new T.CylinderGeometry(r,r,len,segments),color);m.position.set(...pos);if(axis==='x')m.rotation.z=Math.PI/2;if(axis==='z')m.rotation.x=Math.PI/2;return m;
  };
  const rod=(g,name,a,b,r=.025,color=c.metal)=>{
-  const v=new T.Vector3(...b).sub(new T.Vector3(...a)),m=cyl(g,name,r,v.length(),[0,0,0],color,'y',p.light?4:6);
+  const v=new T.Vector3(...b).sub(new T.Vector3(...a)),m=cyl(g,name,r,v.length(),[0,0,0],color,'y',detail>=2?3:p.light?4:6);
   m.position.set(...a).addScaledVector(v,.5);m.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),v.normalize());return m;
  };
- const sphere=(g,name,pos,size,color=c.body)=>{const m=mesh(g,name,new T.SphereGeometry(1,p.light?8:12,p.light?6:8),color);m.position.set(...pos);m.scale.set(...size);return m};
+ const sphere=(g,name,pos,size,color=c.body)=>{const m=mesh(g,name,new T.SphereGeometry(1,detail===3?6:8,detail>=2?4:detail===1?5:6),color);m.position.set(...pos);m.scale.set(...size);return m};
  // Cross sections share vertices at every join. Cargo windows and both
  // canopies replace body panels; no opaque wall sits behind the glass.
  const ring=(s,n=12,exponent=p.roundness,body=false)=>Array.from({length:n},(_,i)=>{
@@ -84,7 +86,7 @@ export function createMi24Proposal(T,id='mi24-main'){
   const out=[...s];out[1]*=p.width;
   if(i<=5)out[0]-=p.nose*(1-i/6);
   if(i>=2&&i<=8){out[3]=out[4]+(out[3]-out[4])*p.bubble;out[1]*=p.bubble**.3}
-  if(id==='mi24-b'&&i>=2&&i<=13)out[2]-=.12;
+  
   return out;
  });
  loft(hull,'Fuselatge Mi-24',sections,{belly:true,body:true,caps:[true,false],state:(j,k)=>{
@@ -134,7 +136,7 @@ export function createMi24Proposal(T,id='mi24-main'){
   poly(blade,'Pala principal',q,c.dark);
   if(!p.light){poly(blade,'Intrados pala',q.map(v=>[v[0],v[1]-.035,v[2]]).reverse(),c.dark);
    for(let j=0;j<q.length;j++){const k=(j+1)%q.length;poly(blade,'Cantell pala',[q[j],q[k],[q[k][0],q[k][1]-.035,q[k][2]],[q[j][0],q[j][1]-.035,q[j][2]]],c.dark)}}
-  box(blade,'Punta pala',[.20,.036,.37],[8.49,-.112,-.035],0xb5bcaa);
+  if(detail<3)box(blade,'Punta pala',[.20,.036,.37],[8.49,-.112,-.035],0xb5bcaa);
  }
  const plate=(g,name,points,thickness=.1)=>{
   const lower=points.map(v=>[v[0],v[1]-thickness,v[2]]);poly(g,name,points,c.top);poly(g,name+' inferior',lower.slice().reverse(),c.body);
@@ -149,8 +151,9 @@ export function createMi24Proposal(T,id='mi24-main'){
    box(wing,'Piló càrrega',[.13,.33,.56],[side*x,y-.27,.71]);
    cyl(wing,'Contenidor coets',.25,1.72,[side*x,y-.66,.33],c.metal,'z');
    cyl(wing,'Cara contenidor coets',.235,.03,[side*x,y-.66,-.54],c.dark,'z');
-   for(let n=0;n<(p.light?6:10);n++){
-    const a=n*2*Math.PI/(p.light?6:10);cyl(wing,'Boca coet',.032,.035,[side*x+Math.cos(a)*.16,y-.66+Math.sin(a)*.16,-.565],c.rubber,'z',6);
+   const apertures=detail===3?0:detail===2?3:detail===1?4:6;
+   for(let n=0;n<apertures;n++){
+    const a=n*2*Math.PI/apertures;cyl(wing,'Boca coet',.032,.035,[side*x+Math.cos(a)*.16,y-.66+Math.sin(a)*.16,-.565],c.rubber,'z',6);
    }
   }
   // Drooping wingtip pylons and the two long launch containers are
@@ -172,7 +175,7 @@ export function createMi24Proposal(T,id='mi24-main'){
   const blade=group('Pala cua '+(i+1),rear);blade.rotation.x=i*2*Math.PI/3;
   rod(blade,'Arrel pala cua',[0,.10,0],[0,.49,0],.05,c.metal);
   poly(blade,'Pala rotor de cua',[[0,.42,-.11],[0,1.954,-.14],[0,1.954,.15],[0,.50,.12]],0xb1b9ae);
-  box(blade,'Punta vermella rotor cua',[.04,.16,.29],[0,1.87,.005],0xb74736);
+  if(detail<3)box(blade,'Punta vermella rotor cua',[.04,.16,.29],[0,1.87,.005],0xb74736);
  }
  const gear=group('Tren aterratge');
  const wheel=(x,y,z,r)=>{cyl(gear,'Pneumàtic',r,.25,[x,y,z],c.rubber,'x',16);cyl(gear,'Llanta',r*.56,.268,[x,y,z],c.metal,'x',12)};
@@ -204,6 +207,57 @@ export function createMi24Proposal(T,id='mi24-main'){
    const m=new T.Mesh(geo,items[0].material);m.name=g.name+' · '+m.material.color.getHexString();m.castShadow=true;m.receiveShadow=true;m.userData.batchedParts=parts;g.add(m);
   }
  };merge(root);
+ // Keep the two rotor pivots separate. Every batch is transformed into
+ // its owner's coordinates; transparent panes are never mixed with body.
+ if(detail){
+  const rotors=root.children.filter(g=>g.userData.kamovRotor);
+  const regroup=(owner,list,partKey,useColors)=>{
+   owner.updateWorldMatrix(true,true);
+   const inverse=owner.matrixWorld.clone().invert(),batches=new Map();
+   for(const m of list){
+    const key=partKey(m)+(useColors&&!m.material.transparent?'|rgb':'|'+m.material.uuid);
+    let b=batches.get(key);
+    if(!b){b={mat:m.material,position:[],normal:[],rgb:[],parts:[],label:partKey(m)};batches.set(key,b)}
+    const geo=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();
+    geo.applyMatrix4(new T.Matrix4().multiplyMatrices(inverse,m.matrixWorld));
+    const v=geo.attributes.position,n=geo.attributes.normal,col=m.material.color;
+    for(let i=0;i<v.count;i++){b.position.push(v.getX(i),v.getY(i),v.getZ(i));b.normal.push(n.getX(i),n.getY(i),n.getZ(i));b.rgb.push(col.r,col.g,col.b)}
+    b.parts.push(...(m.userData.batchedParts||[m.name]));
+    geo.dispose();m.removeFromParent();m.geometry.dispose();
+   }
+   for(const b of batches.values()){
+    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(b.position,3));geo.setAttribute('normal',new T.Float32BufferAttribute(b.normal,3));geo.userData.labOwned=true;
+    let mat=b.mat;if(useColors&&!mat.transparent){mat=mat.clone();mat.color.setRGB(1,1,1);mat.vertexColors=true;geo.setAttribute('color',new T.Float32BufferAttribute(b.rgb,3))}
+    const m=new T.Mesh(geo,mat);m.name=b.label;m.userData.batchedParts=b.parts;m.castShadow=!mat.transparent;m.receiveShadow=true;owner.add(m);
+   }
+  };
+  const collect=g=>{const children=[];g.traverse(m=>{if(m.isMesh)children.push(m)});return children};
+  const staticGroups=root.children.filter(g=>!g.userData.kamovRotor);
+  if(detail===1){
+   for(const g of staticGroups)regroup(g,collect(g).filter(m=>!m.material.transparent),()=>g.name,true);
+  }else{
+   regroup(root,staticGroups.flatMap(collect).filter(m=>!m.material.transparent),()=> 'Fuselatge i equips',detail===3);
+  }
+  const glasses=staticGroups.flatMap(collect).filter(m=>m.material.transparent);
+  regroup(root,glasses,m=>{
+   const center=new T.Box3().setFromObject(m).getCenter(new T.Vector3());
+   return (detail===1&&m.name.startsWith('Finestra càrrega')?'Finestrons':'Vidres')+(center.x<0?' esquerra':' dreta');
+  },false);
+  for(const rotor of rotors)regroup(rotor,collect(rotor),()=>rotor.name,detail!==1);
+  const empty=[];root.traverse(n=>{if(n.isGroup&&n!==root&&!n.userData.kamovRotor)empty.push(n)});
+  for(const n of empty.reverse())if(n.children.length===0)n.removeFromParent();
+ }
  Object.assign(root.userData,{mi24Proposal:id,referenceVersion:MI24_VERSION,crewSeats:2,transportSeats:8,rotorDiameter:17.3,tailRotorDiameter:3.908,labSizeMultiplier:1,labAssemblies:true});
  return root;
+}
+
+// Model natiu compartit pel joc, amb l'escala exterior del vehicle.
+export function createMi24Runtime(T){
+ const model=createMi24Proposal(T,'mi24-d');
+ const rotor=model.children.find(g=>g.userData.kamovRotor?.axis==='y');
+ const tailRotor=model.children.find(g=>g.userData.kamovRotor?.axis==='x');
+ model.updateMatrixWorld(true);
+ const bounds=new T.Box3().setFromObject(model,true);
+ Object.assign(model.userData,{mi24Model:MI24_RUNTIME_ID,rotor,tailRotor,cockpitSeatCount:2,roundWheelCount:4,skidContactHeight:Math.max(0,bounds.min.y),rotorContactHeight:rotor.position.y});
+ return model;
 }

@@ -4,21 +4,21 @@ import {CATALOG} from '../src/vehicle-candidate-catalog.mjs';
 import {vehicleSpecs} from '../src/vehicle-specs.mjs';
 
 const names=CATALOG.map(x=>x.id);
-assert.deepEqual(names,["heli_combat","mi24","llanxa","llanxa_coets","ferry","heli","cotxe","cotxe_civil","camio","tanc","tanqueta","moto","bici","hover","moto_aquatica","barca_rems","windsurf"]);
+assert.deepEqual(names,["llanxa","llanxa_coets","heli_combat","ferry","heli","cotxe","cotxe_civil","camio","tanc","tanqueta","moto","bici","hover","moto_aquatica","barca_rems","windsurf"]);
 assert.deepEqual(CATALOG.filter(c=>!c.experimental).map(c=>c.id).sort(),Object.keys(vehicleSpecs.scales).sort());
-assert.deepEqual(CATALOG.filter(c=>!c.validated).map(c=>c.id),["heli_combat","mi24","llanxa","llanxa_coets"]);
-assert(CATALOG.filter(c=>c.validated).every(c=>c.options.length===0));
-assert(CATALOG.find(c=>c.id==='mi24').experimental);
+assert.deepEqual(CATALOG.filter(c=>!c.validated).map(c=>c.id),["llanxa","llanxa_coets"]);
+assert(CATALOG.filter(c=>c.validated&&c.id!=='heli_combat').every(c=>c.options.length===0));
+assert(!CATALOG.some(c=>c.id==='mi24'));
 for(const id of ['heli_combat']){
  assert(names.includes(id),'Cal la pestanya '+id);
  const config=CATALOG.find(x=>x.id===id);
  assert.equal(config.kind,'aire');
- assert.equal(config.options.length,4,'Actual i quatre propostes Kamov');
- assert.deepEqual(config.options.map(x=>x.variant),['ka52-a','ka52-b','ka52-c','ka52-d']);
+ assert.equal(config.options.length,3,'Actual i tres variants d’optimització');
+ assert.deepEqual(config.options.map(x=>x.variant),['mi24-d-a','mi24-d-b','mi24-d-c']);
 }
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8');
 assert(!lab.includes('prepareHueyDuaneRuntime'));
-assert(lab.includes('prepareApacheAraonRuntime(THREE)'));
+assert(!lab.includes('prepareApacheAraonRuntime'));
 assert(lab.includes('stepKamovRotors(slot.model,dt)'));
 assert(!lab.includes('createCivilianCarRoofCandidate'));
 assert(lab.includes('gaz:prepareGazTigrRuntime(THREE'));
@@ -39,4 +39,4 @@ assert(gameModels.includes('createKa60Runtime(THREE,{vehicleScale:VS[t]})'));
 assert(!boot.includes('prepareHueyDuaneRuntime'));
 assert(gameModels.includes('installT90MModel(THREE,g)'),'El T-90M s’ha de conservar al joc');
 assert(gameModels.includes('installBtr82Model3B(THREE,g'),'La BTR-82 s’ha de conservar al joc');
-console.log('PASS lab: tota la flota del joc, Mi-24 experimental i estats pendents/validats');
+console.log('PASS lab: tota la flota del joc, Mi-24 D aprovat i estats pendents/validats');

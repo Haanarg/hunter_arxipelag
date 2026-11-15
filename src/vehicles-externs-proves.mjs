@@ -1,15 +1,13 @@
-import {createMi24Proposal,MI24_MODELS} from './mi24-proposals.mjs?rev=mi24-proposals-20261115-2';
-import {createKa52Proposal,KA52_PROPOSALS} from './ka52-proposals.mjs?rev=ka52-proposals-20261115-1';
+import {createMi24Proposal,MI24_MODELS} from './mi24-proposals.mjs?rev=mi24-d-optimized-20261115-3';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-mi24-fuselage-2';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-mi24-d-approved-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {vehicleModels} from './vehicle-model-core.mjs?rev=ferry-d-approved-1';
+import {vehicleModels} from './vehicle-model-core.mjs?rev=mi24-d-approved-1';
 import {playerBatching} from './player-batching-core.mjs';
 import {createTruckModel} from './truck-model.mjs';
 import {createCivilianCarModel} from './civilian-car-model.mjs?rev=c1a-approved-1';
-import {prepareApacheAraonRuntime} from './apache-araon-runtime.mjs';
 import {createVehicleAnnotationEditor} from './vehicle-annotation-editor.mjs?rev=live-editor-20261112-1';
 import {prepareGazTigrRuntime} from './gaz-tigr-runtime.mjs?rev=gaz-final-1';
 import {createReferenceVehicle} from './vehicle-reference-candidates.mjs?rev=gaz-door-contours-v4';
@@ -18,7 +16,7 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-mi24-fuselage-2';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-mi24-d-approved-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -84,15 +82,7 @@ function prepareLabRuntimeModel(model){
  model.traverse(n=>{n.userData=clean(n.userData)});
  return model;
 }
-// Només cal preparar l'Apache quan s'obre la pestanya del Ka-52.
-let apacheFactoryPromise=null;
 async function createCurrentVehicle(type){
- if(type==='heli_combat'){
-  if(!apacheFactoryPromise)apacheFactoryPromise=prepareApacheAraonRuntime(THREE)
-    .then(factory=>{globalThis.HUNTER_APACHE_ARAON=factory;return factory})
-    .catch(error=>{apacheFactoryPromise=null;throw error});
-  await apacheFactoryPromise;
- }
  return prepareLabRuntimeModel(makeOriginal(type,{color:0x4b9fd1}));
 }
 const slots=[];
@@ -268,8 +258,11 @@ function setModel(slot,obj,original,animations=[],keepNativeOrientation=false){
 }
 
 function createProceduralModel(variant){
- if(Object.hasOwn(MI24_MODELS,variant))return createMi24Proposal(THREE,variant);
- if(Object.hasOwn(KA52_PROPOSALS,variant))return createKa52Proposal(THREE,variant);
+ if(Object.hasOwn(MI24_MODELS,variant)){
+   const model=createMi24Proposal(THREE,variant);
+   model.scale.setScalar(vehicleModels.scales.heli_combat);
+   model.userData.labFixedScale=true;return model;
+ }
  return createReferenceVehicle(THREE,variant);
 }
 async function loadExternal(slot,entry,used,token){
@@ -400,11 +393,11 @@ async function choose(config){
    slots[0].sub.textContent=btrStudy?
      'Casc i torreta 3B, defenses i visors · SIpriv · CC BY 4.0':
      t90Study?'Model real del joc · torreta, canó i erugues animables':
-     config.id==='heli_combat'?'Apache AH-64 · model definitiu natiu · 3 rodes':
+     config.id==='heli_combat'?'Mil Mi-24 · D definitiu · cinc pales principals':
      config.base?'Model principal de referència · Three.js propi':
      'Fàbrica original · Three.js r186';
    if(config.base){slots[0].source.href=config.references?.[0]?.url;slots[0].source.hidden=false;slots[0].status.textContent+=' · '+config.base.note;}
-   if(config.id==='ferry'){slots[0].source.href=config.references[0].url;slots[0].source.hidden=false;}
+   if(config.id==='ferry'||config.id==='heli_combat'){slots[0].source.href=config.references[0].url;slots[0].source.hidden=false;}
    if(t90Study){
      slots[0].bold.textContent='Actual · T-90M · escala del joc';
      slots[0].source.href=config.references?.[0]?.url||'https://commons.wikimedia.org/wiki/Category:T-90M';

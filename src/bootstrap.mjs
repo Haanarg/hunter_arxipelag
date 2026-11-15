@@ -160,17 +160,6 @@ try {
     window.HUNTER_GAZ_TIGR=null;
     console.error('No es pot preparar el GAZ Tigr-M',gazError);
   }
-  // Apache natiu: les dades APG2 són dins el mòdul JavaScript; reconstrueix
-  // les tres rodes rodones i amplia el model 50% sense carregar cap GLB.
-  try {
-    const {prepareApacheAraonRuntime}=await import('./apache-araon-runtime.mjs?v=0.6.222');
-    window.HUNTER_APACHE_ARAON=await prepareApacheAraonRuntime(THREE);
-    console.info('Apache Three.js +50% amb tres rodes circulars, sàlvia mat i rotors negres',
-      window.HUNTER_APACHE_ARAON.dimensions);
-  } catch (apacheError) {
-    window.HUNTER_APACHE_ARAON=null;
-    console.error('No s’ha pogut reconstruir l’Apache natiu; reserva procedural activa',apacheError);
-  }
   // El bundle inclou els scripts clàssics en el mateix ordre i preserva
   // les variables globals de la versió anterior. Només fem UNA petició.
   // Si el fitxer empaquetat no s'ha desplegat, recuperem el loader antic.

@@ -1,3 +1,8 @@
+**2026-11-15 · Mi-24 D aprovat i tres nivells d’optimització:**
+- [x] D original substitueix l'Apache a la fàbrica del joc i al LOD; retirada de càrrega d'Apache. Pestanya única Mi-24 de combat validada, tres estudis d'optimització, retirada del Ka-52 i estudis anteriors.
+- [x] mi24-d: 99 malles / 4873 triangles; mi24-d-a: 20 malles / 4585 triangles; mi24-d-b: 12 malles / 3725 triangles; mi24-d-c: 5 malles / 3245 triangles. Rotors, vidres i escala conservats; comprovacions amb Three.js, serialització i catàleg.
+- [ ] Validació de vol, navegador i Cloudflare.
+
 **2026-11-15 · Mi-24: fuselatge segons les vistes aportades:**
 - [x] Principal i A/B/C/D: unió curta ascendent entre cabines, sense el clot en V; cabina posterior i seients avançats, nou contorn dels vidres. Ventre ample i més pla, flancs més rectes, aprimament inferior progressiu i línia superior del botaló gairebé horitzontal. Preses avançades i carenats dels motors acabats dins la pell del fuselatge.
 - [x] Malles revisades de perfil, front, tres quarts i sota amb render de la geometria real. Comprovacions de vidres, perfil del pont, amplada de quilla, unió amb la cua, cinc propostes, rotors i serialització. Principal 7506 triangles, D 4873; revisió `live-editor-20261115-mi24-fuselage-2`.
