@@ -1,8 +1,9 @@
+import {createFerryProposal,FERRY_MODELS} from './ferry-proposals.mjs?rev=ferry-proposals-20261115-1';
 import {createMi24Proposal,MI24_MODELS} from './mi24-proposals.mjs?rev=mi24-proposals-20261115-1';
 import {createKa52Proposal,KA52_PROPOSALS} from './ka52-proposals.mjs?rev=ka52-proposals-20261115-1';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-btr82-scale-80-1';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-ferry-four-models-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs?rev=btr82-scale-80-1';
@@ -18,7 +19,7 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-btr82-scale-80-1';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-ferry-four-models-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -259,7 +260,7 @@ function setModel(slot,obj,original,animations=[],keepNativeOrientation=false){
  // la fàbrica del joc el dibuixa cap a -Z. Orientam sense deformar.
  if(!original&&!keepNativeOrientation)obj.rotation.y+=Math.PI;
  const wrap=new THREE.Group();wrap.add(obj);
- normalize(wrap,original,obj.userData.labSizeMultiplier||1);
+ normalize(wrap,original||obj.userData.labFixedScale===true,obj.userData.labSizeMultiplier||1);
  wrap.traverse(o=>{if(o.isMesh){o.castShadow=!o.material?.transparent;o.receiveShadow=true}});
  slot.scene.add(wrap);slot.model=wrap;
  if(animations?.length){slot.mixer=new THREE.AnimationMixer(obj);for(const clip of animations)slot.mixer.clipAction(clip).play()}
@@ -268,6 +269,7 @@ function setModel(slot,obj,original,animations=[],keepNativeOrientation=false){
 }
 
 function createProceduralModel(variant){
+ if(Object.hasOwn(FERRY_MODELS,variant))return createFerryProposal(THREE,variant);
  if(Object.hasOwn(MI24_MODELS,variant))return createMi24Proposal(THREE,variant);
  if(Object.hasOwn(KA52_PROPOSALS,variant))return createKa52Proposal(THREE,variant);
  return createReferenceVehicle(THREE,variant);
@@ -279,7 +281,7 @@ async function loadExternal(slot,entry,used,token){
    setModel(slot,model,false,[],true);
    slot.bold.textContent=entry.title;
    slot.sub.textContent='Model Three.js propi · '+(model.userData.kamovDetail||model.userData.ka52Assemblies||model.userData.labAssemblies?'malles agrupades per materials i conjunts':'editable per peces')+' · sense GLB extern';
-   slot.source.href=currentType.references?.[0]?.url||'https://commons.wikimedia.org/';
+   slot.source.href=currentType.references?.[entry.referenceIndex??0]?.url||'https://commons.wikimedia.org/';
    slot.source.hidden=false;
    slot.status.textContent=metrics(slot.model)+' · '+entry.note;
    return;
@@ -434,7 +436,7 @@ async function choose(config){
    const used=new Set();
    await Promise.all(config.options.map((entry,i)=>loadExternal(slots[i+1],entry,used,token)));
    if(token!==generation)return;
-   if(config.kind==='aire'){
+   if(config.kind==='aire'||config.id==='ferry'){
      for(const slot of slots)if(slot.model&&!slot.outer.hidden)comparisonDims.max(dimsOf(slot.model));
      // Same camera distance in both views: size comparison stays honest.
      const oldLook=defaultLookY;

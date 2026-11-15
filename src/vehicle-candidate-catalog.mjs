@@ -42,10 +42,18 @@ export const CATALOG=[
    options:[P('powerboat-racing-and-launch-ramp','Large RIB with twin outboards'),
     P('transport-collection-hd','Rigid inflatable boat'),
     P('powerboat-racing-and-launch-ramp','Offshore catamaran racer')]},
- {id:'ferry',validated:false,name:'Ferri',kind:'mar',note:'Les dues primeres alternatives representen principalment la popa d’un ferri, sense casc submergit complet: són referències visuals parcials. La tercera cerca un ferri de passatgers alternatiu.',
-   options:[P('ferry-terminal-and-harbour-crossing','Roll on roll off ferry, berthed stern section'),
-    P('ferry-terminal-and-harbour-crossing','Roll on roll off ferry, blue livery'),
-    Q('passenger ferry')]},
+ {id:'ferry',validated:false,name:'Ferri',kind:'mar',note:'Quatre ferris Ro-Ro de doble extrem, completament natius, amb la mateixa plataforma transitable i rampes del joc. Estudis inspirats en fotografies, no rèpliques exactes.',
+   references:[
+    {label:'Western Ferries · Sound of Scarba, fotografia de James T M Towill',url:'https://www.geograph.org.uk/photo/3057505'},
+    {label:'Transbordador fluvial · coberta i cabina lateral',url:'https://travelmanager.de/en/industries/ferries-ferry-lines/'},
+    {label:'Ferri de doble extrem · pont transversal i rampes',url:'https://www.go-shipping.net/ships/double-end-ferries/go-1476'},
+    {label:'Ferri costaner · Veidnes, coberta i superestructura lateral',url:'https://batomtaler.skipsrevyen.no/froy-rederi-sefine-shipyard-veidnes/ms-veidnes/1820601'}
+   ],options:[
+    {...C('ferry-a','Ferri · A · Transbordador escocès','Casc vermell · pont lateral elevat · baranes'),referenceIndex:0},
+    {...C('ferry-b','Ferri · B · Fluvial','Casc verd · cabina baixa · coberta diàfana'),referenceIndex:1},
+    {...C('ferry-c','Ferri · C · Pont elevat','Pont transversal · pas central lliure'),referenceIndex:2},
+    {...C('ferry-d','Ferri · D · Costaner','Casc blau · bloc lateral de dos nivells'),referenceIndex:3}
+   ]},
  // Approved models: no obsolete candidate downloads or rejected designs.
  {id:'heli',validated:true,name:'Helicòpter · Kamov Ka-60',currentName:'Ka-60 · variant A definitiva',kind:'aire',options:[]},
  {id:'cotxe',validated:true,name:'GAZ Tigr-M',currentName:'GAZ Tigr-M',kind:'terra',options:[]},

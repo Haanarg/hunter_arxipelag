@@ -1,3 +1,6 @@
+**2026-11-15 · Ferri: quatre propostes natives:**\n- [x] Fotografies de Western Ferries, transbordador fluvial, ferri de pont elevat i Veidnes enllaçades al catàleg. Quatre estudis editables A/B/C/D, amb casc facetat, dos extrems, coberta contínua, rampes i ponts diferenciats.\n- [x] Dimensions físiques del joc compartides, escala fixa al comparador, secció central lliure; es conserva el ferri actual. Comprovacions Three.js: ferry-a 112 malles 1760 triangles 32.10 × 10.37 × 63.75; ferry-b 99 malles 1580 triangles 32.10 × 9.22 × 63.75; ferry-c 113 malles 1772 triangles 32.10 × 20.07 × 63.75; ferry-d 117 malles 1820 triangles 32.10 × 11.12 × 63.75.
+- [ ] Validació visual i desplegament Cloudflare; no integrat al joc.
+
 **2026-11-15 · BTR-82 3B, petició e50a0eaa:**
 - [x] Reducció uniforme 20%: escala compartida 1,8125 → 1,45; geometria, triangles i pivots locals intactes. Hitbox, radi, LOD, rodes i origen de tret escalen amb el vehicle. Punts d'autoapuntat bazuca adaptats. Editor i joc SOLO/COOP comparteixen l'escala; pestanya verda conservada.
 - [ ] Validació visual i Cloudflare.
