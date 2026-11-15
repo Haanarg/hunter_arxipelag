@@ -63,7 +63,7 @@ Les proves Node no substitueixen una partida real, una revisió WebGL/Android o 
 
 ## Crèdits de models 3D
 
-- **Huey UH-1 de Duane's Mind** — [Bell Huey helicopter](https://sketchfab.com/3d-models/bell-huey-helicopter-755d8518a06e41b19752c1b54c0da588), llicència [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Modificat per obrir les dues portes laterals de passatgers; [detalls de la modificació i atribució](assets/vehicle-models/README.md). Model definitiu integrat al joc.
+- **Kamov Ka-60 variant A** — geometria pròpia Three.js, escala ×2 del candidat aprovat, fenestron i dos seients. Substitueix el Huey de Duane's Mind (CC BY 4.0), retirat de la distribució actual. [Detalls](assets/vehicle-models/README.md).
 - **Apache AH-64 d'Araon** — [model original](https://sketchfab.com/3d-models/ah-64-apache-df0993ee21e74a759cd0519f6fc51cf8), CC BY 4.0. Variant seleccionada: sàlvia mat, aspes i detalls negres, fuselatge 50%/rodes 75%, 2.193 triangles. S'ha connectat a `heli_combat`; **la publicació del GLB binari definitiu encara està pendent** i fins aleshores s'empra la reserva procedural. [Crèdits i instruccions](assets/vehicle-models/README.md).
 
 ## Laboratori de models 3D — editor de proves per defecte

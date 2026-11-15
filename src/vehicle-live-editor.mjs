@@ -1,6 +1,7 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {symmetrizeModel} from './vehicle-live-geometry.mjs';
-export const LAB_REVISION='live-editor-20261115-ka60-cockpit-body-1';
+export const LAB_REVISION='live-editor-20261115-ka60-approved-queue-1';
+export const removeResolvedRequests=queue=>queue.filter(item=>item?.status!=='resolta');
 const clone=root=>{const copy=root.clone(true),overlays=[];copy.traverse(o=>{if(o.userData.vehicleAnnotationOverlay)overlays.push(o)});for(const o of overlays)o.removeFromParent();return copy};
 const pathOf=(root,node)=>{const path=[];while(node&&node!==root){path.unshift(node.parent.children.indexOf(node));node=node.parent}return path};
 const atPath=(root,path)=>path.reduce((node,i)=>node?.children[i],root);
@@ -16,6 +17,10 @@ export function createVehicleLiveEditor({slots,getType,annotations,getView,resto
  function saveQueue(){try{localStorage.setItem(storageKey,JSON.stringify(queue));return true}catch{say('No s’ha pogut desar la cua. Copia-la abans de sortir.');return false}}
  function renderQueue(){
   $('liveQueue').replaceChildren();
+  const resolved=queue.filter(item=>item?.status==='resolta').length;
+  $('liveClearResolved').disabled=resolved===0;
+  $('liveClearResolved').textContent=resolved?'Esborrar resoltes ('+resolved+')':'Esborrar resoltes';
+  if(!queue.length){const empty=document.createElement('p');empty.textContent='La cua és buida.';$('liveQueue').append(empty)}
   for(const item of queue){
    const row=document.createElement('div'),text=document.createElement('span'),button=document.createElement('button');
    text.textContent=item.status+' · '+item.vehicle+' · '+item.text;
@@ -182,6 +187,15 @@ export function createVehicleLiveEditor({slots,getType,annotations,getView,resto
   const text=$('liveRequest').value.trim();if(!text)return;
   const object=node();queue.push({id:crypto.randomUUID(),status:'pendent',createdAt:new Date().toISOString(),revision:LAB_REVISION,vehicle:getType(),variant:selected?.bold.textContent,path:[...path],piece:object?.name||'Model complet',position:object?.position.toArray(),rotation:object?.rotation.toArray(),scale:object?.scale.toArray(),text,annotations:annotations.description()});
   const saved=saveQueue();renderQueue();if(saved){$('liveRequest').value='';say('Petició desada al navegador. Copia la cua al xat perquè la pugui aplicar.')}
+ };
+ $('liveClearResolved').onclick=()=>{
+  const previous=queue,next=removeResolvedRequests(queue),count=previous.length-next.length;
+  if(!count)return;
+  if(!confirm('Eliminar definitivament '+count+' peticions resoltes? Les pendents es conservaran.'))return;
+  queue=next;
+  if(!saveQueue()){queue=previous;renderQueue();return}
+  renderQueue();
+  say('Eliminades '+count+' peticions resoltes. '+queue.length+' a la cua. Si l’has compartida, prem «Compartir / actualitzar cua».');
  };
  $('liveCopy').onclick=async()=>{
   const text=JSON.stringify({format:'hunter-model-requests-v1',requests:queue.filter(x=>x.status==='pendent')},null,2);

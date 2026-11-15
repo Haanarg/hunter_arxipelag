@@ -1,23 +1,12 @@
 // Catàleg compartit entre el visor Three.js i l'eina de descàrrega local.
 // La moto aquàtica definitiva ja forma part de la fàbrica del joc; no és cap candidata.
-// Huey i Apache aprovats al joc: se'n mostren els models reals com a base editable.
+// Ka-60 A aprovat al joc i fora del laboratori. L'Apache és la referència del Ka-52.
 const P=(pack,match,query)=>({pack,match,query:query||match});
 const Q=(query)=>({query});
 // Els blindats T-90M i BTR-82 es mantenen al joc; temporalment no tenen pestanya al visor.
 // Candidats procedimentals que es poden editar sense dependre de GLB externs.
 const C=(variant,title,note)=>({provider:'procedural',variant,title,note});
 export const CATALOG=[
- {id:'heli',name:'Helicòpter · Kamov Ka-60',kind:'aire',
-   note:'Candidat Three.js ajustat exclusivament a les dues imatges facilitades a la conversa: morro opac diferenciat dels vidres davanters, parabrisa endarrerit i alerons triangulars de cua orientats cap avall. Motor dorsal, preses d’aire i escapaments integrats al fuselatge en totes quatre variants; portes laterals obertes i tren posterior conservats.',
-   // Retirades totes les referències URL externes antigues. Les dues
-   // imatges aportades per l’usuari són les úniques referències de disseny.
-   references:[],
-   options:[
-    C('ka60','Kamov Ka-60 · candidat 12 (referència)','Escala ×2 · motor, preses i escapaments integrats'),
-    C('ka60-a','Ka-60 · variant A','Optimització conservadora · totes les peces visuals'),
-    C('ka60-b','Ka-60 · variant B','Menys segments · detalls petits simplificats'),
-    C('ka60-c','Ka-60 · variant C','Màxima simplificació · malles agrupades per material')
-   ]},
  {id:'heli_combat',name:'Helicòpter de combat · Kamov Ka-52',kind:'aire',
    note:'Ka-52 candidat Three.js propi: cabina ampla amb dos pilots de costat, nas aplanat, rotors coaxials contrarotatius i ales curtes. Apache actual al costat per comparar.',
    references:[

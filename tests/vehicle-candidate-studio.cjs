@@ -13,7 +13,7 @@ const studio=read('src/vehicles-externs-proves.mjs');
 const html=read('vehicles-externs-proves.html');
 const types=[...catalog.matchAll(/\{id:'([^']+)'/g)].map(x=>x[1]);
 assert.deepEqual(new Set(types),new Set([
- 'heli','heli_combat','llanxa','llanxa_coets','ferry'
+ 'heli_combat','llanxa','llanxa_coets','ferry'
 ]));
 assert(!types.includes('cotxe_civil'),'El C1A aprovat no ha de ser al laboratori');
 assert(!types.includes('cotxe'),'El GAZ aprovat no ha de ser al laboratori');
@@ -27,7 +27,9 @@ assert.deepEqual(manifest.models.llanxa_coets,[]);
 assert.deepEqual(manifest.models.tanqueta,[]);
 assert(!Object.hasOwn(manifest,'selectedForLod'));
 assert(studio.includes('previewFactory=createBtr823BPreview')&&studio.includes('btrStudy?previewFactory()'));
-assert(studio.includes('prepareHueyDuaneRuntime(THREE)'));
+assert(!studio.includes('prepareHueyDuaneRuntime'));
+assert(!types.includes('heli'));
+assert(html.includes('id="liveClearResolved"'));
 assert(studio.includes('prepareApacheAraonRuntime(THREE)'));
 assert(!studio.includes('studio.load(token)'));
 assert(studio.includes('slot.outer.hidden=slots.indexOf(slot)>(soloStudy?0:config.options.length)'));
@@ -47,4 +49,4 @@ for(const file of [
  'tests/vehicle-candidate-studio.cjs'
 ])execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
 execFileSync(process.execPath,[path.join(root,'tests/btr82-published-assets.cjs')],{stdio:'pipe'});
-console.log('PASS laboratori: cinc pestanyes; C1A, T-90M, BTR-82 i GAZ fora de l’editor, manifest coherent');
+console.log('PASS laboratori: quatre pestanyes; Ka-60, C1A, T-90M, BTR-82 i GAZ fora de l’editor, manifest coherent');

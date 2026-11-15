@@ -92,6 +92,23 @@ export function createDistantVehicleFactory(THREE,resources=null){
         else if(type==='hover')box(0,1.34,-d*.12,w*.67,.8,d*.46,0x627779);
         else if(type==='windsurf')box(0,1.8,d*.06,.09,2.5,.12,0xc9c3a1);
       }
+    }else if(type==='heli'){
+      // Ka-60: una sola malla llunyana, dimensions i quatre pales equivalents.
+      const k=2/scale,b=(x,y,z,w,h,d,c)=>box(x*k,y*k,z*k,w*k,h*k,d*k,c);
+      b(0,1.72,-.75,2.16,2.25,6.4,main);
+      b(0,1.44,-3.96,1.62,.95,1.25,main);
+      b(0,2.18,-3.31,1.92,.83,1.14,0x547982);
+      b(0,2.98,-.55,1.37,.35,2.85,main);
+      b(0,1.76,5.35,.69,.70,4.55,main);
+      b(0,3.08,7.99,.24,2.12,.79,main);
+      for(const y of [1.20,2.68])b(0,y,7.63,.38,.20,1.55,main);
+      for(const z of [6.92,8.34])b(0,1.94,z,.38,1.49,.18,main);
+      b(0,3.21,8.03,2.45,.12,.67,main);
+      for(const x of [-1.15,1.15])b(x,.35,-2.22,.25,.70,.70,0x292d2d);
+      b(0,.38,3.84,.25,.56,.56,0x292d2d);
+      b(0,3.52,0,.20,.76,.20,0x555d57);
+      b(0,3.91,0,13.5,.075,.30,0x292d2d);
+      b(0,3.91,0,.30,.075,13.5,0x292d2d);
     }else if(flyer){
       box(0,1.75,0,w*.72,1.35,d*.65,main);
       box(0,2.85,0,w*1.65,.075,.30,0x292d2d);

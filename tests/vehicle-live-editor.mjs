@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three-r186.module.mjs';
+import {removeResolvedRequests} from '../src/vehicle-live-editor.mjs';
 import {symmetrizeModel} from '../src/vehicle-live-geometry.mjs';
 import {createBtr823BPreview} from '../src/btr82-3b-preview.mjs';
 import {writeModelLab,readModelLab} from '../server/model-lab.mjs';
@@ -41,3 +42,10 @@ assert(!JSON.stringify([...objects.values()]).includes('test-only-secret'));
 const k=[...objects.keys()][0],expired=JSON.parse(objects.get(k));expired.expiresAt=0;objects.set(k,JSON.stringify(expired));
 await assert.rejects(()=>readModelLab(new Request(result.url),env,new URL(result.url),json),/caducat/);
 console.log('PASS live editor: six symmetry directions, transformed meshes, attributes, BTR, JSON roundtrip, atomic failure and shared queue permissions/expiry');
+
+const pending={id:'p',status:'pendent'},done={id:'d',status:'resolta'},other={id:'x',status:'desconegut'};
+const queue=[done,pending,other];assert.deepEqual(removeResolvedRequests(queue),[pending,other]);
+assert.deepEqual(removeResolvedRequests([done]),[]);
+assert.deepEqual(removeResolvedRequests([]),[]);
+assert.equal(queue.length,3,'La neteja no modifica la cua original');
+console.log('PASS cua: eliminació definitiva de resoltes, pendents preservades');

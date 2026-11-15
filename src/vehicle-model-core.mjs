@@ -3,9 +3,10 @@ import {installBtr82Model3B} from './btr82-3b-native.mjs?rev=btr82-distant-1';
 export {createBtr82DistantGeometry} from './btr82-3b-native.mjs?rev=btr82-distant-1';
 import {installT90MModel} from './t90m-runtime.mjs?rev=t90m-game-double-1';
 import {vehicleSpecs} from './vehicle-specs.mjs';
+import {createKa60Runtime,KA60_RUNTIME_ID} from './ka60-runtime.mjs?rev=ka60-approved-1';
 import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs?rev=vivid-engine-cover-2';
 import {createStreetfighter25,STREETFIGHTER_25_META} from './streetfighter-25-geometry.mjs';
-import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?v=0.6.216&btr82=1&t90m=1';
+import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?v=0.6.216&btr82=1&t90m=1&ka60=1';
 import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.mjs?v=0.6.81';
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 export const vehicleModels=Object.freeze({
@@ -83,7 +84,7 @@ export const vehicleModels=Object.freeze({
       }
       const p=new THREE.Group();p.position.set(px,py,pz);parent.add(p);const tire=new THREE.Mesh(new THREE.TorusGeometry(r*.8,r*.2,6,12),material(0x20252a,'rubber'));tire.rotation.y=Math.PI/2;tire.scale.z=width/(r*.4);p.add(tire);round(p,r*.45,width*.8,0x8b9699,0,0,0,'x','metal');if(spokes)for(let a=0;a<Math.PI;a+=Math.PI/3)rod(p,[0,Math.sin(a)*r*.75,Math.cos(a)*r*.75],[0,-Math.sin(a)*r*.75,-Math.cos(a)*r*.75],.035,0xb6bdc1,'metal');p.userData.radius=r;(owner.userData.wheels||(owner.userData.wheels=[])).push(p);return p};
     return function createVehicle(t,appearance={}){
-      const cacheKey=t==='camio'?'camio':t==='cotxe_civil'?'civil:'+String(appearance.color??0x4b9fd1):null;
+      const cacheKey=t==='heli'?'ka60-a':t==='camio'?'camio':t==='cotxe_civil'?'civil:'+String(appearance.color??0x4b9fd1):null;
       if(resources&&cacheKey&&templates.has(cacheKey))return resources.cloneModel(templates.get(cacheKey));
       const g=new THREE.Group();g.rotation.order='YXZ';const metal=0x3e4849,glass=0x76acba,rubber=0x252d31;
       if(t==='cotxe_civil'){
@@ -737,58 +738,25 @@ export const vehicleModels=Object.freeze({
       }
       if(t==='heli'||t==='heli_combat'){
         const combat=t==='heli_combat',bodyCol=combat?0x59634f:0x647768;
-        // Huey i Apache natius de Three.js: geometria d'accessors / APG2.
-        // No es carrega cap GLB; preservam els dos pivots de rotor i les
-        // geometries compartides entre instàncies, SOLO i COOP.
-        // La reserva procedural només s'usa si falla la construcció.
-        const approvedHuey=!combat?globalThis.HUNTER_HUEY_DUANE?.create?.():null;
+        // Ka-60 A i Apache natius, rotors independents en SOLO/COOP.
+        const approvedKa60=!combat?createKa60Runtime(THREE,{vehicleScale:VS[t]}):null;
         const apacheRuntime=combat?globalThis.HUNTER_APACHE_ARAON:null;
         const approvedApache=apacheRuntime?.create?.()||null;
-        const approvedModel=approvedHuey||approvedApache;
+        const approvedModel=approvedKa60||approvedApache;
         if(approvedModel){
           resources?.retainModel(approvedModel);
           g.add(approvedModel);
           g.userData.rotor=approvedModel.userData.rotor;
           g.userData.tailRotor=approvedModel.userData.tailRotor;
-          if(approvedHuey){
-            g.userData.hueyModel='duane-100-open-engine-native-110';
+          if(approvedKa60){
+            g.userData.ka60Model=KA60_RUNTIME_ID;
             g.userData.cockpitSeatCount=2;
+            g.userData.roundWheelCount=3;
+            g.userData.ka60Contact={skid:approvedKa60.userData.skidContactHeight,rotor:approvedKa60.userData.rotorContactHeight};
           }else{
             g.userData.apacheModel=approvedApache.userData.apacheModel||'araon-50-engine-native-round-wheels-150';
             g.userData.roundWheelCount=3;
           }
-        }else if(!combat){
-          // Huey 3B-4: la secció central és un PASSADÍS OBERT de banda a
-          // banda, no un prisma massís amagat rere els marcs de les portes.
-          // Frontal i cua conserven el gruix; al mig, només sòl i sostre.
-          const doorFront=-.76,doorRear=1.76,frontEnd=-1.79,rearEnd=2.39;
-          roundedPrism(g,2.7,1.74,doorFront-frontEnd,.20,bodyCol,0,2.08,(frontEnd+doorFront)/2,'paint');
-          roundedPrism(g,2.7,1.74,rearEnd-doorRear,.16,bodyCol,0,2.08,(doorRear+rearEnd)/2,'paint');
-          roundedPrism(g,2.7,.16,doorRear-doorFront,.06,bodyCol,0,1.28,(doorFront+doorRear)/2,'paint');
-          roundedPrism(g,2.7,.20,doorRear-doorFront,.06,bodyCol,0,2.88,(doorFront+doorRear)/2,'paint');
-          const belly=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(bodyCol,'paint'));belly.scale.set(1.24,.24,1.92);belly.position.set(0,1.39,.34);g.add(belly);
-          const nose=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(glass,'glass'));nose.scale.set(1.28,.9,1.02);nose.position.set(0,2.17,-2.35);g.add(nose);
-          roundedPrism(g,2.38,.32,2.12,.13,bodyCol,0,2.91,.04,'paint');
-          // Grans obertures laterals de transport.
-          const sideX=1.36;
-          for(const side of[-1,1]){
-            box(g,.1,1.18,.36,bodyCol,side*sideX,2.0,-.76,'paint');
-            box(g,.1,1.18,.36,bodyCol,side*sideX,2.0,1.76,'paint');
-            box(g,.1,.14,2.05,0x343b35,side*(sideX+.01),1.43,.5,'metal');
-            rod(g,[side*sideX,2.58,-.58],[side*sideX,2.58,1.58],.052,bodyCol,'paint');
-            // Variant 4: petit carenat arrodonit en lloc dels antics discs laterals.
-            const pod=roundedPrism(g,.28,.58,.82,.12,bodyCol,side*1.323,1.86,-2.37,'paint');pod.rotation.z=side*.08;
-            box(g,.08,.32,.46,0x343b35,side*1.364,1.88,-2.38,'metal');
-          }
-          // Bancs interiors visibles a través de les portes.
-          for(const x of[-.82,.82])box(g,.4,.46,2.1,0x2d302c,x,1.55,.55,'paint');
-          // Boom de cua afinat i estabilitzador.
-          {const startZ=2,endZ=7.48,y0=2.58,y1=2.98,L=Math.hypot(endZ-startZ,y1-y0),boom=new THREE.Mesh(new THREE.CylinderGeometry(.176,.42,L,6),material(bodyCol,'paint'));boom.position.set(0,(y0+y1)/2,(startZ+endZ)/2);boom.rotation.x=Math.PI/2-Math.atan2(y1-y0,endZ-startZ);g.add(boom)}
-          box(g,.12,1.35,.88,bodyCol,0,3.34,7.36,'paint');box(g,2.25,.1,.58,bodyCol,0,2.9,6.43,'paint');
-          // Patins del model 3B.
-          for(const x of[-1.458,1.458]){rod(g,[x,.48,-2.12],[x,.48,2.3],.075,metal);rod(g,[x*.45,1.15,-1.05],[x,.48,-1.05],.07,metal);rod(g,[x*.45,1.15,1.0],[x,.48,1.0],.07,metal)}
-          roundedPrism(g,1.3,.62,1.8,.17,0x505b49,0,3.12,.82,'paint');
-          rod(g,[.494,3.15,1.34],[.845,3.2,1.78],.11,0x343b35,'metal');
         }else{
           // Combat Compacte B3 · Apache: cabines igualades, fuselatge compacte i unió diagonal.
           const fus=new THREE.Mesh(new THREE.SphereGeometry(1,10,6),material(bodyCol,'paint'));fus.scale.set(.86,.86,2.51);fus.position.set(0,2.08,.2);g.add(fus);
@@ -868,11 +836,10 @@ export const vehicleModels=Object.freeze({
       // Les dues barres inferiors estan centrades a y=.48 i tenen radi .075.
       // Guardam el contacte inferior JA escalat per a la física d'aterratge.
       if(t==='heli'||t==='heli_combat'){
-        const aircraft=t==='heli_combat'?globalThis.HUNTER_APACHE_ARAON:globalThis.HUNTER_HUEY_DUANE;
-        g.userData.skidContactHeight=
-          (aircraft?.skidContactHeight??(.48-.075))*VS[t];
-        g.userData.rotorContactHeight=
-          (aircraft?.rotorContactHeight??((t==='heli_combat'?3.22:3.82)+.05))*VS[t];
+        const aircraft=globalThis.HUNTER_APACHE_ARAON;
+        const ka60=g.userData.ka60Contact;
+        g.userData.skidContactHeight=(ka60?.skid??aircraft?.skidContactHeight??(.48-.075))*VS[t];
+        g.userData.rotorContactHeight=(ka60?.rotor??aircraft?.rotorContactHeight??3.27)*VS[t];
       }
       g.traverse(o=>{if(o.isMesh&&!o.userData.waterMask){o.castShadow=shadows;o.receiveShadow=shadows}});
       // Fusionam només malles rígides germanes amb el mateix material.

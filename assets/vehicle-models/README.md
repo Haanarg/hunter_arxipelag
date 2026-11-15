@@ -6,24 +6,12 @@ instàncies SOLO i COOP. **Els GLB de runtime s'han eliminat del repositori**
 en adoptar aquesta implementació. Les fonts externes conserven la seva autoria
 i llicència Creative Commons Attribution 4.0.
 
-## Huey UH-1 — Duane's Mind
+## Kamov Ka-60 — variant A
 
-- **Autor i font:** [Bell Huey helicopter, Duane's Mind](https://sketchfab.com/3d-models/bell-huey-helicopter-755d8518a06e41b19752c1b54c0da588).
-- **Llicència:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-- **Geometria:** `src/huey-duane-native-geometry.mjs`. 1.767 triangles
-  extrets amb fidelitat dels accessors GLB 100% aprovats, amb les portes
-  laterals de passatgers obertes, normals, UV i jerarquia originals.
-- **Pintura/textures:** atles original separat a
-  `assets/vehicle-models/huey-duane-native-atlas.png` (926.565 bytes).
-- **Modificacions per al joc:** **10% més gran** que l'aprovat anterior
-  (escala local 1.35 → 1.485), seients tridimensionals de pilot i copilot
-  a la cabina, textura i materials originals, rotors independents.
-  Els dos seients afegeixen 352 triangles: **2.119 triangles totals**.
-- **Carregador natiu:** `src/huey-duane-runtime.mjs`; ni GLB ni
-  `GLTFLoader` ni cap descàrrega de malla. La textura PNG s'ha de carregar
-  una sola vegada pel navegador, compartida entre la flota.
-- **Contacte amb el sòl:** punt inferior dels patins a .405 unitats locals,
-  amb altura del rotor calculada a partir del nou model.
+- Model propi Three.js, sense textura externa ni GLB.
+- Variant A exacta del laboratori (`src/kamov-reference-candidates.mjs`), escala mundial ×2, rodes, dos seients i fenestron.
+- Adaptador: `src/ka60-runtime.mjs`. Pivots independents; dades de contacte calculades del model.
+- El Huey de Duane's Mind (CC BY 4.0) és una referència històrica retirada de la distribució actual; l'atribució i els fitxers originals es conserven a l'historial Git.
 
 ## Apache AH-64 — Araon
 
@@ -41,7 +29,7 @@ i llicència Creative Commons Attribution 4.0.
 - **Mida:** **50% més gran** que la variant anterior (longitud objectiu
   7.15 → 10.725 unitats locals); dades de contacte i col·lisió ajustades.
 - **Rotors:** els pivots principal i de cua queden separats, igual que el
-  Huey, i són utilitzats per l'animació del motor.
+  Ka-60, i són utilitzats per l'animació del motor.
 
 ## Integració i verificacions
 
@@ -51,11 +39,10 @@ i llicència Creative Commons Attribution 4.0.
   proporcionals als augments de mida, contacte de patins/rodes i rotor.
 - `helicopters-engine-compare.html`: previsualització de les geometries
   definitives amb materials i vista en filferro.
-- `tests/huey-approved.cjs`, `tests/apache-approved.cjs`,
+- `tests/ka60-game-integration.mjs`, `tests/apache-approved.cjs`,
   `tests/apache-native-runtime.mjs`: proves estructurals de geometria,
   rodes, escala i integració.
 - **Pendent:** inspecció visual en un navegador i comprovació del pilotatge,
   els ocupants, les ombres i l'aterratge en una partida real (SOLO/COOP/Android).
 
-L'atribució a Duane's Mind i Araon ha d'acompanyar qualsevol distribució del
-joc que inclogui les seves geometries modificades.
+L'atribució a Araon acompanya la distribució actual; Duane's Mind conserva l'atribució a l'historial de l'antic Huey.

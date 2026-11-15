@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
-import {prepareHueyDuaneRuntime} from './huey-duane-runtime.mjs';
+import {createKa60Runtime} from './ka60-runtime.mjs?rev=ka60-approved-1';
 import {prepareApacheAraonRuntime} from './apache-araon-runtime.mjs';
 
 const display=document.getElementById('notice');
@@ -54,10 +54,9 @@ async function load(slot){
  const before=performance.now();
  try{
   let root,info='';
-  if(slot.type==='huey'){
-   const factory=await prepareHueyDuaneRuntime(THREE);
-   root=factory.create();
-   info='Geometria JS · 2 seients · +10%';
+  if(slot.type==='ka60'){
+   root=createKa60Runtime(THREE);
+   info='Variant A · 2 seients · escala ×2';
   }else if(slot.type==='apache'){
    const factory=await prepareApacheAraonRuntime(THREE);
    root=factory.create();
@@ -83,8 +82,8 @@ async function load(slot){
   const elapsed=Math.round(performance.now()-before);
   slot.stat.textContent=fmt(stats.triangles)+' triangles · '+stats.meshes+' malles · '+elapsed+' ms de preparació · '+info;
   slot.stat.title='Dimensions: '+dimensions.toArray().map(n=>n.toFixed(2)).join(' × ')+' unitats. El temps inclou la preparació de la geometria.';
-  if(slot.type==='huey'&&stats.triangles!==2119)
-   throw Error('Els 1.767 triangles originals i els seients del Huey no coincideixen');
+  if(slot.type==='ka60'&&!(stats.triangles>2000&&stats.triangles<6000))
+   throw Error('Geometria Ka-60 A incompleta');
   if(slot.type==='apache'&&!(stats.triangles>2100&&stats.triangles<2800))
    throw Error('La malla Apache i les tres rodes són incompletes');
   return true;

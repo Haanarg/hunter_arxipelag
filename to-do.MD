@@ -1,3 +1,8 @@
+**2026-11-15 · Ka-60 A aprovat i neteja de cua:**
+- [x] Variant A nativa a la fàbrica del joc, escala mundial ×2 sense factor duplicat, rotors independents, contacte inferior i LOD distant. Retirats el Huey i la pestanya Ka-60 del laboratori; Ka-52/Apache conservats.
+- [x] Botó Esborrar resoltes, amb confirmació i persistència local; les pendents es conserven i la cua compartida s’actualitza amb el botó existent.
+- [ ] Verificar desplegament, visualització i aterratge en una partida. Les dimensions de col·lisió horitzontal preexistents es mantenen.
+
 **2026-11-15 · Ka-60 candidat 12, peticions a7884227 / dc425027:**
 - [x] Convertits en carrosseria opaca els vidres 1/3 i 1/2 (parell simètric superior), i els laterals 2/4 + inferior 2/5 amb els seus simètrics 2/1 + 2/0. Mateixos vèrtexs i color del fuselatge; contorns dels vidres restants recalculats.
 - [x] Canvi compartit pel model complet i les variants A/B/C, inclosa la variant A indicada. Escala, motor integrat i quatre finestrons conservats. Revisió `live-editor-20261115-ka60-cockpit-body-1`.

@@ -48,7 +48,7 @@ import * as weapons from './weapon-catalog.mjs?v=0.6.218&rifleCone80=1';
 window.HUNTER_SHARED_WEAPONS=weapons;
 import * as sharedBatching from './player-batching-core.mjs';
 window.HUNTER_SHARED_BATCHING=sharedBatching;
-import * as vehicleModels from './vehicle-model-core.mjs?v=0.6.218&armoredCrew=1&t90m=1';
+import * as vehicleModels from './vehicle-model-core.mjs?v=0.6.218&armoredCrew=1&t90m=1&ka60=1';
 window.HUNTER_SHARED_VEHICLE_MODELS=vehicleModels;
 import * as sharedAccuracy from './enemy-accuracy-core.mjs';
 window.HUNTER_SHARED_ACCURACY=sharedAccuracy;
@@ -159,17 +159,6 @@ try {
   } catch (gazError) {
     window.HUNTER_GAZ_TIGR=null;
     console.error('No es pot preparar el GAZ Tigr-M',gazError);
-  }
-  // Huey natiu +10% i dos seients de cabina: les geometries i la textura
-  // es preparen una sola vegada i es comparteixen entre totes les instàncies.
-  try {
-    const {prepareHueyDuaneRuntime}=await import('./huey-duane-runtime.mjs?v=0.6.218');
-    window.HUNTER_HUEY_DUANE=await prepareHueyDuaneRuntime(THREE);
-    console.info('Huey Three.js, portes obertes, +10% i dos seients · carregat',
-      window.HUNTER_HUEY_DUANE.dimensions);
-  } catch (hueyError) {
-    window.HUNTER_HUEY_DUANE=null;
-    console.warn('Huey de geometria nativa no disponible; reserva procedural activa',hueyError);
   }
   // Apache natiu: les dades APG2 són dins el mòdul JavaScript; reconstrueix
   // les tres rodes rodones i amplia el model 50% sense carregar cap GLB.

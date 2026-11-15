@@ -19,7 +19,7 @@ assert(!runtime.includes('GLTFLoader')&&!runtime.includes('.glb')&&!runtime.incl
 assert(boot.includes('prepareApacheAraonRuntime'));
 assert(boot.indexOf('prepareApacheAraonRuntime')<boot.indexOf('const loadClassic='));
 assert(core.includes('approvedApache')&&core.includes('apacheModel')&&core.includes('roundWheelCount=3'));
-assert(!catalog.includes("{id:'heli_combat'"),'Apache acceptat ha de continuar absent dels candidats');
+assert(catalog.includes("{id:'heli_combat'"),'Apache és la referència del candidat Ka-52');
 assert(!fs.existsSync(path.join(root,'assets/vehicle-models/apache-araon-salvia-black.glb')),
  'No s’ha retirat el GLB Apache del joc');
 const encoded=runtime.match(/const APG2_DEFLATED='([^']+)';/);

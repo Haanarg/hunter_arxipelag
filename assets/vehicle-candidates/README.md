@@ -10,7 +10,7 @@ A data de **13 de novembre de 2026**, el repositori només conserva **tres fitxe
 
 La llicència d'aquests tres candidats és CC0 1.0; els enllaços originals són al `manifest.json`.
 
-S'han eliminat del repositori els dos GLB antics de la **BTR-82**, el GLB font del **Huey**, els tres GLB de **llanxa llançamíssils** i els dos de **ferri**. El joc i el laboratori principal utilitzen **BTR-82 3B procedimental** i **Huey Three.js natiu** (el fitxer GLB font ja no és necessari). També es conserva l'Apache natiu, sense fitxer GLB.
+S'han eliminat del repositori els dos GLB antics de la **BTR-82**, el GLB font del **Huey**, els tres GLB de **llanxa llançamíssils** i els dos de **ferri**. El joc i el laboratori principal utilitzen **BTR-82 3B procedimental** i **Ka-60 A Three.js natiu** (el Huey ha estat retirat). També es conserva l'Apache natiu, sense fitxer GLB.
 
 Les alternatives de llanxa llançamíssils i ferri poden consultar-se en línia des del catàleg, però **no es tornen a desar al repositori** si s'executa `tools/fetch-vehicle-candidates.mjs`.
 
