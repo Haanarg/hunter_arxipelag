@@ -13,7 +13,7 @@ export const CATALOG=[
    // imatges aportades per l’usuari són les úniques referències de disseny.
    references:[],
    options:[
-    C('ka60','Kamov Ka-60 · candidat 11 (referència)','Escala ×2 · motor, preses i escapaments integrats'),
+    C('ka60','Kamov Ka-60 · candidat 12 (referència)','Escala ×2 · motor, preses i escapaments integrats'),
     C('ka60-a','Ka-60 · variant A','Optimització conservadora · totes les peces visuals'),
     C('ka60-b','Ka-60 · variant B','Menys segments · detalls petits simplificats'),
     C('ka60-c','Ka-60 · variant C','Màxima simplificació · malles agrupades per material')

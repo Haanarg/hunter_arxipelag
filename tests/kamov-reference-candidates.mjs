@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as T from '../vendor/three-r186.module.mjs';
 import {createKamovCandidate,stepKamovRotors,KAMOV_VERSION,KA60_LOD_VARIANTS} from '../src/kamov-reference-candidates.mjs';
-assert(KAMOV_VERSION.includes('integrated-engine'));
+assert(KAMOV_VERSION.includes('cockpit-body-panels'));
 for(const type of ['ka60','ka52']){
  const root=createKamovCandidate(T,type),meshes=[],rotors=[];
  root.traverse(o=>{if(o.userData.kamovRotor)rotors.push(o);if(o.isMesh)meshes.push(o)});
@@ -82,7 +82,12 @@ for(const type of ['ka60','ka52']){
   assert(backBox.max.z>=panelBox.min.z-.06&&backBox.max.z<=panelBox.min.z+1e-6);
   assert.equal(meshes.filter(o=>o.name==='Banc posterior · suport al terra').length,2);
   const panes=meshes.filter(o=>o.name.startsWith('Vidre panoràmic Fuselatge Ka-60'));
-  assert.equal(panes.length,16,'Parabrisa i vidres dels pilots preservats');
+  assert.equal(panes.length,10,'Parabrisa i vidres laterals restants preservats');
+  for(const [j,k] of [[1,2],[1,3],[2,0],[2,1],[2,4],[2,5]]){
+   const panel=root.getObjectByName('Fuselatge Ka-60 panell '+j+' '+k);
+   assert(panel&&!panel.material.transparent&&panel.material.opacity===1&&panel.material.color.getHex()===0x536655,'Secció convertida en carrosseria '+j+'/'+k);
+   assert(!root.getObjectByName('Vidre panoràmic Fuselatge Ka-60 '+j+' '+k));
+  }
   assert(panes.every(o=>!o.name.includes(' 3 ')),'No hi ha vidre panoràmic darrere els pilots');
   const squares=meshes.filter(o=>o.name.startsWith('Finestró quadrat Fuselatge Ka-60'));
   assert.equal(squares.length,4,'Dos finestrons per banda');
@@ -124,7 +129,7 @@ for(const type of ['ka60','ka52']){
    const ray=new T.Raycaster(new T.Vector3(0,h,-8),new T.Vector3(0,0,1));
    assert(noseParts.includes(ray.intersectObjects(noseParts)[0]?.object),'Morro opac al frontal');
   }
-  assert(glassBounds.max.y-glassBounds.min.y>1.39,'Altura panoràmica '+(glassBounds.max.y-glassBounds.min.y));
+  assert(glassBounds.max.y-glassBounds.min.y>1.2,'Altura panoràmica '+(glassBounds.max.y-glassBounds.min.y));
   const byPanel=new Map(panes.map(o=>[o.name.split(' ').slice(-2).join(':'),o]));
   const verts=o=>{const p=o.geometry.attributes.position;return Array.from({length:p.count},(_,i)=>[p.getX(i),p.getY(i),p.getZ(i)].map(v=>v.toFixed(5)).join(','))};
   for(const [key,o] of byPanel){

@@ -1,3 +1,9 @@
+**2026-11-15 · Ka-60 candidat 12, peticions a7884227 / dc425027:**
+- [x] Convertits en carrosseria opaca els vidres 1/3 i 1/2 (parell simètric superior), i els laterals 2/4 + inferior 2/5 amb els seus simètrics 2/1 + 2/0. Mateixos vèrtexs i color del fuselatge; contorns dels vidres restants recalculats.
+- [x] Canvi compartit pel model complet i les variants A/B/C, inclosa la variant A indicada. Escala, motor integrat i quatre finestrons conservats. Revisió `live-editor-20261115-ka60-cockpit-body-1`.
+- [x] Comprovacions de geometria i editor superades; render de revisió de la variant A.
+- [ ] Valoració visual de l’usuari al visor WebGL.
+
 **2026-11-15 · Ka-60 candidat 11, petició a3097fef:**
 - [x] Motor integrat al mateix loft del fuselatge: sostre elevat progressivament i transicions contínues. Preses d’aire i escapaments encaixats a la pell, amb conductes enfonsats; eliminats carenat superposat, tubs i cèrcols que formaven esglaons.
 - [x] Aplicat al model complet i a les variants A/B/C. Escala ×2, portes, vidres, rodes i rotors conservats; Ka-52 verificat idèntic. Render de comprovació de la geometria completa i de C.

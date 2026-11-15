@@ -1,6 +1,6 @@
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
-import {createKamovCandidate,stepKamovRotors,KA60_LOD_VARIANTS} from './kamov-reference-candidates.mjs?rev=kamov-20261115-integrated-engine-12';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-ka60-integrated-engine-1';
+import {createKamovCandidate,stepKamovRotors,KA60_LOD_VARIANTS} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-ka60-cockpit-body-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs';
@@ -17,7 +17,7 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-ka60-integrated-engine-1';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-ka60-cockpit-body-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});

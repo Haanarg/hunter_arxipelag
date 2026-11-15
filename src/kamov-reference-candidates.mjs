@@ -1,6 +1,6 @@
 // Original low-poly geometry, based on photographs linked in the lab catalogue.
 // Nose = -Z, metres before the lab's uniform comparison scale. No external assets.
-export const KAMOV_VERSION='kamov-20261115-integrated-engine-12';
+export const KAMOV_VERSION='kamov-20261115-cockpit-body-panels-13';
 export const KA60_LOD_VARIANTS=Object.freeze(['ka60-a','ka60-b','ka60-c']);
 // Batching is performed in each independent animation pivot's coordinates,
 // before the requested model scale is applied.
@@ -70,7 +70,7 @@ export function createKamovCandidate(T,variant){
  const type=detail?'ka60':variant;
  if(!['ka60','ka52'].includes(type))throw new Error('Kamov desconegut: '+variant);
  const combat=type==='ka52',root=new T.Group();
- root.name=combat?'Kamov Ka-52 · candidat 1':detail?'Kamov Ka-60 · variant '+['','A','B','C'][detail]:'Kamov Ka-60 · candidat 11';
+ root.name=combat?'Kamov Ka-52 · candidat 1':detail?'Kamov Ka-60 · variant '+['','A','B','C'][detail]:'Kamov Ka-60 · candidat 12';
  root.userData.kamovDetail=detail;
  root.userData.kamovCandidate=type;
  const c={body:combat?0x63725b:0x536655,top:0x75816b,dark:0x252c2c,metal:0x727a76,glass:0x789da5,light:0xe4ddbc,beacon:0xcb5148,navGreen:0x538e74};
@@ -266,9 +266,10 @@ export function createKamovCandidate(T,variant){
    if(j===3&&[1,4].includes(k))return 'engine-intake';
    if(j===6&&[1,4].includes(k))return 'engine-exhaust';
    if((j===5||j===6)&&[0,5,6,11].includes(k))return 'open';
-   // Preserve front and pilot-side glazing. Behind the pilot seats,
-   // restore the opaque green shoulders and two square portholes per side.
-   if(j<=1&&k<6||j===2&&[0,1,4,5].includes(k))return 'panoramic-glass';
+   // Selected canopy panels become bodywork, symmetrically:
+   // roof 1/2 and 1/3; rear side 2/4 plus lower 2/5, mirrored at 2/1 and 2/0.
+   // Keep the front windscreen and the remaining pilot-side glazing.
+   if(j===0&&k<6||j===1&&[0,1,4,5].includes(k))return 'panoramic-glass';
    if(j===3&&[0,5].includes(k))return 'square-windows';
    return false;
   },c.body,[false,false]);
