@@ -20,6 +20,20 @@ export const CATALOG=[
     C('ka52-c','Ka-52 · C · Perfil afilat','Morro més llarg i baix · cabina més angular'),
     C('ka52-d','Ka-52 · D · Facetat lleuger','Volums més simples · menys cares i detalls petits')
    ]},
+ {id:'mi24',name:'Helicòpter de combat · Mil Mi-24',kind:'aire',
+   note:'Mi-24V com a base: cabines en tàndem, cos de transport, ales descendents, cinc pales principals i tres a la cua. Un model principal i quatre estudis de forma; A/B/C/D no són versions reals de l’aparell.',
+   base:C('mi24-main','Mil Mi-24V · Principal','Proporcions de referència · model complet'),
+   references:[
+    {label:'Perfil i volums · Chris Lofting',url:'https://commons.wikimedia.org/wiki/File:Macedonian_Air_Force_Mil_Mi-24V_Lofting.jpg'},
+    {label:'Cabines, ales i tren · Mi-24V 7353',url:'https://commons.wikimedia.org/wiki/File:Mil_Mi-24V_Hind_7353_(9324310918).jpg'},
+    {label:'Vista frontal · cabines i inclinació de les ales',url:'https://www.armyweb.cz/clanek/legendarni-bitevni-vrtulnik-mi-24v'},
+    {label:'Configuració i dimensions · Ministeri de Defensa txec',url:'https://mise.mo.gov.cz/en/armed-forces/equipment/air-force/helicopters/mil-mi-24---nato-code%3A-hind-38157/'}
+   ],options:[
+    C('mi24-a','Mi-24 · A · Cabines arrodonides','Cúpules més plenes · transicions més suaus'),
+    C('mi24-b','Mi-24 · B · Cos robust','Fuselatge més ample · ventre més profund'),
+    C('mi24-c','Mi-24 · C · Perfil estilitzat','Morro més llarg · cabines més baixes i angulars'),
+    C('mi24-d','Mi-24 · D · Facetat lleuger','Menys triangles · silueta i finestres conservades')
+   ]},
  {id:'llanxa',name:'Llanxa ràpida',kind:'mar',options:[
    P('transport-collection-hd','Open sport runabout'),
    P('powerboat-racing-and-launch-ramp','Offshore monohull racer'),

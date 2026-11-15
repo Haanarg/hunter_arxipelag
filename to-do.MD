@@ -1,3 +1,10 @@
+**2026-11-15 · Mil Mi-24V: pestanya pròpia, principal i quatre propostes:**
+- [x] Referències noves frontal, lateral i tres quarts; configuració contrastada amb el Ministeri de Defensa txec. Model principal Mi-24V i quatre estudis: A cúpules més arrodonides, B cos robust, C perfil estilitzat, D facetat lleuger. A-D són propostes del model, no versions reals.
+- [x] Cabines transparents en tàndem a diferent alçada, dos seients de pilotatge, vuit de transport, vuit finestres laterals reals, preses dobles, ales descendents, tren de tres potes/quatre rodes, torreta i rotors de cinc/tres pales animats. Conjunts editables i geometries alliberables en canviar de pestanya.
+- [x] Nova pestanya `mi24`, amb principal propi al primer visor i quatre alternatives; no crida la fàbrica del joc amb un tipus inexistent. Enllaç directe `?vehicle=mi24`, escala i càmera compartides, anotacions, simetria i cua existents. Ka-52/Apache i joc conservats.
+- [x] Regressions de geometria, vidres, interior, cinc formes diferents, rotors i JSON; pressupost principal 7218 triangles, D 4705. Revisió `live-editor-20261115-mi24-five-models-1`.
+- [ ] Valoració visual de l’usuari al visor WebGL i elecció de proposta; no integrat al joc.
+
 **2026-11-15 · Ka-52: quatre propostes natives a l’editor:**
 - [x] Referències noves frontal (Fedor Leukhin), tres quarts (Peer.Gynt) i perfil en vol (Fedor Leukhin), amb enllaços al catàleg; diàmetre de rotor 14,5 m segons el fullet de Rosoboronexport.
 - [x] A equilibrat; B radom més ample i cabina baixa; C morro més llarg, baix i angular; D facetat i alleugerit. Són estudis de proporcions del Ka-52, no designacions reals. Quatre propostes al costat de l’Apache actual, mateixa escala i càmera compartida.

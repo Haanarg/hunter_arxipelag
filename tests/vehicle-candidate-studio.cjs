@@ -13,7 +13,7 @@ const studio=read('src/vehicles-externs-proves.mjs');
 const html=read('vehicles-externs-proves.html');
 const types=[...catalog.matchAll(/\{id:'([^']+)'/g)].map(x=>x[1]);
 assert.deepEqual(new Set(types),new Set([
- 'heli_combat','llanxa','llanxa_coets','ferry'
+ 'heli_combat','mi24','llanxa','llanxa_coets','ferry'
 ]));
 assert(!types.includes('cotxe_civil'),'El C1A aprovat no ha de ser al laboratori');
 assert(!types.includes('cotxe'),'El GAZ aprovat no ha de ser al laboratori');
@@ -49,4 +49,4 @@ for(const file of [
  'tests/vehicle-candidate-studio.cjs'
 ])execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
 execFileSync(process.execPath,[path.join(root,'tests/btr82-published-assets.cjs')],{stdio:'pipe'});
-console.log('PASS laboratori: quatre pestanyes; Ka-60, C1A, T-90M, BTR-82 i GAZ fora de l’editor, manifest coherent');
+console.log('PASS laboratori: cinc pestanyes; Ka-60, C1A, T-90M, BTR-82 i GAZ fora de l’editor, manifest coherent');

@@ -1,7 +1,8 @@
+import {createMi24Proposal,MI24_MODELS} from './mi24-proposals.mjs?rev=mi24-proposals-20261115-1';
 import {createKa52Proposal,KA52_PROPOSALS} from './ka52-proposals.mjs?rev=ka52-proposals-20261115-1';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-ka52-four-proposals-1';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-mi24-five-models-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs';
@@ -17,7 +18,7 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-ka52-four-proposals-1';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-mi24-five-models-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -202,7 +203,7 @@ function dropPrevious(slot){
  if(slot.model){
    const freed=new Set();
    slot.model.traverse(node=>{
-     if(node.isMesh&&node.geometry?.userData?.candidateSimplified&&!freed.has(node.geometry)){
+     if(node.isMesh&&(node.geometry?.userData?.candidateSimplified||node.geometry?.userData?.labOwned)&&!freed.has(node.geometry)){
        freed.add(node.geometry);node.geometry.dispose();
      }
    });
@@ -243,14 +244,18 @@ function setModel(slot,obj,original,animations=[],keepNativeOrientation=false){
  return wrap;
 }
 
+function createProceduralModel(variant){
+ if(Object.hasOwn(MI24_MODELS,variant))return createMi24Proposal(THREE,variant);
+ if(Object.hasOwn(KA52_PROPOSALS,variant))return createKa52Proposal(THREE,variant);
+ return createReferenceVehicle(THREE,variant);
+}
 async function loadExternal(slot,entry,used,token){
  if(entry.provider==='procedural'){
    if(token!==generation)return;
-   const isKamov=Object.hasOwn(KA52_PROPOSALS,entry.variant);
-   const model=isKamov?createKa52Proposal(THREE,entry.variant):createReferenceVehicle(THREE,entry.variant);
+   const model=createProceduralModel(entry.variant);
    setModel(slot,model,false,[],true);
    slot.bold.textContent=entry.title;
-   slot.sub.textContent='Model Three.js propi · '+(model.userData.kamovDetail||model.userData.ka52Assemblies?'malles agrupades per materials i conjunts':'editable per peces')+' · sense GLB extern';
+   slot.sub.textContent='Model Three.js propi · '+(model.userData.kamovDetail||model.userData.ka52Assemblies||model.userData.labAssemblies?'malles agrupades per materials i conjunts':'editable per peces')+' · sense GLB extern';
    slot.source.href=currentType.references?.[0]?.url||'https://commons.wikimedia.org/';
    slot.source.hidden=false;
    slot.status.textContent=metrics(slot.model)+' · '+entry.note;
@@ -360,11 +365,12 @@ async function choose(config){
    slot.source.hidden=true;
  }
  try{
-   const model=btrStudy?previewFactory():t90Study?createReferenceVehicle(THREE,config.candidate):await createCurrentVehicle(config.id);
+   const model=config.base?createProceduralModel(config.base.variant):btrStudy?previewFactory():t90Study?createReferenceVehicle(THREE,config.candidate):await createCurrentVehicle(config.id);
    // No reintroduir models antics quan es canvia de pestanya durant la càrrega.
    if(token!==generation)return;
    setModel(slots[0],model,true,[],soloStudy);
    if(config.id==='heli_combat')slots[0].bold.textContent='Actual · Apache AH-64';
+   if(config.base)slots[0].bold.textContent=config.base.title;
    originalDims=dimsOf(slots[0].model);
    slots[0].status.textContent=metrics(slots[0].model);
    slots[0].person.position.x=originalDims.x*.62+1.0;
@@ -372,7 +378,9 @@ async function choose(config){
      'Casc i torreta 3B, defenses i visors · SIpriv · CC BY 4.0':
      t90Study?'Model Three.js propi · 150 % · torreta, canó i erugues animables':
      config.id==='heli_combat'?'Apache AH-64 · model definitiu natiu · 3 rodes':
+     config.base?'Model principal de referència · Three.js propi':
      'Fàbrica original · Three.js r186';
+   if(config.base){slots[0].source.href=config.references?.[0]?.url;slots[0].source.hidden=false;slots[0].status.textContent+=' · '+config.base.note;}
    if(t90Study){
      slots[0].bold.textContent='T-90M · model propi únic · 150 %';
      slots[0].source.href=config.references?.[0]?.url||'https://commons.wikimedia.org/wiki/Category:T-90M';
@@ -403,7 +411,7 @@ async function choose(config){
    const used=new Set();
    await Promise.all(config.options.map((entry,i)=>loadExternal(slots[i+1],entry,used,token)));
    if(token!==generation)return;
-   if(config.id==='heli'||config.id==='heli_combat'){
+   if(config.kind==='aire'){
      for(const slot of slots)if(slot.model&&!slot.outer.hidden)comparisonDims.max(dimsOf(slot.model));
      // Same camera distance in both views: size comparison stays honest.
      const oldLook=defaultLookY;
@@ -595,16 +603,17 @@ const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
 for(const config of CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.textContent=config.name;
- const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3B revisat · únic model':config.id==='tanc'?'Model propi · únic':config.id==='heli_combat'?'Apache definitiu · Three.js':config.options.length+' alternatives');
+ const small=document.createElement('small');small.textContent=kinds[config.kind]+' · '+(config.id==='tanqueta'?'3B revisat · únic model':config.id==='tanc'?'Model propi · únic':config.id==='heli_combat'?'Apache definitiu · Three.js':config.base?'Principal + '+config.options.length+' propostes':config.options.length+' alternatives');
  button.append(small);button.addEventListener('click',()=>choose(config));
  list.append(button);
 }
 addEventListener('resize',resizeRenderer);
 resizeRenderer();requestAnimationFrame(draw);
+const requestedType=new URLSearchParams(location.search).get('vehicle');
 fetch('./assets/vehicle-candidates/manifest.json',{cache:'no-store'})
  .then(response=>response.ok?response.json():null)
- .then(manifest=>{savedManifest=manifest;return choose(CATALOG.find(c=>c.id===resumedView?.type)||CATALOG[0]);})
- .catch(error=>{console.warn('Manifest local no disponible',error);choose(CATALOG[0]);});
+ .then(manifest=>{savedManifest=manifest;return choose(CATALOG.find(c=>c.id===(resumedView?.type||requestedType))||CATALOG[0]);})
+ .catch(error=>{console.warn('Manifest local no disponible',error);choose(CATALOG.find(c=>c.id===(resumedView?.type||requestedType))||CATALOG[0]);});
 
 // A tiny manifest is the only periodic request; edited drafts are never discarded.
 setInterval(async()=>{

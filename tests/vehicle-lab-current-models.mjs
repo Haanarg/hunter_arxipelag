@@ -8,7 +8,7 @@ assert(!names.includes('cotxe'),'El GAZ aprovat ha de desaparèixer de les pesta
 assert(!names.includes('tanc'),'El T-90M ja no ha de sortir al laboratori');
 assert(!names.includes('tanqueta'),'La BTR-82 3B ja no ha de sortir al laboratori');
 assert(!names.includes('heli'),'Ka-60 A aprovat no ha de tenir pestanya');
-assert.deepEqual(names,['heli_combat','llanxa','llanxa_coets','ferry']);
+assert.deepEqual(names,['heli_combat','mi24','llanxa','llanxa_coets','ferry']);
 for(const id of ['heli_combat']){
  assert(names.includes(id),'Cal la pestanya '+id);
  const config=CATALOG.find(x=>x.id===id);
