@@ -32,6 +32,7 @@ assert(studio.includes('slot.outer.hidden=slots.indexOf(slot)>(soloStudy?0:confi
 assert(studio.includes('createVehicleAnnotationEditor'));
 assert(studio.includes('createVehicleLiveEditor'));
 assert(html.includes('id="liveEditor"')&&html.includes('id="vehicleList"'));
+assert(html.includes('id="humanList"')&&html.includes('id="humanMotion"'));
 const labRevision=JSON.parse(read('assets/vehicle-candidates/lab-revision.json')).revision;
 assert(read('src/vehicle-live-editor.mjs').includes("LAB_REVISION='"+labRevision+"'"));
 assert(html.includes('src/vehicles-externs-proves.mjs?rev='+labRevision));

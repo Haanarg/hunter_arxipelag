@@ -1,7 +1,10 @@
 import {createMi24Proposal,MI24_MODELS} from './mi24-proposals.mjs?rev=mi24-d-optimized-20261115-3';
+import {HUMAN_CATALOG} from './human-model-catalog.mjs?rev=human-proposals-20261116-1';
+import {createHumanProposal,poseHumanProposal} from './human-proposals.mjs?rev=human-proposals-20261116-1';
+import {createCurrentHuman} from './human-current-models.mjs?rev=human-proposals-20261116-1';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261115-mi24-d-approved-1';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261116-humans-three-proposals-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs?rev=mi24-d-approved-1';
@@ -16,9 +19,11 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261115-mi24-d-approved-1';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261116-humans-three-proposals-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
+const humanList=document.querySelector('#humanList'),ALL_CATALOG=[...CATALOG,...HUMAN_CATALOG];
+let humanTime=0;
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
 renderer.setPixelRatio(Math.min(1.5,window.devicePixelRatio||1));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -146,7 +151,7 @@ function refreshLab(){
 }
 let suppressDraftRestore=false;
 const liveEditor=createVehicleLiveEditor({slots,getType:()=>currentType.id,annotations:vehicleEditor,
- onChange:slot=>{slot.status.textContent=metrics(slot.model)+' · candidat editat'},resumeSelection:resumedView?.selection,
+ onChange:slot=>{slot.status.textContent=metrics(slot.model)+' · candidat editat';if(currentType.human)document.querySelector('#animate').checked=false},resumeSelection:resumedView?.selection,
  getView:()=>({yaw,elev,zoom,lookY,panScreenX}),
  restoreView:view=>{if(!view)return;({yaw,elev,zoom,lookY,panScreenX}=view);updateCamera()},
  reload:async()=>{
@@ -219,6 +224,7 @@ function dropPrevious(slot){
      if(node.isMesh&&(node.geometry?.userData?.candidateSimplified||node.geometry?.userData?.labOwned)&&!freed.has(node.geometry)){
        freed.add(node.geometry);node.geometry.dispose();
      }
+     for(const m of Array.isArray(node.material)?node.material:[node.material])if(m?.userData.labOwned&&!freed.has(m)){freed.add(m);m.dispose()}
    });
    slot.scene.remove(slot.model);slot.model=null;
  }
@@ -227,7 +233,7 @@ function dropPrevious(slot){
 function normalize(obj,original,sizeMultiplier=1){
  obj.updateMatrixWorld(true);
  let bounds=new THREE.Box3().setFromObject(obj),sz=bounds.getSize(new THREE.Vector3());
- if(!original&&document.querySelector('#fitScale').checked){
+ if(!original&&!currentType.human&&document.querySelector('#fitScale').checked){
    // Escala uniforme segons el millor encaix de les dues dimensions del xassís.
    // Manté les proporcions del fitxer i permet comparar les siluetes amb el joc.
    // Fit the unscaled geometry, then retain its explicit design scale.
@@ -266,6 +272,13 @@ function createProceduralModel(variant){
  return createReferenceVehicle(THREE,variant);
 }
 async function loadExternal(slot,entry,used,token){
+ if(entry.provider==='human'){
+   if(token!==generation)return;
+   const model=createHumanProposal(THREE,entry.role,entry.style);
+   poseHumanProposal(model,0,'rest');setModel(slot,model,false,[],true);
+   slot.bold.textContent=entry.title;slot.sub.textContent='Articulat · escala del joc · '+entry.note;
+   slot.status.textContent=metrics(slot.model);slot.source.hidden=true;return;
+ }
  if(entry.provider==='procedural'){
    if(token!==generation)return;
    const model=createProceduralModel(entry.variant);
@@ -355,21 +368,24 @@ async function choose(config){
   a.textContent=reference.label;a.href=reference.url;a.target='_blank';a.rel='noopener noreferrer';
   refs.append(a);
  }
- for(const b of list.querySelectorAll('button'))b.classList.toggle('active',b.dataset.type===config.id);
+ for(const b of [...list.querySelectorAll('button'),...humanList.querySelectorAll('button')])b.classList.toggle('active',b.dataset.type===config.id);
  const marine=config.kind==='mar';
  grid.classList.remove('featured');
  const btrStudy=config.id==='tanqueta';
  const t90Study=config.id==='tanc';
  const soloStudy=config.validated&&config.options.length===0;
  grid.classList.toggle('btr-study',soloStudy);
- document.querySelector('#fitScale').closest('label').hidden=soloStudy;
+ document.querySelector('#fitScale').closest('label').hidden=soloStudy||!!config.human;
  document.querySelector('#t90Motion').hidden=!t90Study;
+ document.querySelector('#humanMotion').hidden=!config.human;
+ humanTime=0;
  labTankKeys.clear();labTurretSwitch=false;labTurretYaw=0;labTurretPitch=0;
  syncLabTurretButton();
  for(const slot of slots){
    slot.outer.hidden=slots.indexOf(slot)>(soloStudy?0:config.options.length);
    dropPrevious(slot);
    slot.kind=config.kind;
+   slot.person.visible=!config.human&&document.querySelector('#showGrid').checked;
    slot.ground.material.color.setHex(marine?0x285f65:config.kind==='aire'?0x6a7b67:0x69735e);
    slot.ground.material.roughness=marine?.43:1;
    slot.ground.material.needsUpdate=true;
@@ -381,7 +397,7 @@ async function choose(config){
    slot.source.hidden=true;
  }
  try{
-   const model=config.base?createProceduralModel(config.base.variant):await createCurrentVehicle(config.id);
+   const model=config.human?await createCurrentHuman(THREE,config.human):config.base?createProceduralModel(config.base.variant):await createCurrentVehicle(config.id);
    // No reintroduir models antics quan es canvia de pestanya durant la càrrega.
    if(token!==generation)return;
    setModel(slots[0],model,true,[],soloStudy);
@@ -390,7 +406,7 @@ async function choose(config){
    originalDims=dimsOf(slots[0].model);
    slots[0].status.textContent=metrics(slots[0].model);
    slots[0].person.position.x=originalDims.x*.62+1.0;
-   slots[0].sub.textContent=btrStudy?
+   slots[0].sub.textContent=config.human?'Model actual del joc · postura neutra':btrStudy?
      'Casc i torreta 3B, defenses i visors · SIpriv · CC BY 4.0':
      t90Study?'Model real del joc · torreta, canó i erugues animables':
      config.id==='heli_combat'?'Mil Mi-24 · D definitiu · cinc pales principals':
@@ -422,17 +438,18 @@ async function choose(config){
  defaultLookY=lookY;
  panScreenX=0;
  zoom=1;
+ if(config.human){yaw=Math.PI+.20;elev=.08;lookY=originalDims.y*.43;defaultLookY=lookY;zoom=1.2;}
  if(resumedView?.type===config.id){({yaw,elev,zoom,lookY,panScreenX}=resumedView);resumedView=null}
  updateCamera();
  if(!soloStudy){
    const used=new Set();
    await Promise.all(config.options.map((entry,i)=>loadExternal(slots[i+1],entry,used,token)));
    if(token!==generation)return;
-   if(config.kind==='aire'||config.id==='ferry'){
+   if(config.kind==='aire'||config.id==='ferry'||config.human){
      for(const slot of slots)if(slot.model&&!slot.outer.hidden)comparisonDims.max(dimsOf(slot.model));
      // Same camera distance in both views: size comparison stays honest.
      const oldLook=defaultLookY;
-     defaultLookY=Math.min(12,Math.max(.55,comparisonDims.y*.38));
+     defaultLookY=Math.min(12,Math.max(.55,comparisonDims.y*(config.human?.43:.38)));
      if(Math.abs(lookY-oldLook)<1e-8)lookY=defaultLookY;
      updateCamera();
    }
@@ -472,6 +489,7 @@ function draw(now){
  const dt=Math.min(.07,(now-prev)/1000);prev=now;
  if(document.querySelector('#animate').checked){
    for(const slot of slots){slot.mixer?.update(dt);if(slot.model)stepKamovRotors(slot.model,dt);}
+   if(currentType.human){humanTime+=dt*Number(document.querySelector('#humanSpeed').value);for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,humanTime,document.querySelector('#humanPose').value);}
    if(currentType.id==='tanc'&&slots[0].model)
      stepT90MPreview(slots[0].model,t90MotionInput(dt),dt);
  }
@@ -522,7 +540,14 @@ document.querySelector('#pan-down').addEventListener('click',()=>{lookY-=panStep
 document.querySelector('#pan-left').addEventListener('click',()=>{panScreenX+=panStep();updateCamera()});
 document.querySelector('#pan-right').addEventListener('click',()=>{panScreenX-=panStep();updateCamera()});
 document.querySelector('#fitScale').addEventListener('change',()=>choose(currentType));
-document.querySelector('#showGrid').addEventListener('change',e=>{for(const s of slots){s.lines.visible=e.target.checked;s.person.visible=e.target.checked}});
+document.querySelector('#showGrid').addEventListener('change',e=>{for(const s of slots){s.lines.visible=e.target.checked;s.person.visible=e.target.checked&&!currentType.human}});
+document.querySelector('#humanPose').addEventListener('change',e=>{
+ humanTime=0;document.querySelector('#animate').checked=e.target.value!=='rest';
+ for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,0,e.target.value);
+});
+document.querySelector('#humanRest').addEventListener('click',()=>{
+ document.querySelector('#humanPose').value='rest';document.querySelector('#humanPose').dispatchEvent(new Event('change'));
+});
 const drag=new Map(),pointerStarts=new Map(),paintPointers=new Set();
 slots.forEach(slot=>{
  slot.viewport.addEventListener('pointerleave',()=>vehicleEditor.hideCursor());
@@ -616,23 +641,23 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keyup',e=>{labTankKeys.delete(e.key.toLowerCase());syncLabTurretButton()});
 window.addEventListener('blur',()=>{labTankKeys.clear();syncLabTurretButton()});
 syncLabTurretButton();
-const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri'};
-for(const config of CATALOG){
+const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri',huma:'3 propostes'};
+for(const config of ALL_CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.dataset.validation=config.validated?'validated':'pending';
  button.textContent=config.name;
  const small=document.createElement('small');
  small.textContent=(config.validated?'✓ Validat':'● Pendent')+' · '+(config.experimental?'Experimental':kinds[config.kind]);
  button.append(small);button.addEventListener('click',()=>choose(config));
- list.append(button);
+ (config.human?humanList:list).append(button);
 }
 addEventListener('resize',resizeRenderer);
 resizeRenderer();requestAnimationFrame(draw);
-const requestedType=new URLSearchParams(location.search).get('vehicle');
+const params=new URLSearchParams(location.search),requestedType=params.get('model')||params.get('vehicle');
 fetch('./assets/vehicle-candidates/manifest.json',{cache:'no-store'})
  .then(response=>response.ok?response.json():null)
- .then(manifest=>{savedManifest=manifest;return choose(CATALOG.find(c=>c.id===(resumedView?.type||requestedType))||CATALOG[0]);})
- .catch(error=>{console.warn('Manifest local no disponible',error);choose(CATALOG.find(c=>c.id===(resumedView?.type||requestedType))||CATALOG[0]);});
+ .then(manifest=>{savedManifest=manifest;return choose(ALL_CATALOG.find(c=>c.id===(resumedView?.type||requestedType))||CATALOG[0]);})
+ .catch(error=>{console.warn('Manifest local no disponible',error);choose(ALL_CATALOG.find(c=>c.id===(resumedView?.type||requestedType))||CATALOG[0]);});
 
 // A tiny manifest is the only periodic request; edited drafts are never discarded.
 setInterval(async()=>{

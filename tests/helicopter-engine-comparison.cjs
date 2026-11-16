@@ -10,7 +10,7 @@ assert(a.includes('const TARGET_LENGTH=10.725;'));
 for(const name of ['ka60-solid','ka60-native','apache-solid','apache-native'])assert(html.includes('data-model="'+name+'"'));
 assert(viewer.includes('createKa60Runtime')&&viewer.includes('prepareApacheAraonRuntime')&&viewer.includes('wireframe:true'));
 assert(!viewer.includes('GLTFLoader')&&!viewer.includes('.glb'));
-assert(catalog.includes("{id:'heli_combat'")&&!catalog.includes("{id:'heli'"));
+assert(catalog.includes("{id:'heli_combat'")&&catalog.includes("{id:'heli'"));
 assert(base.includes('helicopters-engine-compare.html'));
 for(const file of ['src/ka60-runtime.mjs','src/apache-araon-runtime.mjs','src/helicopters-engine-compare.mjs'])execFileSync(process.execPath,['--check',path.join(root,file)]);
 console.log('PASS comparador: Ka-60 A i Apache natius');

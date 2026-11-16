@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {symmetrizeModel} from './vehicle-live-geometry.mjs';
-export const LAB_REVISION='live-editor-20261115-mi24-d-approved-1';
+export const LAB_REVISION='live-editor-20261116-humans-three-proposals-1';
 export const removeResolvedRequests=queue=>queue.filter(item=>item?.status!=='resolta');
 const clone=root=>{const copy=root.clone(true),overlays=[];copy.traverse(o=>{if(o.userData.vehicleAnnotationOverlay)overlays.push(o)});for(const o of overlays)o.removeFromParent();return copy};
 const pathOf=(root,node)=>{const path=[];while(node&&node!==root){path.unshift(node.parent.children.indexOf(node));node=node.parent}return path};
@@ -44,7 +44,7 @@ export function createVehicleLiveEditor({slots,getType,annotations,getView,resto
   const visit=(object,prefix=[],depth=0)=>{
    object.children.forEach((child,i)=>{
     if(child.userData.vehicleAnnotationOverlay)return;
-    const p=[...prefix,i];select.add(new Option('· '.repeat(depth)+(child.name|| (child.isMesh?'Malla':'Grup'))+' ['+p.join('.')+']',JSON.stringify(p)));
+    const p=[...prefix,i];if(!child.userData.humanMotionJoint)select.add(new Option('· '.repeat(depth)+(child.name|| (child.isMesh?'Malla':'Grup'))+' ['+p.join('.')+']',JSON.stringify(p)));
     visit(child,p,depth+1);
    });
   };visit(selected.model);

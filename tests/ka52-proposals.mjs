@@ -4,7 +4,8 @@ import {createKa52Proposal,KA52_PROPOSALS} from '../src/ka52-proposals.mjs';
 import {stepKamovRotors} from '../src/kamov-reference-candidates.mjs';
 import {CATALOG} from '../src/vehicle-candidate-catalog.mjs';
 const ids=Object.keys(KA52_PROPOSALS);
-assert.deepEqual(CATALOG.find(x=>x.id==='heli_combat').options.map(x=>x.variant),ids);
+// Archived geometry remains inspectable; the active combat helicopter is Mi-24 D.
+assert(CATALOG.every(c=>c.options.every(o=>!ids.includes(o.variant))));
 assert.equal(ids.length,4);
 const shapes=new Set();let referenceTriangles=0;
 for(const id of ids){

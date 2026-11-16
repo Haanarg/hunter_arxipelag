@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hunter · Models externs de vehicles · Laboratori 3D</title>
-<meta name="description" content="Compara els vehicles pendents de Hunter.">
+<title>Hunter · Vehicles i personatges · Laboratori 3D</title>
+<meta name="description" content="Compara i edita vehicles i personatges de Hunter.">
 <style>
 :root{color-scheme:dark;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;--bg:#102025;--panel:#192e32;--border:#426065;--ink:#edf5eb;--muted:#b2c9c5;--gold:#e8cd8e;--green:#cbe6a8}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:auto}
@@ -14,18 +14,18 @@ h1{font-size:clamp(22px,3.3vw,36px);margin:5px 0}h2{font-size:17px;margin:5px 0 
 header p{max-width:960px;font-size:13px;line-height:1.5;margin:7px 0;color:#c3d6cc}
 nav{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:12px}
 main{padding:15px clamp(10px,2vw,30px) 26px}
-#vehicleList{display:flex;gap:7px;margin:10px 0 12px;overflow-x:auto;overflow-y:hidden;padding:2px 2px 10px;scrollbar-width:thin;overscroll-behavior-x:contain}
+:is(#vehicleList,#humanList){display:flex;gap:7px;margin:10px 0 12px;overflow-x:auto;overflow-y:hidden;padding:2px 2px 10px;scrollbar-width:thin;overscroll-behavior-x:contain}
 .reference-links{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;font-size:12px}.reference-links:empty{display:none}
 .t90-motion{max-width:1120px;margin:3px auto 14px;padding:10px 13px;border:1px solid #688b78;border-radius:10px;background:#1a3538}
 .t90-motion[hidden]{display:none!important}.t90-motion h2{margin:0 0 8px;font-size:15px}
 .t90-motion p{margin:9px 0 0;font-size:11px;color:#c7d6ca}
 .t90-motion button{padding:8px 13px;border:1px solid #c3d997;border-radius:8px;background:#183d37;color:white;font-weight:750}
 .t90-motion button[aria-pressed="true"]{background:#477757}
-#vehicleList button{text-align:left;min-height:44px;min-width:140px;flex:0 0 148px}#vehicleList small{display:block;font-size:10px;opacity:.9;margin-top:3px}
-#vehicleList button[data-validation='validated']{background:#235b37;color:#effff0;border-color:#5e9d70}
-#vehicleList button[data-validation='pending']{background:#813838;color:#fff0ef;border-color:#ce7c75}
-#vehicleList button[data-validation]:hover{filter:brightness(1.16)}
-#vehicleList button[data-validation].active{box-shadow:inset 0 0 0 2px #f4e4a5;border-color:#f4e4a5}
+:is(#vehicleList,#humanList) button{text-align:left;min-height:44px;min-width:140px;flex:0 0 148px}:is(#vehicleList,#humanList) small{display:block;font-size:10px;opacity:.9;margin-top:3px}
+:is(#vehicleList,#humanList) button[data-validation='validated']{background:#235b37;color:#effff0;border-color:#5e9d70}
+:is(#vehicleList,#humanList) button[data-validation='pending']{background:#813838;color:#fff0ef;border-color:#ce7c75}
+:is(#vehicleList,#humanList) button[data-validation]:hover{filter:brightness(1.16)}
+:is(#vehicleList,#humanList) button[data-validation].active{box-shadow:inset 0 0 0 2px #f4e4a5;border-color:#f4e4a5}
 #info{display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:10px;margin:0 0 11px}
 #warning{color:#f0d9a8;font-size:12px;line-height:1.5;max-width:900px}
 #grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;position:relative}
@@ -78,7 +78,7 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-height:1.6}
 @media(min-width:1650px){#grid{grid-template-columns:repeat(4,minmax(0,1fr))}#grid.btr-study{grid-template-columns:minmax(0,1fr);max-width:1120px;margin:0 auto}.panel{height:450px}}
 @media(max-width:1050px){#grid.btr-study{grid-template-columns:minmax(0,1fr);max-width:1120px;margin:0 auto}}
-@media(max-width:650px){#grid,#grid.btr-study{grid-template-columns:1fr}.panel{height:420px}.panel .status{min-height:16px}#vehicleList button{min-width:130px;flex-basis:130px}}
+@media(max-width:650px){#grid,#grid.btr-study{grid-template-columns:1fr}.panel{height:420px}.panel .status{min-height:16px}:is(#vehicleList,#humanList) button{min-width:130px;flex-basis:130px}}
 
 
 .live-transforms{display:flex;flex-wrap:wrap;gap:10px}.live-transforms fieldset{flex:1;min-width:220px}.live-transforms input{width:75px}#liveEditor fieldset{border:1px solid #677765;border-radius:8px;padding:10px;margin:8px 0}#liveEditor label{display:inline-flex;align-items:center;gap:6px;margin:4px}#liveEditor select{max-width:100%;min-width:0}#livePart{max-width:440px!important}#liveOffset{width:80px}#liveRequest{width:100%;box-sizing:border-box}#liveQueue>div{display:flex;justify-content:space-between;gap:12px;padding:8px;border-bottom:1px solid #677765}#liveQueue span{white-space:pre-wrap;overflow-wrap:anywhere}#liveStatus{color:#f3dc9d}button:disabled{opacity:.4;cursor:default}@media(max-width:600px){#livePart{max-width:240px!important}.live-transforms{display:block}}
@@ -89,7 +89,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <script type="importmap">{"imports":{"three":"./vendor/three-r186.module.mjs","three/addons/":"./vendor/three-addons/"}}</script>
 </head><body>
 <header><div class="kicker">HUNTER: ARXIPÈLAG · LABORATORI DE MODELS</div>
-<h1>Flota · Models i simplificació</h1>
+<h1>Vehicles i personatges · Models en proves</h1>
 <nav aria-label="Vistes">
 <button id="view-quarter" data-view="quarter" class="active">3/4</button><button data-view="front" id="view-front">Frontal</button>
 <button data-view="side" id="view-side">Lateral</button><button data-view="rear" id="view-rear">Posterior</button>
@@ -98,18 +98,24 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <a href="helicopters-engine-compare.html" style="color:#f3dc9d;font-weight:800">Models definitius Ka-60 / Apache</a><a href="vehicle-mides-proves.html">Mides del joc</a><a href="index.html">Jugar</a>
 </nav></header>
 <main><div id="vehicleList" aria-label="Tria vehicle"></div>
+<div id="humanList" aria-label="Tria personatge humà"></div>
 <section id="info"><div><h2 id="vehicleName">Carregant el taller…</h2><div id="warning"></div><div id="referenceLinks" class="reference-links" aria-label="Fotografies de referència"></div></div>
 <div class="toolbar"><label><input id="fitScale" type="checkbox" checked> Ajustar candidates a l'escala del model actual</label>
 <label><input id="animate" type="checkbox" checked> Animacions disponibles</label>
 <label><input id="showGrid" type="checkbox" checked> Graella i protagonista</label>
 
 </div></section>
+<section id="humanMotion" class="t90-motion" hidden aria-label="Animacions dels candidats humans">
+ <label>Moviment <select id="humanPose"><option value="idle">Repòs</option><option value="rest">Postura neutra</option><option value="walk">Caminar</option><option value="run">Córrer</option><option value="crouch">Ajupir-se</option><option value="aim">Apuntar</option><option value="work">Treballar</option><option value="wave">Saludar</option></select></label>
+ <label>Velocitat <input id="humanSpeed" type="range" min="0.25" max="1.5" step="0.05" value="1" aria-label="Velocitat de l’animació"></label>
+ <button id="humanRest" type="button">Postura neutra</button>
+</section>
 <section id="t90Motion" class="t90-motion" hidden aria-label="Provar la torreta del T-90M">
  <button id="t90LabTurret" type="button" aria-pressed="false">TORRETA</button>
  <p>W/S per avançar o retrocedir, A/D per girar. Mantén SHIFT o activa TORRETA per dirigir el canó amb W/S i A/D.</p>
 </section>
 <details class="annotation-tools"><summary>Marques i reparació de forats</summary><section id="btrPartTool" class="btr-part-tool" aria-label="Editor de marques 3D del laboratori de vehicles">
- <div class="btr-part-header"><h2>Editor de marques 3D</h2><span>Per a tots els vehicles · Anotacions no destructives</span></div>
+ <div class="btr-part-header"><h2>Editor de marques 3D</h2><span>Vehicles i personatges · Anotacions no destructives</span></div>
  <div class="btr-part-controls">
  <label class="btr-option"><input type="checkbox" id="btrSelectEnabled"> Editor actiu</label>
  <label>Eina <select id="btrSelectMode"><option value="join">Unir peces</option><option value="fill">Tapar forats (clic)</option><option value="remove">Eliminar peces</option></select></label>
@@ -156,7 +162,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <script type="module">
 // Carrega asíncronament per poder mostrar l'error si qualsevol import està
 // trencat. Un error de sintaxi al catàleg ja no deixa un visor en blanc.
-import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261115-mi24-d-approved-1&t90m=1')
+import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261116-humans-three-proposals-1&t90m=1')
  .catch(error=>{
   console.error('Error en arrencar el laboratori de vehicles:',error);
   const reason=error instanceof Error?error.message:String(error);

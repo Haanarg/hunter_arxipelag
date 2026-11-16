@@ -35,6 +35,9 @@ jobs:
           node --check src/kamov-reference-candidates.mjs
           node --check src/ka52-proposals.mjs
           node --check src/mi24-proposals.mjs
+          node --check src/human-proposals.mjs
+          node --check src/human-model-catalog.mjs
+          node --check src/human-current-models.mjs
           node --check tests/kamov-reference-candidates.mjs
           node --check src/t90m-runtime.mjs
           node --check src/vehicle-specs.mjs
@@ -70,6 +73,7 @@ jobs:
           node tests/kamov-reference-candidates.mjs
           node tests/ka52-proposals.mjs
           node tests/mi24-proposals.mjs
+          node tests/human-proposals.mjs
           node tests/ka60-game-integration.mjs
           node tests/vehicle-live-editor.mjs
           node tests/helicopter-engine-comparison.cjs

@@ -1,3 +1,10 @@
+**2026-11-16 · Humans: 7 perfils i 21 candidats articulats:**
+- [x] Segona fila de set pastilles vermelles: protagonista, soldat, bazuca, elit, general, pagès presoner i mecànic. Cada perfil conserva el cos actual del joc com a referència neutra i mostra A Natural, B Detallat i C Àgil, a la mateixa alçada del perfil. Els tripulants reutilitzen aquests cossos.
+- [x] Anatomia amb cintura, tòrax, mandíbula, nas, orelles, mans amb dits, botes i roba/equipament segons el rol. 16 articulacions per candidat; repòs, caminar, córrer, ajupir-se, apuntar amb suport de mà esquerra, treballar i saludar. Control de velocitat i pausa; edicions en pivots independents de l’animació.
+- [x] Editors de peces, desfer, cua, JSON i esborranys compartits. Sense ajust automàtic a l’amplada artificial antiga. Geometries/materials locals alliberables. 32–47 malles i aproximadament 3500–12200 triangles segons rol i proposta.
+- [x] Proves dels 7 originals i 21 candidats: articulacions, límits, moviment, cames/peus, JSON i preservació de transformacions editades. Revisió visual per rasterització de malles. Corregides dues expectatives antigues de proves que encara exigien el Ka-52 al catàleg i el Ka-60 absent.
+- [ ] Valoració de l’usuari al visor WebGL i selecció dels candidats. Cap substitució dels humans del joc. Revisió `live-editor-20261116-humans-three-proposals-1`.
+
 **2026-11-15 · v0.6.223 · Mi-24 D al joc:**
 - [x] Fàbrica real provada amb Three.js r186: model D 99 malles/4.873 triangles; LOD 1 malla/216 triangles; dos rotors independents i contacte de rodes a zero. Escala del tipus `heli_combat` (1,82) conservada. Radi de disc del rotor actualitzat. Ka-60 intacte.
 - [x] Retirada de la càrrega Apache i del model de reserva; candidats antics fora del laboratori. L'arxiu històric de l'Apache resta disponible només al comparador independent de motors, no al joc.
