@@ -1,3 +1,7 @@
+**2026-11-16 · HUMANS V3 · animació de cursa i transició de marxa:**
+- [x] Cicles periòdics de marxa/cursa amb suport, impuls de punta, flexió pròpia de turmell, recuperació del peu, genoll doblegat i fase aèria de cursa. Correcció de contacte de soles inclinades. Transició bidireccional gradual de totes les articulacions amb fase contínua i cadència interpolada; indicador de mescla al visor.
+- [ ] Validació CI, HTTP i visual. Propostes només de laboratori; sense integrar al joc.
+
 **2026-11-16 · HUMANS V2 · accessoris del pit del protagonista:**
 - [x] A/B/C: butxaques i solapes conformades a la superfície triangular real del tors i armilla; la cara interior penetra lleugerament la superfície. Sivelles, cintes, ràdio i tirants també ajustats; antena connectada a la ràdio. Peces accessibles individualment a l'editor. Mateixa profunditat relativa per les tres butxaques, no mateixa Z.
 - [x] Triangulació del tors i armilla del protagonista reflectida a X=0 amb segments múltiples de quatre, per garantir la simetria dels accessoris ajustats. Primera prova CI detectà asimetria de les diagonals.

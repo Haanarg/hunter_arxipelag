@@ -2,11 +2,27 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as T from '../vendor/three-r186.module.mjs';
 import {HUMAN_PROFILES,HUMAN_CATALOG,HUMAN_STYLES} from '../src/human-model-catalog.mjs';
-import {createHumanProposal,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,humanChestSurfaceZ} from '../src/human-proposals.mjs';
+import {createHumanProposal,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait} from '../src/human-proposals.mjs';
 import {createCurrentHuman} from '../src/human-current-models.mjs';
 globalThis.window=globalThis;
 assert.equal(HUMAN_CATALOG.length,7);assert(HUMAN_CATALOG.every(c=>!c.validated&&c.kind==='huma'&&c.options.length===3));
 const choices=new Set();let count=0;
+for(const blend of [0,.25,.5,.75,1]){
+ const samples=Array.from({length:201},(_,i)=>sampleHumanGait(i/200,blend));
+ assert(samples.every(p=>p.knee<=.00001&&p.ankle>=-.751&&p.ankle<=.821));
+ assert(Math.abs(samples[0].footPitch-samples.at(-1).footPitch)<1e-9);
+ for(let i=1;i<samples.length;i++)assert(Math.abs(samples[i].footPitch-samples[i-1].footPitch)<.15,'Peu sense salts');
+ assert(Math.max(...samples.map(p=>p.footPitch))>.01&&Math.min(...samples.map(p=>p.footPitch))<-.35,'Taló i punta no paral·lels al terra');
+}
+let clock=createHumanGaitClock('walk');clock.phase=.37;
+const before=sampleHumanGait(clock.phase,clock.blend);
+for(const mode of ['run','walk']){
+ const prior=clock;clock=advanceHumanGait(clock,0,mode);assert.deepEqual(clock,prior);
+ for(let i=0;i<60;i++){const next=advanceHumanGait(clock,1/60,mode);assert(Math.abs(next.blend-clock.blend)<.12);assert(((next.phase-clock.phase+1)%1)<.03,'Fase contínua');clock=next}
+ assert(Math.abs(clock.blend-(mode==='run'?1:0))<.002);
+}
+assert(Number.isFinite(before.ankle));
+console.log('PASS transició caminar/córrer, fase contínua i flexió de turmell');
 for(const [role,p]of Object.entries(HUMAN_PROFILES)){
  const actual=await createCurrentHuman(T,role);assert.equal(actual.userData.humanOriginal,role);
  assert(new T.Box3().setFromObject(actual).getSize(new T.Vector3()).y>2.8);
@@ -71,6 +87,17 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
    model.traverse(n=>assert(n.matrixWorld.elements.every(Number.isFinite),role+style+mode));
    assert(new T.Box3().setFromObject(model).min.y>-.12,'Peus o accessoris sota terra '+role+style+mode);
   }
+  // Read the actual transformed soles, not the keyframe intentions.
+  const soles=meshes.filter(m=>m.userData.humanLandmark==='sole');assert.equal(soles.length,2);
+  const localSoles=()=>soles.map(m=>{const pos=m.geometry.attributes.position,v=new T.Vector3();let low=Infinity;for(let k=0;k<pos.count;k++){v.fromBufferAttribute(pos,k);m.localToWorld(v);model.worldToLocal(v);low=Math.min(low,v.y)}return low});
+  let minPitch=Infinity,maxPitch=-Infinity,maxAir=0;
+  for(let k=0;k<80;k++){
+   poseHumanProposal(model,0,'run',{phase:k/80,blend:1});
+   const foot=joints.ankleL.localToWorld(new T.Vector3(0,0,-.18)).sub(joints.ankleL.getWorldPosition(new T.Vector3())).normalize();
+   minPitch=Math.min(minPitch,foot.y);maxPitch=Math.max(maxPitch,foot.y);
+   const lows=localSoles();assert(Math.min(...lows)>-.002,'Soles above ground');maxAir=Math.max(maxAir,Math.min(...lows));
+  }
+  assert(minPitch<-.35&&maxPitch>.02&&maxAir>.05,'Peu gira i ambdós peus deixen el terra');
   assert.deepEqual(rest.elbowL.position.toArray(),restPos.toArray());assert.deepEqual(rest.head.rotation.toArray(),headRotation.toArray());
   // Edits belong to rest pivots; playback and JSON round-tripping preserve them.
   rest.head.rotation.y=.22;poseHumanProposal(model,.4,'walk');assert.equal(rest.head.rotation.y,.22);
@@ -82,7 +109,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,21);assert.equal(choices.size,21);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../vehicles-externs-proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V2'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V3'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));

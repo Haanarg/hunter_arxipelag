@@ -1,10 +1,10 @@
 import {createMi24Proposal,MI24_MODELS} from './mi24-proposals.mjs?rev=mi24-d-optimized-20261115-3';
-import {HUMAN_CATALOG} from './human-model-catalog.mjs?rev=humans-v2-fit2';
-import {createHumanProposal,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy} from './human-proposals.mjs?rev=humans-v2-fit2';
-import {createCurrentHuman} from './human-current-models.mjs?rev=humans-v2-fit2';
+import {HUMAN_CATALOG} from './human-model-catalog.mjs?rev=humans-v3';
+import {createHumanProposal,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,createHumanGaitClock,advanceHumanGait} from './human-proposals.mjs?rev=humans-v3';
+import {createCurrentHuman} from './human-current-models.mjs?rev=humans-v3';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261116-humans-v2-fit2';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261116-humans-v3';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs?rev=mi24-d-approved-1';
@@ -19,11 +19,12 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261116-humans-v2-fit2';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261116-humans-v3';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const humanList=document.querySelector('#humanList'),ALL_CATALOG=[...CATALOG,...HUMAN_CATALOG];
-let humanTime=0;
+let humanTime=0,humanMode='rest',humanGait=createHumanGaitClock();
+const isHumanGait=mode=>mode==='walk'||mode==='run';
 import {mountHumanEvidence} from './human-lab-evidence-ui.mjs?rev=human-evidence-4';
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
 renderer.setPixelRatio(Math.min(1.5,window.devicePixelRatio||1));
@@ -382,8 +383,8 @@ async function choose(config){
  document.querySelector('#t90Motion').hidden=!t90Study;
  document.querySelector('#humanMotion').hidden=!config.human;
  humanEvidence.show(config.human||null);
- humanTime=0;
- if(config.human){document.querySelector('#humanPose').value='rest';document.querySelector('#animate').checked=false;document.querySelector('#humanRevision').textContent='HUMANS V2 · '+HUMAN_VERSION;}
+ humanTime=0;humanMode='rest';humanGait=createHumanGaitClock();
+ if(config.human){document.querySelector('#humanPose').value='rest';document.querySelector('#animate').checked=false;document.querySelector('#humanRevision').textContent='HUMANS V3 · '+HUMAN_VERSION;}
  labTankKeys.clear();labTurretSwitch=false;labTurretYaw=0;labTurretPitch=0;
  syncLabTurretButton();
  for(const slot of slots){
@@ -496,7 +497,7 @@ function drawHumanGuide(slot,w,h){
  if(!active){slot.guide.hidden=true;return}
  let model=null;slot.model?.traverse(n=>{if(n.userData.humanProposal)model=n.userData.humanProposal});
  const original=slots.indexOf(slot)===0;
- slot.versionTag.textContent=original?'ORIGINAL DEL JOC':model?.version===HUMAN_VERSION?'HUMANS V2 · '+model.style.toUpperCase():model?'VERSIÓ ANTERIOR · '+model.version:'IMPORTAT / VERSIÓ DESCONEGUDA';
+ slot.versionTag.textContent=original?'ORIGINAL DEL JOC':model?.version===HUMAN_VERSION?'HUMANS V3 · '+model.style.toUpperCase():model?'VERSIÓ ANTERIOR · '+model.version:'IMPORTAT / VERSIÓ DESCONEGUDA';
  slot.versionTag.classList.toggle('stale',!original&&model?.version!==HUMAN_VERSION);
  const axis=Math.abs(Math.sin(2*yaw))<.025&&Math.abs(elev)<.025;
  const measured=show&&axis&&slot.model&&!original?measureHumanAnatomy(THREE,slot.model):null;
@@ -529,7 +530,7 @@ function draw(now){
  const dt=Math.min(.07,(now-prev)/1000);prev=now;
  if(document.querySelector('#animate').checked){
    for(const slot of slots){slot.mixer?.update(dt);if(slot.model)stepKamovRotors(slot.model,dt);}
-   if(currentType.human){humanTime+=dt*Number(document.querySelector('#humanSpeed').value);for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,humanTime,document.querySelector('#humanPose').value);}
+   if(currentType.human){const elapsed=dt*Number(document.querySelector('#humanSpeed').value);humanTime+=elapsed;const mode=document.querySelector('#humanPose').value;const gait=isHumanGait(mode);if(gait)humanGait=advanceHumanGait(humanGait,elapsed,mode);for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,humanTime,mode,gait?humanGait:null);const out=document.querySelector('#humanGaitMix');out.textContent=gait?'Cursa '+Math.round(humanGait.blend*100)+' %':'';}
    if(currentType.id==='tanc'&&slots[0].model)
      stepT90MPreview(slots[0].model,t90MotionInput(dt),dt);
  }
@@ -584,8 +585,12 @@ document.querySelector('#pan-right').addEventListener('click',()=>{panScreenX-=p
 document.querySelector('#fitScale').addEventListener('change',()=>choose(currentType));
 document.querySelector('#showGrid').addEventListener('change',e=>{for(const s of slots){s.lines.visible=e.target.checked;s.person.visible=e.target.checked&&!currentType.human}});
 document.querySelector('#humanPose').addEventListener('change',e=>{
- humanTime=0;document.querySelector('#animate').checked=e.target.value!=='rest';
- for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,0,e.target.value);
+ const mode=e.target.value,continuous=isHumanGait(humanMode)&&isHumanGait(mode);
+ humanMode=mode;document.querySelector('#animate').checked=mode!=='rest';
+ if(continuous)return; // Retain the current phase AND blend when changing gait.
+ humanTime=0;humanGait=createHumanGaitClock(mode);
+ document.querySelector('#humanGaitMix').textContent=isHumanGait(mode)?'Cursa '+Math.round(humanGait.blend*100)+' %':'';
+ for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,0,mode,isHumanGait(mode)?humanGait:null);
 });
 document.querySelector('#humanGuides').addEventListener('change',e=>{if(e.target.checked){document.querySelector('#humanPose').value='rest';document.querySelector('#humanPose').dispatchEvent(new Event('change'));applyView('front')}});
 document.querySelector('#humanRest').addEventListener('click',()=>{

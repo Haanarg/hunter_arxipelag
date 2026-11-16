@@ -1,5 +1,5 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs';
-export const HUMAN_VERSION='humans-v2';
+export const HUMAN_VERSION='humans-v3';
 
 // Eight-head anatomical template, before role-specific headwear and game scaling.
 // Reference image: knee slightly above division 6; elbows near 5 heads from floor;
@@ -242,27 +242,77 @@ export function createHumanProposal(T,role,style='a'){
  };merge(root);
  root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
  root.scale.setScalar(p.height/height);
- root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:2},humanHeight:p.height,labAssemblies:true};
+ root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:3},humanHeight:p.height,labAssemblies:true};
  return root;
 }
 
+// Gait angles (radians): hip, knee, foot pitch in the body sagittal plane.
+// Both cycles start at forward foot contact; negative foot pitch is toe-down.
+// Walk: heel strike, flat support, toe-off, swing. Run: shorter stance,
+// stronger toe-off, folded swing and a brief aerial phase.
+const WALK_GAIT=[
+ [0,.36,-.06,.21],[.115,.22,-.25,0],[.30,-.05,-.07,0],
+ [.50,-.34,-.12,-.30],[.62,-.40,-.48,-.55],[.74,-.02,-1.0,-.48],
+ [.87,.38,-.40,.10],[1,.36,-.06,.21]
+];
+const RUN_GAIT=[
+ [0,.60,-.22,.07],[.13,.15,-.53,-.12],[.29,-.43,-.38,-.55],
+ [.39,-.55,-.85,-.91],[.53,-.15,-1.80,-1.40],[.69,.55,-1.45,-.55],
+ [.85,.78,-.62,.10],[1,.60,-.22,.07]
+];
+const mix=(a,b,t)=>a+(b-a)*t,clamp01=x=>Math.max(0,Math.min(1,x));
+const cycle=x=>((x%1)+1)%1;
+function sampleGait(keys,phase){
+ const p=cycle(phase);let i=0;while(i<keys.length-2&&p>=keys[i+1][0])i++;
+ const a=keys[i],b=keys[i+1],h=b[0]-a[0],t=(p-a[0])/h;
+ const prev=i===0?[keys.at(-2)[0]-1,...keys.at(-2).slice(1)]:keys[i-1];
+ const next=i===keys.length-2?[1+keys[1][0],...keys[1].slice(1)]:keys[i+2];
+ // Periodic monotone cubic interpolation. No overshoot at toe-off or
+ // sudden velocity jump through the cycle seam.
+ const slope=(l,r)=>l*r<=0?0:2*l*r/(l+r);
+ return [1,2,3].map(k=>{
+  const d=(b[k]-a[k])/h,m0=slope((a[k]-prev[k])/(a[0]-prev[0]),d),m1=slope(d,(next[k]-b[k])/(next[0]-b[0]));
+  return (2*t*t*t-3*t*t+1)*a[k]+(t*t*t-2*t*t+t)*h*m0+(-2*t*t*t+3*t*t)*b[k]+(t*t*t-t*t)*h*m1;
+ });
+}
+export function sampleHumanGait(phase,blend){
+ const t=clamp01(blend),walk=sampleGait(WALK_GAIT,phase),run=sampleGait(RUN_GAIT,phase),[hip,knee,foot]=walk.map((v,i)=>mix(v,run[i],t));
+ // The ankle adds its own flexion, rather than canceling the hip and knee
+ // and keeping the entire boot horizontal as in V2.
+ const ankle=Math.max(-.75,Math.min(.82,foot-hip-knee));
+ return {hip,knee,ankle,footPitch:hip+knee+ankle};
+}
+const gaitRate=blend=>mix(5.5,9,blend)/(2*Math.PI);
+export function createHumanGaitClock(mode='walk'){return {phase:0,blend:mode==='run'?1:0}}
+export function advanceHumanGait(clock,dt,mode){
+ const elapsed=Math.max(0,dt),goal=mode==='run'?1:0;
+ const next=goal+(clock.blend-goal)*Math.exp(-elapsed/.145);
+ return {phase:cycle(clock.phase+elapsed*gaitRate((clock.blend+next)/2)),blend:Math.abs(next-goal)<.0001?goal:next};
+}
+function flightLift(phase,blend){
+ // Both feet are off the ground in the running stride from .39 to .50
+ // (and again half a cycle later); fade the lift with gait blending.
+ const p=cycle(phase*2)/2;
+ if(p<=.39||p>=.50)return 0;
+ return .085*blend*blend*Math.sin(Math.PI*(p-.39)/.11)**2;
+}
 const rigCache=new WeakMap();
-export function poseHumanProposal(root,time=0,mode='idle'){
+export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
  let rigs=rigCache.get(root);
  if(!rigs){rigs=[];root.traverse(n=>{if(!n.userData.humanProposal)return;const joints={};let weapon;n.traverse(j=>{const id=j.userData.humanMotionJoint;if(id)joints[id]=j;if(j.userData.humanWeapon)weapon=j});rigs.push({model:n,joints,weapon})});rigCache.set(root,rigs)}
  for(const {model,joints:j,weapon}of rigs){
   const set=(id,x=0,y=0,z=0)=>{if(j[id])j[id].rotation.set(x,y,z)};
   for(const n of Object.values(j)){n.rotation.set(0,0,0);n.position.set(0,0,0)}
   if(mode==='rest'){model.updateMatrixWorld(true);continue}
-  const walk=mode==='walk'||mode==='run',run=mode==='run',phase=time*(run?9:5.5),breath=Math.sin(time*1.8),stride=run?.88:.5;
-  set('spine',walk?(run?.13:.035):.008*breath,walk?Math.sin(phase)*.055:Math.sin(time*.7)*.02);
+  const walk=mode==='walk'||mode==='run',blend=walk?clamp01(locomotion?.blend??(mode==='run'?1:0)):0;
+  const cyclePhase=walk?(locomotion?.phase??time*gaitRate(blend)):0,phase=cyclePhase*Math.PI*2,breath=Math.sin(time*1.8);
+  set('spine',walk?mix(.035,.15,blend):.008*breath,walk?Math.sin(phase)*mix(.055,.095,blend):Math.sin(time*.7)*.02);
   set('neck',0,mode==='idle'?Math.sin(time*.6)*.08:0);set('head',-.015*breath);
   for(const [i,side]of ['L','R'].entries()){
-   const sign=i?-1:1,a=phase+i*Math.PI,swing=walk?Math.sin(a)*stride:0;
-   set('hip'+side,swing,0,0);set('knee'+side,walk?-(.05+Math.max(0,-Math.sin(a))*(run?1.45:.85)):0);
-   set('ankle'+side,-swing-(j['knee'+side]?.rotation.x||0));
-   set('shoulder'+side,walk?-swing*.65:.025*breath,0,-sign*.06);
-   set('elbow'+side,run?1.0:walk?.18+.16*Math.max(0,Math.sin(a)):.10);
+   const sign=i?-1:1,a=phase+i*Math.PI,gait=walk?sampleHumanGait(cyclePhase+i*.5,blend):{hip:0,knee:0,ankle:0};
+   set('hip'+side,gait.hip);set('knee'+side,gait.knee);set('ankle'+side,gait.ankle);
+   set('shoulder'+side,walk?-gait.hip*mix(.72,.86,blend):.025*breath,0,-sign*.06);
+   set('elbow'+side,walk?mix(.18+.16*Math.max(0,Math.sin(a)),1.15+.17*Math.sin(a),blend):.10);
    set('wrist'+side,0,0,sign*.035);
   }
   if(mode==='crouch'){
@@ -277,8 +327,8 @@ export function poseHumanProposal(root,time=0,mode='idle'){
   }else if(mode==='wave'){
    set('shoulderR',.12,0,2.5);set('elbowR',.35,0,Math.sin(time*4)*.28);set('wristR',0,0,Math.sin(time*4)*.20);set('head',0,-.10);
   }
-  // Pelvis follows the lowest sole. Knees bend backwards, and ankles keep
-  // the sole flat during the planted phase instead of swinging rigid legs.
+  // Ground clearance follows the actual tilted boot soles, with a brief
+  // true aerial phase in the running cycle.
   if(j.pelvis)set('pelvis',0,walk?-Math.sin(phase)*.035:0,walk?Math.cos(phase)*.018:0);
   model.updateMatrixWorld(true);
   // Measure actual transformed sole contact points, including editable
@@ -291,7 +341,7 @@ export function poseHumanProposal(root,time=0,mode='idle'){
     ankle.localToWorld(point);model.worldToLocal(point);lowest=Math.min(lowest,point.y);
    }
   }
-  if(j.pelvis&&Number.isFinite(lowest))j.pelvis.position.y=-lowest;
+  if(j.pelvis&&Number.isFinite(lowest))j.pelvis.position.y=-lowest+(walk?flightLift(cyclePhase,blend):0);
   model.updateMatrixWorld(true);
   if(mode==='aim'&&weapon&&j.shoulderL&&j.elbowL){
    // Geometric support-hand IK follows the actual decorative prop, including
