@@ -15,21 +15,51 @@ function operationScalars(value){
 }
 function operationTransform(o){return o?{position:o.position.toArray(),rotation:[o.rotation.x,o.rotation.y,o.rotation.z],scale:o.scale.toArray()}:null}
 function operationSetTransform(o,t){if(o&&t){o.position.fromArray(t.position);o.rotation.set(...t.rotation);o.scale.fromArray(t.scale)}}
+function operationReleaseSeries(version){
+  const m=/^(\d+)\.(\d+)\.\d+$/.exec(version);
+  return m?m[1]+'.'+m[2]:null;
+}
+function operationIdentity(kind,state,nested={},legacy=false){
+  if(kind==='fauna'||kind==='bomb')return null;
+  const position=kind==='walls'?[state.x0,state.x1,state.y0,state.y1,state.z0,state.z1]:
+    kind==='enemies'&&legacy?[nested.home?.x,nested.home?.z]:[state.x,state.z];
+  if(!position.every(Number.isFinite))return null;
+  return JSON.stringify([kind,state.t??null,state.kind??null,...position.map(n=>Math.round(n*1000)/1000)]);
+}
+function operationRecoveryPairs(saved,current,exact=false){
+  const key=(record,old)=>record.identity??operationIdentity(record.kind,record.state,record.nested,old);
+  const buckets=(records,old)=>{
+    const map=new Map();
+    for(const record of records){const k=key(record,old);if(k===null)continue;const list=map.get(k)||[];list.push(record);map.set(k,list);}
+    return map;
+  };
+  const prior=buckets(saved,true),next=buckets(current,false),byId=new Map(saved.map(r=>[r.id,r]));
+  const result=new Map(),used=new Set();
+  for(const row of current){
+    const k=key(row,false),same=byId.get(row.id);
+    let match=null;
+    if(exact&&row.kind!=='fauna'&&same&&same.kind===row.kind&&same.state.t===row.state.t&&same.state.kind===row.state.kind)match=same;
+    else if(k!==null&&next.get(k)?.length===1&&prior.get(k)?.length===1)match=prior.get(k)[0];
+    if(match&&!used.has(match.id)){used.add(match.id);result.set(row.id,match);}
+  }
+  return result;
+}
 function prepareOperationRegistry(){
-  const groups={vehicles:V.slice(),enemies:E.slice(),items:items.slice(),buildings:B.slice(),walls:Wl.slice(),palms:PL.slice(),fauna:fa.slice()},byId=new Map();
+  const groups={vehicles:V.slice(),enemies:E.slice(),items:items.slice(),buildings:B.slice(),walls:Wl.slice(),palms:PL.slice(),fauna:fa.slice()},byId=new Map(),identities=new Map();
   let fingerprint=2166136261;
   for(const [kind,entries]of Object.entries(groups))entries.forEach((entity,index)=>{
     const collection=['vehicles','enemies','items'].includes(kind)?kind:'structures';
     entity.saveId=collection+':'+kind+':'+index;byId.set(entity.saveId,entity);
+    identities.set(entity.saveId,operationIdentity(kind,entity));
     // Fauna uses cosmetic random placement; generation identity belongs to fixed world entities.
     const token=kind+':'+index+':'+(entity.t||entity.kind||'')+':'+(kind==='fauna'?'':JSON.stringify([entity.x??entity.cx,entity.z??entity.cz,entity.y0]));
     for(let i=0;i<token.length;i++){fingerprint^=token.charCodeAt(i);fingerprint=Math.imul(fingerprint,16777619)}
   });
-  operationRegistry={groups,byId,fingerprint:(fingerprint>>>0).toString(16)};
+  operationRegistry={groups,byId,identities,fingerprint:(fingerprint>>>0).toString(16)};
   activeOperation=null;initializeOperationRun();operationAutosave?.reset();
 }
 function operationRecord(kind,entity){
-  const record={id:entity.saveId,kind,...operationScalars(entity),transform:operationTransform(entity.o||entity.m)};
+  const record={id:entity.saveId,kind,identity:operationRegistry.identities.get(entity.saveId)??null,...operationScalars(entity),transform:operationTransform(entity.o||entity.m)};
   // Els soldats embarcats tenen transformació LOCAL al cotxe.
   // El desament guarda una sortida segura a peu: la missió es reprendrà
   // amb el soldat al costat del cotxe, sense cap referència circular a V.
@@ -68,6 +98,7 @@ function captureOperation(name){
     name:name||'Operació '+(seed>>>0),gameVersion:window.HUNTER_VERSION||'0.6.6',
     generatorVersion:OPERATION_GENERATOR_VERSION,seed:seed>>>0,mapScale:MAP_SCALE});
   if(name)snapshot.name=name.trim();
+  snapshot.gameVersion=window.HUNTER_VERSION||snapshot.gameVersion;
   snapshot.world.time=elapsed;
   for(const kind of api.ENTITY_KINDS)snapshot.world.entities[kind]=[];
   for(const [kind,entries]of Object.entries(operationRegistry.groups)){
@@ -149,6 +180,107 @@ function validateOperationRuntime(snapshot,matchWorld=false){
   }
   if(matchWorld&&p.state.vehicleSeat&&!snapshot.world.entities.vehicles.some(v=>v.id===p.state.vehicleSeat.vehicleId&&v.active&&v.state.life>0))
     throw new Error('El vehicle del jugador ja no existeix.');
+}
+// Recovery never mutates the source snapshot or transfers a state by ordinal
+// when the regenerated world has changed. Only a unique spawn signature is matched.
+function validateOperationRecovery(snapshot){
+  window.HUNTER_SAVES.validateSnapshot(snapshot,{generatorVersion:OPERATION_GENERATOR_VERSION});
+  const series=operationReleaseSeries(snapshot.gameVersion);
+  if(!series||series!==operationReleaseSeries(window.HUNTER_VERSION)||
+     snapshot.world.runtime?.adapterVersion!==OPERATION_ADAPTER_VERSION)
+    throw new Error('No es pot recuperar aquesta partida: salt de versió major o format incompatible.');
+  const r=snapshot.world.runtime,p=snapshot.participants.local?.state;
+  if(Object.keys(snapshot.participants).length!==1||!p||![.6,1,1.5].includes(r.difficulty)||
+     !p.inventory||typeof p.inventory!=='object'||Array.isArray(p.inventory)||
+     ![p.x,p.y,p.z,p.hd,p.hp].every(Number.isFinite)||p.hp<=0||
+     !Number.isInteger(p.ammo)||p.ammo<0||!Number.isInteger(snapshot.stats.kills)||snapshot.stats.kills<0)
+    throw new Error('L’estat del jugador no es pot recuperar de forma segura.');
+}
+function reconcileOperationSnapshot(source){
+  validateOperationRecovery(source);
+  const snapshot=operationClone(source),r=snapshot.world.runtime,p=snapshot.participants.local.state;
+  const saved=Object.values(source.world.entities).flat().filter(e=>e.kind!=='bomb'&&e.state);
+  const current=[];
+  for(const [kind,entries] of Object.entries(operationRegistry.groups))
+    for(const entity of entries)current.push(operationRecord(kind,entity));
+  const exact=r.fingerprint===operationRegistry.fingerprint;
+  const pairs=operationRecoveryPairs(saved,current,exact),remap=new Map();
+  for(const [id,prior] of pairs)remap.set(prior.id,id);
+  // Keep new geometry, collision dimensions, model scales and default AI paths.
+  const fields={
+    vehicles:['x','z','hd','v','alt','life','destroyed','rockets','smokeT'],
+    enemies:['x','z','gy','hd','hp','life','destroyed','cd','alert','wt','tx','tz'],
+    items:[],buildings:['rb'],walls:['hp','open','openProgress','desiredOpen'],palms:['alive'],fauna:[]
+  };
+  const byId=new Map(current.map(row=>[row.id,row]));
+  for(const row of current){
+    const prior=pairs.get(row.id);if(!prior)continue;
+    if(typeof prior.active==='boolean'&&typeof row.active==='boolean')row.active=prior.active;
+    for(const key of fields[row.kind]||[]){
+      const value=prior.state[key],actual=operationRegistry.byId.get(row.id)[key];
+      if(value!==undefined&&(value===null||['number','string','boolean'].includes(typeof value))&&
+         (actual===null||typeof actual!=='object')){
+        row.state[key]=value;row.infinite=row.infinite.filter(pair=>pair[0]!==key);
+      }
+    }
+    if(row.kind==='vehicles'){
+      const max=VT[row.state.t]?.life;
+      if(Number.isFinite(max)&&Number.isFinite(row.state.life))
+        row.state.life=Math.min(max,Math.max(0,row.state.life*((r.vehicleHealthVersion||1)<2?2:1)));
+    }
+    if(row.kind==='buildings')row.stairDestroyed=!!prior.stairDestroyed;
+    if(['vehicles','enemies'].includes(row.kind)&&row.transform&&prior.transform&&
+        ['position','rotation'].every(k=>Array.isArray(prior.transform[k])&&prior.transform[k].length===3&&prior.transform[k].every(Number.isFinite))){
+      row.transform.position=prior.transform.position.slice();row.transform.rotation=prior.transform.rotation.slice();
+    }
+  }
+  for(const row of current)if(row.kind==='vehicles'){
+    const carrier=byId.get(remap.get(pairs.get(row.id)?.carrierId));
+    row.carrierId=carrier?.active&&carrier.state.t==='ferry'?carrier.id:null;
+  }
+  for(const collection of Object.keys(snapshot.world.entities))snapshot.world.entities[collection]=[];
+  for(const row of current){
+    const collection=['vehicles','enemies','items'].includes(row.kind)?row.kind:'structures';
+    snapshot.world.entities[collection].push(row);
+  }
+  // Planted explosives can only be safely replayed in an unchanged world.
+  if(exact)snapshot.world.entities.explosives=operationClone(source.world.entities.explosives);
+  const seat=byId.get(remap.get(p.vehicleSeat?.vehicleId)),lostSeat=!!p.vehicleSeat&&!(seat?.active&&seat.state.life>0);
+  p.vehicleSeat=seat?.active&&seat.state.life>0?{vehicleId:seat.id,seat:p.vehicleSeat.seat}:null;
+  p.hp=Math.min(p.hp,COMBAT_BALANCE.player);
+  p.inventory=Object.fromEntries(Object.entries(p.inventory).filter(([k,n])=>Object.hasOwn(IT,k)&&Number.isInteger(n)&&n>0));
+  for(const [flag,item] of [['bazookaEquipped','bazooka'],['sniperEquipped','sniper'],['grenadeEquipped','grenade'],['cisallaEquipped','cisalla'],['knifeEquipped','knife']])
+    if(!Object.hasOwn(IT,item))p[flag]=false;
+  // A lost vehicle or newly blocked position returns the player to the safe
+  // generated starting point, not a possibly submerged or enclosed location.
+  const blocked=!p.vehicleSeat&&wallCandidates(p.x,p.z,.4).some(w=>!w.open&&w.playerBlock!==false&&
+    p.x>w.x0-.35&&p.x<w.x1+.35&&p.z>w.z0-.35&&p.z<w.z1+.35&&p.y<w.y1&&p.y+1.5>w.y0);
+  const relocate=lostSeat||blocked||Math.abs(p.x)>=H||Math.abs(p.z)>=H;
+  if(relocate){
+    const delta=[P.x-p.x,P.y-p.y,P.z-p.z];
+    p.x=P.x;p.y=P.y;p.z=P.z;p.hd=P.hd;p.swimming=false;p.flightY=null;
+    if(Array.isArray(p.view?.position))p.view.position=p.view.position.map((n,i)=>n+delta[i]);
+  }
+  // Optional missions are restored only if their own validator recognises the
+  // regenerated entities; otherwise retain their freshly generated state.
+  const optionalReset=[];
+  if(r.prisoners?.repair)r.prisoners.repair.vehicleId=remap.get(r.prisoners.repair.vehicleId)||null;
+  try{prisonerSystem.validateSave(r.prisoners);}catch(_){r.prisoners=prisonerSystem.exportSave();optionalReset.push('presoners');}
+  if(Array.isArray(r.radio?.leases))r.radio.leases=r.radio.leases.flatMap(l=>{
+    const enemyId=remap.get(l.enemyId);return enemyId?[{...l,enemyId}]:[];
+  });
+  try{radioRelay.validateSave(r.radio,operationRegistry.byId);}catch(_){r.radio=radioRelay.exportSave();optionalReset.push('ràdio');}
+  if(Array.isArray(r.intelMarks))r.intelMarks=r.intelMarks.flatMap(m=>{
+    const refId=remap.get(m.refId);return refId?[{...m,refId}]:[];
+  });
+  r.fingerprint=operationRegistry.fingerprint;r.vehicleHealthVersion=2;
+  snapshot.gameVersion=window.HUNTER_VERSION;
+  snapshot.operationId=window.HUNTER_SAVES.newOperationId();snapshot.revision=0;
+  snapshot.createdAt=snapshot.updatedAt=Date.now();
+  snapshot.name=(source.name.slice(0,85)+' (recuperada)');
+  const report={matched:pairs.size,unmatched:saved.length-pairs.size,newEntities:current.length-pairs.size,relocated:relocate,optionalReset};
+  validateOperationRuntime(snapshot,true);
+  return {snapshot,report};
 }
 function applyOperationSnapshot(snapshot){
   validateOperationRuntime(snapshot,true);

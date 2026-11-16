@@ -44,7 +44,7 @@ async function saveOperation({name,asNew=false,exit=false}={}){
     return saved;
   }finally{operationBusy=false;}
 }
-async function loadOperation(operationId,{previous=false}={}){
+async function loadOperation(operationId,{previous=false,force=false}={}){
   if(operationBusy||generationPromise||seedSearchRunning)throw new Error('Espera que acabi l’operació en curs.');
   operationBusy=true;
   try{
@@ -53,11 +53,18 @@ async function loadOperation(operationId,{previous=false}={}){
     if(!current)throw new Error('No s’ha trobat aquesta operació.');
     const snapshot=previous?await store.load(operationId,{previous:true,generatorVersion:OPERATION_GENERATOR_VERSION}):current;
     if(!snapshot)throw new Error('Aquesta operació no té còpia anterior.');
-    validateOperationRuntime(snapshot);
+    if(force)validateOperationRecovery(snapshot);else validateOperationRuntime(snapshot);
     // A chosen backup is promoted only by a later explicit save against the latest revision.
-    if(previous)snapshot.revision=current.revision;
-    await startGameProgressively({difficulty:snapshot.world.runtime.difficulty,
-      scale:snapshot.world.mapScale,seed:snapshot.world.seed,restoreSnapshot:snapshot});
+    if(previous&&!force)snapshot.revision=current.revision;
+    const result=await startGameProgressively({difficulty:snapshot.world.runtime.difficulty,
+      scale:snapshot.world.mapScale,seed:snapshot.world.seed,restoreSnapshot:snapshot,forceRestore:force});
+    if(force){
+      const saved=await persistOperation(activeOperation);
+      operationAutosave?.markSaved(saved.world.time);
+      const report=result.recovery;
+      msg='Partida recuperada com a còpia nova · '+report.matched+' restaurades, '+report.unmatched+' antigues sense correspondència, '+report.newEntities+' en estat inicial'+(report.relocated?' · jugador a la base':'')+(report.optionalReset.length?' · reinici: '+report.optionalReset.join(', '):'');msgT=12;
+      return saved;
+    }
     return snapshot;
   }finally{operationBusy=false;}
 }
@@ -149,7 +156,7 @@ async function renderOperations(body,isCurrent=()=>true,notice=''){
     for(const row of rows){
       const card=add('section','',list);card.style.cssText='border-top:1px solid #ffffff44;padding:12px 0';
       add('strong',row.name,card);
-      add('p','Llavor '+row.seed+' · '+(row.mapScale===2?'Gran':'Petit')+' · '+Math.floor(row.time/60)+' min · '+new Date(row.updatedAt).toLocaleString('ca-ES'),card);
+      add('p','Llavor '+row.seed+' · '+(row.mapScale===2?'Gran':'Petit')+' · '+Math.floor(row.time/60)+' min · v'+row.gameVersion+' · '+new Date(row.updatedAt).toLocaleString('ca-ES'),card);
       const compatible=row.generatorVersion===OPERATION_GENERATOR_VERSION;
       button('Exportar fitxer',()=>downloadOperationFile(row.operationId),card);
       if(accountCloud&&window.HUNTER_ACCOUNT_SERVICE.status().approval==='approved'){
@@ -157,14 +164,19 @@ async function renderOperations(body,isCurrent=()=>true,notice=''){
         button('Pujar com a nova al núvol',async()=>{await accountCloud.push(row.operationId,{asNew:true});status.textContent='Còpia nova al núvol.';},card);
       }
       if(!compatible)add('p','Necessita una versió compatible del generador.',card);
-      function loadButton(text,previous){
-        let confirmed=!started;
+      function loadButton(text,previous,force=false){
+        let confirmed=!started&&!force;
         const el=button(text,async()=>{
-          if(!confirmed){confirmed=true;el.textContent='Confirma: substituir la partida actual';return;}
-          await loadOperation(row.operationId,{previous});
+          if(!confirmed){confirmed=true;el.textContent=force?'Confirma: recuperar en una còpia nova':'Confirma: substituir la partida actual';return;}
+          await loadOperation(row.operationId,{previous,force});
         },card);
       }
       if(compatible){loadButton('Continuar',false);if(row.hasPrevious)loadButton('Còpia anterior',true);}
+      if(compatible&&operationReleaseSeries(row.gameVersion)===operationReleaseSeries(window.HUNTER_VERSION)){
+        add('p','Si Continuar falla, recupera les entitats identificables en una còpia nova; les altres tornen a l’estat inicial.',card);
+        loadButton('Forçar la càrrega',false,true);
+        if(row.hasPrevious)loadButton('Forçar la còpia anterior',true,true);
+      }
       let confirmDelete=false;
       const remove=button('Eliminar',async()=>{
         if(!confirmDelete){confirmDelete=true;remove.textContent='Confirma eliminar';return;}

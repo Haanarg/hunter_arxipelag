@@ -765,19 +765,23 @@ function startGameProgressively(options=readGameStartOptions()){
       })();
       await buildProgressively({iterator,signal:generationAttempt.signal,schedule:options.schedule||window.HUNTER_GENERATION_SCHEDULE,onProgress:generationAttempt.report});
       if(generationAttempt.signal.aborted)throw generationAbortError();
-      if(options.restoreSnapshot)applyOperationSnapshot(options.restoreSnapshot);else applyStressAuditPosition();
+      let recovery=null;
+      if(options.restoreSnapshot){
+        if(options.forceRestore){const restored=reconcileOperationSnapshot(options.restoreSnapshot);applyOperationSnapshot(restored.snapshot);recovery=restored.report;}
+        else applyOperationSnapshot(options.restoreSnapshot);
+      }else applyStressAuditPosition();
       initAudio();started=1;paused=!!options.restoreSnapshot||!simulationFocused||!!document.hidden;clearKeys();
       if(paused){ui.show('pause');audioPause()}
       window.HUNTER_GENERATION_STATE.status='ready';
       iniEl.style.display='none';document.body.classList.add('game-started');
-      resetSimulationClock();return {seed,mapScale:MAP_SCALE};
+      resetSimulationClock();return {seed,mapScale:MAP_SCALE,recovery};
     }catch(error){
       Object.assign(window.HUNTER_GENERATION_STATE,{status:error.name==='AbortError'?'cancelled':'error',error:error.message});
       started=0;paused=false;discardGeneratedWorld();ui.hide();
       iniEl.style.display='flex';startMenuEl.style.display='flex';
       seedSearchScreenEl.style.display='none';seedSearchScreenEl.setAttribute('aria-hidden','true');
       const message=document.getElementById('startLoading');
-      message.textContent=error.name==='AbortError'?'Generació cancel·lada. Pots tornar a començar.':'No s’ha pogut generar el món. Torna a prémer per reintentar-ho.';
+      message.textContent=error.name==='AbortError'?'Generació cancel·lada. Pots tornar a començar.':(options.restoreSnapshot?'No s’ha pogut recuperar la partida: '+(error.message||'error desconegut')+' Torna a Operacions desades.':'No s’ha pogut generar el món. Torna a prémer per reintentar-ho.');
       message.style.display='block';
       if(error.name!=='AbortError')console.error('No es pot generar el món Hunter',error);
       throw error;
