@@ -109,25 +109,31 @@ jobs:
           set -euo pipefail
           version="$(sed -n "s/.*GAME_VERSION = '\([^']*\)'.*/\1/p" src/version.mjs)"
           if [ -z "$version" ]; then echo "::error::No s'ha pogut llegir la versió"; exit 1; fi
-          # Compare actual checked-out assets rather than stale hardcoded model IDs.
-          files=(src/version.mjs src/vehicle-specs.mjs src/ka60-runtime.mjs assets/vehicle-candidates/lab-revision.json src/human-proposals.mjs src/human-lab-evidence.mjs src/human-lab-evidence-ui.mjs vehicles-externs-proves.html)
-          for attempt in 1 2 3 4 5; do
+          # Compare the final HTTP body, not Cloudflare's canonical HTML redirect.
+          files=(src/version.mjs src/vehicle-specs.mjs src/ka60-runtime.mjs assets/vehicle-candidates/lab-revision.json src/human-model-catalog.mjs src/human-current-models.mjs src/human-proposals.mjs src/human-lab-evidence.mjs src/human-lab-evidence-ui.mjs src/vehicle-live-editor.mjs src/vehicles-externs-proves.mjs vehicles-externs-proves.html)
+          for delay in 0 3 6 12 24 30; do
+            if [ "$delay" -gt 0 ]; then sleep "$delay"; fi
             failed=0
             for path in "${files[@]}"; do
-              if ! curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
-                -H 'Cache-Control: no-cache' "https://hunter.paradoxa.cat/$path?release=$COMMIT&attempt=$attempt" -o "$RUNNER_TEMP/hunter-published-check"; then
-                echo "No s'ha pogut llegir: $path"
+              url="https://hunter.paradoxa.cat/$path?release=$COMMIT&retry=$delay"
+              if ! result="$(curl --fail --silent --show-error --location --max-redirs 5 --proto-redir '=https' --connect-timeout 10 --max-time 30 \
+                -H 'Cache-Control: no-cache' "$url" -o "$RUNNER_TEMP/hunter-published-check" \
+                --write-out '%{http_code} %{url_effective} redirects=%{num_redirects}')"; then
+                echo "No s'ha pogut llegir: $path ($result)"
                 failed=1
               elif ! cmp -s "$path" "$RUNNER_TEMP/hunter-published-check"; then
-                echo "Contingut diferent del commit: $path"
+                echo "Contingut diferent del commit: $path ($result)"
+                echo "SHA256 esperat: $(sha256sum "$path" | cut -d' ' -f1)"
+                echo "SHA256 rebut: $(sha256sum "$RUNNER_TEMP/hunter-published-check" | cut -d' ' -f1)"
                 failed=1
+              else
+                echo "Verificat: $path ($result)"
               fi
             done
             if [ "$failed" -eq 0 ]; then
               echo "Paradoxa: versió $version i assets exactes del commit $COMMIT verificats"
               exit 0
             fi
-            sleep 3
           done
           echo "::error::Cloudflare ha desplegat, però no s'han verificat tots els assets a Paradoxa."
           exit 1

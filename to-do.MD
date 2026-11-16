@@ -1,3 +1,7 @@
+**2026-11-16 · Verificació Cloudflare del laboratori:**
+- [x] Actions 43919284014: proves de 7 originals i 21 candidats, build i deploy Wrangler correctes; primera lectura del nou mòdul 404 transitòria. El comparador HTTP no seguia redireccions HTML canòniques. Afegit curl --location, comprovació byte a byte de totes les dependències humanes, diagnòstic d'URL final/hash, reintents amb espera creixent i revalidació de l'HTML/manifest.
+- [ ] Confirmar la nova verificació HTTP final. No s'ha modificat cap malla ni la versió del joc.
+
 **2026-11-16 · Humans: proporcions de vuit caps i connexió amb validació real:**
 - [x] 7 originals i 21 candidats de laboratori; revisió anatòmica `human-proposals-20261116-3`, proves automàtiques superades a Actions 43883072428. Cloudflare acceptà els assets; la verificació final exigia l'escala BTR antiga 1,8125 quan el codi vigent usa 1,45.
 - [x] Editor real: exportació OBJ dels originals i candidats visibles, informe JSON de geometria, articulacions i origen, checklist manual i historial local per perfil/variant/revisió. Els candidats no s'integren automàticament. Verificació de desplegament compara fitxers del commit, sense escala fixa obsoleta.

@@ -31,3 +31,13 @@
 
 /src/*.css
   Cache-Control: public, max-age=0, must-revalidate
+
+# Laboratori: les dues URL poden redirigir a la ruta canònica sense .html.
+/vehicles-externs-proves
+  Cache-Control: public, max-age=0, must-revalidate
+
+/vehicles-externs-proves.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/assets/vehicle-candidates/lab-revision.json
+  Cache-Control: no-store
