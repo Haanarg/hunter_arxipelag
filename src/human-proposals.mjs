@@ -1,5 +1,5 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs';
-export const HUMAN_VERSION='humans-v3';
+export const HUMAN_VERSION='humans-v4';
 
 // Eight-head anatomical template, before role-specific headwear and game scaling.
 // Reference image: knee slightly above division 6; elbows near 5 heads from floor;
@@ -26,6 +26,45 @@ export function humanChestSurfaceZ(meshes,x,y,side=-1){
   }
  }
  return Number.isFinite(z)?z:null;
+}
+// One continuous closed hand mesh: wrist, metacarpals, knuckles and
+// joined fingers with shallow channels and individually rounded distal tips.
+// Local X is hand width, -Z is the dorsum; reflect the anatomy for the other hand.
+export function createHumanHandGeometry(T,side){
+ const cols=16,n=cols*2,points=[],indices=[];
+ const rings=[
+  [.012,.030,.020,0,0],[-.012,.034,.022,0,0],[-.039,.038,.022,0,0],
+  [-.065,.036,.020,.12,0],[-.082,.034,.018,.65,0],[-.103,.034,.015,1,0],
+  [-.120,.032,.012,1,.45],[-.132,.030,.006,1,1],[-.136,.028,.002,0,1]
+ ];
+ for(const [y,w,d,groove,tip] of rings){
+  const sample=(i,face)=>{
+   const u=i/cols,x=2*u-1;
+   // Rounded sides, shallow interdigital grooves and a gradual dorsal slope.
+   const ridge=(1-Math.cos(8*Math.PI*u))/2;
+   const round=Math.sqrt(Math.max(0,1-x*x));
+   const thickness=d*round*(1-.23*groove*(1-ridge));
+   const shorter=.010*Math.max(0,1-u*4)+.014*Math.max(0,(u-.75)*4);
+   const end=tip*(shorter+.005*(1-ridge));
+   points.push(side*x*w,y+end,face*thickness);
+  };
+  for(let i=0;i<=cols;i++)sample(i,-1);
+  for(let i=cols-1;i>=1;i--)sample(i,1);
+ }
+ // The two skin surfaces share the side vertices: no seam at the
+ // metacarpo-phalangeal junction, or on the outside of the little finger.
+ for(let r=0;r<rings.length-1;r++)for(let i=0;i<n;i++){
+  const a=r*n+i,b=r*n+(i+1)%n;indices.push(a,b,a+n,b,b+n,a+n);
+ }
+ // Cap the wrist and rounded fingertips with a central vertex per cap;
+ // the terminal ring is not planar because individual digits differ in length.
+ for(const r of [0,rings.length-1]){
+  const start=r*n,center=points.length/3;let y=0;
+  for(let i=0;i<n;i++)y+=points[(start+i)*3+1];points.push(0,y/n,0);
+  for(let i=0;i<n;i++){const a=start+i,b=start+(i+1)%n;if(r===0)indices.push(center,b,a);else indices.push(center,a,b)}
+ }
+ if(side<0)for(let i=0;i<indices.length;i+=3)[indices[i+1],indices[i+2]]=[indices[i+2],indices[i+1]];
+ const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(points,3));geo.setIndex(indices);geo.computeVertexNormals();return geo;
 }
 // Native articulated mesh assemblies, facing -Z. Motion pivots are separate
 // from editable rest pivots, so playing a clip never overwrites a body edit.
@@ -141,12 +180,12 @@ export function createHumanProposal(T,role,style='a'){
   limb(elbow,'Avantbraç',BODY.forearm,.049*L,.052*L,.030*L,p.civilian?p.skin:p.uniform);
   if(!p.civilian)tube(elbow,'Punys de màniga',.035,.037,.038,[0,-BODY.forearm+.017,0],p.trim);
   const wrist=joint(elbow,'wrist'+suffix,'Canell '+label,[0,-BODY.forearm,0]);
-  loft(wrist,'Palmell',[[.012,.032,.024],[-.04,.039,.023],[-.09,.034,.020]],p.skin,8);
-  for(let i=0;i<4;i++){
-   const finger=oval(wrist,'Dit '+(i+1),[.0085,.031-(i===3?.007:0),.009],[(i-1.5)*.017,-.106,0],p.skin);
-   if(s.detail===2)box(wrist,'Artell',[.014,.006,.008],[(i-1.5)*.017,-.085,-.017],0xb88969);
-  }
-  const thumb=oval(wrist,'Polze',[.012,.032,.013],[-side*.043,-.035,-.006],p.skin);thumb.rotation.z=-side*.4;
+  // Rotate only the anatomical hand assembly, not the motion pivot or
+  // weapon socket. Neutral palms face the thighs and both thumbs face -Z.
+  const hand=group(wrist,'Mà '+label);hand.rotation.y=-side*Math.PI/2;hand.userData.humanHand=suffix;
+  mesh(hand,'Palmell i dits continus',createHumanHandGeometry(T,side),p.skin).userData.humanHandSurface=true;
+  const thumb=oval(hand,'Polze',[.013,.033,.014],[-side*.034,-.037,-.003],p.skin);
+  thumb.rotation.z=-side*.30;thumb.userData.humanThumb=true;
   if(!p.civilian&&role!=='general'){
    box(knee,'Genollera',[.12,.125,.037],[0,-.008,-.061],p.trim);
    if(s.detail===2){box(elbow,'Colzera',[.078,.087,.031],[0,.0,.047],p.trim);box(hip,'Butxaca lateral',[.04,.14,.10],[side*.102,-.20,.005],p.trim)}
@@ -233,7 +272,7 @@ export function createHumanProposal(T,role,style='a'){
  // remain addressable in the editor and in JSON drafts.
  const merge=g=>{
   for(const child of [...g.children])if(child.isGroup)merge(child);
-  const batches=new Map();for(const m of g.children)if(m.isMesh&&!m.userData.humanLandmark&&!m.userData.humanChestFit&&!m.userData.humanChestSurface&&!m.userData.humanChestAntenna){if(!batches.has(m.material))batches.set(m.material,[]);batches.get(m.material).push(m)}
+  const batches=new Map();for(const m of g.children)if(m.isMesh&&!m.userData.humanLandmark&&!m.userData.humanChestFit&&!m.userData.humanChestSurface&&!m.userData.humanChestAntenna&&!m.userData.humanHandSurface&&!m.userData.humanThumb){if(!batches.has(m.material))batches.set(m.material,[]);batches.get(m.material).push(m)}
   for(const [material,items]of batches){if(items.length<2)continue;const positions=[],normals=[],names=[];
    for(const m of items){m.updateMatrix();const geo=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();geo.applyMatrix4(m.matrix);positions.push(...geo.attributes.position.array);normals.push(...geo.attributes.normal.array);names.push(m.name);g.remove(m);geo.dispose();m.geometry.dispose()}
    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));geo.userData.labOwned=true;
@@ -242,7 +281,7 @@ export function createHumanProposal(T,role,style='a'){
  };merge(root);
  root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
  root.scale.setScalar(p.height/height);
- root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:3},humanHeight:p.height,labAssemblies:true};
+ root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:4},humanHeight:p.height,labAssemblies:true};
  return root;
 }
 
@@ -381,7 +420,7 @@ export function measureHumanAnatomy(T,root){
  for(const [id,obj] of Object.entries(j))points[id]=obj.getWorldPosition(new T.Vector3());
  for(const side of ['L','R']){
   const wrist=j['wrist'+side];if(!wrist)continue;
-  const b=new T.Box3();for(const child of wrist.children)if(child.isMesh)b.union(bounds(child));
+  const b=new T.Box3();for(const child of wrist.children)if(child.isMesh||child.userData.humanHand)b.union(bounds(child));
   if(!b.isEmpty()){const t=b.getCenter(new T.Vector3());t.y=b.min.y;tips[side]=t;points['tip'+side]=t}
  }
  const middle=s.getCenter(new T.Vector3());points.chin=new T.Vector3(middle.x,s.min.y,middle.z);points.crown=new T.Vector3(middle.x,crown,middle.z);points.crotch=new T.Vector3(middle.x,p.min.y,p.getCenter(new T.Vector3()).z);

@@ -106,6 +106,24 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
    const lows=localSoles();assert(Math.min(...lows)>-.002,'Soles above ground');maxAir=Math.max(maxAir,Math.min(...lows));
   }
   assert(minPitch<-.35&&maxPitch>.02&&maxAir>.05,'Peu gira i ambdós peus deixen el terra');
+  poseHumanProposal(model,0,'rest');
+  for(const [side,sign] of [['L',-1],['R',1]]){
+   const wrist=joints['wrist'+side],hand=wrist.children.find(x=>x.userData.humanHand===side);
+   assert(hand,'Mà articulada');const skin=hand.children.find(x=>x.userData.humanHandSurface),thumb=hand.children.find(x=>x.userData.humanThumb);
+   assert(skin&&thumb,'Superfície contínua i polze');
+   const origin=wrist.getWorldPosition(new T.Vector3()),thumbWorld=thumb.getWorldPosition(new T.Vector3());
+   const wscale=model.scale.x;assert(thumbWorld.z<origin.z-.025*wscale,'Polze endavant');
+   const dorsal=hand.localToWorld(new T.Vector3(0,-.039,-.02));assert(sign*(dorsal.x-origin.x)>.015*wscale,'Dors cap enfora');
+   const bounds=new T.Box3().setFromObject(skin,true),size=bounds.getSize(new T.Vector3());
+   assert(size.z>size.x*1.45&&size.y>size.z,'Mà vertical paral·lela a cuixa');
+   // Closed, connected skin: every indexed edge belongs to exactly two
+   // triangles. Four fingertip contours share the same skin as the dorsum.
+   const idx=skin.geometry.index,edges=new Map(),used=new Set();
+   for(let k=0;k<idx.count;k+=3){const tri=[idx.getX(k),idx.getX(k+1),idx.getX(k+2)];
+    assert.equal(new Set(tri).size,3);for(let l=0;l<3;l++){const a=tri[l],b=tri[(l+1)%3],key=Math.min(a,b)+':'+Math.max(a,b);used.add(a);edges.set(key,(edges.get(key)||0)+1)}}
+   assert.equal(used.size,skin.geometry.attributes.position.count);assert([...edges.values()].every(n=>n===2),'Pell tancada sense vores obertes');
+   assert(!wrist.children.some(x=>x.userData.humanWeapon&&x.parent!==wrist),'Arma independent de la rotació de la mà');
+  }
   assert.deepEqual(rest.elbowL.position.toArray(),restPos.toArray());assert.deepEqual(rest.head.rotation.toArray(),headRotation.toArray());
   // Edits belong to rest pivots; playback and JSON round-tripping preserve them.
   rest.head.rotation.y=.22;poseHumanProposal(model,.4,'walk');assert.equal(rest.head.rotation.y,.22);
@@ -117,7 +135,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,21);assert.equal(choices.size,21);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../vehicles-externs-proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V3'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V4'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));

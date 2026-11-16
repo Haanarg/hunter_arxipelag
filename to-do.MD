@@ -1,3 +1,7 @@
+**2026-11-16 · HUMANS V4 · mans:**
+- [x] Mans dels 21 candidats alineades amb les cuixes, dors exterior, polzes cap a -Z (davant), simetria esquerra/dreta. Palmell i quatre dits en una única superfície tancada amb canals suaus i puntes diferenciades, sense salt al dors. Polze solapat. El grup anatòmic gira independentment del pivot animat i l'ancoratge de l'arma; mesura dels dits actualitzada. Es conserven proporcions i cicles V3.
+- [ ] Validació CI, HTTP i visual. Originals del joc intactes.
+
 **2026-11-16 · HUMANS V3 · animació de cursa i transició de marxa:**
 - [x] Cicles periòdics de marxa/cursa amb suport, impuls de punta, flexió pròpia de turmell, recuperació del peu, genoll doblegat i fase aèria de cursa. Correcció de contacte de soles inclinades. Transició bidireccional gradual de totes les articulacions amb fase contínua i cadència interpolada; indicador de mescla al visor.
 - [ ] Validació CI, HTTP i visual. Propostes només de laboratori; sense integrar al joc.
