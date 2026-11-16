@@ -18,20 +18,27 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   assert.equal(Object.keys(joints).length,16);
   assert.equal(rest.kneeL.parent,joints.hipL);assert.equal(rest.ankleR.parent,joints.kneeR);
   assert.equal(rest.elbowL.parent,joints.shoulderL);assert.equal(rest.wristR.parent,joints.elbowR);
-  // Cervical pivot is behind the projecting chin, skull and neck overlap,
-  // and a separate motion pivot preserves the rest pose.
-  assert(rest.head.position.z>.015&&rest.head.position.y>.08);
+  // Bare skull (headwear excluded) is the unit in the eight-head diagram.
+  // Verify actual joint positions relative to that unit, not hat height.
   assert.equal(rest.head.parent,joints.neck);
   const neckMesh=joints.neck.children.find(n=>n.isMesh&&n.name.includes('Coll anatòmic'));
   const skullMesh=joints.head.children.find(n=>n.isMesh&&(n.name.includes('Mandíbula')||n.userData.batchedParts?.includes('Mandíbula i crani')));
   assert(neckMesh&&skullMesh,'Coll i crani editables');
-  neckMesh.geometry.computeBoundingBox();skullMesh.geometry.computeBoundingBox();
-  assert(neckMesh.geometry.boundingBox.max.y-rest.head.position.y>.045,'Solapament cervical');
-  assert(skullMesh.geometry.boundingBox.min.z<-.08,'Mentó i cara projectats');
-  const neckBounds=new T.Box3().setFromObject(neckMesh);
-  const skullBounds=new T.Box3().setFromObject(skullMesh);
-  assert(neckBounds.intersectsBox(skullBounds),'Cap sense buit al coll');
-  poseHumanProposal(model,0,'rest');const size=new T.Box3().setFromObject(model).getSize(new T.Vector3());
+  poseHumanProposal(model,0,'rest');
+  const neckBounds=new T.Box3().setFromObject(neckMesh,true);
+  const skullBounds=new T.Box3().setFromObject(skullMesh,true);
+  const unit=skullBounds.max.y-skullBounds.min.y;
+  const at=id=>joints[id].getWorldPosition(new T.Vector3());
+  const ratio=y=>y/unit;
+  assert(Math.abs(ratio(skullBounds.max.y)-8)<.15,'Vuit caps '+role+style);
+  for(const [id,heads]of [['shoulderL',6.5],['elbowL',5],['hipL',4.33],['wristL',3.875],['kneeL',2.08],['ankleL',.46]]){
+   assert(Math.abs(ratio(at(id).y)-heads)<.20,id+' · '+role+style);
+  }
+  assert(ratio(at('head').y-skullBounds.min.y)>.08,'Mentó per sota del pivot');
+  assert(at('head').z>(skullBounds.min.z+skullBounds.max.z)/2,'Pivot cap al clatell');
+  assert(neckBounds.max.y-at('head').y>unit*.12&&neckBounds.intersectsBox(skullBounds),'Clatell integrat dins el crani');
+  assert(rest.elbowL.position.length()>rest.wristL.position.length(),'Braç superior més llarg');
+  const size=new T.Box3().setFromObject(model).getSize(new T.Vector3());
   assert(Math.abs(size.y-p.height)<.002,'Alçada del joc '+role+style);
   assert(size.x/size.y<.40,'Proporcions estretes, braços i cap humans '+role+style);
   let triangles=0;for(const m of meshes){assert([...m.geometry.attributes.position.array].every(Number.isFinite));assert(m.geometry.userData.labOwned);triangles+=(m.geometry.index?.count??m.geometry.attributes.position.count)/3}

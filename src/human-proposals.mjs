@@ -1,6 +1,9 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs';
-export const HUMAN_VERSION='human-proposals-20261116-2';
+export const HUMAN_VERSION='human-proposals-20261116-3';
 
+// Eight-head anatomical template, before role-specific headwear and game scaling.
+// Sole 0; ankle .11; knee .50; crotch .95; elbow 1.20; chin 1.68; crown 1.92.
+const BODY=Object.freeze({pelvis:1.08,hip:-.04,thigh:.54,shin:.39,sole:.11,spine:.075,shoulder:.410,upperArm:.365,forearm:.27,handGrip:.068});
 // Native articulated mesh assemblies, facing -Z. Motion pivots are separate
 // from editable rest pivots, so playing a clip never overwrites a body edit.
 export function createHumanProposal(T,role,style='a'){
@@ -33,9 +36,9 @@ export function createHumanProposal(T,role,style='a'){
   return loft(g,name,[[.018,top*.81,top*.84],[-length*.13,top,top*.96],[-length*.34,(top+middle)*.54,Math.max(top,middle)*.97,back],[-length*.65,middle,middle*.91,back*.7],[-length-.008,bottom,bottom*.94,forearm ? -.003 : 0]],c);
  };
  const W=s.width,L=s.limbs;
- const pelvis=joint(root,'pelvis','Pelvis',[0,.96,0]);
+ const pelvis=joint(root,'pelvis','Pelvis',[0,BODY.pelvis,0]);
  loft(pelvis,'Malucs i cintura',[[-.13,.132*W,.10],[-.08,.165*W,.13,.014],[-.01,.174*W,.137,.014],[.08,.146*W,.111]],role==='farmer'?0x746c59:p.uniform);
- const torso=joint(pelvis,'spine','Tors',[0,.075,0]);
+ const torso=joint(pelvis,'spine','Tors',[0,BODY.spine,0]);
  loft(torso,'Tronc anatòmic',[[0,.145*W,.105],[.08,.143*W,.108],[.17,.164*W,.116],[.28,.193*W,.132,.006],[.36,.207*W,.128,.009],[.408,.196*W,.117,.012],[.448,.084*W,.073,.012]],p.uniform);
  const belt=loft(pelvis,'Cinturó',[[.048,.158*W,.122],[.085,.158*W,.122]],dark);
  box(pelvis,'Sivella',[.052,.04,.015],[0,.066,-.127],role==='general'?gold:0x9a9c85);
@@ -48,9 +51,12 @@ export function createHumanProposal(T,role,style='a'){
  }
  // Positive Z is posterior. The cervical axis meets the occiput behind
  // the chin; sloped jaw rings leave a natural submandibular contour.
- const neck=joint(torso,'neck','Coll',[0,.443,.012]);
- loft(neck,'Coll anatòmic i clatell',[[-.039,.087,.073,-.002],[-.011,.078,.064,.003],[.026,.064,.055,.011],[.062,.060,.051,.021],[.090,.058,.050,.025],[.119,.051,.044,.026],[.147,.037,.032,.025]],p.skin);
- const head=joint(neck,'head','Cap',[0,.091,.024]);head.scale.setScalar(s.head);
+ const neck=joint(torso,'neck','Coll',[0,.448,.012]);
+ // The visible section is short; the upper cervical volume is embedded
+ // in the rear of the skull, not exposed as a cylinder under the jaw.
+ loft(neck,'Coll anatòmic i clatell',[[-.047,.090,.079,-.004],[-.019,.080,.070,.001],[.012,.066,.057,.009],[.045,.056,.049,.025],[.071,.055,.047,.038],[.103,.052,.044,.048],[.134,.047,.039,.053],[.157,.032,.028,.053]],p.skin);
+ const head=joint(neck,'head','Cap',[0,.105,.053]);
+ head.scale.set(s.head,.95,s.head);
  loft(head,'Mandíbula i crani',[[0,.032,.033,-.062,.046],[.018,.055,.056,-.041,.039],[.043,.075,.079,-.019,.031],[.081,.086,.095,.003,.017],[.128,.093,.104,.010],[.174,.094,.103,.012],[.216,.076,.082,.016],[.242,.047,.049,.015],[.252,.012,.015,.014]],p.skin,Math.max(10,s.segments));
  const noseGeo=new T.BufferGeometry();noseGeo.setAttribute('position',new T.Float32BufferAttribute([-.020,.135,-.094,0,.075,-.145,.020,.135,-.094,-.020,.135,-.094,-.022,.077,-.105,0,.075,-.145,.020,.135,-.094,0,.075,-.145,.022,.077,-.105,-.022,.077,-.105,.022,.077,-.105,0,.075,-.145],3));noseGeo.computeVertexNormals();mesh(head,'Nas',noseGeo,p.skin);
  for(const side of [-1,1]){
@@ -86,28 +92,32 @@ export function createHumanProposal(T,role,style='a'){
   box(head,'Pont ulleres',[.025,.008,.009],[0,.15,-.111],role==='general'?gold:dark);
  }
  if(role==='general')for(const side of [-1,1])oval(head,'Bigoti',[.035,.014,.014],[side*.027,.068,-.095],hair);
+ // Move the complete face, skull and headwear as one assembly in
+ // relation to the atlanto-occipital pivot. The chin now hangs below
+ // and well in front of the pivot; the rear cranium envelops the neck.
+ for(const part of head.children){part.position.y-=.030;part.position.z-=.048}
  const feet=[];
  for(const side of [-1,1]){
   const suffix=side<0?'L':'R',label=side<0?'esquerre':'dret';
-  const hip=joint(pelvis,'hip'+suffix,'Maluc '+label,[side*.103*W,-.01,0]);
-  limb(hip,'Cuixa',.44,.104*L,.083*L,.064*L,role==='farmer'?0x746c59:p.uniform);
-  const knee=joint(hip,'knee'+suffix,'Genoll '+label,[0,-.44,0]);
+  const hip=joint(pelvis,'hip'+suffix,'Maluc '+label,[side*.103*W,BODY.hip,0]);
+  limb(hip,'Cuixa',BODY.thigh,.104*L,.083*L,.064*L,role==='farmer'?0x746c59:p.uniform);
+  const knee=joint(hip,'knee'+suffix,'Genoll '+label,[0,-BODY.thigh,0]);
   oval(knee,'Ròtula',[.067*L,.063,.065*L],[0,0,-.005],p.uniform);
-  limb(knee,'Panxell',.40,.064*L,.076*L,.040*L,role==='farmer'?0x746c59:p.uniform);
-  const ankle=joint(knee,'ankle'+suffix,'Turmell '+label,[0,-.40,0]);feet.push(ankle);
+  limb(knee,'Panxell',BODY.shin,.064*L,.076*L,.040*L,role==='farmer'?0x746c59:p.uniform);
+  const ankle=joint(knee,'ankle'+suffix,'Turmell '+label,[0,-BODY.shin,0]);feet.push(ankle);
   loft(ankle,'Bota',[[.10,.049,.050,.01],[.015,.055,.065,.003],[-.035,.062,.125,-.055],[-.087,.064,.134,-.057]],shoe);
   loft(ankle,'Sola',[[ -.086,.065,.135,-.057],[-.11,.065,.135,-.057]],0x1d2521);
   if(s.detail===2)for(let j=0;j<4;j++)box(ankle,'Cordons',[.066,.008,.014],[0,.015-j*.010,-.045-j*.021],0x8b8b74);
-  const shoulder=joint(torso,'shoulder'+suffix,'Espatlla '+label,[side*.211*W,.401,.006]);
+  const shoulder=joint(torso,'shoulder'+suffix,'Espatlla '+label,[side*.211*W,BODY.shoulder,.006]);
   loft(shoulder,'Deltoide',[[.035,.038*L,.045*L],[.007,.066*L,.072*L],[-.047,.078*L,.081*L],[-.103,.065*L,.064*L],[-.14,.046*L,.046*L]],p.uniform);
   const bare=p.civilian&&role!=='mechanic';
-  limb(shoulder,'Braç',.285,.068*L,.060*L,.046*L,bare?p.skin:p.uniform);
+  limb(shoulder,'Braç',BODY.upperArm,.068*L,.060*L,.046*L,bare?p.skin:p.uniform);
   if(bare)limb(shoulder,'Màniga curta',.13,.078*L,.072*L,.070*L,p.uniform);
-  const elbow=joint(shoulder,'elbow'+suffix,'Colze '+label,[0,-.285,0]);
+  const elbow=joint(shoulder,'elbow'+suffix,'Colze '+label,[0,-BODY.upperArm,0]);
   oval(elbow,'Articulació colze',[.048*L,.044,.047*L],[0,0,0],p.civilian?p.skin:p.uniform);
-  limb(elbow,'Avantbraç',.255,.049*L,.052*L,.030*L,p.civilian?p.skin:p.uniform);
-  if(!p.civilian)tube(elbow,'Punys de màniga',.035,.037,.038,[0,-.238,0],p.trim);
-  const wrist=joint(elbow,'wrist'+suffix,'Canell '+label,[0,-.255,0]);
+  limb(elbow,'Avantbraç',BODY.forearm,.049*L,.052*L,.030*L,p.civilian?p.skin:p.uniform);
+  if(!p.civilian)tube(elbow,'Punys de màniga',.035,.037,.038,[0,-BODY.forearm+.017,0],p.trim);
+  const wrist=joint(elbow,'wrist'+suffix,'Canell '+label,[0,-BODY.forearm,0]);
   loft(wrist,'Palmell',[[.012,.032,.024],[-.04,.039,.023],[-.09,.034,.020]],p.skin,8);
   for(let i=0;i<4;i++){
    const finger=oval(wrist,'Dit '+(i+1),[.0085,.031-(i===3?.007:0),.009],[(i-1.5)*.017,-.106,0],p.skin);
@@ -182,6 +192,7 @@ export function poseHumanProposal(root,time=0,mode='idle'){
  for(const {model,joints:j,weapon}of rigs){
   const set=(id,x=0,y=0,z=0)=>{if(j[id])j[id].rotation.set(x,y,z)};
   for(const n of Object.values(j)){n.rotation.set(0,0,0);n.position.set(0,0,0)}
+  if(mode==='rest'){model.updateMatrixWorld(true);continue}
   const walk=mode==='walk'||mode==='run',run=mode==='run',phase=time*(run?9:5.5),breath=Math.sin(time*1.8),stride=run?.88:.5;
   set('spine',walk?(run?.13:.035):.008*breath,walk?Math.sin(phase)*.055:Math.sin(time*.7)*.02);
   set('neck',0,mode==='idle'?Math.sin(time*.6)*.08:0);set('head',-.015*breath);
@@ -207,19 +218,26 @@ export function poseHumanProposal(root,time=0,mode='idle'){
   }
   // Pelvis follows the lowest sole. Knees bend backwards, and ankles keep
   // the sole flat during the planted phase instead of swinging rigid legs.
+  if(j.pelvis)set('pelvis',0,walk?-Math.sin(phase)*.035:0,walk?Math.cos(phase)*.018:0);
+  model.updateMatrixWorld(true);
+  // Measure actual transformed sole contact points, including editable
+  // leg lengths and pelvis roll. No previous fixed skeleton dimensions.
   let lowest=Infinity;
   for(const side of ['L','R']){
-   const hip=j['hip'+side]?.rotation.x||0,knee=j['knee'+side]?.rotation.x||0;
-   lowest=Math.min(lowest,.95-.44*Math.cos(hip)-.40*Math.cos(hip+knee)-.11);
+   const ankle=j['ankle'+side];if(!ankle)continue;
+   for(let k=0;k<12;k++){
+    const a=k*Math.PI/6,point=ankle.position.clone().set(.065*Math.cos(a),-BODY.sole,-.057+.135*Math.sin(a));
+    ankle.localToWorld(point);model.worldToLocal(point);lowest=Math.min(lowest,point.y);
+   }
   }
-  if(j.pelvis){j.pelvis.position.y=-lowest;set('pelvis',0,walk?-Math.sin(phase)*.035:0,walk?Math.cos(phase)*.018:0)}
+  if(j.pelvis&&Number.isFinite(lowest))j.pelvis.position.y=-lowest;
   model.updateMatrixWorld(true);
   if(mode==='aim'&&weapon&&j.shoulderL&&j.elbowL){
    // Geometric support-hand IK follows the actual decorative prop, including
    // edits to its position. The palm stays on the grip as the torso turns.
    const target=weapon.position.clone().set(0,-.035,weapon.userData.humanWeapon==='pistol'?.015:-.17);
    weapon.localToWorld(target);j.shoulderL.parent.worldToLocal(target);
-   const upper=.285,lower=.323,d=Math.min(upper+lower-.001,Math.max(.001,target.length())),axis=target.clone().normalize();
+   const upper=j.elbowL.parent.position.length(),lower=j.wristL.parent.position.length()+BODY.handGrip,d=Math.min(upper+lower-.001,Math.max(.001,target.length())),axis=target.clone().normalize();
    const along=(upper*upper+d*d-lower*lower)/(2*d),radius=Math.sqrt(Math.max(0,upper*upper-along*along));
    const pole=axis.clone().set(-.35,-1,.15);pole.addScaledVector(axis,-pole.dot(axis)).normalize();
    const bend=axis.clone().multiplyScalar(along).addScaledVector(pole,radius),down=axis.clone().set(0,-1,0);
