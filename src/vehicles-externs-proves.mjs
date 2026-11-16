@@ -1,10 +1,10 @@
 import {createMi24Proposal,MI24_MODELS} from './mi24-proposals.mjs?rev=mi24-d-optimized-20261115-3';
-import {HUMAN_CATALOG} from './human-model-catalog.mjs?rev=humans-v4';
-import {createHumanProposal,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,createHumanGaitClock,advanceHumanGait} from './human-proposals.mjs?rev=humans-v4';
-import {createCurrentHuman} from './human-current-models.mjs?rev=humans-v4';
+import {HUMAN_CATALOG} from './human-model-catalog.mjs?rev=humans-v5';
+import {createHumanProposal,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,createHumanGaitClock,advanceHumanGait} from './human-proposals.mjs?rev=humans-v5';
+import {createCurrentHuman} from './human-current-models.mjs?rev=humans-v5';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261116-humans-v4';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261116-humans-v5';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs?rev=mi24-d-approved-1';
@@ -19,13 +19,13 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261116-humans-v4';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261116-humans-v5';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const humanList=document.querySelector('#humanList'),ALL_CATALOG=[...CATALOG,...HUMAN_CATALOG];
 let humanTime=0,humanMode='rest',humanGait=createHumanGaitClock();
 const isHumanGait=mode=>mode==='walk'||mode==='run';
-import {mountHumanEvidence} from './human-lab-evidence-ui.mjs?rev=human-evidence-4';
+import {mountHumanEvidence} from './human-lab-evidence-ui.mjs?rev=human-evidence-5';
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
 renderer.setPixelRatio(Math.min(1.5,window.devicePixelRatio||1));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -384,7 +384,7 @@ async function choose(config){
  document.querySelector('#humanMotion').hidden=!config.human;
  humanEvidence.show(config.human||null);
  humanTime=0;humanMode='rest';humanGait=createHumanGaitClock();
- if(config.human){document.querySelector('#humanPose').value='rest';document.querySelector('#animate').checked=false;document.querySelector('#humanRevision').textContent='HUMANS V4 · '+HUMAN_VERSION;}
+ if(config.human){document.querySelector('#humanPose').value='rest';document.querySelector('#animate').checked=false;document.querySelector('#humanRevision').textContent='HUMANS V5 · '+HUMAN_VERSION;}
  labTankKeys.clear();labTurretSwitch=false;labTurretYaw=0;labTurretPitch=0;
  syncLabTurretButton();
  for(const slot of slots){
@@ -497,7 +497,7 @@ function drawHumanGuide(slot,w,h){
  if(!active){slot.guide.hidden=true;return}
  let model=null;slot.model?.traverse(n=>{if(n.userData.humanProposal)model=n.userData.humanProposal});
  const original=slots.indexOf(slot)===0;
- slot.versionTag.textContent=original?'ORIGINAL DEL JOC':model?.version===HUMAN_VERSION?'HUMANS V4 · '+model.style.toUpperCase():model?'VERSIÓ ANTERIOR · '+model.version:'IMPORTAT / VERSIÓ DESCONEGUDA';
+ slot.versionTag.textContent=original?'ORIGINAL DEL JOC':model?.version===HUMAN_VERSION?'HUMANS V5 · '+model.style.toUpperCase():model?'VERSIÓ ANTERIOR · '+model.version:'IMPORTAT / VERSIÓ DESCONEGUDA';
  slot.versionTag.classList.toggle('stale',!original&&model?.version!==HUMAN_VERSION);
  const axis=Math.abs(Math.sin(2*yaw))<.025&&Math.abs(elev)<.025;
  const measured=show&&axis&&slot.model&&!original?measureHumanAnatomy(THREE,slot.model):null;

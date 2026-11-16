@@ -9,8 +9,7 @@ export const HUMAN_PROFILES=Object.freeze({
 });
 export const HUMAN_STYLES=Object.freeze({
  a:{name:'A · Natural',note:'Proporcions equilibrades · anatomia definida',width:1,head:1,limbs:1,segments:10,detail:1},
- b:{name:'B · Detallat',note:'Rostre, roba i equipament més detallats',width:1.05,head:.98,limbs:1.03,segments:14,detail:2},
- c:{name:'C · Àgil',note:'Silueta esvelta · formes més facetades',width:.93,head:.96,limbs:.92,segments:8,detail:1}
+ b:{name:'B · Detallat',note:'Rostre, roba i equipament més detallats',width:1.05,head:.98,limbs:1.03,segments:14,detail:2}
 });
 export const HUMAN_CATALOG=Object.entries(HUMAN_PROFILES).map(([role,p])=>({
  id:'human-'+role,name:p.name,currentName:p.name,kind:'huma',human:role,validated:false,

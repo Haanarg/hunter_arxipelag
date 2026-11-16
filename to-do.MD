@@ -1,3 +1,10 @@
+**2026-11-16 · HUMANS V5 · corpulència, nas, coll i retirada de C:**
+- [x] Protagonista A/B: amplada ×1,18, gruix dels membres ×1,22 i profunditat del tors ×1,16; mateixes alçades anatòmiques. Ulleres rectangulars amb muntura; accessoris del pit, punys, genolleres i colzeres ajustats a la nova superfície.
+- [x] Nas dels set perfils: volum tancat, triangles orientats cap enfora i base encastada a la cara. Coll amb eix vertical i gola que entra realment sota la mandíbula; pivot posterior i animacions conservats.
+- [x] Eliminades les variants humanes C del catàleg, selectors i informe/exportació. Resten 7 originals i 14 candidats A/B. Etiquetes i revisió HUMANS V5; models del joc sense substituir.
+- [x] Comprovacions prèvies amb Three.js real en V8 dels 14 candidats: geometria, visibilitat frontal/lateral del nas, gola dins la mandíbula, proporcions, animacions, accessoris i JSON. Comparació de malles rasteritzades de front i perfil. Les proves Node d'originals i editor s'executen al desplegament.
+- [ ] Valoració visual a l'editor WebGL i elecció de candidat; la rasterització no valida la partida.
+
 **2026-11-16 · HUMANS V4 · mans:**
 - [x] Mans dels 21 candidats alineades amb les cuixes, dors exterior, polzes cap a -Z (davant), simetria esquerra/dreta. Palmell i quatre dits en una única superfície tancada amb canals suaus i puntes diferenciades, sense salt al dors. Polze solapat. El grup anatòmic gira independentment del pivot animat i l'ancoratge de l'arma; mesura dels dits actualitzada. Es conserven proporcions i cicles V3.
 - [ ] Validació CI, HTTP i visual. Originals del joc intactes.

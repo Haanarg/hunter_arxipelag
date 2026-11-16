@@ -1,5 +1,5 @@
-import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs';
-export const HUMAN_VERSION='humans-v4';
+import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs?rev=humans-v5';
+export const HUMAN_VERSION='humans-v5';
 
 // Eight-head anatomical template, before role-specific headwear and game scaling.
 // Reference image: knee slightly above division 6; elbows near 5 heads from floor;
@@ -97,15 +97,16 @@ export function createHumanProposal(T,role,style='a'){
   const back=calf ? .018 : thigh ? .008 : 0;
   return loft(g,name,[[.018,top*.81,top*.84],[-length*.13,top,top*.96],[-length*.34,(top+middle)*.54,Math.max(top,middle)*.97,back],[-length*.65,middle,middle*.91,back*.7],[-length-.008,bottom,bottom*.94,forearm ? -.003 : 0]],c);
  };
- const W=s.width,L=s.limbs,bodySegments=role==='player'?Math.ceil(s.segments/4)*4:s.segments;
+ // Broader shoulders and fuller limbs for the protagonist; joint heights stay anatomical.
+ const W=s.width*(role==='player'?1.18:1),L=s.limbs*(role==='player'?1.22:1),D=role==='player'?1.16:1,bodySegments=role==='player'?Math.ceil(s.segments/4)*4:s.segments;
  const pelvis=joint(root,'pelvis','Pelvis',[0,BODY.pelvis,0]);
  loft(pelvis,'Malucs i cintura',[[-.13,.132*W,.10],[-.08,.165*W,.13,.014],[-.01,.174*W,.137,.014],[.08,.146*W,.111]],role==='farmer'?0x746c59:p.uniform).userData.humanLandmark='pelvis';
  const torso=joint(pelvis,'spine','Tors',[0,BODY.spine,0]);
- const torsoShell=loft(torso,'Tronc anatòmic',[[0,.145*W,.105],[.08,.143*W,.108],[.17,.164*W,.116],[.28,.193*W,.132,.006],[.36,.207*W,.128,.009],[.425,.196*W,.117,.012],[.468,.128*W,.092,.012],[.490,.084*W,.073,.012]],p.uniform,bodySegments,role==='player');
+ const torsoShell=loft(torso,'Tronc anatòmic',[[0,.145*W,.105],[.08,.143*W,.108],[.17,.164*W,.116],[.28,.193*W,.132,.006],[.36,.207*W,.128,.009],[.425,.196*W,.117,.012],[.468,.128*W,.092,.012],[.490,.084*W,.073,.012]].map(([y,x,z,offset=0])=>[y,x,z*D,offset]),p.uniform,bodySegments,role==='player');
  const belt=loft(pelvis,'Cinturó',[[.048,.158*W,.122],[.085,.158*W,.122]],dark);
  box(pelvis,'Sivella',[.052,.04,.015],[0,.066,-.127],role==='general'?gold:0x9a9c85);
  for(const side of [-1,1]){
-  const collar=box(torso,'Coll de camisa',[.073,.073,.027],[side*.055,.458,-.092],p.trim);collar.rotation.z=-side*.38;
+  const collar=box(torso,'Coll de camisa',[.073,.073,.027],[side*.055,.458,-.092*D],p.trim);collar.rotation.z=-side*.38;
   if(s.detail===2){
    for(const y of [.13,.18,.24])box(torso,'Plec lateral',[.055,.012,.012],[side*.15*W,y,-.101],p.trim);
    box(torso,'Costura lateral',[.008,.20,.012],[side*.19*W,.27,.065],p.trim);
@@ -114,13 +115,20 @@ export function createHumanProposal(T,role,style='a'){
  // Positive Z is posterior. The cervical axis meets the occiput behind
  // the chin; sloped jaw rings leave a natural submandibular contour.
  const neck=joint(torso,'neck','Coll',[0,.480,.012]);
- // The visible section is short; the upper cervical volume is embedded
- // in the rear of the skull, not exposed as a cylinder under the jaw.
- loft(neck,'Coll anatòmic i clatell',[[-.050,.090,.079,-.004],[-.018,.080,.070,.001],[.012,.065,.055,.013],[.038,.056,.048,.025],[.064,.053,.045,.037],[.092,.050,.040,.045],[.118,.038,.031,.051],[.140,.018,.020,.052]],p.skin).userData.humanLandmark='neck';
+ // A vertical cervical column: every cross-section shares the same Z centre.
+ // The throat continues into the underside of the jaw, while the upper
+ // rings are buried in the cranium. Do not bow the neck back toward the pivot.
+ loft(neck,'Coll anatòmic i clatell',[[-.050,.090,.080,.002],[-.018,.078,.072,.002],[.012,.065,.063,.002],[.040,.063,.062,.002],[.068,.063,.062,.002],[.096,.061,.059,.002],[.124,.055,.055,.002],[.148,.040,.040,.002]],p.skin).userData.humanLandmark='neck';
  const head=joint(neck,'head','Cap',[0,.095,.065]);
  head.scale.set(s.head,.95,s.head);
  loft(head,'Mandíbula i crani',[[0,.032,.033,-.062,.046],[.018,.055,.056,-.041,.039],[.043,.075,.079,-.019,.031],[.081,.086,.095,.003,.017],[.128,.093,.104,.010],[.174,.094,.103,.012],[.216,.076,.082,.016],[.242,.047,.049,.015],[.252,.012,.015,.014]],p.skin,Math.max(10,s.segments)).userData.humanLandmark='skull';
- const noseGeo=new T.BufferGeometry();noseGeo.setAttribute('position',new T.Float32BufferAttribute([-.020,.135,-.094,0,.075,-.145,.020,.135,-.094,-.020,.135,-.094,-.022,.077,-.105,0,.075,-.145,.020,.135,-.094,0,.075,-.145,.022,.077,-.105,-.022,.077,-.105,.022,.077,-.105,0,.075,-.145],3));noseGeo.computeVertexNormals();mesh(head,'Nas',noseGeo,p.skin);
+ // Closed five-vertex nose with outward winding (-Z is the face front).
+ // The rear rim penetrates the cheek surface so the nose cannot float.
+ // Keep FrontSide materials; the fix belongs to the mesh, not double-sided rendering.
+ const noseGeo=new T.BufferGeometry();
+ noseGeo.setAttribute('position',new T.Float32BufferAttribute([-.020,.135,-.077,0,.075,-.145,.020,.135,-.077,-.022,.077,-.078,.022,.077,-.078],3));
+ noseGeo.setIndex([0,2,1,0,1,3,2,4,1,3,1,4,0,3,4,0,4,2]);noseGeo.computeVertexNormals();
+ mesh(head,'Nas',noseGeo,p.skin).userData.humanLandmark='nose';
  for(const side of [-1,1]){
   oval(head,'Orella',[.022,.037,.020],[side*.089,.115,.012],p.skin);
   oval(head,'Ull',[.022,.009,.008],[side*.042,.143,-.085],0xd7cfba);
@@ -149,9 +157,17 @@ export function createHumanProposal(T,role,style='a'){
   const peak=oval(hat,'Visera',[.093,.011,officer?.073:.063],[0,.212,-.101],officer?dark:p.trim);peak.rotation.x=.10;
   if(officer)box(hat,'Emblema gorra',[.028,.032,.012],[0,.249,-.113],gold);
  }
- if(role==='player'||role==='general'){
-  for(const side of [-1,1]){const lens=oval(head,'Ulleres',[.035,.022,.008],[side*.044,.143,-.108],dark);box(head,'Patilla ulleres',[.008,.010,.085],[side*.085,.148,-.062],dark)}
-  box(head,'Pont ulleres',[.025,.008,.009],[0,.15,-.111],role==='general'?gold:dark);
+ if(role==='player'){
+  const glasses=group(head,'Ulleres quadrades');glasses.userData.humanGlasses='square';
+  for(const side of [-1,1]){
+   box(glasses,'Muntura quadrada',[.074,.048,.014],[side*.044,.143,-.108],dark);
+   box(glasses,'Vidre quadrat',[.060,.034,.006],[side*.044,.143,-.117],0x182923);
+   box(glasses,'Patilla ulleres',[.008,.010,.085],[side*.085,.148,-.062],dark);
+  }
+  box(glasses,'Pont ulleres',[.025,.010,.012],[0,.150,-.111],dark);
+ }else if(role==='general'){
+  for(const side of [-1,1]){oval(head,'Ulleres',[.035,.022,.008],[side*.044,.143,-.108],dark);box(head,'Patilla ulleres',[.008,.010,.085],[side*.085,.148,-.062],dark)}
+  box(head,'Pont ulleres',[.025,.008,.009],[0,.15,-.111],gold);
  }
  if(role==='general')for(const side of [-1,1])oval(head,'Bigoti',[.035,.014,.014],[side*.027,.068,-.095],hair);
  // Move the complete face, skull and headwear as one assembly in
@@ -178,7 +194,7 @@ export function createHumanProposal(T,role,style='a'){
   const elbow=joint(shoulder,'elbow'+suffix,'Colze '+label,[0,-BODY.upperArm,0]);
   oval(elbow,'Articulació colze',[.048*L,.044,.047*L],[0,0,0],p.civilian?p.skin:p.uniform);
   limb(elbow,'Avantbraç',BODY.forearm,.049*L,.052*L,.030*L,p.civilian?p.skin:p.uniform);
-  if(!p.civilian)tube(elbow,'Punys de màniga',.035,.037,.038,[0,-BODY.forearm+.017,0],p.trim);
+  if(!p.civilian)tube(elbow,'Punys de màniga',.035*L,.037*L,.038,[0,-BODY.forearm+.017,0],p.trim);
   const wrist=joint(elbow,'wrist'+suffix,'Canell '+label,[0,-BODY.forearm,0]);
   // Rotate only the anatomical hand assembly, not the motion pivot or
   // weapon socket. Neutral palms face the thighs and both thumbs face -Z.
@@ -187,8 +203,8 @@ export function createHumanProposal(T,role,style='a'){
   const thumb=oval(hand,'Polze',[.013,.033,.014],[-side*.034,-.037,-.003],p.skin);
   thumb.rotation.z=-side*.30;thumb.userData.humanThumb=true;
   if(!p.civilian&&role!=='general'){
-   box(knee,'Genollera',[.12,.125,.037],[0,-.008,-.061],p.trim);
-   if(s.detail===2){box(elbow,'Colzera',[.078,.087,.031],[0,.0,.047],p.trim);box(hip,'Butxaca lateral',[.04,.14,.10],[side*.102,-.20,.005],p.trim)}
+   box(knee,'Genollera',[.12*L,.125,.037],[0,-.008,-.061*L],p.trim);
+   if(s.detail===2){box(elbow,'Colzera',[.078*L,.087,.031],[0,.0,.047*L],p.trim);box(hip,'Butxaca lateral',[.04*L,.14,.10*L],[side*.102*L,-.20,.005],p.trim)}
   }
   if(role==='general'){
    box(shoulder,'Musclera',[.115,.025,.095],[0,.022,0],gold);
@@ -198,7 +214,7 @@ export function createHumanProposal(T,role,style='a'){
   if(role==='mechanic'){box(torso,'Tirant granota',[.034,.32,.016],[side*.10,.27,-.123],p.trim);box(hip,'Butxaca pantaló',[.074,.10,.018],[side*.04,-.12,-.092],p.trim)}
  }
  if(!p.civilian&&role!=='general'){
-  const vest=loft(torso,'Armilla',[[.06,.158*W,.128],[.13,.183*W,.145],[.32,.207*W,.145],[.38,.166*W,.116]],p.trim,bodySegments,role==='player');
+  const vest=loft(torso,'Armilla',[[.06,.158*W,.128],[.13,.183*W,.145],[.32,.207*W,.145],[.38,.166*W,.116]].map(([y,x,z])=>[y,x,z*D]),p.trim,bodySegments,role==='player');
   if(role==='player'){
    const shells=[torsoShell,vest];for(const shell of shells)shell.userData.humanChestSurface=true;
    const surface=(x,y,side)=>humanChestSurfaceZ(shells,x,y,side);
@@ -281,7 +297,7 @@ export function createHumanProposal(T,role,style='a'){
  };merge(root);
  root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
  root.scale.setScalar(p.height/height);
- root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:4},humanHeight:p.height,labAssemblies:true};
+ root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:5},humanHeight:p.height,labAssemblies:true};
  return root;
 }
 

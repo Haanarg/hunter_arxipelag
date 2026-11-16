@@ -5,7 +5,7 @@ import {HUMAN_PROFILES,HUMAN_CATALOG,HUMAN_STYLES} from '../src/human-model-cata
 import {createHumanProposal,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait} from '../src/human-proposals.mjs';
 import {createCurrentHuman} from '../src/human-current-models.mjs';
 globalThis.window=globalThis;
-assert.equal(HUMAN_CATALOG.length,7);assert(HUMAN_CATALOG.every(c=>!c.validated&&c.kind==='huma'&&c.options.length===3));
+assert.equal(HUMAN_CATALOG.length,7);assert(HUMAN_CATALOG.every(c=>!c.validated&&c.kind==='huma'&&c.options.length===2));
 const choices=new Set();let count=0;
 for(const blend of [0,.25,.5,.75,1]){
  const samples=Array.from({length:201},(_,i)=>sampleHumanGait(i/200,blend));
@@ -24,6 +24,7 @@ for(const mode of ['run','walk']){
 assert(Number.isFinite(before.ankle));
 console.log('PASS transició caminar/córrer, fase contínua i flexió de turmell');
 for(const [role,p]of Object.entries(HUMAN_PROFILES)){
+ assert.throws(()=>createHumanProposal(T,role,'c'),/desconeguda/,'Variant C retirada');
  const actual=await createCurrentHuman(T,role);assert.equal(actual.userData.humanOriginal,role);
  assert(new T.Box3().setFromObject(actual).getSize(new T.Vector3()).y>2.8);
  assert.doesNotThrow(()=>new T.ObjectLoader().parse(actual.toJSON()),'Original serialitzable '+role);
@@ -48,6 +49,40 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   assert(rest.elbowL.position.length()+rest.wristL.position.length()>.69,'Braços allargats');
   assert(rest.ankleL.position.length()>.44&&rest.kneeL.position.length()<.50,'Genolls elevats');
   console.log('ANATOMY',role,style,JSON.stringify({heads:headUnits,knee:8-r.kneeL,elbow:8-r.elbowL,wrist:8-r.wristL,tip:8-r.tipL,neckGap:(points.chin.y-points.shoulderL.y)/unit}));
+  // Front-face culling must show the nose from the front and both sides.
+  const nose=meshes.find(m=>m.userData.humanLandmark==='nose');
+  assert(nose&&nose.material.side===T.FrontSide,'Nas amb cares exteriors');
+  const np=nose.geometry.attributes.position,ni=nose.geometry.index,center=new T.Vector3(),edges=new Map();
+  for(let i=0;i<np.count;i++)center.add(new T.Vector3().fromBufferAttribute(np,i));center.divideScalar(np.count);
+  for(let i=0;i<ni.count;i+=3){
+   const ids=[ni.getX(i),ni.getX(i+1),ni.getX(i+2)],v=ids.map(k=>new T.Vector3().fromBufferAttribute(np,k));
+   const normal=v[1].clone().sub(v[0]).cross(v[2].clone().sub(v[0]));
+   assert(normal.dot(v[0].clone().sub(center))>1e-10,'Tots els triangles del nas cap enfora');
+   for(let k=0;k<3;k++){const a=ids[k],b=ids[(k+1)%3],key=[Math.min(a,b),Math.max(a,b)].join(':');edges.set(key,(edges.get(key)||0)+1)}
+  }
+  assert([...edges.values()].every(n=>n===2),'Nas tancat, sense vores obertes');
+  for(const x of [-.20,0,.20]){
+   const origin=nose.localToWorld(new T.Vector3(x,.100,-.40)),target=nose.localToWorld(new T.Vector3(0,.100,-.120));
+   assert(new T.Raycaster(origin,target.sub(origin).normalize()).intersectObject(nose,false).length>0,'Nas visible de front i tres quarts');
+  }
+  const neckMesh=meshes.find(m=>m.userData.humanLandmark==='neck'),skull=meshes.find(m=>m.userData.humanLandmark==='skull'),rings=new Map();
+  const na=neckMesh.geometry.attributes.position;
+  for(let i=0;i<na.count;i++){const key=na.getY(i).toFixed(5);if(!rings.has(key))rings.set(key,[]);rings.get(key).push(na.getZ(i))}
+  const centers=[...rings.values()].map(z=>z.reduce((a,b)=>a+b,0)/z.length);
+  assert(Math.max(...centers)-Math.min(...centers)<1e-6,'Eix cervical vertical, sense corba');
+  // The actual front neck surface must enter the jaw volume, not merely
+  // overlap its bounding box behind the chin.
+  const level=neckMesh.localToWorld(new T.Vector3(0,.068,0));
+  const frontRay=new T.Raycaster(new T.Vector3(level.x,level.y,-10),new T.Vector3(0,0,1));
+  const throat=frontRay.intersectObject(neckMesh,false)[0],jawFront=frontRay.intersectObject(skull,false)[0];
+  const jawRear=new T.Raycaster(new T.Vector3(level.x,level.y,10),new T.Vector3(0,0,-1)).intersectObject(skull,false)[0];
+  assert(throat&&jawFront&&jawRear&&throat.point.z>jawFront.point.z&&throat.point.z<jawRear.point.z,'Gola connectada sota la mandíbula');
+  if(role==='player'){
+   const glasses=model.getObjectByName('Ulleres quadrades');assert(glasses?.userData.humanGlasses==='square');
+   const lenses=glasses.children.find(m=>m.userData.batchedParts?.includes('Vidre quadrat'));
+   assert(lenses,'Dos vidres quadrats');assert.equal(lenses.geometry.attributes.position.count,72,'Vidres rectangulars amb sis cares');
+   assert(Math.abs(rest.shoulderL.position.x)>.245,'Protagonista més ample d’espatlles');
+  }
   const size=new T.Box3().setFromObject(model).getSize(new T.Vector3());
   assert(Math.abs(size.y-p.height)<.002,'Alçada del joc '+role+style);
   assert(size.x/size.y<.40,'Proporcions estretes, braços i cap humans '+role+style);
@@ -131,11 +166,11 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   assert(new T.Box3().setFromObject(copy).getSize(new T.Vector3()).distanceTo(new T.Box3().setFromObject(model).getSize(new T.Vector3()))<1e-6);
   console.log('PASS',role,style,meshes.length,'malles',triangles,'triangles');count++;
  }
- assert.equal(shapes.size,3);
+ assert.equal(shapes.size,2);
 }
-assert.equal(count,21);assert.equal(choices.size,21);
+assert.equal(count,14);assert.equal(choices.size,14);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../vehicles-externs-proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V4'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V5'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));
@@ -143,4 +178,6 @@ assert(lab.includes('config.human?await createCurrentHuman(THREE,config.human)')
 assert(lab.includes('!original&&!currentType.human&&'),'Les proporcions humanes no s’ajusten a l’amplada antiga');
 for(const mode of ['walk','run','crouch','aim','work','wave'])assert(html.includes('value="'+mode+'"'));
 assert(!readFileSync(new URL('../src/bootstrap.mjs',import.meta.url),'utf8').includes('human-proposals'),'Candidats fora del joc');
-console.log('PASS 7 originals, 21 candidats, 16 articulacions, moviment, edició i JSON');
+const evidenceUI=readFileSync(new URL('../src/human-lab-evidence-ui.mjs',import.meta.url),'utf8');
+assert(!html.includes('C · Àgil')&&!evidenceUI.includes("'c'"),'Sense C al selector ni als informes');
+console.log('PASS 7 originals, 14 candidats, 16 articulacions, moviment, edició i JSON');
