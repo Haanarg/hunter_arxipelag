@@ -286,6 +286,7 @@ const gaitRate=blend=>mix(5.5,9,blend)/(2*Math.PI);
 export function createHumanGaitClock(mode='walk'){return {phase:0,blend:mode==='run'?1:0}}
 export function advanceHumanGait(clock,dt,mode){
  const elapsed=Math.max(0,dt),goal=mode==='run'?1:0;
+ if(elapsed===0)return {...clock};
  const next=goal+(clock.blend-goal)*Math.exp(-elapsed/.145);
  return {phase:cycle(clock.phase+elapsed*gaitRate((clock.blend+next)/2)),blend:Math.abs(next-goal)<.0001?goal:next};
 }
