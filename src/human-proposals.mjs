@@ -45,10 +45,10 @@ export function createHumanProposal(T,role,style='a'){
  };
  // Elliptical rings define waist, rib cage, jaw, tapered limbs and hands.
  // Anatomical curves come from multiple cross sections, not stretched boxes.
- const loft=(g,name,rings,c,n=s.segments)=>{
+ const loft=(g,name,rings,c,n=s.segments,mirrorX=false)=>{
   const points=[],indices=[];
   for(const [y,rx,rz,z=0,rearRise=0]of rings)for(let i=0;i<n;i++){const a=i*Math.PI*2/n,back=Math.max(0,Math.sin(a));points.push(Math.cos(a)*rx,y+rearRise*back,Math.sin(a)*rz+z)}
-  for(let r=0;r<rings.length-1;r++)for(let i=0;i<n;i++){const a=r*n+i,b=r*n+(i+1)%n;indices.push(a,a+n,b,b,a+n,b+n)}
+  for(let r=0;r<rings.length-1;r++)for(let i=0;i<n;i++){const a=r*n+i,b=r*n+(i+1)%n;if(mirrorX&&Math.cos((i+.5)*Math.PI*2/n)<0)indices.push(a,a+n,b+n,a,b+n,b);else indices.push(a,a+n,b,b,a+n,b+n)}
   for(let i=1;i<n-1;i++)indices.push(0,i,i+1,(rings.length-1)*n,(rings.length-1)*n+i+1,(rings.length-1)*n+i);
   if(rings.at(-1)[0]<rings[0][0])indices.reverse();
   const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(points,3));geo.setIndex(indices);geo.computeVertexNormals();return mesh(g,name,geo,c);
@@ -58,11 +58,11 @@ export function createHumanProposal(T,role,style='a'){
   const back=calf ? .018 : thigh ? .008 : 0;
   return loft(g,name,[[.018,top*.81,top*.84],[-length*.13,top,top*.96],[-length*.34,(top+middle)*.54,Math.max(top,middle)*.97,back],[-length*.65,middle,middle*.91,back*.7],[-length-.008,bottom,bottom*.94,forearm ? -.003 : 0]],c);
  };
- const W=s.width,L=s.limbs;
+ const W=s.width,L=s.limbs,bodySegments=role==='player'?Math.ceil(s.segments/4)*4:s.segments;
  const pelvis=joint(root,'pelvis','Pelvis',[0,BODY.pelvis,0]);
  loft(pelvis,'Malucs i cintura',[[-.13,.132*W,.10],[-.08,.165*W,.13,.014],[-.01,.174*W,.137,.014],[.08,.146*W,.111]],role==='farmer'?0x746c59:p.uniform).userData.humanLandmark='pelvis';
  const torso=joint(pelvis,'spine','Tors',[0,BODY.spine,0]);
- const torsoShell=loft(torso,'Tronc anatòmic',[[0,.145*W,.105],[.08,.143*W,.108],[.17,.164*W,.116],[.28,.193*W,.132,.006],[.36,.207*W,.128,.009],[.425,.196*W,.117,.012],[.468,.128*W,.092,.012],[.490,.084*W,.073,.012]],p.uniform);
+ const torsoShell=loft(torso,'Tronc anatòmic',[[0,.145*W,.105],[.08,.143*W,.108],[.17,.164*W,.116],[.28,.193*W,.132,.006],[.36,.207*W,.128,.009],[.425,.196*W,.117,.012],[.468,.128*W,.092,.012],[.490,.084*W,.073,.012]],p.uniform,bodySegments,role==='player');
  const belt=loft(pelvis,'Cinturó',[[.048,.158*W,.122],[.085,.158*W,.122]],dark);
  box(pelvis,'Sivella',[.052,.04,.015],[0,.066,-.127],role==='general'?gold:0x9a9c85);
  for(const side of [-1,1]){
@@ -159,7 +159,7 @@ export function createHumanProposal(T,role,style='a'){
   if(role==='mechanic'){box(torso,'Tirant granota',[.034,.32,.016],[side*.10,.27,-.123],p.trim);box(hip,'Butxaca pantaló',[.074,.10,.018],[side*.04,-.12,-.092],p.trim)}
  }
  if(!p.civilian&&role!=='general'){
-  const vest=loft(torso,'Armilla',[[.06,.158*W,.128],[.13,.183*W,.145],[.32,.207*W,.145],[.38,.166*W,.116]],p.trim);
+  const vest=loft(torso,'Armilla',[[.06,.158*W,.128],[.13,.183*W,.145],[.32,.207*W,.145],[.38,.166*W,.116]],p.trim,bodySegments,role==='player');
   if(role==='player'){
    const shells=[torsoShell,vest];for(const shell of shells)shell.userData.humanChestSurface=true;
    const surface=(x,y,side)=>humanChestSurfaceZ(shells,x,y,side);
