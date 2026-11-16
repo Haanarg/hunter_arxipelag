@@ -85,7 +85,8 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 .live-transforms{display:flex;flex-wrap:wrap;gap:10px}.live-transforms fieldset{flex:1;min-width:220px}.live-transforms input{width:75px}#liveEditor fieldset{border:1px solid #677765;border-radius:8px;padding:10px;margin:8px 0}#liveEditor label{display:inline-flex;align-items:center;gap:6px;margin:4px}#liveEditor select{max-width:100%;min-width:0}#livePart{max-width:440px!important}#liveOffset{width:80px}#liveRequest{width:100%;box-sizing:border-box}#liveQueue>div{display:flex;justify-content:space-between;gap:12px;padding:8px;border-bottom:1px solid #677765}#liveQueue span{white-space:pre-wrap;overflow-wrap:anywhere}#liveStatus{color:#f3dc9d}button:disabled{opacity:.4;cursor:default}@media(max-width:600px){#livePart{max-width:240px!important}.live-transforms{display:block}}
 
 .annotation-tools{margin-bottom:12px}.annotation-tools summary{cursor:pointer;padding:10px;color:var(--gold)}
-@media(min-width:950px){#liveWorkspace{display:grid;grid-template-columns:350px minmax(0,1fr);gap:16px;align-items:start}#liveEditor{max-height:85vh;overflow:auto;position:sticky;top:10px}#liveWorkspace #grid{position:sticky;top:10px;width:100%;grid-template-columns:repeat(2,minmax(0,1fr))}#liveWorkspace #grid.btr-study{grid-template-columns:minmax(0,1fr)}.live-transforms{display:block}#livePart{max-width:290px!important}.live-transforms input{width:66px}#liveEditor{padding:12px}.live-transforms fieldset{min-width:0}#liveEditor label{font-size:12px}}
+#liveEditor>summary{cursor:pointer;font-weight:750;color:var(--gold)}#liveEditor[open]>summary{margin-bottom:12px}#liveEditor:not([open]){padding:10px 14px}
+@media(min-width:950px){#liveWorkspace:has(#liveEditor[open]){display:grid;grid-template-columns:350px minmax(0,1fr);gap:16px;align-items:start}#liveEditor{max-height:85vh;overflow:auto;position:sticky;top:10px}#liveWorkspace:has(#liveEditor[open]) #grid{position:sticky;top:10px;width:100%;grid-template-columns:repeat(2,minmax(0,1fr))}#liveWorkspace #grid.btr-study{grid-template-columns:minmax(0,1fr)}.live-transforms{display:block}#livePart{max-width:290px!important}.live-transforms input{width:66px}#liveEditor{padding:12px}.live-transforms fieldset{min-width:0}#liveEditor label{font-size:12px}}
 </style>
 <script type="importmap">{"imports":{"three":"./vendor/three-r186.module.mjs","three/addons/":"./vendor/three-addons/"}}</script>
 </head><body>
@@ -144,8 +145,8 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
  <textarea id="btrSelectNote" rows="3" placeholder="Ex.: les dues meitats de la coberta posterior han de formar una sola superfície contínua; els baixos dels dos costats també..."></textarea>
  <div class="btr-part-footer"><button id="btrCopySelection" type="button">Copiar marques i explicació</button><span id="btrSelectFeedback" role="status">Marca les peces del model per indicar quines han d'anar juntes.</span></div>
 </section>
-</details><div id="liveWorkspace"><section id="liveEditor" class="btr-part-tool" aria-label="Refinat en directe">
- <h2>Refinat en directe</h2>
+</details><div id="liveWorkspace"><details id="liveEditor" class="btr-part-tool" aria-label="Refinat en directe">
+ <summary>Refinat en directe</summary>
  <div class="btr-part-controls"><label>Model <select id="liveModel"></select></label>
  <label>Peça <select id="livePart"></select></label>
  <label><input id="livePick" type="checkbox"> Seleccionar amb un clic</label>
@@ -169,13 +170,13 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
  <div class="btr-part-controls"><button id="liveEnqueue">Afegir a la cua</button><button id="liveCopy">Copiar pendents al xat</button><button id="liveDownloadQueue">Exportar cua</button><button id="liveClearResolved" type="button" disabled>Esborrar resoltes</button><button id="liveShare">Compartir / actualitzar cua</button></div>
  <p id="liveSharedLink"></p><div id="liveQueue" aria-live="polite"></div>
  </details>
-</section>
+</details>
 <section id="grid" aria-label="Comparativa de models 3D"></section></div>
 </main>
 <script type="module">
 // Carrega asíncronament per poder mostrar l'error si qualsevol import està
 // trencat. Un error de sintaxi al catàleg ja no deixa un visor en blanc.
-import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261116-humans-v3-gait2&t90m=1')
+import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261116-collapsed-refinement-1&t90m=1')
  .catch(error=>{
   console.error('Error en arrencar el laboratori de vehicles:',error);
   const reason=error instanceof Error?error.message:String(error);

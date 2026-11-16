@@ -49,3 +49,10 @@ assert.deepEqual(removeResolvedRequests([done]),[]);
 assert.deepEqual(removeResolvedRequests([]),[]);
 assert.equal(queue.length,3,'La neteja no modifica la cua original');
 console.log('PASS cua: eliminació definitiva de resoltes, pendents preservades');
+
+import {readFileSync} from 'node:fs';
+const labHTML=readFileSync(new URL('../vehicles-externs-proves.html',import.meta.url),'utf8');
+assert.match(labHTML,/<details id="liveEditor"[^>]*>\s*<summary>Refinat en directe<\/summary>/);
+assert.doesNotMatch(labHTML,/<details id="liveEditor"[^>]*\bopen\b/);
+assert(labHTML.includes('#liveWorkspace:has(#liveEditor[open])'));
+console.log('PASS refinat col·lapsat per defecte');
