@@ -21,4 +21,4 @@ for(const role of Object.keys(HUMAN_PROFILES)){
   for(const f of faces)assert(f.split(' ').slice(1).every(x=>Number(x)>0&&Number(x)<=verts.length));
  }
 }
-console.log('PASS actual 7 + 14 lab meshes: OBJ, metrics, joints and origin');
+console.log('PASS human lab: current roles/styles, OBJ, metrics, joints and origin');

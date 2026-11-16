@@ -23,33 +23,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Comprovar sintaxi del laboratori de vehicles abans de desplegar
-        run: |
-          node --check src/civilian-car-model.mjs
-          node --check src/vehicle-candidate-catalog.mjs
-          node --check src/vehicles-externs-proves.mjs
-          node --check src/vehicle-live-editor.mjs
-          node --check src/btr82-3b-preview.mjs
-          node --check src/vehicle-reference-candidates.mjs
-          node --check src/ka60-runtime.mjs
-          node --check src/kamov-reference-candidates.mjs
-          node --check src/ka52-proposals.mjs
-          node --check src/mi24-proposals.mjs
-          node --check src/human-proposals.mjs
-          node --check src/human-model-catalog.mjs
-          node --check src/human-lab-evidence.mjs
-          node --check src/human-lab-evidence-ui.mjs
-          node --check src/human-current-models.mjs
-          node --check tests/kamov-reference-candidates.mjs
-          node --check src/t90m-runtime.mjs
-          node --check src/vehicle-specs.mjs
-          node --check tests/t90m-game-integration.mjs
-          node --check tests/armored-crew-controls.mjs
-          node --check tests/armored-turret-camera.mjs
-          node --check src/camera-controls.js
-          node --check src/game-core.js
-          node --check tests/gaz-tigr-door-contours.mjs
-          node --check tests/gaz-tigr-approved.mjs
       - name: Verificar credencials de desplegament sense mostrar secrets
         env:
           CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -61,26 +34,8 @@ jobs:
           if [ "$missing" -ne 0 ]; then exit 1; fi
       - name: Instal·lar dependències
         run: npm ci --ignore-scripts
-      - name: Comprovar C1A definitiu, inventari GLB i pestanyes de l'editor
-        run: |
-          node tests/civilian-car-roof-candidate.mjs
-          node tests/vehicle-lab-current-models.mjs
-          node tests/t90m-game-integration.mjs
-          node tests/armored-turret-camera.mjs
-          node tests/armored-crew-controls.mjs
-          node tests/gaz-tigr-door-contours.mjs
-          node tests/gaz-tigr-approved.mjs
-          node tests/btr82-published-assets.cjs
-          node tests/vehicle-candidate-studio.cjs
-          node tests/kamov-reference-candidates.mjs
-          node tests/ka52-proposals.mjs
-          node tests/mi24-proposals.mjs
-          node tests/human-proposals.mjs
-          node tests/human-lab-evidence.mjs
-          node tests/ka60-game-integration.mjs
-          node tests/vehicle-live-editor.mjs
-          node tests/helicopter-engine-comparison.cjs
-          node tests/apache-native-runtime.mjs
+      - name: Comprovar contracte publicable del laboratori
+        run: npm run test:deploy
       - name: Comprovar versió i bundle publicable
         run: npm run check:build
       - name: Comprovar la compilació del Worker

@@ -1,5 +1,4 @@
-// Contracte actual del laboratori, manifest i editor (sense dependències
-// amb els antics candidats GLB de la BTR-82).
+// Minimal deploy contract: current catalog, published asset integrity and lab revision.
 'use strict';
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -7,43 +6,34 @@ const path=require('node:path');
 const {execFileSync}=require('node:child_process');
 const root=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
-const manifest=JSON.parse(read('assets/vehicle-candidates/manifest.json'));
-const catalog=read('src/vehicle-candidate-catalog.mjs');
-const studio=read('src/vehicles-externs-proves.mjs');
-const html=read('vehicles-externs-proves.html');
-const types=[...catalog.matchAll(/\{id:'([^']+)'/g)].map(x=>x[1]);
-assert.deepEqual(types,["llanxa","llanxa_coets","heli_combat","ferry","heli","cotxe","cotxe_civil","camio","tanc","tanqueta","moto","bici","hover","moto_aquatica","barca_rems","windsurf"]);
-for(const type of ['heli','heli_combat'])assert(!Object.hasOwn(manifest.models,type));
-assert.equal(manifest.savedModels,3);
-assert.equal(manifest.savedBytes,851208);
-assert.equal(Object.values(manifest.models).flat().length,3);
-assert.deepEqual(manifest.models.ferry,[]);
-assert.deepEqual(manifest.models.llanxa_coets,[]);
-assert.deepEqual(manifest.models.tanqueta,[]);
-assert(!Object.hasOwn(manifest,'selectedForLod'));
-assert(studio.includes('config.base?createProceduralModel(config.base.variant):await createCurrentVehicle(config.id)'));
-assert(studio.includes('button.dataset.validation='));
-assert(html.includes("data-validation='validated'")&&html.includes("data-validation='pending'"));
-assert(!studio.includes('prepareHueyDuaneRuntime'));
-assert(html.includes('id="liveClearResolved"'));
-assert(!studio.includes('prepareApacheAraonRuntime'));
-assert(!studio.includes('studio.load(token)'));
-assert(studio.includes('slot.outer.hidden=slots.indexOf(slot)>(soloStudy?0:config.options.length)'));
-assert(studio.includes('createVehicleAnnotationEditor'));
-assert(studio.includes('createVehicleLiveEditor'));
-assert(html.includes('id="liveEditor"')&&html.includes('id="vehicleList"'));
-assert(html.includes('id="humanList"')&&html.includes('id="humanMotion"'));
-const labRevision=JSON.parse(read('assets/vehicle-candidates/lab-revision.json')).revision;
-assert(read('src/vehicle-live-editor.mjs').includes("LAB_REVISION='"+labRevision+"'"));
-assert(html.includes('src/vehicles-externs-proves.mjs?rev='+labRevision));
-assert(studio.includes('vehicle-live-editor.mjs?rev='+labRevision));
-assert(studio.includes('vehicle-candidate-catalog.mjs?rev='+labRevision));
-for(const file of [
- 'src/vehicles-externs-proves.mjs','src/vehicle-candidate-catalog.mjs',
- 'src/vehicle-live-editor.mjs','src/btr82-3b-preview.mjs',
- 'src/vehicle-annotation-editor.mjs','src/vehicle-hole-brush.mjs',
- 'tools/fetch-vehicle-candidates.mjs','tests/btr82-published-assets.cjs',
- 'tests/vehicle-candidate-studio.cjs'
-])execFileSync(process.execPath,['--check',path.join(root,file)],{stdio:'pipe'});
-execFileSync(process.execPath,[path.join(root,'tests/btr82-published-assets.cjs')],{stdio:'pipe'});
-console.log('PASS laboratori: 16 pestanyes, tota la flota, pendents primer, manifest coherent');
+(async()=>{
+ const {CATALOG}=await import('../src/vehicle-candidate-catalog.mjs');
+ const {vehicleSpecs}=await import('../src/vehicle-specs.mjs');
+ const ids=CATALOG.map(c=>c.id);
+ assert.equal(new Set(ids).size,ids.length,'Duplicate catalog id');
+ assert.deepEqual(CATALOG.filter(c=>!c.experimental).map(c=>c.id).sort(),Object.keys(vehicleSpecs.scales).sort());
+ for(const c of CATALOG){assert.equal(typeof c.validated,'boolean');assert(Array.isArray(c.options));}
+ const dir=path.join(root,'assets/vehicle-candidates');
+ const manifest=JSON.parse(read('assets/vehicle-candidates/manifest.json'));
+ const records=Object.values(manifest.models).flat();
+ assert.equal(manifest.savedModels,records.length);
+ assert.equal(manifest.savedBytes,records.reduce((n,r)=>n+r.bytes,0));
+ const listed=records.map(r=>{
+  assert(typeof r.file==='string'&&!path.isAbsolute(r.file)&&!r.file.split(/[\\/]/).includes('..'));
+  assert.equal(fs.statSync(path.join(dir,r.file)).size,r.bytes,'Wrong size: '+r.file);
+  return r.file;
+ });
+ assert.equal(new Set(listed).size,listed.length);
+ const walk=d=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>{const p=path.join(d,e.name);return e.isDirectory()?walk(p):/\.glb$/i.test(e.name)?[path.relative(dir,p).split(path.sep).join('/')]:[];});
+ assert.deepEqual(walk(dir).sort(),listed.sort(),'Unlisted or missing candidate GLB');
+ const revision=JSON.parse(read('assets/vehicle-candidates/lab-revision.json')).revision;
+ assert(typeof revision==='string'&&revision.length>0);
+ const html=read('vehicles-externs-proves.html'),entry=read('src/vehicles-externs-proves.mjs');
+ assert(read('src/vehicle-live-editor.mjs').includes("LAB_REVISION='"+revision+"'"));
+ assert(html.includes('src/vehicles-externs-proves.mjs?rev='+revision));
+ for(const module of ['vehicle-live-editor.mjs','vehicle-candidate-catalog.mjs'])assert(entry.includes(module+'?rev='+revision));
+ for(const id of ['liveEditor','vehicleList','humanList','humanMotion','liveClearResolved'])assert(html.includes('id="'+id+'"'),'Missing lab control '+id);
+ // Parse the active lab entry and helpers, not tests of retired vehicles.
+ for(const file of ['vehicles-externs-proves.mjs','vehicle-candidate-catalog.mjs','vehicle-live-editor.mjs','vehicle-live-geometry.mjs','vehicle-annotation-editor.mjs','vehicle-hole-brush.mjs','human-proposals.mjs','human-model-catalog.mjs','human-current-models.mjs','human-lab-evidence.mjs','human-lab-evidence-ui.mjs'])execFileSync(process.execPath,['--check',path.join(root,'src',file)],{stdio:'inherit'});
+ console.log('PASS lab: current fleet, asset manifest, revision and syntax');
+})().catch(e=>{console.error(e);process.exitCode=1;});

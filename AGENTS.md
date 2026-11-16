@@ -45,7 +45,7 @@ The vehicle model lab `vehicles-externs-proves.html` is the default reusable int
 
 ## Phase 2 tools
 
-Before bumping `GAME_VERSION`, update `src/version.mjs`, run `npm run sync:version`, then `npm run build`. `npm run check:build` must reject stale version stamps and generated bundles. Preserve the only runtime generation workflow at `.github/workflows/rebuild-runtime.yml`; do not reintroduce a second writer. For the reduced set of essential regressions use `npm test` (`npm run test:regression:once` is a compatibility alias), and `node tools/repository-audit.cjs` for a conservative dependency/preview inventory. HTML labs may have external URLs even when no source file links to them; never delete on graph reachability alone.
+Before bumping `GAME_VERSION`, update `src/version.mjs`, run `npm run sync:version`, then `npm run build`. `npm run check:build` must reject stale version stamps and generated bundles. Preserve the only runtime generation workflow at `.github/workflows/rebuild-runtime.yml`; do not reintroduce a second writer. For essential gameplay regressions use `npm test` (`npm run test:regression:once` is a compatibility alias). Use `npm run test:performance`, `npm run test:models`, or `npm run test:lab` for focused work; `npm run test:all` runs all maintained suites. Cloudflare runs only `npm run test:deploy` plus the existing build/Worker/HTTP verification. Do not add tests for rejected candidates or duplicate source-string/geometry checks; prefer current runtime behavior and shared invariants. `node tools/repository-audit.cjs` remains a conservative dependency/preview inventory. HTML labs may have external URLs even when no source file links to them; never delete on graph reachability alone.
 
 ## Fast model refinement (2026-11-12)
 
