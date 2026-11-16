@@ -1,5 +1,5 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs';
-export const HUMAN_VERSION='human-proposals-20261116-1';
+export const HUMAN_VERSION='human-proposals-20261116-2';
 
 // Native articulated mesh assemblies, facing -Z. Motion pivots are separate
 // from editable rest pivots, so playing a clip never overwrites a body edit.
@@ -21,18 +21,22 @@ export function createHumanProposal(T,role,style='a'){
  // Anatomical curves come from multiple cross sections, not stretched boxes.
  const loft=(g,name,rings,c,n=s.segments)=>{
   const points=[],indices=[];
-  for(const [y,rx,rz,z=0]of rings)for(let i=0;i<n;i++){const a=i*Math.PI*2/n;points.push(Math.cos(a)*rx,y,Math.sin(a)*rz+z)}
+  for(const [y,rx,rz,z=0,rearRise=0]of rings)for(let i=0;i<n;i++){const a=i*Math.PI*2/n,back=Math.max(0,Math.sin(a));points.push(Math.cos(a)*rx,y+rearRise*back,Math.sin(a)*rz+z)}
   for(let r=0;r<rings.length-1;r++)for(let i=0;i<n;i++){const a=r*n+i,b=r*n+(i+1)%n;indices.push(a,a+n,b,b,a+n,b+n)}
   for(let i=1;i<n-1;i++)indices.push(0,i,i+1,(rings.length-1)*n,(rings.length-1)*n+i+1,(rings.length-1)*n+i);
   if(rings.at(-1)[0]<rings[0][0])indices.reverse();
   const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(points,3));geo.setIndex(indices);geo.computeVertexNormals();return mesh(g,name,geo,c);
  };
- const limb=(g,name,length,top,middle,bottom,c)=>loft(g,name,[[.015,top*.88,top*.90],[-length*.17,top,top*.91],[-length*.55,middle,middle*.93],[-length,bottom,bottom*.96]],c);
+ const limb=(g,name,length,top,middle,bottom,c)=>{
+  const calf=name==='Panxell',thigh=name==='Cuixa',forearm=name==='Avantbraç';
+  const back=calf ? .018 : thigh ? .008 : 0;
+  return loft(g,name,[[.018,top*.81,top*.84],[-length*.13,top,top*.96],[-length*.34,(top+middle)*.54,Math.max(top,middle)*.97,back],[-length*.65,middle,middle*.91,back*.7],[-length-.008,bottom,bottom*.94,forearm ? -.003 : 0]],c);
+ };
  const W=s.width,L=s.limbs;
  const pelvis=joint(root,'pelvis','Pelvis',[0,.96,0]);
- loft(pelvis,'Malucs i cintura',[[-.13,.155*W,.11],[-.04,.177*W,.125],[.08,.155*W,.115]],role==='farmer'?0x746c59:p.uniform);
+ loft(pelvis,'Malucs i cintura',[[-.13,.132*W,.10],[-.08,.165*W,.13,.014],[-.01,.174*W,.137,.014],[.08,.146*W,.111]],role==='farmer'?0x746c59:p.uniform);
  const torso=joint(pelvis,'spine','Tors',[0,.075,0]);
- loft(torso,'Tronc anatòmic',[[0,.145*W,.105],[.11,.158*W,.115],[.28,.203*W,.125],[.40,.215*W,.12],[.445,.135*W,.095]],p.uniform);
+ loft(torso,'Tronc anatòmic',[[0,.145*W,.105],[.08,.143*W,.108],[.17,.164*W,.116],[.28,.193*W,.132,.006],[.36,.207*W,.128,.009],[.408,.196*W,.117,.012],[.448,.084*W,.073,.012]],p.uniform);
  const belt=loft(pelvis,'Cinturó',[[.048,.158*W,.122],[.085,.158*W,.122]],dark);
  box(pelvis,'Sivella',[.052,.04,.015],[0,.066,-.127],role==='general'?gold:0x9a9c85);
  for(const side of [-1,1]){
@@ -42,21 +46,23 @@ export function createHumanProposal(T,role,style='a'){
    box(torso,'Costura lateral',[.008,.20,.012],[side*.19*W,.27,.065],p.trim);
   }
  }
- const neck=joint(torso,'neck','Coll',[0,.448,0]);
- tube(neck,'Coll anatòmic',.053,.068,.10,[0,.035,0],p.skin);
- const head=joint(neck,'head','Cap',[0,.06,0]);head.scale.setScalar(s.head);
- loft(head,'Mandíbula i crani',[[0,.048,.055,-.01],[.025,.073,.076,-.009],[.075,.098,.091],[.14,.105,.099],[.195,.095,.09],[.235,.061,.063],[.25,.016,.022]],p.skin);
+ // Positive Z is posterior. The cervical axis meets the occiput behind
+ // the chin; sloped jaw rings leave a natural submandibular contour.
+ const neck=joint(torso,'neck','Coll',[0,.443,.012]);
+ loft(neck,'Coll anatòmic i clatell',[[-.039,.087,.073,-.002],[-.011,.078,.064,.003],[.026,.064,.055,.011],[.062,.060,.051,.021],[.090,.058,.050,.025],[.119,.051,.044,.026],[.147,.037,.032,.025]],p.skin);
+ const head=joint(neck,'head','Cap',[0,.091,.024]);head.scale.setScalar(s.head);
+ loft(head,'Mandíbula i crani',[[0,.032,.033,-.062,.046],[.018,.055,.056,-.041,.039],[.043,.075,.079,-.019,.031],[.081,.086,.095,.003,.017],[.128,.093,.104,.010],[.174,.094,.103,.012],[.216,.076,.082,.016],[.242,.047,.049,.015],[.252,.012,.015,.014]],p.skin,Math.max(10,s.segments));
  const noseGeo=new T.BufferGeometry();noseGeo.setAttribute('position',new T.Float32BufferAttribute([-.020,.135,-.094,0,.075,-.145,.020,.135,-.094,-.020,.135,-.094,-.022,.077,-.105,0,.075,-.145,.020,.135,-.094,0,.075,-.145,.022,.077,-.105,-.022,.077,-.105,.022,.077,-.105,0,.075,-.145],3));noseGeo.computeVertexNormals();mesh(head,'Nas',noseGeo,p.skin);
  for(const side of [-1,1]){
-  oval(head,'Orella',[.022,.037,.020],[side*.104,.115,.005],p.skin);
-  oval(head,'Ull',[.022,.009,.008],[side*.042,.143,-.094],0xd7cfba);
-  oval(head,'Iris',[.008,.008,.006],[side*.041,.143,-.101],0x3b3e32);
-  const brow=box(head,'Cella',[.046,.010,.008],[side*.045,.167,-.092],hair);brow.rotation.z=side*.06;
-  if(s.detail===2){oval(head,'Pavelló orella',[.008,.021,.012],[side*.119,.115,.001],0xa97659);box(head,'Parpella',[.043,.005,.008],[side*.043,.153,-.099],p.skin)}
+  oval(head,'Orella',[.022,.037,.020],[side*.089,.115,.012],p.skin);
+  oval(head,'Ull',[.022,.009,.008],[side*.042,.143,-.085],0xd7cfba);
+  oval(head,'Iris',[.008,.008,.006],[side*.041,.143,-.092],0x3b3e32);
+  const brow=box(head,'Cella',[.046,.010,.008],[side*.045,.167,-.082],hair);brow.rotation.z=side*.06;
+  if(s.detail===2){oval(head,'Pavelló orella',[.008,.021,.012],[side*.104,.115,.008],0xa97659);box(head,'Parpella',[.043,.005,.008],[side*.043,.153,-.092],p.skin)}
  }
- box(head,'Boca',[.047,.007,.007],[0,.050,-.083],0x8e6451);
- const hairCap=mesh(head,'Cabells',new T.SphereGeometry(1,s.segments,5,0,Math.PI*2,0,Math.PI*.53),hair,[0,.145,.008]);hairCap.scale.set(.107,.112,.101);
- const hat=group(head,'Barret');
+ box(head,'Boca',[.047,.007,.007],[0,.050,-.099],0x8e6451);
+ const hairCap=mesh(head,'Cabells',new T.SphereGeometry(1,s.segments,5,0,Math.PI*2,0,Math.PI*.53),hair,[0,.153,.014]);hairCap.scale.set(.096,.103,.105);
+ const hat=group(head,'Barret');hat.scale.set(.94,1,.98);
  if(p.hat==='straw'){
   const brim=tube(hat,'Ala del capell',.19,.195,.018,[0,.211,0],0xb49c6d);brim.scale.z=.88;
   const crown=tube(hat,'Copa del capell',.095,.122,.09,[0,.255,0],0xc4ad7a);crown.scale.z=.9;
@@ -67,7 +73,7 @@ export function createHumanProposal(T,role,style='a'){
   box(hat,'Insígnia',[.027,.032,.012],[-.052,.236,-.091],gold);
  }else if(p.hat==='helmet'){
   const helmet=mesh(hat,'Casc',new T.SphereGeometry(1,s.segments,6,0,Math.PI*2,0,Math.PI*.56),p.trim,[0,.166,.004]);helmet.scale.set(.122,.124,.115);
-  for(const side of [-1,1])box(head,'Corretja casc',[.012,.106,.013],[side*.087,.086,.015],dark);
+  for(const side of [-1,1])box(head,'Corretja casc',[.012,.106,.013],[side*.079,.086,.019],dark);
  }else{
   const officer=p.hat==='officer';
   tube(hat,'Banda gorra',.105,.106,.028,[0,.211,0],officer?dark:p.trim);
@@ -76,7 +82,7 @@ export function createHumanProposal(T,role,style='a'){
   if(officer)box(hat,'Emblema gorra',[.028,.032,.012],[0,.249,-.113],gold);
  }
  if(role==='player'||role==='general'){
-  for(const side of [-1,1]){const lens=oval(head,'Ulleres',[.035,.022,.008],[side*.044,.143,-.108],dark);box(head,'Patilla ulleres',[.008,.010,.085],[side*.096,.148,-.062],dark)}
+  for(const side of [-1,1]){const lens=oval(head,'Ulleres',[.035,.022,.008],[side*.044,.143,-.108],dark);box(head,'Patilla ulleres',[.008,.010,.085],[side*.085,.148,-.062],dark)}
   box(head,'Pont ulleres',[.025,.008,.009],[0,.15,-.111],role==='general'?gold:dark);
  }
  if(role==='general')for(const side of [-1,1])oval(head,'Bigoti',[.035,.014,.014],[side*.027,.068,-.095],hair);
@@ -84,22 +90,22 @@ export function createHumanProposal(T,role,style='a'){
  for(const side of [-1,1]){
   const suffix=side<0?'L':'R',label=side<0?'esquerre':'dret';
   const hip=joint(pelvis,'hip'+suffix,'Maluc '+label,[side*.103*W,-.01,0]);
-  limb(hip,'Cuixa',.44,.108*L,.092*L,.065*L,role==='farmer'?0x746c59:p.uniform);
+  limb(hip,'Cuixa',.44,.104*L,.083*L,.064*L,role==='farmer'?0x746c59:p.uniform);
   const knee=joint(hip,'knee'+suffix,'Genoll '+label,[0,-.44,0]);
   oval(knee,'Ròtula',[.067*L,.063,.065*L],[0,0,-.005],p.uniform);
-  limb(knee,'Panxell',.40,.065*L,.080*L,.043*L,role==='farmer'?0x746c59:p.uniform);
+  limb(knee,'Panxell',.40,.064*L,.076*L,.040*L,role==='farmer'?0x746c59:p.uniform);
   const ankle=joint(knee,'ankle'+suffix,'Turmell '+label,[0,-.40,0]);feet.push(ankle);
   loft(ankle,'Bota',[[.10,.049,.050,.01],[.015,.055,.065,.003],[-.035,.062,.125,-.055],[-.087,.064,.134,-.057]],shoe);
   loft(ankle,'Sola',[[ -.086,.065,.135,-.057],[-.11,.065,.135,-.057]],0x1d2521);
   if(s.detail===2)for(let j=0;j<4;j++)box(ankle,'Cordons',[.066,.008,.014],[0,.015-j*.010,-.045-j*.021],0x8b8b74);
-  const shoulder=joint(torso,'shoulder'+suffix,'Espatlla '+label,[side*.224*W,.408,0]);
-  oval(shoulder,'Deltoide',[.074*L,.075,.078*L],[side*.003,-.055,0],p.uniform);
+  const shoulder=joint(torso,'shoulder'+suffix,'Espatlla '+label,[side*.211*W,.401,.006]);
+  loft(shoulder,'Deltoide',[[.035,.038*L,.045*L],[.007,.066*L,.072*L],[-.047,.078*L,.081*L],[-.103,.065*L,.064*L],[-.14,.046*L,.046*L]],p.uniform);
   const bare=p.civilian&&role!=='mechanic';
-  limb(shoulder,'Braç',.285,.072*L,.061*L,.048*L,bare?p.skin:p.uniform);
+  limb(shoulder,'Braç',.285,.068*L,.060*L,.046*L,bare?p.skin:p.uniform);
   if(bare)limb(shoulder,'Màniga curta',.13,.078*L,.072*L,.070*L,p.uniform);
   const elbow=joint(shoulder,'elbow'+suffix,'Colze '+label,[0,-.285,0]);
   oval(elbow,'Articulació colze',[.048*L,.044,.047*L],[0,0,0],p.civilian?p.skin:p.uniform);
-  limb(elbow,'Avantbraç',.255,.050*L,.056*L,.032*L,p.civilian?p.skin:p.uniform);
+  limb(elbow,'Avantbraç',.255,.049*L,.052*L,.030*L,p.civilian?p.skin:p.uniform);
   if(!p.civilian)tube(elbow,'Punys de màniga',.035,.037,.038,[0,-.238,0],p.trim);
   const wrist=joint(elbow,'wrist'+suffix,'Canell '+label,[0,-.255,0]);
   loft(wrist,'Palmell',[[.012,.032,.024],[-.04,.039,.023],[-.09,.034,.020]],p.skin,8);

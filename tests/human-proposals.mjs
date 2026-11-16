@@ -18,6 +18,19 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   assert.equal(Object.keys(joints).length,16);
   assert.equal(rest.kneeL.parent,joints.hipL);assert.equal(rest.ankleR.parent,joints.kneeR);
   assert.equal(rest.elbowL.parent,joints.shoulderL);assert.equal(rest.wristR.parent,joints.elbowR);
+  // Cervical pivot is behind the projecting chin, skull and neck overlap,
+  // and a separate motion pivot preserves the rest pose.
+  assert(rest.head.position.z>.015&&rest.head.position.y>.08);
+  assert.equal(rest.head.parent,joints.neck);
+  const neckMesh=joints.neck.children.find(n=>n.isMesh&&n.name.includes('Coll anatòmic'));
+  const skullMesh=joints.head.children.find(n=>n.isMesh&&(n.name.includes('Mandíbula')||n.userData.batchedParts?.includes('Mandíbula i crani')));
+  assert(neckMesh&&skullMesh,'Coll i crani editables');
+  neckMesh.geometry.computeBoundingBox();skullMesh.geometry.computeBoundingBox();
+  assert(neckMesh.geometry.boundingBox.max.y-rest.head.position.y>.045,'Solapament cervical');
+  assert(skullMesh.geometry.boundingBox.min.z<-.08,'Mentó i cara projectats');
+  const neckBounds=new T.Box3().setFromObject(neckMesh);
+  const skullBounds=new T.Box3().setFromObject(skullMesh);
+  assert(neckBounds.intersectsBox(skullBounds),'Cap sense buit al coll');
   poseHumanProposal(model,0,'rest');const size=new T.Box3().setFromObject(model).getSize(new T.Vector3());
   assert(Math.abs(size.y-p.height)<.002,'Alçada del joc '+role+style);
   assert(size.x/size.y<.40,'Proporcions estretes, braços i cap humans '+role+style);
