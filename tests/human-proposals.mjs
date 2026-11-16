@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as T from '../vendor/three-r186.module.mjs';
 import {HUMAN_PROFILES,HUMAN_CATALOG,HUMAN_STYLES} from '../src/human-model-catalog.mjs';
-import {createHumanProposal,poseHumanProposal} from '../src/human-proposals.mjs';
+import {createHumanProposal,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy} from '../src/human-proposals.mjs';
 import {createCurrentHuman} from '../src/human-current-models.mjs';
 globalThis.window=globalThis;
 assert.equal(HUMAN_CATALOG.length,7);assert(HUMAN_CATALOG.every(c=>!c.validated&&c.kind==='huma'&&c.options.length===3));
@@ -18,26 +18,20 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   assert.equal(Object.keys(joints).length,16);
   assert.equal(rest.kneeL.parent,joints.hipL);assert.equal(rest.ankleR.parent,joints.kneeR);
   assert.equal(rest.elbowL.parent,joints.shoulderL);assert.equal(rest.wristR.parent,joints.elbowR);
-  // Bare skull (headwear excluded) is the unit in the eight-head diagram.
-  // Verify actual joint positions relative to that unit, not hat height.
-  assert.equal(rest.head.parent,joints.neck);
-  const neckMesh=joints.neck.children.find(n=>n.isMesh&&n.name.includes('Coll anatòmic'));
-  const skullMesh=joints.head.children.find(n=>n.isMesh&&(n.name.includes('Mandíbula')||n.userData.batchedParts?.includes('Mandíbula i crani')));
-  assert(neckMesh&&skullMesh,'Coll i crani editables');
   poseHumanProposal(model,0,'rest');
-  const neckBounds=new T.Box3().setFromObject(neckMesh,true);
-  const skullBounds=new T.Box3().setFromObject(skullMesh,true);
-  const unit=skullBounds.max.y-skullBounds.min.y;
-  const at=id=>joints[id].getWorldPosition(new T.Vector3());
-  const ratio=y=>y/unit;
-  assert(Math.abs(ratio(skullBounds.max.y)-8)<.15,'Vuit caps '+role+style);
-  for(const [id,heads]of [['shoulderL',6.5],['elbowL',5],['hipL',4.33],['wristL',3.875],['kneeL',2.08],['ankleL',.46]]){
-   assert(Math.abs(ratio(at(id).y)-heads)<.20,id+' · '+role+style);
-  }
-  assert(ratio(at('head').y-skullBounds.min.y)>.08,'Mentó per sota del pivot');
-  assert(at('head').z>(skullBounds.min.z+skullBounds.max.z)/2,'Pivot cap al clatell');
-  assert(neckBounds.max.y-at('head').y>unit*.12&&neckBounds.intersectsBox(skullBounds),'Clatell integrat dins el crani');
-  assert(rest.elbowL.position.length()>rest.wristL.position.length(),'Braç superior més llarg');
+  assert.equal(model.userData.humanProposal.version,HUMAN_VERSION);
+  const anatomy=measureHumanAnatomy(T,model);assert(anatomy);
+  const {ratios:r,headUnits,points,unit,skullBounds,neckBounds}=anatomy;
+  assert(Math.abs(headUnits-8)<.10,'Vuit caps reals '+role+style);
+  for(const [id,target,tolerance]of [['shoulderL',6.66,.09],['elbowL',5.06,.09],['wristL',3.77,.09],['crotch',4,.07],['tipL',3.20,.10],['kneeL',2.33,.08],['ankleL',.46,.04]])assert(Math.abs(r[id]-target)<tolerance,id+' '+r[id]+' '+role+style);
+  for(const id of ['shoulder','elbow','wrist','hip','knee','ankle','tip'])assert(Math.abs(r[id+'L']-r[id+'R'])<.015,id+' simetria');
+  assert((points.chin.y-points.shoulderL.y)/unit<.37,'Coll perceptiblement més curt');
+  assert((points.head.y-points.chin.y)/unit>.20,'Pivot dins del crani, no sota el mentó');
+  assert(points.head.z>(skullBounds.min.z+skullBounds.max.z)/2,'Pivot posterior');
+  assert(neckBounds.max.y-points.head.y>unit*.12&&neckBounds.intersectsBox(skullBounds),'Clatell dins el crani');
+  assert(rest.elbowL.position.length()+rest.wristL.position.length()>.69,'Braços allargats');
+  assert(rest.ankleL.position.length()>.44&&rest.kneeL.position.length()<.50,'Genolls elevats');
+  console.log('ANATOMY',role,style,JSON.stringify({heads:headUnits,knee:8-r.kneeL,elbow:8-r.elbowL,wrist:8-r.wristL,tip:8-r.tipL,neckGap:(points.chin.y-points.shoulderL.y)/unit}));
   const size=new T.Box3().setFromObject(model).getSize(new T.Vector3());
   assert(Math.abs(size.y-p.height)<.002,'Alçada del joc '+role+style);
   assert(size.x/size.y<.40,'Proporcions estretes, braços i cap humans '+role+style);
@@ -65,6 +59,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,21);assert.equal(choices.size,21);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../vehicles-externs-proves.html',import.meta.url),'utf8');
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V1'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));

@@ -1,3 +1,8 @@
+**2026-11-16 · HUMANS V1 · primera versió numerada:**
+- [x] Genoll .50 → .56; cuixa .54 → .49, tíbia .39 → .45, braç .365 → .385, avantbraç .27 → .31. Coll visualment més curt: pujada de la cintura escapular, mentó per sota del pivot, crani avançat i articulació posterior. Malles cranial, coll, pelvis i soles mesurables independentment.
+- [x] Guies 0–8 i punts reals superposats al visor, càmera ortogràfica humana, postura neutra per defecte. Número de versió visible per candidat a partir de l'Object3D carregat, avís de versió anterior en esborranys. Proves numèriques de geometria en els 21 candidats.
+- [ ] Validació CI, HTTP i aspecte WebGL. Candidats només de laboratori; cap substitució al joc.
+
 **2026-11-16 · Verificació Cloudflare del laboratori:**
 - [x] Actions 43919284014: proves de 7 originals i 21 candidats, build i deploy Wrangler correctes; primera lectura del nou mòdul 404 transitòria. El comparador HTTP no seguia redireccions HTML canòniques. Afegit curl --location, comprovació byte a byte de totes les dependències humanes, diagnòstic d'URL final/hash, reintents amb espera creixent i revalidació de l'HTML/manifest.
 - [ ] Confirmar la nova verificació HTTP final. No s'ha modificat cap malla ni la versió del joc.

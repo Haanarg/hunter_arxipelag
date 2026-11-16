@@ -1,10 +1,10 @@
 import {createMi24Proposal,MI24_MODELS} from './mi24-proposals.mjs?rev=mi24-d-optimized-20261115-3';
-import {HUMAN_CATALOG} from './human-model-catalog.mjs?rev=human-proposals-20261116-3';
-import {createHumanProposal,poseHumanProposal} from './human-proposals.mjs?rev=human-proposals-20261116-3';
-import {createCurrentHuman} from './human-current-models.mjs?rev=human-proposals-20261116-3';
+import {HUMAN_CATALOG} from './human-model-catalog.mjs?rev=humans-v1';
+import {createHumanProposal,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy} from './human-proposals.mjs?rev=humans-v1';
+import {createCurrentHuman} from './human-current-models.mjs?rev=humans-v1';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261116-human-evidence-4';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261116-humans-v1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs?rev=mi24-d-approved-1';
@@ -19,7 +19,7 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261116-human-evidence-4';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261116-humans-v1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const humanList=document.querySelector('#humanList'),ALL_CATALOG=[...CATALOG,...HUMAN_CATALOG];
@@ -121,8 +121,10 @@ for(let i=0;i<5;i++){
  const lines=new THREE.GridHelper(230,230,0xacc3ab,0x819788);
  lines.position.y=.015;lines.material.transparent=true;lines.material.opacity=.24;scene.add(lines);
  const person=createLabPlayerReference(THREE);scene.add(person);
- const camera=new THREE.PerspectiveCamera(36,1,.05,1300);
- const slot={outer,viewport,scene,camera,ground,lines,person,status,source,bold,sub,upload,downloadBtr,model:null,mixer:null,kind:null,sourceFrame:null};
+ const perspective=new THREE.PerspectiveCamera(36,1,.05,1300),ortho=new THREE.OrthographicCamera(-2,2,2,-2,.05,1300);
+ const guide=document.createElement('canvas');guide.className='human-guide';guide.hidden=true;outer.append(guide);
+ const versionTag=document.createElement('span');versionTag.className='human-version-tag';versionTag.hidden=true;label.append(versionTag);
+ const slot={outer,viewport,scene,camera:perspective,perspective,ortho,guide,versionTag,ground,lines,person,status,source,bold,sub,upload,downloadBtr,model:null,mixer:null,kind:null,sourceFrame:null};
  slots.push(slot);
  upload.addEventListener('change',async()=>{
    const file=upload.files?.[0];if(!file)return;
@@ -381,12 +383,13 @@ async function choose(config){
  document.querySelector('#humanMotion').hidden=!config.human;
  humanEvidence.show(config.human||null);
  humanTime=0;
+ if(config.human){document.querySelector('#humanPose').value='rest';document.querySelector('#animate').checked=false;document.querySelector('#humanRevision').textContent='HUMANS V1 · '+HUMAN_VERSION;}
  labTankKeys.clear();labTurretSwitch=false;labTurretYaw=0;labTurretPitch=0;
  syncLabTurretButton();
  for(const slot of slots){
    slot.outer.hidden=slots.indexOf(slot)>(soloStudy?0:config.options.length);
    dropPrevious(slot);
-   slot.kind=config.kind;
+   slot.kind=config.kind;slot.camera=config.human?slot.ortho:slot.perspective;slot.guide.hidden=true;slot.versionTag.hidden=!config.human;
    slot.person.visible=!config.human&&document.querySelector('#showGrid').checked;
    slot.ground.material.color.setHex(marine?0x285f65:config.kind==='aire'?0x6a7b67:0x69735e);
    slot.ground.material.roughness=marine?.43:1;
@@ -440,7 +443,7 @@ async function choose(config){
  defaultLookY=lookY;
  panScreenX=0;
  zoom=1;
- if(config.human){yaw=Math.PI+.20;elev=.08;lookY=originalDims.y*.43;defaultLookY=lookY;zoom=1.2;}
+ if(config.human){yaw=Math.PI;elev=0;lookY=originalDims.y*.43;defaultLookY=lookY;zoom=1;}
  if(resumedView?.type===config.id){({yaw,elev,zoom,lookY,panScreenX}=resumedView);resumedView=null}
  updateCamera();
  if(!soloStudy){
@@ -465,7 +468,7 @@ function updateCamera(){
    const rect=slot.viewport.getBoundingClientRect();
    if(rect.height<=0||rect.width<=0)continue;
    slot.camera.aspect=rect.width/rect.height;
-   slot.camera.fov=37;
+   if(slot.camera.isOrthographicCamera){const half=Math.max(comparisonDims.y*.94,comparisonDims.x*.58/slot.camera.aspect)*zoom;slot.camera.top=half;slot.camera.bottom=-half;slot.camera.left=-half*slot.camera.aspect;slot.camera.right=half*slot.camera.aspect;}else slot.camera.fov=37;
    slot.camera.near=Math.max(.05,distance/1000);
    slot.camera.far=Math.max(800,distance*10);
    // Panoràmica en l'eix horitzontal de la pantalla, també en
@@ -486,6 +489,41 @@ function resizeRenderer(){
  renderer.setSize(w,h,false);
  updateCamera();
 }
+// The printed model version comes from the loaded Object3D, not the page title.
+function drawHumanGuide(slot,w,h){
+ const active=!!currentType.human,show=active&&document.querySelector('#humanGuides').checked&&document.querySelector('#humanPose').value==='rest';
+ slot.versionTag.hidden=!active;
+ if(!active){slot.guide.hidden=true;return}
+ let model=null;slot.model?.traverse(n=>{if(n.userData.humanProposal)model=n.userData.humanProposal});
+ const original=slots.indexOf(slot)===0;
+ slot.versionTag.textContent=original?'ORIGINAL DEL JOC':model?.version===HUMAN_VERSION?'HUMANS V1 · '+model.style.toUpperCase():model?'VERSIÓ ANTERIOR · '+model.version:'IMPORTAT / VERSIÓ DESCONEGUDA';
+ slot.versionTag.classList.toggle('stale',!original&&model?.version!==HUMAN_VERSION);
+ const axis=Math.abs(Math.sin(2*yaw))<.025&&Math.abs(elev)<.025;
+ const measured=show&&axis&&slot.model&&!original?measureHumanAnatomy(THREE,slot.model):null;
+ slot.guide.hidden=!measured;if(!measured)return;
+ const cv=slot.guide,dpr=Math.min(2,window.devicePixelRatio||1);
+ if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr)}
+ const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+ const {floor,crown,unit,points,ratios}=measured;
+ const x=points.crown.x,z=points.crown.z;
+ const screen=v=>{const p=v.clone().project(slot.camera);return {x:(p.x+1)*w/2,y:(1-p.y)*h/2}};
+ ctx.font='11px system-ui';ctx.textBaseline='middle';
+ for(let i=0;i<=8;i++){
+  const y=screen(new THREE.Vector3(x,crown-i*unit,z)).y;
+  if(y<0||y>h)continue;
+  ctx.strokeStyle='rgba(157,221,236,.83)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(11,y);ctx.lineTo(w-12,y);ctx.stroke();
+  ctx.fillStyle='#d9f7ff';ctx.fillText(String(i),13,y-7);
+ }
+ ctx.setLineDash([]);const sideView=Math.abs(Math.sin(yaw))>.9;
+ for(const [id,label] of [['chin','Mentó'],['shoulderL','Espatlla'],['elbowL','Colze'],['wristL','Canell'],['crotch','Engonal'],['tipL','Dits'],['kneeL','Genoll'],['ankleL','Turmell'],['head','Pivot cap']]){
+  if(id==='head'&&!sideView)continue;
+  const p=points[id];if(!p)continue;const v=screen(p);if(v.y<0||v.y>h||v.x<0||v.x>w)continue;
+  ctx.fillStyle=id==='head'?'#ffb66e':'#dfff80';ctx.beginPath();ctx.arc(v.x,v.y,3.5,0,Math.PI*2);ctx.fill();
+  const txt=label+' '+(8-ratios[id]).toFixed(2),right=sideView||v.x<w*.48;
+  ctx.textAlign=right?'left':'right';ctx.strokeStyle='#142628';ctx.lineWidth=3;ctx.strokeText(txt,v.x+(right?7:-7),v.y-5);ctx.fillText(txt,v.x+(right?7:-7),v.y-5);ctx.lineWidth=1;ctx.textAlign='left';
+ }
+}
+
 function draw(now){
  requestAnimationFrame(draw);
  const dt=Math.min(.07,(now-prev)/1000);prev=now;
@@ -520,11 +558,13 @@ function draw(now){
    slot.camera.aspect=width/height;
    slot.camera.updateProjectionMatrix();
    renderer.render(slot.scene,slot.camera);
+   drawHumanGuide(slot,width,height);
  }
 }
 function applyView(id){
  const views={quarter:[.62,.38],front:[Math.PI,.1],side:[Math.PI/2,.1],rear:[0,.1],top:[0,Math.PI/2-.06]};
  [yaw,elev]=views[id]||views.quarter;
+ if(currentType.human&&['front','side','rear'].includes(id))elev=0;
  for(const el of document.querySelectorAll('[data-view]'))el.classList.toggle('active',el.dataset.view===id);
  updateCamera();
 }
@@ -547,6 +587,7 @@ document.querySelector('#humanPose').addEventListener('change',e=>{
  humanTime=0;document.querySelector('#animate').checked=e.target.value!=='rest';
  for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,0,e.target.value);
 });
+document.querySelector('#humanGuides').addEventListener('change',e=>{if(e.target.checked){document.querySelector('#humanPose').value='rest';document.querySelector('#humanPose').dispatchEvent(new Event('change'));applyView('front')}});
 document.querySelector('#humanRest').addEventListener('click',()=>{
  document.querySelector('#humanPose').value='rest';document.querySelector('#humanPose').dispatchEvent(new Event('change'));
 });
