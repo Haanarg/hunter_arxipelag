@@ -110,7 +110,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
  <label>Moviment <select id="humanPose"><option value="idle">Repòs</option><option value="rest" selected>Postura neutra</option><option value="walk">Caminar</option><option value="run">Córrer</option><option value="crouch">Ajupir-se</option><option value="aim">Apuntar</option><option value="work">Treballar</option><option value="wave">Saludar</option></select></label>
  <label>Velocitat <input id="humanSpeed" type="range" min="0.25" max="1.5" step="0.05" value="1" aria-label="Velocitat de l’animació"></label>
  <button id="humanRest" type="button">Postura neutra</button>
- <label><input id="humanGuides" type="checkbox" checked> Guies anatòmiques (0–8)</label> <strong id="humanRevision">HUMANS V1</strong>
+ <label><input id="humanGuides" type="checkbox" checked> Guies anatòmiques (0–8)</label> <strong id="humanRevision">HUMANS V2</strong>
  <p>Guies en postura neutra, vista frontal/lateral/posterior. Punts verds = articulacions i extrems reals; taronja = pivot del cap. El 0 és el crani sense barret, el 8 la sola.</p>
 </section>
 <details id="humanEvidence" class="annotation-tools" hidden><summary>Fitxa de validació humana · exportació de malles reals</summary>
@@ -175,7 +175,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <script type="module">
 // Carrega asíncronament per poder mostrar l'error si qualsevol import està
 // trencat. Un error de sintaxi al catàleg ja no deixa un visor en blanc.
-import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261116-humans-v1&t90m=1')
+import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261116-humans-v2&t90m=1')
  .catch(error=>{
   console.error('Error en arrencar el laboratori de vehicles:',error);
   const reason=error instanceof Error?error.message:String(error);

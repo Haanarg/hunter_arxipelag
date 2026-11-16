@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as T from '../vendor/three-r186.module.mjs';
 import {HUMAN_PROFILES,HUMAN_CATALOG,HUMAN_STYLES} from '../src/human-model-catalog.mjs';
-import {createHumanProposal,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy} from '../src/human-proposals.mjs';
+import {createHumanProposal,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,humanChestSurfaceZ} from '../src/human-proposals.mjs';
 import {createCurrentHuman} from '../src/human-current-models.mjs';
 globalThis.window=globalThis;
 assert.equal(HUMAN_CATALOG.length,7);assert(HUMAN_CATALOG.every(c=>!c.validated&&c.kind==='huma'&&c.options.length===3));
@@ -36,7 +36,30 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   assert(Math.abs(size.y-p.height)<.002,'Alçada del joc '+role+style);
   assert(size.x/size.y<.40,'Proporcions estretes, braços i cap humans '+role+style);
   let triangles=0;for(const m of meshes){assert([...m.geometry.attributes.position.array].every(Number.isFinite));assert(m.geometry.userData.labOwned);triangles+=(m.geometry.index?.count??m.geometry.attributes.position.count)/3}
-  assert(triangles<13000&&meshes.length<55);
+  assert(triangles<13000&&meshes.length<(role==='player'?65:55));
+  if(role==='player'){
+   const shells=meshes.filter(m=>m.userData.humanChestSurface),fitted=meshes.filter(m=>m.userData.humanChestFit);
+   assert.equal(shells.length,2);assert.equal(fitted.length,style==='b'?14:10);
+   for(const m of fitted){
+    const {side,depth,embed}=m.userData.humanChestFit,attr=m.geometry.attributes.position;
+    let min=Infinity,max=-Infinity;const q=new T.Vector3();m.updateMatrix();
+    for(let i=0;i<attr.count;i++){
+     q.fromBufferAttribute(attr,i).applyMatrix4(m.matrix);
+     const z=humanChestSurfaceZ(shells,q.x,q.y,side);assert(z!==null,m.name+' superfície');
+     const gap=side*(q.z-z);min=Math.min(min,gap);max=Math.max(max,gap);
+     assert(gap>=-embed-1e-5&&gap<=depth-embed+1e-5,m.name+' segueix superficie');
+    }
+    assert(Math.abs(min+embed)<1e-5&&Math.abs(max-depth+embed)<1e-5,m.name+' encastat i profunditat');
+   }
+   const center=fitted.find(m=>m.name==='Butxaca armilla central'),left=fitted.find(m=>m.name==='Butxaca armilla esquerra'),right=fitted.find(m=>m.name==='Butxaca armilla dreta');
+   assert(left.position.z>center.position.z+.008&&right.position.z>center.position.z+.008,'Butxaques laterals segueixen la curvatura');
+   assert(Math.abs(left.position.z-right.position.z)<1e-6,'Simetria de les butxaques');
+   if(style==='b'){
+    const antenna=meshes.find(m=>m.userData.humanChestAntenna),radio=fitted.find(m=>m.name==='Ràdio');
+    assert(new T.Box3().setFromObject(antenna,true).intersectsBox(new T.Box3().setFromObject(radio,true)),'Antena connectada a la ràdio');
+   }
+   console.log('CHEST FIT',style,fitted.length,'peces','centre/laterals',center.position.z,left.position.z,right.position.z);
+  }
   shapes.add(JSON.stringify(meshes.map(m=>Array.from(m.geometry.attributes.position.array))));
   const restPos=rest.elbowL.position.clone(),headRotation=rest.head.rotation.clone();
   const footBefore=joints.ankleL.getWorldPosition(new T.Vector3());
@@ -59,7 +82,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,21);assert.equal(choices.size,21);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../vehicles-externs-proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V1'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V2'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));

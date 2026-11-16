@@ -1,3 +1,7 @@
+**2026-11-16 · HUMANS V2 · accessoris del pit del protagonista:**
+- [x] A/B/C: butxaques i solapes conformades a la superfície triangular real del tors i armilla; la cara interior penetra lleugerament la superfície. Sivelles, cintes, ràdio i tirants també ajustats; antena connectada a la ràdio. Peces accessibles individualment a l'editor. Mateixa profunditat relativa per les tres butxaques, no mateixa Z.
+- [ ] Validar CI, desplegament i aspecte WebGL. Altres rols i models del joc sense canvis de geometria.
+
 **2026-11-16 · HUMANS V1 · primera versió numerada:**
 - [x] Genoll .50 → .56; cuixa .54 → .49, tíbia .39 → .45, braç .365 → .385, avantbraç .27 → .31. Coll visualment més curt: pujada de la cintura escapular, mentó per sota del pivot, crani avançat i articulació posterior. Malles cranial, coll, pelvis i soles mesurables independentment.
 - [x] Guies 0–8 i punts reals superposats al visor, càmera ortogràfica humana, postura neutra per defecte. Número de versió visible per candidat a partir de l'Object3D carregat, avís de versió anterior en esborranys. Proves numèriques de geometria en els 21 candidats.
