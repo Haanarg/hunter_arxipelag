@@ -18,3 +18,13 @@ assert.notEqual(run("operationReleaseSeries('0.7.0')"),run("operationReleaseSeri
 assert.equal(run("operationRecoveryPairs([a],[{...a,state:{...a.state,t:'tanc'}}]).size"),0);
 assert.equal(run("operationRecoveryPairs([a],[{...a,state:{...a.state,x:11}}]).size"),0);
 console.log('operation recovery: reordered entities, ambiguity, spawn identity, legacy enemy home and release series passed');
+
+// Exercise the actual restore cleanup with the runtime's existing globals only.
+// The obsolete hangar-roof array (HR) no longer exists.
+run(`let Pj=[{o:'projectile'}],grenades=[{o:'grenade'}],fx=[{m:'effect'}],DEAD=[{}];
+const DB=[{m:'debris'}],WA=[{}],removed=[],world={remove:o=>removed.push(o)};
+clearOperationTransientEffects();`);
+assert.equal(run('JSON.stringify(removed)'),JSON.stringify(['projectile','grenade','effect','debris']));
+assert.equal(run('[Pj,grenades,fx,DEAD,DB,WA].reduce((n,a)=>n+a.length,0)'),0);
+assert.equal(run('typeof HR'),'undefined');
+console.log('operation recovery: existing transient collections cleared without obsolete HR');

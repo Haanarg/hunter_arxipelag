@@ -282,6 +282,10 @@ function reconcileOperationSnapshot(source){
   validateOperationRuntime(snapshot,true);
   return {snapshot,report};
 }
+function clearOperationTransientEffects(){
+  for(const collection of [Pj,grenades,fx,DB])for(const e of collection)if(e.o||e.m)world.remove(e.o||e.m);
+  Pj=[];grenades=[];fx=[];DEAD=[];DB.length=WA.length=0;
+}
 function applyOperationSnapshot(snapshot){
   validateOperationRuntime(snapshot,true);
   const r=snapshot.world.runtime,p=snapshot.participants.local.state;
@@ -361,8 +365,7 @@ function applyOperationSnapshot(snapshot){
     [knownVehicleSectors.heli,r.knownVehicleSectors.heli],[knownVehicleSectors.tanc,r.knownVehicleSectors.tanc]]){set.clear();for(const value of values)set.add(value);}
   intelMarks=r.intelMarks.map(m=>({kind:m.kind,label:m.label,ref:operationRegistry.byId.get(m.refId)})).filter(m=>m.ref&&V.includes(m.ref));
   logb=operationClone(r.log);waypoint=r.waypoint?{...r.waypoint}:null;
-  for(const collection of [Pj,grenades,fx,DB])for(const e of collection)if(e.o||e.m)world.remove(e.o||e.m);
-  Pj=[];grenades=[];fx=[];DEAD=[];DB.length=WA.length=HR.length=0;
+  clearOperationTransientEffects();
   clearBulletImpacts();window.HUNTER_STEALTH.clear();clearKeys();setSniperScope(false);
   wallGridCount=-1;vehicleGridVSource=null;vehicleGridESource=null;
   pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;

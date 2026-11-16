@@ -78,9 +78,17 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   }
   shapes.add(JSON.stringify(meshes.map(m=>Array.from(m.geometry.attributes.position.array))));
   const restPos=rest.elbowL.position.clone(),headRotation=rest.head.rotation.clone();
+  // Measure the actual excursion across the stride, not a single instant
+  // that can coincide with the neutral foot pose in the new gait.
+  poseHumanProposal(model,0,'walk',{phase:0,blend:0});
   const footBefore=joints.ankleL.getWorldPosition(new T.Vector3());
-  poseHumanProposal(model,.25,'walk');const footAfter=joints.ankleL.getWorldPosition(new T.Vector3());
-  assert(footBefore.distanceTo(footAfter)>.05);assert(joints.kneeL.rotation.x<=0&&joints.kneeR.rotation.x<=0);
+  let excursion=0;
+  for(let step=1;step<=20;step++){
+   poseHumanProposal(model,0,'walk',{phase:step/20,blend:0});
+   excursion=Math.max(excursion,footBefore.distanceTo(joints.ankleL.getWorldPosition(new T.Vector3())));
+   assert(joints.kneeL.rotation.x<=0&&joints.kneeR.rotation.x<=0);
+  }
+  assert(excursion>.05,'El turmell es desplaça durant la gambada '+role+style);
   poseHumanProposal(model,.25,'crouch');assert(joints.pelvis.position.y<-.25);assert.equal(joints.kneeL.rotation.x,-1.78);
   for(const mode of ['idle','walk','run','crouch','aim','work','wave'])for(const t of [0,.25,.5,1]){
    poseHumanProposal(model,t,mode);model.updateMatrixWorld(true);
