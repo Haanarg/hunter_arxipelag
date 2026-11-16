@@ -37,6 +37,8 @@ jobs:
           node --check src/mi24-proposals.mjs
           node --check src/human-proposals.mjs
           node --check src/human-model-catalog.mjs
+          node --check src/human-lab-evidence.mjs
+          node --check src/human-lab-evidence-ui.mjs
           node --check src/human-current-models.mjs
           node --check tests/kamov-reference-candidates.mjs
           node --check src/t90m-runtime.mjs
@@ -74,6 +76,7 @@ jobs:
           node tests/ka52-proposals.mjs
           node tests/mi24-proposals.mjs
           node tests/human-proposals.mjs
+          node tests/human-lab-evidence.mjs
           node tests/ka60-game-integration.mjs
           node tests/vehicle-live-editor.mjs
           node tests/helicopter-engine-comparison.cjs
@@ -106,26 +109,25 @@ jobs:
           set -euo pipefail
           version="$(sed -n "s/.*GAME_VERSION = '\([^']*\)'.*/\1/p" src/version.mjs)"
           if [ -z "$version" ]; then echo "::error::No s'ha pogut llegir la versió"; exit 1; fi
+          # Compare actual checked-out assets rather than stale hardcoded model IDs.
+          files=(src/version.mjs src/vehicle-specs.mjs src/ka60-runtime.mjs assets/vehicle-candidates/lab-revision.json src/human-proposals.mjs src/human-lab-evidence.mjs src/human-lab-evidence-ui.mjs vehicles-externs-proves.html)
           for attempt in 1 2 3 4 5; do
-            if curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
-              "https://hunter.paradoxa.cat/src/version.mjs?release=$COMMIT" | grep -Fq "GAME_VERSION = '$version'"; then
-              # La versió visible del joc no canvia en una revisió de model.
-              # Comprovam també la nova escala FÍSICA publicada, no només la versió.
-              if curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
-                "https://hunter.paradoxa.cat/src/vehicle-specs.mjs?release=$COMMIT" |
-                grep -Fq 'tanqueta:1.8125,tanc:2,heli:1.75'; then
-                # Comprovar també la revisió de l'editor i l'adaptador real del Ka-60.
-                lab_revision="$(node -p "require('./assets/vehicle-candidates/lab-revision.json').revision")"
-                if curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
-                    "https://hunter.paradoxa.cat/assets/vehicle-candidates/lab-revision.json?release=$COMMIT" | grep -Fq "$lab_revision" &&
-                   curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
-                    "https://hunter.paradoxa.cat/src/ka60-runtime.mjs?release=$COMMIT" | grep -Fq "KA60_RUNTIME_ID='ka60-a-cockpit-body-13'"; then
-                  echo "Paradoxa: versió $version, revisió $lab_revision i Ka-60 A verificats"
-                  exit 0
-                fi
+            failed=0
+            for path in "${files[@]}"; do
+              if ! curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+                -H 'Cache-Control: no-cache' "https://hunter.paradoxa.cat/$path?release=$COMMIT&attempt=$attempt" -o "$RUNNER_TEMP/hunter-published-check"; then
+                echo "No s'ha pogut llegir: $path"
+                failed=1
+              elif ! cmp -s "$path" "$RUNNER_TEMP/hunter-published-check"; then
+                echo "Contingut diferent del commit: $path"
+                failed=1
               fi
+            done
+            if [ "$failed" -eq 0 ]; then
+              echo "Paradoxa: versió $version i assets exactes del commit $COMMIT verificats"
+              exit 0
             fi
             sleep 3
           done
-          echo "::error::Cloudflare ha desplegat, però Paradoxa encara no serveix la versió $version."
+          echo "::error::Cloudflare ha desplegat, però no s'han verificat tots els assets a Paradoxa."
           exit 1

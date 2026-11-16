@@ -110,6 +110,16 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
  <label>Velocitat <input id="humanSpeed" type="range" min="0.25" max="1.5" step="0.05" value="1" aria-label="Velocitat de l’animació"></label>
  <button id="humanRest" type="button">Postura neutra</button>
 </section>
+<details id="humanEvidence" class="annotation-tools" hidden><summary>Fitxa de validació humana · exportació de malles reals</summary>
+ <section class="btr-part-tool"><div class="btr-part-controls">
+ <label>Model <select id="humanEvidenceModel"><option value="0">Actual del joc</option><option value="1">A · Natural</option><option value="2">B · Detallat</option><option value="3">C · Àgil</option></select></label>
+ <label>Estat local <select id="humanEvidenceStatus"><option value="candidate">Candidat</option><option value="testing">En proves</option><option value="selected">Seleccionat (no integrat)</option><option value="regression">Amb regressió</option></select></label>
+ <button id="humanObj" type="button">Exportar OBJ</button><button id="humanEvidenceExport" type="button">Exportar informe JSON</button>
+ </div><p id="humanEvidenceInfo" role="status"></p>
+ <div id="humanChecks" class="btr-part-controls"></div>
+ <label>Observacions i evidència (enllaç de captura, commit o prova)<textarea id="humanEvidenceNotes" rows="3"></textarea></label>
+ <p>Les marques són observacions locals, no acrediten integració. El model actual prové de la fàbrica del joc; A/B/C són només de laboratori. L'OBJ és una instantània geomètrica sense esquelet ni materials vinculats. L'editor JSON conserva els pivots.</p>
+ </section></details>
 <section id="t90Motion" class="t90-motion" hidden aria-label="Provar la torreta del T-90M">
  <button id="t90LabTurret" type="button" aria-pressed="false">TORRETA</button>
  <p>W/S per avançar o retrocedir, A/D per girar. Mantén SHIFT o activa TORRETA per dirigir el canó amb W/S i A/D.</p>
@@ -162,7 +172,7 @@ footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-hei
 <script type="module">
 // Carrega asíncronament per poder mostrar l'error si qualsevol import està
 // trencat. Un error de sintaxi al catàleg ja no deixa un visor en blanc.
-import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261116-human-eight-heads-3&t90m=1')
+import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261116-human-evidence-4&t90m=1')
  .catch(error=>{
   console.error('Error en arrencar el laboratori de vehicles:',error);
   const reason=error instanceof Error?error.message:String(error);

@@ -1,3 +1,8 @@
+**2026-11-16 · Humans: proporcions de vuit caps i connexió amb validació real:**
+- [x] 7 originals i 21 candidats de laboratori; revisió anatòmica `human-proposals-20261116-3`, proves automàtiques superades a Actions 43883072428. Cloudflare acceptà els assets; la verificació final exigia l'escala BTR antiga 1,8125 quan el codi vigent usa 1,45.
+- [x] Editor real: exportació OBJ dels originals i candidats visibles, informe JSON de geometria, articulacions i origen, checklist manual i historial local per perfil/variant/revisió. Els candidats no s'integren automàticament. Verificació de desplegament compara fitxers del commit, sense escala fixa obsoleta.
+- [ ] Validar el nou desplegament, visual WebGL, selecció per l'usuari i posterior integració/animacions reals en partida, inclosos vehicles, mort i terreny. No afirmar validació del joc a partir d'una exportació estàtica ni del Site extern.
+
 **2026-11-16 · Humans: 7 perfils i 21 candidats articulats:**
 - [x] Segona fila de set pastilles vermelles: protagonista, soldat, bazuca, elit, general, pagès presoner i mecànic. Cada perfil conserva el cos actual del joc com a referència neutra i mostra A Natural, B Detallat i C Àgil, a la mateixa alçada del perfil. Els tripulants reutilitzen aquests cossos.
 - [x] Anatomia amb cintura, tòrax, mandíbula, nas, orelles, mans amb dits, botes i roba/equipament segons el rol. 16 articulacions per candidat; repòs, caminar, córrer, ajupir-se, apuntar amb suport de mà esquerra, treballar i saludar. Control de velocitat i pausa; edicions en pivots independents de l’animació.
