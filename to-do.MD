@@ -1,3 +1,7 @@
+**HUMANS V16 · segona verificació:**
+- [x] Ajustada la prova anterior d'amplada que requeria el pivot antic; ara comprova exactament la nova posició V16 i la robustesa del protagonista.
+- [ ] Confirmar pipeline, geometria i publicació.
+
 **2026-11-17 · HUMANS V16 · espatlles anatòmiques:**
 - [x] 14 candidats A/B: deltoides amb cinc seccions menys voluminoses, inserció medial sota la clavícula i unió gradual amb el braç. Pivot lateral apropat 9 mm al cos sense variar l'alçada ni el rig d'espatlla-colze-canell.
 - [x] Clavícula lleugerament més integrada al tors i radi superior del braç reduït (igualment a la màniga curta civil) per evitar una protuberància esfèrica a l'espatlla. Guies i postura neutra preservades.

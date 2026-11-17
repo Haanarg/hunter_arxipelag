@@ -198,7 +198,9 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
    const glasses=model.getObjectByName('Ulleres quadrades');assert(glasses?.userData.humanGlasses==='square');
    const lenses=glasses.children.find(m=>m.userData.batchedParts?.includes('Vidre quadrat'));
    assert(lenses,'Dos vidres quadrats');assert.equal(lenses.geometry.attributes.position.count,72,'Vidres rectangulars amb sis cares');
-   assert(Math.abs(rest.shoulderL.position.x)>.245,'Protagonista més ample d’espatlles');
+   const shoulderWidth=HUMAN_SHOULDER_V16.pivotWidth*HUMAN_STYLES[style].width*1.18;
+   assert(Math.abs(Math.abs(rest.shoulderL.position.x)-shoulderWidth)<1e-7,'Protagonista: pivot lateral actualitzat V16');
+   assert(shoulderWidth>.235,'Protagonista encara ample de tronc i espatlles');
   }
   // Only military roles receive two broad, solid, independently editable
   // straps joining the front vest to the actual backpack surface.

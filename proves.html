@@ -200,14 +200,14 @@ body[data-editor-kind=""] #draw{display:none!important}
  <a id="sectionOpen" target="_blank" rel="noopener noreferrer" href="#" hidden></a>
  <iframe id="sectionFrame" title="Visor de proves" loading="lazy" allow="fullscreen" hidden></iframe>
 </section></main>
-<script type="module" src="./src/proves-hub.mjs?rev=live-editor-20261117-humans-v16-shoulder-blend-1"></script>
+<script type="module" src="./src/proves-hub.mjs?rev=live-editor-20261117-humans-v16-shoulder-blend-2"></script>
 <script type="module">
 let workshopStarted=false;
 function loadWorkshop(){
  if(workshopStarted)return;
  workshopStarted=true;
  // Report import failures instead of leaving a blank editor.
- import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261117-humans-v16-shoulder-blend-1')
+ import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261117-humans-v16-shoulder-blend-2')
   .catch(error=>{
    workshopStarted=false;
    console.error('Error en arrencar l’editor:',error);
