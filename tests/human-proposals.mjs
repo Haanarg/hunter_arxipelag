@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as T from '../vendor/three-r186.module.mjs';
 import {HUMAN_PROFILES,HUMAN_CATALOG,HUMAN_STYLES} from '../src/human-model-catalog.mjs';
-import {createHumanProposal,poseHumanProposal,HUMAN_VERSION,HUMAN_HEAD_ADVANCE,HUMAN_NECK_FOLLOW,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait} from '../src/human-proposals.mjs';
+import {createHumanProposal,setHumanPreviewWeapon,HUMAN_PREVIEW_WEAPONS,poseHumanProposal,HUMAN_VERSION,HUMAN_HEAD_ADVANCE,HUMAN_NECK_FOLLOW,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait} from '../src/human-proposals.mjs';
 import {createCurrentHuman} from '../src/human-current-models.mjs';
 globalThis.window=globalThis;
 assert.equal(HUMAN_CATALOG.length,7);assert(HUMAN_CATALOG.every(c=>!c.validated&&c.kind==='huma'&&c.options.length===2));
@@ -26,7 +26,8 @@ console.log('PASS transició caminar/córrer, fase contínua i flexió de turmel
 for(const [role,p]of Object.entries(HUMAN_PROFILES)){
  assert.throws(()=>createHumanProposal(T,role,'c'),/desconeguda/,'Variant C retirada');
  const actual=await createCurrentHuman(T,role);assert.equal(actual.userData.humanOriginal,role);
- assert(new T.Box3().setFromObject(actual).getSize(new T.Vector3()).y>2.8);
+ assert(Math.abs(new T.Box3().setFromObject(actual).getSize(new T.Vector3()).y-2)<.002,'Original normalitzat proporcionalment a 2 m');
+ assert(actual.userData.previewOnlyScale>0&&actual.userData.previewHeight===2);
  assert.doesNotThrow(()=>new T.ObjectLoader().parse(actual.toJSON()),'Original serialitzable '+role);
  const shapes=new Set();
  for(const style of Object.keys(HUMAN_STYLES)){
@@ -119,7 +120,32 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   assert(Math.abs(size.y-p.height)<.002,'Alçada del joc '+role+style);
   assert(size.x/size.y<.40,'Proporcions estretes, braços i cap humans '+role+style);
   let triangles=0;for(const m of meshes){assert([...m.geometry.attributes.position.array].every(Number.isFinite));assert(m.geometry.userData.labOwned);triangles+=(m.geometry.index?.count??m.geometry.attributes.position.count)/3}
-  assert(triangles<13000&&meshes.length<(role==='player'?65:55));
+  const bodyMeshes=meshes.filter(m=>!m.userData.humanGameWeaponPart);
+  const bodyTriangles=bodyMeshes.reduce((n,m)=>n+(m.geometry.index?.count??m.geometry.attributes.position.count)/3,0);
+  assert(bodyTriangles<13000&&bodyMeshes.length<(role==='player'?65:55));
+  const pads=meshes.filter(m=>m.userData.humanKneePad);
+  assert.equal(pads.length,['player','soldier','rocket','elite'].includes(role)?2:0,'Genolleres ovalades als soldats i al protagonista');
+  for(const pad of pads){
+   assert(pad.geometry.type==='SphereGeometry','Genollera no rectangular');
+   assert(pad.scale.y>pad.scale.x&&pad.scale.z<pad.scale.y*.6,'Genollera ovalada, vertical i convexa');
+  }
+  if(role==='player'){
+   const gameGun=meshes.filter(m=>m.userData.humanGameWeaponPart);
+   assert(gameGun.length>=15,'Pistola real del joc, no rectangle');
+   assert(gameGun.some(m=>m.geometry.type==='CylinderGeometry'),'Canó real de la pistola silenciada');
+   const mount=model.getObjectByName('Arma del joc');
+   assert(mount?.userData.humanGameWeaponSource==='characters.js');
+   assert.equal(mount.userData.humanWeapon,'pistol');
+   for(const type of HUMAN_PREVIEW_WEAPONS){
+    assert.equal(setHumanPreviewWeapon(T,model,type),true,'Es pot seleccionar '+type);
+    assert.equal(mount.userData.humanWeapon,type);
+    assert(mount.children.some(c=>c.userData.gameWeaponType===type),'Arma del joc carregada');
+    assert.doesNotThrow(()=>poseHumanProposal(model,.33,'aim'),'Apuntar amb '+type);
+    assert.doesNotThrow(()=>poseHumanProposal(model,.33,'work'),'Treballar amb '+type);
+    assert.doesNotThrow(()=>poseHumanProposal(model,.33,'run',{phase:.25,blend:1}),'Córrer amb '+type);
+   }
+   setHumanPreviewWeapon(T,model,'pistol');poseHumanProposal(model,0,'rest');
+  }
   if(role==='player'){
    const shells=meshes.filter(m=>m.userData.humanChestSurface),fitted=meshes.filter(m=>m.userData.humanChestFit);
    assert.equal(shells.length,2);assert.equal(fitted.length,style==='b'?14:10);
@@ -157,6 +183,9 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   }
   assert(excursion>.05,'El turmell es desplaça durant la gambada '+role+style);
   poseHumanProposal(model,.25,'crouch');assert(joints.pelvis.position.y<-.25);assert.equal(joints.kneeL.rotation.x,-1.78);
+  assert(joints.spine.rotation.x<-.15,'Ajupir-se: inclinar el cos endavant');
+  poseHumanProposal(model,.25,'work');assert(joints.spine.rotation.x<-.20,'Treballar: inclinar-se endavant');
+  poseHumanProposal(model,.25,'run',{phase:.25,blend:1});assert(joints.spine.rotation.x<-.08,'Córrer: inclinar-se endavant');
   for(const mode of ['idle','walk','run','crouch','aim','work','wave'])for(const t of [0,.25,.5,1]){
    poseHumanProposal(model,t,mode);model.updateMatrixWorld(true);
    model.traverse(n=>assert(n.matrixWorld.elements.every(Number.isFinite),role+style+mode));
@@ -165,14 +194,17 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   // Read the actual transformed soles, not the keyframe intentions.
   const soles=meshes.filter(m=>m.userData.humanLandmark==='sole');assert.equal(soles.length,2);
   const localSoles=()=>soles.map(m=>{const pos=m.geometry.attributes.position,v=new T.Vector3();let low=Infinity;for(let k=0;k<pos.count;k++){v.fromBufferAttribute(pos,k);m.localToWorld(v);model.worldToLocal(v);low=Math.min(low,v.y)}return low});
-  let minPitch=Infinity,maxPitch=-Infinity,maxAir=0;
+  let minPitch=Infinity,maxPitch=-Infinity,maxAir=0,minPelvis=Infinity,maxPelvis=-Infinity;
   for(let k=0;k<80;k++){
    poseHumanProposal(model,0,'run',{phase:k/80,blend:1});
    const foot=joints.ankleL.localToWorld(new T.Vector3(0,0,-.18)).sub(joints.ankleL.getWorldPosition(new T.Vector3())).normalize();
    minPitch=Math.min(minPitch,foot.y);maxPitch=Math.max(maxPitch,foot.y);
    const lows=localSoles();assert(Math.min(...lows)>-.002,'Soles above ground');maxAir=Math.max(maxAir,Math.min(...lows));
+   const y=joints.pelvis.getWorldPosition(new T.Vector3()).y;
+   minPelvis=Math.min(minPelvis,y);maxPelvis=Math.max(maxPelvis,y);
   }
   assert(minPitch<-.35&&maxPitch>.02&&maxAir>.05,'Peu gira i ambdós peus deixen el terra');
+  assert(maxPelvis-minPelvis<.055,'Cos que rebota massa en córrer: '+(maxPelvis-minPelvis));
   poseHumanProposal(model,0,'rest');
   for(const [side,sign] of [['L',-1],['R',1]]){
    const wrist=joints['wrist'+side],hand=wrist.children.find(x=>x.userData.humanHand===side);
@@ -202,7 +234,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,14);assert.equal(choices.size,14);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V7'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V8'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));
@@ -211,6 +243,8 @@ assert(lab.includes('!original&&!currentType.human&&'),'Les proporcions humanes 
 for(const mode of ['walk','run','crouch','aim','work','wave'])assert(html.includes('value="'+mode+'"'));
 assert(!readFileSync(new URL('../src/bootstrap.mjs',import.meta.url),'utf8').includes('human-proposals'),'Candidats fora del joc');
 const evidenceUI=readFileSync(new URL('../src/human-lab-evidence-ui.mjs',import.meta.url),'utf8');
+assert(html.includes('id="humanWeapon"')&&html.includes('id="humanWeaponControl"'));
+assert(html.includes('id="humanGuides" type="checkbox">'),'Guies desmarcades');
 assert(!html.includes('C · Àgil')&&!html.includes('A/B/C')&&!evidenceUI.includes("'c'"),'Sense C al selector ni als informes');
 assert(html.includes('id="sectionTabs"')&&html.includes('data-section="characters"'),'Editor humà a la pàgina principal de proves');
 const liveDetails=html.match(/<details\s+id="liveEditor"[^>]*>/)?.[0];
