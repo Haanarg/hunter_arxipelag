@@ -1,3 +1,9 @@
+**2026-11-17 · HUMANS V9 · orientació d'armes a les postures:**
+- [x] Compensació del canell amb quaternions sobre els eixos reals del model: pistola, AEK-971, SV-98, bazuca i fusells dels soldats cap avall en repòs (també caminant, corrent i treballant); canons horitzontals cap endavant quan apunten.
+- [x] Ganivet amb la fulla vertical cap amunt; cisalla com a eina cap avall. L'IK de la mà esquerra només intenta subjectar les armes llargues i la pistola, no el ganivet ni les cisalles.
+- [x] Tests geomètrics de direcció per a cada arma i postura, incorporant soldats, general i les variants A/B. No es modifica cap model/animació ja aprovats del joc.
+- [ ] Revisió visual WebGL a l'editor de models humans.
+
 **2026-11-17 · HUMANS V8 · armes reals, animació i escala de 2 m:**
 - [x] Genolleres ovalades anatòmiques per als militars A/B; la imatge de referència no és visible en aquest torn.
 - [x] Protagonista A/B: selector de pistola silenciada, AEK-971, SV-98, bazuca, ganivet i cisalla que reutilitza els models geomètrics de `src/characters.js`; pot combinar-se amb tots els moviments.

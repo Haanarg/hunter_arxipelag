@@ -141,9 +141,19 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
     assert.equal(setHumanPreviewWeapon(T,model,type),true,'Es pot seleccionar '+type);
     assert.equal(mount.userData.humanWeapon,type);
     assert(mount.children.some(c=>c.userData.gameWeaponType===type),'Arma del joc carregada');
-    assert.doesNotThrow(()=>poseHumanProposal(model,.33,'aim'),'Apuntar amb '+type);
-    assert.doesNotThrow(()=>poseHumanProposal(model,.33,'work'),'Treballar amb '+type);
-    assert.doesNotThrow(()=>poseHumanProposal(model,.33,'run',{phase:.25,blend:1}),'Córrer amb '+type);
+    const expected=(mode)=>type==='knife'?new T.Vector3(0,1,0):
+     mode==='aim'&&type!=='cutters'?new T.Vector3(0,0,-1):new T.Vector3(0,-1,0);
+    const axis=()=>['knife','cutters'].includes(type)?new T.Vector3(0,-1,0):new T.Vector3(0,0,-1);
+    const checkDirection=(mode)=>{
+     const forward=axis().applyQuaternion(mount.getWorldQuaternion(new T.Quaternion())).normalize();
+     const target=expected(mode).applyQuaternion(model.getWorldQuaternion(new T.Quaternion()));
+     assert(forward.dot(target)>.999,'Orientació '+type+'/'+mode+'; dir='+forward.toArray());
+    };
+    for(const mode of ['rest','idle','walk','run','crouch','work','wave','aim']){
+     const gait=['walk','run'].includes(mode)?{phase:.25,blend:mode==='run'?1:0}:null;
+     assert.doesNotThrow(()=>poseHumanProposal(model,.33,mode,gait),mode+' amb '+type);
+     checkDirection(mode);
+    }
    }
    setHumanPreviewWeapon(T,model,'pistol');poseHumanProposal(model,0,'rest');
   }
@@ -206,6 +216,18 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   }
   assert(minPitch<-.35&&maxPitch>.02&&maxAir>.05,'Peu gira i ambdós peus deixen el terra');
   assert(maxPelvis-minPelvis<.055,'Cos que rebota massa en córrer: '+(maxPelvis-minPelvis));
+  // Every soldier/rocket/general weapon also follows the same correct
+  // muzzle axis, not the old fixed -90-degree offset in aiming poses.
+  if(role!=='player'&&p.weapon){
+   const held=meshes.find(m=>m.parent?.userData.humanWeapon)?.parent;
+   assert(held,'Arma subjecta al canell de '+role);
+   for(const mode of ['rest','aim']){
+    poseHumanProposal(model,0,mode);
+    const dir=new T.Vector3(0,0,-1).applyQuaternion(held.getWorldQuaternion(new T.Quaternion()));
+    const desired=new T.Vector3(0,mode==='aim'?0:-1,mode==='aim'?-1:0);
+    assert(dir.dot(desired)>.999,'Canó de '+role+' en '+mode);
+   }
+  }
   poseHumanProposal(model,0,'rest');
   for(const [side,sign] of [['L',-1],['R',1]]){
    const wrist=joints['wrist'+side],hand=wrist.children.find(x=>x.userData.humanHand===side);
@@ -235,7 +257,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,14);assert.equal(choices.size,14);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V8'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V9'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));

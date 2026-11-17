@@ -1,6 +1,7 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs?rev=humans-v5';
+import * as THREE from '../vendor/three-r186.module.mjs';
 import {createGameWeaponPreview} from './human-weapon-preview.mjs';
-export const HUMAN_VERSION='humans-v8';
+export const HUMAN_VERSION='humans-v9';
 export const HUMAN_PREVIEW_WEAPONS=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters']);
 // Anatomical adjustment for every A/B human candidate. -Z faces forward.
 export const HUMAN_HEAD_ADVANCE=.020;
@@ -366,7 +367,7 @@ export function createHumanProposal(T,role,style='a'){
  };merge(root);
  root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
  root.scale.setScalar(p.height/height);
- root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:8},humanHeight:p.height,labAssemblies:true};
+ root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:9},humanHeight:p.height,labAssemblies:true};
  if(role==='player')setHumanPreviewWeapon(T,root,'pistol');
  return root;
 }
@@ -453,14 +454,33 @@ function flightLift(phase,blend){
  if(p<=.39||p>=.50)return 0;
  return .012*blend*blend*Math.sin(Math.PI*(p-.39)/.11)**2;
 }
+// Correct weapon axis in the model's frame, independent of wrist and elbow
+// rotations. Game firearm muzzles are along local -Z; the real game knife's
+// blade runs along local -Y. This also handles crouching and running without
+// a separate hard-coded +/-90 degree wrist compensation.
+function orientHumanEquippedWeapon(model,weapon,mode,rig){
+ if(!weapon)return;
+ const type=weapon.userData.humanWeapon;
+ const blade=type==='knife',tool=type==='cutters';
+ const source=rig.source.set(0,blade||tool?-1:0,blade||tool?0:-1);
+ const target=rig.direction.set(0,blade?1:mode==='aim'&&!tool?0:-1,blade||tool?0:mode==='aim'?-1:0);
+ model.getWorldQuaternion(rig.modelQ);
+ weapon.parent.getWorldQuaternion(rig.parentQ);
+ target.applyQuaternion(rig.modelQ).applyQuaternion(rig.parentQ.invert()).normalize();
+ weapon.quaternion.setFromUnitVectors(source,target);
+ weapon.updateMatrixWorld(true);
+}
 const rigCache=new WeakMap();
 export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
  let rigs=rigCache.get(root);
- if(!rigs){rigs=[];root.traverse(n=>{if(!n.userData.humanProposal)return;const joints={};let weapon;n.traverse(j=>{const id=j.userData.humanMotionJoint;if(id)joints[id]=j;if(j.userData.humanWeapon)weapon=j});rigs.push({model:n,joints,weapon})});rigCache.set(root,rigs)}
- for(const {model,joints:j,weapon}of rigs){
+ if(!rigs){rigs=[];root.traverse(n=>{if(!n.userData.humanProposal)return;const joints={};let weapon;n.traverse(j=>{const id=j.userData.humanMotionJoint;if(id)joints[id]=j;if(j.userData.humanWeapon)weapon=j});rigs.push({model:n,joints,weapon,orientation:{
+ source:new THREE.Vector3(),direction:new THREE.Vector3(),
+ modelQ:new THREE.Quaternion(),parentQ:new THREE.Quaternion()
+ }})});rigCache.set(root,rigs)}
+ for(const {model,joints:j,weapon,orientation}of rigs){
   const set=(id,x=0,y=0,z=0)=>{if(j[id])j[id].rotation.set(x,y,z)};
   for(const n of Object.values(j)){n.rotation.set(0,0,0);n.position.set(0,0,0)}
-  if(mode==='rest'){model.updateMatrixWorld(true);continue}
+  if(mode==='rest'){model.updateMatrixWorld(true);orientHumanEquippedWeapon(model,weapon,mode,orientation);continue}
   const walk=mode==='walk'||mode==='run',blend=walk?clamp01(locomotion?.blend??(mode==='run'?1:0)):0;
   const cyclePhase=walk?(locomotion?.phase??time*gaitRate(blend)):0,phase=cyclePhase*Math.PI*2,breath=Math.sin(time*1.8);
   // Facing -Z, negative spine X bends the shoulders FORWARD.
@@ -506,7 +526,8 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
    j.pelvis.position.y=walk?mix(planted,stableRun,blend)+flightLift(cyclePhase,blend):planted;
   }
   model.updateMatrixWorld(true);
-  if(mode==='aim'&&weapon&&j.shoulderL&&j.elbowL){
+  orientHumanEquippedWeapon(model,weapon,mode,orientation);
+  if(mode==='aim'&&weapon&&!['knife','cutters'].includes(weapon.userData.humanWeapon)&&j.shoulderL&&j.elbowL){
    // Geometric support-hand IK follows the actual decorative prop, including
    // edits to its position. The palm stays on the grip as the torso turns.
    const target=weapon.position.clone().set(0,-.035,weapon.userData.humanWeapon==='pistol'?.015:-.17);
