@@ -57,7 +57,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   const thighs=meshes.filter(m=>m.userData.humanThighFactor!==undefined);
   assert.equal(thighs.length,2,'Dues cuixes independents');
   const expectedFactor=role==='player'?HUMAN_PLAYER_THIGH_FACTOR:1;
-  const expectedWidth=.104*s.limbs*(role==='player'?1.22:1)*expectedFactor;
+  const expectedWidth=.104*HUMAN_STYLES[style].limbs*(role==='player'?1.22:1)*expectedFactor;
   for(const thigh of thighs){
    assert.equal(thigh.userData.humanThighFactor,expectedFactor);
    const pos=thigh.geometry.attributes.position;
@@ -67,7 +67,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
    assert.equal(thigh.material.color.getHex(),role==='farmer'?0x746c59:target,'Color de cuixa '+role+style);
   }
   if(role==='player'){
-   const torso=meshes.find(m=>m.name==='Tronc anatòmic');
+   const torso=meshes.find(m=>m.name==='Tronc anatòmic'||m.userData.batchedParts?.includes('Tronc anatòmic'));
    assert(torso&&torso.material.color.getHex()===HUMAN_PLAYER_GREEN,'Tronc verd clar igual que cames');
   }
   assert.equal(rest.neck.position.z,.012-HUMAN_NECK_FOLLOW,'Coll vertical avançat 1 cm per mantenir la gola sota la mandíbula');

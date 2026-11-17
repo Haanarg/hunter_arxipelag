@@ -1,3 +1,7 @@
+**HUMANS V15 · segona revisió de proves:**
+- [x] Corregida referència a l'estil A/B de la prova de cuixes; marcatge explícit per evitar que la fusió de malles perdi la referència geomètrica. Ajustada la comprovació del tronc per acceptar agrupació per materials.
+- [ ] CI i desplegament definitiu pendents.
+
 **2026-11-17 · HUMANS V15 · protagonista verd més clar i cuixes més lleugeres:**
 - [x] Referència comprovada al codi del protagonista del joc: palette.player.primary=0x3ee43a. Color del candidat A/B actualitzat de 0x54804a a 0x60c754: més lluminós i proper a l'original sense copiar-ne completament la saturació; mantenir els detalls foscos de l'armilla.
 - [x] Cuixes exclusivament del protagonista A/B afinades un 6% en els radis, sense alterar-ne llargada ni pivots, genolleres, panxells ni botes. Altres 6 rols intactes.
