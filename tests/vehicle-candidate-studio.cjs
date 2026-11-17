@@ -46,12 +46,27 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
  for(const module of ['vehicle-live-editor.mjs','vehicle-candidate-catalog.mjs'])assert(entry.includes(module+'?rev='+revision));
  for(const id of ['liveEditor','vehicleList','humanList','humanMotion','liveClearResolved','sectionTabs','sectionPreview','sectionFrame'])assert(html.includes('id="'+id+'"'),'Missing lab control '+id);
  // Parse the active lab entry and helpers, not tests of retired vehicles.
- for(const file of ['proves-hub.mjs','vehicles-externs-proves.mjs','vehicle-candidate-catalog.mjs','vehicle-live-editor.mjs','vehicle-live-geometry.mjs','vehicle-annotation-editor.mjs','vehicle-hole-brush.mjs','human-proposals.mjs','human-model-catalog.mjs','human-current-models.mjs','human-lab-evidence.mjs','human-lab-evidence-ui.mjs'])execFileSync(process.execPath,['--check',path.join(root,'src',file)],{stdio:'inherit'});
+ for(const file of ['proves-hub.mjs','vehicles-externs-proves.mjs','vehicle-candidate-catalog.mjs','vehicle-live-editor.mjs','vehicle-live-geometry.mjs','vehicle-annotation-editor.mjs','vehicle-hole-brush.mjs','human-proposals.mjs','human-model-catalog.mjs','human-current-models.mjs','human-lab-evidence.mjs','human-lab-evidence-ui.mjs','compound-preview.mjs','compound-concepts.mjs'])execFileSync(process.execPath,['--check',path.join(root,'src',file)],{stdio:'inherit'});
  // Parse the inline startup module as well; broken dynamic imports must block deploy.
  const inline=[...html.matchAll(/<script type="module">([\s\S]*?)<\/script>/g)].map(m=>m[1]);
  assert.equal(inline.length,1,'Exactly one inline editor bootstrap expected');
  execFileSync(process.execPath,['--check','--input-type=module'],{input:inline[0],stdio:['pipe','pipe','pipe']});
  assert(html.includes("import('./src/vehicles-externs-proves.mjs?rev="+revision+"')"));
+ // The compound viewer is standalone, NOT bootstrapped by the game's classic bridges.
+ const compoundHtml=read('compounds-preview.html');
+ assert(!compoundHtml.includes('src/vehicles.js')&&!compoundHtml.includes('src/player-model.js')&&!compoundHtml.includes('src/palette.js'));
+ const compoundEntry=read('src/compound-preview.mjs');
+ const compoundFactory=read('src/compound-concepts.mjs');
+ assert(compoundEntry.includes('window.HUNTER_PLAYER_MODEL=playerModel;'));
+ assert(compoundEntry.includes('window.HUNTER_PALETTE=palette;'));
+ assert(compoundEntry.includes('window.HUNTER_PLAYER_BATCH=playerBatching;'));
+ assert(compoundFactory.includes('vehicleModels.createFactory(T,'));
+ assert(!compoundFactory.includes('window.HUNTER_VEHICLES.createFactory('));
+ assert(compoundHtml.includes('compound-preview.mjs?rev='+revision));
+ assert(compoundEntry.includes('compound-concepts.mjs?rev='+revision));
+ const modelEditor=read('src/vehicles-externs-proves.mjs');
+ assert(/renderer\.setScissorTest\(false\);\s*renderer\.clear\(true,true,true\);\s*renderer\.setScissorTest\(true\);/.test(modelEditor),'The full WebGL canvas must be cleared before each clipped frame');
+ assert(html.includes('body[data-editor-kind=""] #draw{display:none!important}'));
  const hub=await import('../src/proves-hub.mjs');
  assert.deepEqual(hub.SECTIONS.map(s=>s.id),['characters','vehicles','nature','animations','compounds']);
  for(const section of Object.values(hub.SECTION_TOOLS))for(const tool of section)if(tool.url)assert(fs.existsSync(path.join(root,tool.url.split('?')[0])),'Missing preview: '+tool.url);

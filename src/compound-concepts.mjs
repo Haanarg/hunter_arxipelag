@@ -4,6 +4,11 @@ import {refineCompoundLayout} from './compound-layout-rules.mjs';
 import {createCompoundStructures} from './compound-structures.mjs';
 import {STANDARD_BUILDING_DOOR,doorFlankLayout} from './building-shell.mjs';
 import * as T from '../vendor/three-r186.module.mjs';
+import {vehicleModels} from './vehicle-model-core.mjs';
+import {playerBatching} from './player-batching-core.mjs';
+import {createTruckModel} from './truck-model.mjs';
+import {createCivilianCarModel} from './civilian-car-model.mjs';
+import {prepareGazTigrRuntime} from './gaz-tigr-runtime.mjs';
 export function createCompoundConcept(layout){
  layout=refineCompoundLayout(layout);
  const structures=createCompoundStructures();
@@ -170,7 +175,7 @@ export function createCompoundConcept(layout){
   const roof=box(g,5.8,.3,5.8,0x625d4c,0,11,0);roofs.push(roof);tag('Torre',x,12,z);
   for(let y=.4;y<8.5;y+=.65)rod(g,[-.6,y,2.5],[.6,y,2.5],.08,0x687375);
  }
- const makeVehicle=window.HUNTER_VEHICLES.createFactory(T,{box,material:mat,shadows:true});
+ const makeVehicle=vehicleModels.createFactory(T,{box,material:mat,shadows:true,batching:playerBatching,truck:createTruckModel,civilianCar:createCivilianCarModel,gaz:prepareGazTigrRuntime(T,{vehicleScale:vehicleModels.scales.cotxe})});
  for(const v of layout.vehicles){const model=makeVehicle(v.t);model.position.set(v.x,isPort||coast&&v.z>coast.shore?-.05:.25,v.z);model.rotation.y=v.hd;root.add(model);model.userData.previewVehicle=v.t;
   if(v.t==='tanc')tag('Tanc',v.x,5,v.z);}
  for(const [i,[x,z]] of layout.soldiers.entries()){

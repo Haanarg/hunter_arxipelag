@@ -1,4 +1,10 @@
 import * as T from '../vendor/three-r186.module.mjs';
+import {palette,playerModel} from './player-model-core.mjs';
+import {playerBatching} from './player-batching-core.mjs';
+// Stand-alone preview: the game bootstrap is not present.
+window.HUNTER_PALETTE=palette;
+window.HUNTER_PLAYER_MODEL=playerModel;
+window.HUNTER_PLAYER_BATCH=playerBatching;
 import {compoundLayouts as integratedLayouts} from './compound-layouts.mjs';
 import {phase2Layouts} from './compound-phase2-layouts.mjs';
 import {phase3Layouts} from './compound-phase3-layouts.mjs';
@@ -7,7 +13,7 @@ const params=new URLSearchParams(location.search),requested=Number(params.get('f
 let compoundLayouts=phase===4?newWorldLayouts:phase===3?phase3Layouts:phase===2?phase2Layouts:integratedLayouts.filter(l=>!l.phase);
 document.querySelector('.badge').textContent='Fase '+phase+(phase===4?' · dissenys per revisar':' · revisió visual');
 for(const n of[1,2,3,4])document.getElementById('phase'+n).setAttribute('aria-current',phase===n?'page':'false');
-import {createCompoundConcept} from './compound-concepts.mjs?rev=20261029doors';
+import {createCompoundConcept} from './compound-concepts.mjs?rev=live-editor-20261117-compounds-canvas-fix-1';
 const canvas=document.getElementById('scene'),container=canvas.parentElement;
 const renderer=new T.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;
 renderer.shadowMap.enabled=!matchMedia('(pointer:coarse)').matches;renderer.shadowMap.type=T.PCFSoftShadowMap;

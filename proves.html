@@ -100,7 +100,7 @@ body[data-editor-kind="vehicles"] #humanList{display:none}
 #sectionTools button.active{background:var(--green);color:#182d22;border-color:var(--green)}
 #sectionOpen{display:inline-block;margin:0 0 12px;font-size:12px}
 #sectionFrame{display:block;width:100%;height:clamp(550px,78vh,1100px);border:1px solid #53766c;border-radius:12px;background:#10252b}
-body[data-section="nature"] #draw,body[data-section="animations"][data-editor-kind=""] #draw,body[data-section="compounds"] #draw{display:none}
+body[data-editor-kind=""] #draw{display:none!important}
 @media(max-width:650px){#sectionTabs{gap:6px}#sectionTabs button{padding:9px 13px}#sectionFrame{height:82vh;min-height:440px}}
 </style>
 <script type="importmap">{"imports":{"three":"./vendor/three-r186.module.mjs","three/addons/":"./vendor/three-addons/"}}</script>
@@ -199,14 +199,14 @@ body[data-section="nature"] #draw,body[data-section="animations"][data-editor-ki
  <a id="sectionOpen" target="_blank" rel="noopener noreferrer" href="#" hidden></a>
  <iframe id="sectionFrame" title="Visor de proves" loading="lazy" allow="fullscreen" hidden></iframe>
 </section></main>
-<script type="module" src="./src/proves-hub.mjs?rev=live-editor-20261117-proves-sections-1"></script>
+<script type="module" src="./src/proves-hub.mjs?rev=live-editor-20261117-compounds-canvas-fix-1"></script>
 <script type="module">
 let workshopStarted=false;
 function loadWorkshop(){
  if(workshopStarted)return;
  workshopStarted=true;
  // Report import failures instead of leaving a blank editor.
- import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261117-proves-sections-1')
+ import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261117-compounds-canvas-fix-1')
   .catch(error=>{
    workshopStarted=false;
    console.error('Error en arrencar l’editor:',error);

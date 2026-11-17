@@ -4,7 +4,7 @@ import {createHumanProposal,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,
 import {createCurrentHuman} from './human-current-models.mjs?rev=humans-v5';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261117-proves-sections-1';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261117-compounds-canvas-fix-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs?rev=mi24-d-approved-1';
@@ -19,7 +19,7 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261117-proves-sections-1';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261117-compounds-canvas-fix-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const humanList=document.querySelector('#humanList'),ALL_CATALOG=[...CATALOG,...HUMAN_CATALOG];
@@ -541,7 +541,11 @@ function draw(now){
  // Les coordenades setViewport i setScissor de WebGLRenderer ja es
  // multipliquen internament pel pixelRatio. Multiplicar-les aquí deixava
  // els models retallats o totalment fora del canvas en pantalles HiDPI.
- renderer.setClearColor(0x203238,1);
+ // Clear the ENTIRE transparent canvas before drawing clipped card views.
+ // Clearing only scissored regions leaves the last section's silhouettes visible.
+ renderer.setClearColor(0x203238,0);
+ renderer.setScissorTest(false);
+ renderer.clear(true,true,true);
  renderer.setScissorTest(true);
  const windowWidth=innerWidth,windowHeight=innerHeight;
  for(const slot of slots){
