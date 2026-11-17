@@ -1,3 +1,8 @@
+**2026-11-17 · HUMANS V11 · turmells i botes:**
+- [x] Versions A/B dels set rols: pivot del turmell abaixat 4 cm fins a l'encaix de l'empenya, tíbia allargada en conseqüència sense moure els genolls ni la talla de 2 m. Part superior de la bota més baixa, taló més recollit i puntera més curta i estreta, evitant que surti el taló per darrere.
+- [x] Contacte amb el terra recalculat a partir de tots els vèrtexs reals de les soles en moviment en lloc de l'el·lipse antiga; proves de posició del pivot, mides de bota i geometria de taló/puntera.
+- [ ] Confirmació CI, desplegament i validació visual de caminar/córrer. Candidats de laboratori; originals de joc sense substituir.
+
 **2026-11-17 · HUMANS V10 · armes subjectades en córrer:**
 - [x] Pistola de protagonista A/B: segueix la línia colze-canell de la mà dreta durant la cursa; no es queda fixada verticalment.
 - [x] AEK-971, SV-98, bazuca i fusells/bazuca de soldats A/B: arma creuada en diagonal davant del pit; mà dreta al canell de subjecció i esquerra ajustada al guardamà amb IK.

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as T from '../vendor/three-r186.module.mjs';
 import {HUMAN_PROFILES,HUMAN_CATALOG,HUMAN_STYLES} from '../src/human-model-catalog.mjs';
-import {createHumanProposal,setHumanPreviewWeapon,HUMAN_PREVIEW_WEAPONS,poseHumanProposal,HUMAN_VERSION,HUMAN_HEAD_ADVANCE,HUMAN_NECK_FOLLOW,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait} from '../src/human-proposals.mjs';
+import {createHumanProposal,setHumanPreviewWeapon,HUMAN_PREVIEW_WEAPONS,poseHumanProposal,HUMAN_VERSION,HUMAN_HEAD_ADVANCE,HUMAN_NECK_FOLLOW,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait,HUMAN_BOOT_SPEC} from '../src/human-proposals.mjs';
 import {createCurrentHuman} from '../src/human-current-models.mjs';
 globalThis.window=globalThis;
 assert.equal(HUMAN_CATALOG.length,7);assert(HUMAN_CATALOG.every(c=>!c.validated&&c.kind==='huma'&&c.options.length===2));
@@ -44,14 +44,34 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   const anatomy=measureHumanAnatomy(T,model);assert(anatomy);
   const {ratios:r,headUnits,points,unit,skullBounds,neckBounds}=anatomy;
   assert(Math.abs(headUnits-8)<.10,'Vuit caps reals '+role+style);
-  for(const [id,target,tolerance]of [['shoulderL',6.66,.09],['elbowL',5.06,.09],['wristL',3.77,.09],['crotch',4,.07],['tipL',3.20,.10],['kneeL',2.33,.08],['ankleL',.46,.04]])assert(Math.abs(r[id]-target)<tolerance,id+' '+r[id]+' '+role+style);
+  for(const [id,target,tolerance]of [['shoulderL',6.66,.09],['elbowL',5.06,.09],['wristL',3.77,.09],['crotch',4,.07],['tipL',3.20,.10],['kneeL',2.33,.08],['ankleL',.30,.05]])assert(Math.abs(r[id]-target)<tolerance,id+' '+r[id]+' '+role+style);
   for(const id of ['shoulder','elbow','wrist','hip','knee','ankle','tip'])assert(Math.abs(r[id+'L']-r[id+'R'])<.015,id+' simetria');
   assert((points.chin.y-points.shoulderL.y)/unit<.37,'Coll perceptiblement més curt');
   assert((points.head.y-points.chin.y)/unit>.20,'Pivot dins del crani, no sota el mentó');
   assert(points.head.z>(skullBounds.min.z+skullBounds.max.z)/2,'Pivot posterior');
   assert(neckBounds.max.y-points.head.y>unit*.12&&neckBounds.intersectsBox(skullBounds),'Clatell dins el crani');
   assert(rest.elbowL.position.length()+rest.wristL.position.length()>.69,'Braços allargats');
-  assert(rest.ankleL.position.length()>.44&&rest.kneeL.position.length()<.50,'Genolls elevats');
+  assert(rest.ankleL.position.length()>.48&&rest.kneeL.position.length()<.50,'Genolls elevats; turmell abaixat V11');
+  // Measure the indexed shoe and sole vertices, not a nominal bounding box.
+  const boots=meshes.filter(m=>m.userData.humanBootShell),outsoles=meshes.filter(m=>m.userData.humanLandmark==='sole');
+  assert.equal(boots.length,2,'Botes editables a banda i banda');
+  assert.equal(outsoles.length,2,'Soles reals per contacte amb el terra');
+  const rawExtents=m=>{const pos=m.geometry.attributes.position,b={minY:Infinity,maxY:-Infinity,minZ:Infinity,maxZ:-Infinity,maxX:-Infinity};
+   for(let i=0;i<pos.count;i++){b.minY=Math.min(b.minY,pos.getY(i));b.maxY=Math.max(b.maxY,pos.getY(i));b.minZ=Math.min(b.minZ,pos.getZ(i));b.maxZ=Math.max(b.maxZ,pos.getZ(i));b.maxX=Math.max(b.maxX,Math.abs(pos.getX(i)))}return b};
+  for(const boot of boots){
+   const ext=rawExtents(boot);
+   assert(ext.maxY<=HUMAN_BOOT_SPEC.bootTop+.00001,'Bota no puja excessivament per la cama');
+   assert(ext.maxZ<HUMAN_BOOT_SPEC.heelBack+.0001,'Taló no sobresurt del tendó');
+  }
+  for(const sole of outsoles){
+   const ext=rawExtents(sole);
+   assert(Math.abs(ext.minY-HUMAN_BOOT_SPEC.soleBottom)<1e-5);
+   assert(Math.abs(ext.maxZ-HUMAN_BOOT_SPEC.heelBack)<1e-5,'Taló sense sobrevol enrere');
+   assert(Math.abs(ext.minZ-HUMAN_BOOT_SPEC.toeFront)<1e-5,'Puntera proporcionada');
+   assert(Math.abs(ext.maxX-HUMAN_BOOT_SPEC.halfWidth)<1e-5,'Amplada ajustada');
+  }
+  assert(Math.abs((points.ankleL.y-anatomy.floor)/model.scale.y-HUMAN_BOOT_SPEC.ankleHeight)<.002,'Turmell a la unió empenya-cama');
+  assert(new T.Box3().setFromObject(boots[0],true).intersectsBox(new T.Box3().setFromObject(outsoles[0],true)),'Bota i sola contínues');
   console.log('ANATOMY',role,style,JSON.stringify({heads:headUnits,knee:8-r.kneeL,elbow:8-r.elbowL,wrist:8-r.wristL,tip:8-r.tipL,neckGap:(points.chin.y-points.shoulderL.y)/unit}));
   // Front-face culling must show the nose from the front and both sides.
   const nose=meshes.find(m=>m.userData.humanLandmark==='nose');

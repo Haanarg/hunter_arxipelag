@@ -1,7 +1,7 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs?rev=humans-v5';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {createGameWeaponPreview} from './human-weapon-preview.mjs';
-export const HUMAN_VERSION='humans-v10';
+export const HUMAN_VERSION='humans-v11';
 export const HUMAN_PREVIEW_WEAPONS=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters']);
 // Anatomical adjustment for every A/B human candidate. -Z faces forward.
 export const HUMAN_HEAD_ADVANCE=.020;
@@ -11,8 +11,11 @@ export const HUMAN_NECK_FOLLOW=.010;
 
 // Eight-head anatomical template, before role-specific headwear and game scaling.
 // Reference image: knee slightly above division 6; elbows near 5 heads from floor;
-// fingertips below crotch. Sole 0; ankle .11; knee .56; crotch .96; crown 1.92.
-const BODY=Object.freeze({pelvis:1.09,hip:-.04,thigh:.49,shin:.45,sole:.11,spine:.075,shoulder:.435,upperArm:.385,forearm:.310,handGrip:.068});
+// fingertips below crotch. Sole 0; ankle .07; knee .56; crotch .96; crown 1.92.
+// V11: the ankle hinge is at the instep/leg junction rather than high inside
+// the boot. A longer lower leg is balanced by a shallower, shorter shoe.
+export const HUMAN_BOOT_SPEC=Object.freeze({ankleHeight:.07,soleBottom:-.070,heelBack:.060,toeFront:-.162,halfWidth:.057,bootTop:.085});
+const BODY=Object.freeze({pelvis:1.09,hip:-.04,thigh:.49,shin:.49,sole:HUMAN_BOOT_SPEC.ankleHeight,spine:.075,shoulder:.435,upperArm:.385,forearm:.310,handGrip:.068});
 // Sample the actual triangulated, faceted torso/vest surface in torso-local
 // coordinates. Intersect the vertical Z line with each projected triangle;
 // take the outermost hit. This includes the vest taper and width variants.
@@ -193,9 +196,13 @@ export function createHumanProposal(T,role,style='a'){
   oval(knee,'Ròtula',[.067*L,.063,.065*L],[0,0,-.005],p.uniform);
   limb(knee,'Panxell',BODY.shin,.064*L,.076*L,.040*L,role==='farmer'?0x746c59:p.uniform);
   const ankle=joint(knee,'ankle'+suffix,'Turmell '+label,[0,-BODY.shin,0]);feet.push(ankle);
-  loft(ankle,'Bota',[[.10,.049,.050,.01],[.015,.055,.065,.003],[-.035,.062,.125,-.055],[-.087,.064,.134,-.057]],shoe);
-  loft(ankle,'Sola',[[ -.086,.065,.135,-.057],[-.11,.065,.135,-.057]],0x1d2521).userData.humanLandmark='sole';
-  if(s.detail===2)for(let j=0;j<4;j++)box(ankle,'Cordons',[.066,.008,.014],[0,.015-j*.010,-.045-j*.021],0x8b8b74);
+  // The boot follows the lower shin. The pivot sits at the real instep
+  // junction; the heel no longer protrudes far behind the Achilles tendon.
+  const boot=loft(ankle,'Bota',[[.085,.045,.045,.006],[.042,.047,.055,.003],[.007,.050,.072,-.017],[-.030,.055,.102,-.051],[-.054,.055,.109,-.051]],shoe);
+  boot.userData.humanBootShell=true;
+  const sole=loft(ankle,'Sola',[[-.054,.057,.111,-.051],[-.070,.057,.111,-.051]],0x1d2521);
+  sole.userData.humanLandmark='sole';
+  if(s.detail===2)for(let j=0;j<4;j++)box(ankle,'Cordons',[.058,.006,.012],[0,.045-j*.010,-.052-j*.011],0x8b8b74);
   const shoulder=joint(torso,'shoulder'+suffix,'Espatlla '+label,[side*.211*W,BODY.shoulder,.006]);
   loft(shoulder,'Deltoide',[[.035,.038*L,.045*L],[.007,.066*L,.072*L],[-.047,.078*L,.081*L],[-.103,.065*L,.064*L],[-.14,.046*L,.046*L]],p.uniform);
   const bare=p.civilian&&role!=='mechanic';
@@ -372,7 +379,7 @@ export function createHumanProposal(T,role,style='a'){
  };merge(root);
  root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
  root.scale.setScalar(p.height/height);
- root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:10},humanHeight:p.height,labAssemblies:true};
+ root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:11},humanHeight:p.height,labAssemblies:true};
  if(role==='player')setHumanPreviewWeapon(T,root,'pistol');
  return root;
 }
@@ -519,12 +526,12 @@ function supportHumanRunningLongGun(model,weapon,j,rig){
 const rigCache=new WeakMap();
 export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
  let rigs=rigCache.get(root);
- if(!rigs){rigs=[];root.traverse(n=>{if(!n.userData.humanProposal)return;const joints={};let weapon;n.traverse(j=>{const id=j.userData.humanMotionJoint;if(id)joints[id]=j;if(j.userData.humanWeapon)weapon=j});rigs.push({model:n,joints,weapon,orientation:{
+ if(!rigs){rigs=[];root.traverse(n=>{if(!n.userData.humanProposal)return;const joints={},soles=[];let weapon;n.traverse(j=>{const id=j.userData.humanMotionJoint;if(id)joints[id]=j;if(j.userData.humanWeapon)weapon=j;if(j.userData.humanLandmark==='sole')soles.push(j)});rigs.push({model:n,joints,soles,weapon,orientation:{
  source:new THREE.Vector3(),direction:new THREE.Vector3(),
  modelQ:new THREE.Quaternion(),parentQ:new THREE.Quaternion(),
- wrist:new THREE.Vector3(),elbow:new THREE.Vector3(),gripWorld:new THREE.Vector3(),down:new THREE.Vector3()
+ wrist:new THREE.Vector3(),elbow:new THREE.Vector3(),gripWorld:new THREE.Vector3(),down:new THREE.Vector3(),footPoint:new THREE.Vector3()
  }})});rigCache.set(root,rigs)}
- for(const {model,joints:j,weapon,orientation}of rigs){
+ for(const {model,joints:j,soles,weapon,orientation}of rigs){
   const set=(id,x=0,y=0,z=0)=>{if(j[id])j[id].rotation.set(x,y,z)};
   for(const n of Object.values(j)){n.rotation.set(0,0,0);n.position.set(0,0,0)}
   if(mode==='rest'){model.updateMatrixWorld(true);orientHumanEquippedWeapon(model,weapon,mode,orientation,j);continue}
@@ -569,14 +576,15 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
   // true aerial phase in the running cycle.
   if(j.pelvis)set('pelvis',0,walk?-Math.sin(phase)*.008:0,walk?Math.cos(phase)*.006:0);
   model.updateMatrixWorld(true);
-  // Measure actual transformed sole contact points, including editable
-  // leg lengths and pelvis roll. No previous fixed skeleton dimensions.
+  // V11: sample the actual outsole vertices, not the V3 ellipse.
+  // This remains correct when the boot profile, pivot or stride is edited.
   let lowest=Infinity;
-  for(const side of ['L','R']){
-   const ankle=j['ankle'+side];if(!ankle)continue;
-   for(let k=0;k<12;k++){
-    const a=k*Math.PI/6,point=ankle.position.clone().set(.065*Math.cos(a),-BODY.sole,-.057+.135*Math.sin(a));
-    ankle.localToWorld(point);model.worldToLocal(point);lowest=Math.min(lowest,point.y);
+  for(const sole of soles){
+   const positions=sole.geometry.attributes.position;
+   for(let k=0;k<positions.count;k++){
+    const point=orientation.footPoint.fromBufferAttribute(positions,k);
+    sole.localToWorld(point);model.worldToLocal(point);
+    lowest=Math.min(lowest,point.y);
    }
   }
   // Avoid using the swing-foot's height as the whole body's vertical
