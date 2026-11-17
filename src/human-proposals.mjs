@@ -1,7 +1,7 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs?rev=humans-v5';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {createGameWeaponPreview} from './human-weapon-preview.mjs';
-export const HUMAN_VERSION='humans-v9';
+export const HUMAN_VERSION='humans-v10';
 export const HUMAN_PREVIEW_WEAPONS=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters']);
 // Anatomical adjustment for every A/B human candidate. -Z faces forward.
 export const HUMAN_HEAD_ADVANCE=.020;
@@ -353,6 +353,11 @@ export function createHumanProposal(T,role,style='a'){
    box(weapon,'Empunyadura arma',[.04,.08,.05],[0,-.038,.012],p.trim);
    if(rifle){box(weapon,'Culata',[.043,.07,.17],[0,.012,.13],p.trim);box(weapon,'Carregador',[.033,.10,.06],[0,-.06,-.10],dark);const barrel=tube(weapon,'Canó visual',.012,.014,.27,[0,.018,-.36],dark,8);barrel.rotation.x=Math.PI/2}
   }
+  if(p.weapon==='rocket'||p.weapon==='rifle'){
+   const grip=group(weapon,'Presa esquerra de cursa');
+   grip.position.set(p.weapon==='rocket'?-.075:-.044,-.03,p.weapon==='rocket'?-.40:-.205);
+   grip.userData.humanRunSupportGrip=true;
+  }
  }
  // Batch only within each rigid assembly; joints, clothing and accessories
  // remain addressable in the editor and in JSON drafts.
@@ -367,7 +372,7 @@ export function createHumanProposal(T,role,style='a'){
  };merge(root);
  root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
  root.scale.setScalar(p.height/height);
- root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:9},humanHeight:p.height,labAssemblies:true};
+ root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:10},humanHeight:p.height,labAssemblies:true};
  if(role==='player')setHumanPreviewWeapon(T,root,'pistol');
  return root;
 }
@@ -396,6 +401,13 @@ export function setHumanPreviewWeapon(T,root,kind){
    for(const mat of Array.isArray(obj.material)?obj.material:[obj.material])mat.userData.labOwned=true;
   }
  });
+ if(['assault','sniper','bazooka'].includes(kind)){
+  const grip=new T.Object3D();
+  grip.name='Presa esquerra de cursa';
+  grip.position.set(...{assault:[-.11,-.12,-.95],sniper:[-.13,-.17,-1.15],bazooka:[-.22,-.31,-.60]}[kind]);
+  grip.userData.humanRunSupportGrip=true;
+  visual.add(grip);
+ }
  mount.add(visual);
  mount.userData.humanWeapon=kind;
  mount.userData.humanGameWeaponSource='characters.js';
@@ -458,22 +470,51 @@ function flightLift(phase,blend){
 // rotations. Game firearm muzzles are along local -Z; the real game knife's
 // blade runs along local -Y. This also handles crouching and running without
 // a separate hard-coded +/-90 degree wrist compensation.
-function orientHumanEquippedWeapon(model,weapon,mode,rig){
+function orientHumanEquippedWeapon(model,weapon,mode,rig,j){
  if(!weapon)return;
  const type=weapon.userData.humanWeapon;
  const blade=type==='knife',tool=type==='cutters';
+ const long=['rocket','bazooka','sniper','assault','rifle'].includes(type);
  const source=rig.source.set(0,blade||tool?-1:0,blade||tool?0:-1);
- const long=type==='rocket'||type==='bazooka'||type==='sniper'||type==='assault'||type==='rifle';
- // While crouching or working, a long muzzle held straight down could pierce
- // the ground. Carry it across the knees, pitched slightly toward the floor.
  const lowered=long&&(mode==='crouch'||mode==='work');
- const target=rig.direction.set(0,blade?1:mode==='aim'&&!tool?0:lowered?-.20:-1,
-  blade||tool?0:mode==='aim'?-1:lowered?-.9797958971:0);
- model.getWorldQuaternion(rig.modelQ);
+ const target=rig.direction;
+ if(mode==='run'&&type==='pistol'&&j?.elbowR&&j.wristR){
+  // Right-arm swing drives the pistol. No frozen model-space barrel axis.
+  target.copy(j.wristR.getWorldPosition(rig.wrist)).sub(j.elbowR.getWorldPosition(rig.elbow)).normalize();
+ }else{
+  target.set(mode==='run'&&long?-.60:0,
+   blade?1:mode==='aim'&&!tool?0:mode==='run'&&long?-.12:lowered?-.20:-1,
+   blade||tool?0:mode==='aim'?-1:mode==='run'&&long?-.79:lowered?-.9797958971:0)
+   .normalize().applyQuaternion(model.getWorldQuaternion(rig.modelQ));
+ }
  weapon.parent.getWorldQuaternion(rig.parentQ);
- target.applyQuaternion(rig.modelQ).applyQuaternion(rig.parentQ.invert()).normalize();
+ target.applyQuaternion(rig.parentQ.invert()).normalize();
  weapon.quaternion.setFromUnitVectors(source,target);
  weapon.updateMatrixWorld(true);
+}
+
+// The left hand tracks an actual fore-end anchor; right wrist remains the
+// primary grip and weapon parent. Both arms follow the running skeleton.
+function supportHumanRunningLongGun(model,weapon,j,rig){
+ let grip=null;weapon.traverse(n=>{if(n.userData.humanRunSupportGrip)grip=n});
+ if(!grip||!j.shoulderL||!j.elbowL||!j.wristL)return;
+ model.updateMatrixWorld(true);
+ const target=grip.getWorldPosition(rig.gripWorld);
+ j.shoulderL.parent.worldToLocal(target);
+ const upper=j.elbowL.parent.position.length();
+ const lower=j.wristL.parent.position.length()+BODY.handGrip;
+ const d=Math.min(upper+lower-.001,Math.max(.001,target.length()));
+ const axis=target.clone().normalize(),along=(upper*upper+d*d-lower*lower)/(2*d);
+ const radius=Math.sqrt(Math.max(0,upper*upper-along*along));
+ const pole=new THREE.Vector3(-.48,-.72,.30);
+ pole.addScaledVector(axis,-pole.dot(axis)).normalize();
+ const bend=axis.clone().multiplyScalar(along).addScaledVector(pole,radius);
+ const down=rig.down.set(0,-1,0);
+ j.shoulderL.quaternion.setFromUnitVectors(down,bend.clone().normalize());
+ const direction=target.clone().sub(bend).normalize().applyQuaternion(j.shoulderL.quaternion.clone().invert());
+ j.elbowL.quaternion.setFromUnitVectors(down,direction);
+ j.wristL.rotation.set(0,0,-.14);
+ model.updateMatrixWorld(true);
 }
 const rigCache=new WeakMap();
 export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
