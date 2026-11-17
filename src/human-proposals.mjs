@@ -364,7 +364,8 @@ export function createHumanProposal(T,role,style='a'){
   let parent;root.traverse(n=>{if(n.userData.humanMotionJoint==='wristR')parent=n});
   const weapon=group(parent,role==='player'?'Arma del joc':p.weapon==='rocket'?'Bazuca':p.weapon==='rifle'?'Fusell':'Pistola');
   weapon.position.set(0,-.055,role==='player'?-.09:-.015);
-  weapon.rotation.x=role==='player'?0:-Math.PI/2;
+  // Enlarged launcher starts in its safe angled carry pose before sizing the human.
+  weapon.rotation.x=role==='player'?0:p.weapon==='rocket'?-0.695:-Math.PI/2;
   weapon.userData.humanWeapon=p.weapon;
   if(role==='player'){
    // Meshes installed after batching so they stay individually selectable.
