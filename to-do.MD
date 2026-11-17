@@ -13,30 +13,35 @@
 
 **2026-11-16 · HUMANS V4 · mans:**
 - [x] Mans dels 21 candidats alineades amb les cuixes, dors exterior, polzes cap a -Z (davant), simetria esquerra/dreta. Palmell i quatre dits en una única superfície tancada amb canals suaus i puntes diferenciades, sense salt al dors. Polze solapat. El grup anatòmic gira independentment del pivot animat i l'ancoratge de l'arma; mesura dels dits actualitzada. Es conserven proporcions i cicles V3.
-- [ ] Validació CI, HTTP i visual. Originals del joc intactes.
+- [x] Validació CI i HTTP: suite `test:lab` 5/5 i assets verificats a Paradoxa (Actions 44074027459). Originals del joc intactes.
+- [ ] Validació visual WebGL de mans i polzes.
 
 **2026-11-16 · HUMANS V3 · animació de cursa i transició de marxa:**
 - [x] Cicles periòdics de marxa/cursa amb suport, impuls de punta, flexió pròpia de turmell, recuperació del peu, genoll doblegat i fase aèria de cursa. Correcció de contacte de soles inclinades. Transició bidireccional gradual de totes les articulacions amb fase contínua i cadència interpolada; indicador de mescla al visor.
-- [ ] Validació CI, HTTP i visual. Propostes només de laboratori; sense integrar al joc.
+- [x] Validació CI i HTTP: suite `test:lab` 5/5 i assets verificats a Paradoxa (Actions 44074027459). Propostes només de laboratori.
+- [ ] Validació visual WebGL del cicle de cursa i les transicions.
 
 **2026-11-16 · HUMANS V2 · accessoris del pit del protagonista:**
 - [x] A/B/C: butxaques i solapes conformades a la superfície triangular real del tors i armilla; la cara interior penetra lleugerament la superfície. Sivelles, cintes, ràdio i tirants també ajustats; antena connectada a la ràdio. Peces accessibles individualment a l'editor. Mateixa profunditat relativa per les tres butxaques, no mateixa Z.
 - [x] Triangulació del tors i armilla del protagonista reflectida a X=0 amb segments múltiples de quatre, per garantir la simetria dels accessoris ajustats. Primera prova CI detectà asimetria de les diagonals.
-- [ ] Validar CI, desplegament i aspecte WebGL. Altres rols i models del joc sense canvis de geometria.
+- [x] CI i desplegament verificats: suite `test:lab` 5/5, assets confirmats a Paradoxa (Actions 44074027459). Altres rols i models del joc sense canvis de geometria.
+- [ ] Validació visual WebGL de butxaques i accessoris.
 
 **2026-11-16 · HUMANS V1 · primera versió numerada:**
 - [x] Genoll .50 → .56; cuixa .54 → .49, tíbia .39 → .45, braç .365 → .385, avantbraç .27 → .31. Coll visualment més curt: pujada de la cintura escapular, mentó per sota del pivot, crani avançat i articulació posterior. Malles cranial, coll, pelvis i soles mesurables independentment.
 - [x] Guies 0–8 i punts reals superposats al visor, càmera ortogràfica humana, postura neutra per defecte. Número de versió visible per candidat a partir de l'Object3D carregat, avís de versió anterior en esborranys. Proves numèriques de geometria en els 21 candidats.
-- [ ] Validació CI, HTTP i aspecte WebGL. Candidats només de laboratori; cap substitució al joc.
+- [x] CI i HTTP verificats: suite `test:lab` 5/5, assets confirmats a Paradoxa (Actions 44074027459). Candidats només de laboratori.
+- [ ] Validació visual WebGL de proporcions, pivot cranial i guies.
 
 **2026-11-16 · Verificació Cloudflare del laboratori:**
 - [x] Actions 43919284014: proves de 7 originals i 21 candidats, build i deploy Wrangler correctes; primera lectura del nou mòdul 404 transitòria. El comparador HTTP no seguia redireccions HTML canòniques. Afegit curl --location, comprovació byte a byte de totes les dependències humanes, diagnòstic d'URL final/hash, reintents amb espera creixent i revalidació de l'HTML/manifest.
-- [ ] Confirmar la nova verificació HTTP final. No s'ha modificat cap malla ni la versió del joc.
+- [x] Confirmació HTTP posterior: Actions 44074027459 comprova els assets del laboratori byte a byte a Paradoxa. Les malles del joc i la versió no han canviat.
 
 **2026-11-16 · Humans: proporcions de vuit caps i connexió amb validació real:**
 - [x] 7 originals i 21 candidats de laboratori; revisió anatòmica `human-proposals-20261116-3`, proves automàtiques superades a Actions 43883072428. Cloudflare acceptà els assets; la verificació final exigia l'escala BTR antiga 1,8125 quan el codi vigent usa 1,45.
 - [x] Editor real: exportació OBJ dels originals i candidats visibles, informe JSON de geometria, articulacions i origen, checklist manual i historial local per perfil/variant/revisió. Els candidats no s'integren automàticament. Verificació de desplegament compara fitxers del commit, sense escala fixa obsoleta.
-- [ ] Validar el nou desplegament, visual WebGL, selecció per l'usuari i posterior integració/animacions reals en partida, inclosos vehicles, mort i terreny. No afirmar validació del joc a partir d'una exportació estàtica ni del Site extern.
+- [x] Desplegament del laboratori i assets verificats per CI/HTTP (Actions 44074027459).
+- [ ] Valorar visualment els candidats en WebGL, seleccionar-los explícitament i, només després, integrar/validar animacions i models en partida (vehicles, mort, terreny). Les exportacions estàtiques no validen el joc.
 
 **2026-11-16 · Humans: 7 perfils i 21 candidats articulats:**
 - [x] Segona fila de set pastilles vermelles: protagonista, soldat, bazuca, elit, general, pagès presoner i mecànic. Cada perfil conserva el cos actual del joc com a referència neutra i mostra A Natural, B Detallat i C Àgil, a la mateixa alçada del perfil. Els tripulants reutilitzen aquests cossos.
