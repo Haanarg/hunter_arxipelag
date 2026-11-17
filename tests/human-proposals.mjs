@@ -35,7 +35,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   assert.equal(Object.keys(joints).length,16);
   assert.equal(rest.neck.position.z,.012-HUMAN_NECK_FOLLOW,'Coll vertical avançat 1 cm per mantenir la gola sota la mandíbula');
   assert.equal(rest.head.position.z,.065-(HUMAN_HEAD_ADVANCE-HUMAN_NECK_FOLLOW),'Pivot del cap avançat respecte del coll');
-  assert.equal((.012-rest.neck.position.z)+(.065-rest.head.position.z),HUMAN_HEAD_ADVANCE,'Cap avançat 2 cm en conjunt');
+  assert(Math.abs((.012-rest.neck.position.z)+(.065-rest.head.position.z)-HUMAN_HEAD_ADVANCE)<1e-9,'Cap avançat 2 cm en conjunt');
   assert.equal(rest.kneeL.parent,joints.hipL);assert.equal(rest.ankleR.parent,joints.kneeR);
   assert.equal(rest.elbowL.parent,joints.shoulderL);assert.equal(rest.wristR.parent,joints.elbowR);
   poseHumanProposal(model,0,'rest');

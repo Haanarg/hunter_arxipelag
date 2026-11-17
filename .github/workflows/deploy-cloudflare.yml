@@ -9,6 +9,8 @@ on:
       - 'src/version.mjs'
       - 'assets/vehicle-candidates/lab-revision.json'
       - 'src/hovercraft-concepts.mjs'
+      - 'src/human-proposals.mjs'
+      - 'tests/human-proposals.mjs'
       - 'tests/vehicle-candidate-studio.cjs'
       - '.github/workflows/deploy-cloudflare.yml'
 permissions:
