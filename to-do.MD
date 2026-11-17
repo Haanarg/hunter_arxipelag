@@ -1,3 +1,7 @@
+**2026-11-17 · HUMANS V11 · verificació de geometria:**
+- [x] Les primeres proves detectaren una discrepància de la punta i el taló perquè els perfils de 10/14 segments no tenien vèrtex als eixos 90°; corregit amb 12/16 segments per reproduir extrems i mesurar-los exactament.
+- [ ] Repetir verificació CI i desplegament sobre la revisió ankle-2.
+
 **2026-11-17 · HUMANS V11 · turmells i botes:**
 - [x] Versions A/B dels set rols: pivot del turmell abaixat 4 cm fins a l'encaix de l'empenya, tíbia allargada en conseqüència sense moure els genolls ni la talla de 2 m. Part superior de la bota més baixa, taló més recollit i puntera més curta i estreta, evitant que surti el taló per darrere.
 - [x] Contacte amb el terra recalculat a partir de tots els vèrtexs reals de les soles en moviment en lloc de l'el·lipse antiga; proves de posició del pivot, mides de bota i geometria de taló/puntera.

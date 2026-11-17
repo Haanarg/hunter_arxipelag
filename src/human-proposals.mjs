@@ -198,9 +198,10 @@ export function createHumanProposal(T,role,style='a'){
   const ankle=joint(knee,'ankle'+suffix,'Turmell '+label,[0,-BODY.shin,0]);feet.push(ankle);
   // The boot follows the lower shin. The pivot sits at the real instep
   // junction; the heel no longer protrudes far behind the Achilles tendon.
-  const boot=loft(ankle,'Bota',[[.085,.045,.045,.006],[.042,.047,.055,.003],[.007,.050,.072,-.017],[-.030,.055,.102,-.051],[-.054,.055,.109,-.051]],shoe);
+  const bootSegments=Math.ceil(s.segments/4)*4; // Exact lateral/toe/heel silhouette at 90° intervals.
+  const boot=loft(ankle,'Bota',[[.085,.045,.045,.006],[.042,.047,.055,.003],[.007,.050,.072,-.017],[-.030,.055,.102,-.051],[-.054,.055,.109,-.051]],shoe,bootSegments);
   boot.userData.humanBootShell=true;
-  const sole=loft(ankle,'Sola',[[-.054,.057,.111,-.051],[-.070,.057,.111,-.051]],0x1d2521);
+  const sole=loft(ankle,'Sola',[[-.054,.057,.111,-.051],[-.070,.057,.111,-.051]],0x1d2521,bootSegments);
   sole.userData.humanLandmark='sole';
   if(s.detail===2)for(let j=0;j<4;j++)box(ankle,'Cordons',[.058,.006,.012],[0,.045-j*.010,-.052-j*.011],0x8b8b74);
   const shoulder=joint(torso,'shoulder'+suffix,'Espatlla '+label,[side*.211*W,BODY.shoulder,.006]);
