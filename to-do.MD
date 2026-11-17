@@ -1,5 +1,5 @@
 **2026-11-17 · HUMANS V6 · avanç del cap i reducció del clatell:**
-- [x] Avançat **0,020 unitats anatòmiques** cap a -Z el pivot del cap de tots els 14 candidats humans A/B (set rols), sense moure l'eix vertical del coll. La mandíbula, el nas, les ulleres, el barret i el cabell es mouen com una unitat i conserven l'animació.
+- [x] Avançat **0,020 unitats anatòmiques** cap a -Z el pivot del cap de tots els 14 candidats humans A/B (set rols), amb el coll avançat 0,010 unitats (eix recte i gola connectada). La mandíbula, el nas, les ulleres, el barret i el cabell es mouen com una unitat i conserven l'animació.
 - [x] Actualitzades les etiquetes V6, la revisió del laboratori i el test geomètric per a tots els rols i variants; es mantenen les comprovacions existents de gola-crani, proporcions i articulacions.
 - [ ] Validació visual del nou perfil al navegador. Els set originals del joc continuen intactes com a referència, d'acord amb la regla d'aprovar abans d'integrar candidats.
 
