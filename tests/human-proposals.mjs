@@ -131,7 +131,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   }
   if(role==='player'){
    const gameGun=meshes.filter(m=>m.userData.humanGameWeaponPart);
-   assert(gameGun.length>=15,'Pistola real del joc, no rectangle');
+   assert(gameGun.length>=5,'Pistola real del joc, no rectangle (malles agrupades per material)');
    assert(gameGun.some(m=>m.geometry.type==='CylinderGeometry'),'Canó real de la pistola silenciada');
    const mount=model.getObjectByName('Arma del joc');
    assert(mount?.userData.humanGameWeaponSource==='characters.js');
