@@ -1,3 +1,9 @@
+**2026-11-17 · HUMANS V10 · armes subjectades en córrer:**
+- [x] Pistola de protagonista A/B: segueix la línia colze-canell de la mà dreta durant la cursa; no es queda fixada verticalment.
+- [x] AEK-971, SV-98, bazuca i fusells/bazuca de soldats A/B: arma creuada en diagonal davant del pit; mà dreta al canell de subjecció i esquerra ajustada al guardamà amb IK.
+- [x] Proves geomètriques de direcció, canells i preses en diferents fases de la cursa; genolleres i la resta de postures preservades.
+- [ ] Confirmació visual WebGL de la cursa i del contacte de les dues mans abans d'aprovar els models per al joc.
+
 **2026-11-17 · HUMANS V9 · correcció posterior de col·lisió:**
 - [x] Armes llargues en ajupir-se i treballar: postura de transport sobre els genolls, amb el canó lleugerament cap avall per evitar que travessi el terra; repòs general vertical cap avall i apuntat horitzontal es mantenen sense canvis.
 

@@ -151,8 +151,20 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
     const axis=()=>['knife','cutters'].includes(type)?new T.Vector3(0,-1,0):new T.Vector3(0,0,-1);
     const checkDirection=(mode)=>{
      const forward=axis().applyQuaternion(mount.getWorldQuaternion(new T.Quaternion())).normalize();
-     const target=expected(mode).applyQuaternion(model.getWorldQuaternion(new T.Quaternion()));
-     assert(forward.dot(target)>.999,'Orientació '+type+'/'+mode+'; dir='+forward.toArray());
+     if(mode==='run'&&type==='pistol'){
+      const arm=joints.wristR.getWorldPosition(new T.Vector3()).sub(joints.elbowR.getWorldPosition(new T.Vector3())).normalize();
+      assert(forward.dot(arm)>.995,'Pistola seguint l’eix real del braç dret');
+     }else if(mode==='run'&&['assault','sniper','bazooka'].includes(type)){
+      const local=forward.applyQuaternion(model.getWorldQuaternion(new T.Quaternion()).invert());
+      assert(local.x<-.50&&local.z<-.70&&local.y<-.08,'Arma llarga creuada davant del cos');
+      let grip=null;mount.traverse(n=>{if(n.userData.humanRunSupportGrip)grip=n});
+      assert(grip,'Presa esquerra de cursa per a '+type);
+      const contact=grip.getWorldPosition(new T.Vector3()).distanceTo(joints.wristL.getWorldPosition(new T.Vector3()));
+      assert(contact<.16,'Mà esquerra sobre '+type+' ('+contact+')');
+     }else{
+      const target=expected(mode).applyQuaternion(model.getWorldQuaternion(new T.Quaternion()));
+      assert(forward.dot(target)>.999,'Orientació '+type+'/'+mode+'; dir='+forward.toArray());
+     }
     };
     for(const mode of ['rest','idle','walk','run','crouch','work','wave','aim']){
      const gait=['walk','run'].includes(mode)?{phase:.25,blend:mode==='run'?1:0}:null;
@@ -232,6 +244,18 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
     const desired=new T.Vector3(0,mode==='aim'?0:-1,mode==='aim'?-1:0);
     assert(dir.dot(desired)>.999,'Canó de '+role+' en '+mode);
    }
+   if(['rifle','rocket'].includes(p.weapon)){
+    for(const phase of [0,.23,.51,.77]){
+     poseHumanProposal(model,.25,'run',{phase,blend:1});
+     const direction=new T.Vector3(0,0,-1).applyQuaternion(held.getWorldQuaternion(new T.Quaternion()))
+      .applyQuaternion(model.getWorldQuaternion(new T.Quaternion()).invert());
+     assert(direction.x<-.50&&direction.z<-.70,'Soldat amb arma creuada');
+     let grip=null;held.traverse(n=>{if(n.userData.humanRunSupportGrip)grip=n});
+     assert(grip,'Guardamà del fusell/bazuca del soldat');
+     const contact=grip.getWorldPosition(new T.Vector3()).distanceTo(joints.wristL.getWorldPosition(new T.Vector3()));
+     assert(contact<.16,'Mà esquerra del soldat sobre el guardamà '+role+' '+contact);
+    }
+   }
   }
   poseHumanProposal(model,0,'rest');
   for(const [side,sign] of [['L',-1],['R',1]]){
@@ -262,7 +286,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,14);assert.equal(choices.size,14);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V9'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V10'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));
