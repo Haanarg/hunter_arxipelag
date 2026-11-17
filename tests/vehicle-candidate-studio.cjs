@@ -11,10 +11,11 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
  // The real in-game factory is also imported by the editor. Keep runtime dependencies.
  const {vehicleModels}=await import('../src/vehicle-model-core.mjs');
  const THREE=await import('../vendor/three-r186.module.mjs');
+ const {playerBatching}=await import('../src/player-batching-core.mjs');
  const factory=vehicleModels.createFactory(THREE,{
   box:(parent,w,h,d,color)=>{const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color}));parent.add(mesh);return mesh},
   material:color=>new THREE.MeshStandardMaterial({color}),
-  shadows:false
+  shadows:false,batching:playerBatching
  });
  const hover=factory('hover');
  assert.equal(hover.userData.hovercraftModel,'D-model-3','Approved hovercraft must be available in the actual game factory');
