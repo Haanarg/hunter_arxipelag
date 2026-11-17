@@ -1,5 +1,5 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs?rev=humans-v5';
-export const HUMAN_VERSION='humans-v6';
+export const HUMAN_VERSION='humans-v7';
 // Anatomical adjustment for every A/B human candidate. -Z faces forward.
 export const HUMAN_HEAD_ADVANCE=.020;
 // The straight cervical column follows halfway, so the throat remains tucked
@@ -222,6 +222,7 @@ export function createHumanProposal(T,role,style='a'){
  }
  if(!p.civilian&&role!=='general'){
   const vest=loft(torso,'Armilla',[[.06,.158*W,.128],[.13,.183*W,.145],[.32,.207*W,.145],[.38,.166*W,.116]].map(([y,x,z])=>[y,x,z*D]),p.trim,bodySegments,role==='player');
+  vest.userData.humanChestSurface=true;
   if(role==='player'){
    const shells=[torsoShell,vest];for(const shell of shells)shell.userData.humanChestSurface=true;
    const surface=(x,y,side)=>humanChestSurfaceZ(shells,x,y,side);
@@ -263,7 +264,58 @@ export function createHumanProposal(T,role,style='a'){
    for(const side of [-1,1]){box(torso,'Tirant',[.034,.30,.025],[side*.14,.26,.125],dark);box(torso,'Sivella tirant',[.039,.028,.014],[side*.14,.30,-.139],0x979883)}
    if(s.detail===2){box(torso,'Ràdio',[.055,.095,.038],[.145,.315,-.145],dark);tube(torso,'Antena',.004,.004,.14,[.16,.42,-.15],dark,5);for(const y of [.27,.30,.33])box(torso,'Cinta armilla',[.26,.012,.012],[0,y,-.145],p.uniform)}
   }
-  const backpack=group(torso,'Motxilla');loft(backpack,'Bossa',[[.07,.125,.065,.18],[.16,.142,.078,.19],[.37,.126,.07,.18]],p.trim);
+  const backpack=group(torso,'Motxilla');
+  const bag=loft(backpack,'Bossa',[[.07,.125,.065,.18],[.16,.142,.078,.19],[.37,.126,.07,.18]],p.trim);
+  // Broad load-bearing shoulder webbing follows the front vest, arches over
+  // each clavicle and joins the REAR surface of the backpack. Both endpoints
+  // are sampled from actual meshes, avoiding floating straps.
+  const shoulderHarness=(side)=>{
+   const frontX=side*.108*W,crestX=side*.112*W,rearX=side*.095*W;
+   const shells=[torsoShell,vest],frontY=.292,upperY=.357,rearY=.318;
+   const frontZ=humanChestSurfaceZ(shells,frontX,frontY,-1);
+   const upperZ=humanChestSurfaceZ(shells,frontX,upperY,-1);
+   const rearZ=humanChestSurfaceZ([bag],rearX,rearY,1);
+   if([frontZ,upperZ,rearZ].some(v=>v===null))throw Error('No es pot ancorar la cinta de l’espatlla');
+   const path=[
+    [frontX,frontY,frontZ+.007],
+    [frontX,upperY,upperZ+.005],
+    [crestX,.423,-.082*D],
+    [crestX,.475,-.029*D],
+    [crestX,.493,.041*D],
+    [crestX,.447,.137*D],
+    [rearX,rearY,rearZ-.010]
+   ];
+   const width=.064*W,thickness=.021,half=width/2,points=[],indices=[];
+   for(let i=0;i<path.length;i++){
+    const prev=path[Math.max(0,i-1)],next=path[Math.min(path.length-1,i+1)];
+    const dy=next[1]-prev[1],dz=next[2]-prev[2],length=Math.hypot(dy,dz);
+    const ny=dz/length,nz=-dy/length,[x,y,z]=path[i];
+    // Four corners per station: closed curved solid webbing, not flat boxes.
+    points.push(x-half,y-ny*.004,z-nz*.004,
+                x+half,y-ny*.004,z-nz*.004,
+                x+half,y+ny*thickness,z+nz*thickness,
+                x-half,y+ny*thickness,z+nz*thickness);
+    if(i===0)continue;
+    const a=(i-1)*4,b=i*4;
+    for(let k=0;k<4;k++){
+     const k2=(k+1)%4;
+     indices.push(a+k,a+k2,b+k,a+k2,b+k2,b+k);
+    }
+   }
+   const end=(path.length-1)*4;
+   indices.push(0,2,1,0,3,2,end,end+1,end+2,end,end+2,end+3);
+   const geo=new T.BufferGeometry();
+   geo.setAttribute('position',new T.Float32BufferAttribute(points,3));
+   geo.setIndex(indices);geo.computeVertexNormals();
+   const label=side<0?'esquerra':'dreta';
+   const strap=mesh(torso,'Cinta ampla espatlla '+label,geo,role==='player'?0x344638:role==='elite'?0x27372e:0x493336);
+   strap.userData.humanHarnessStrap={
+    side,width,thickness,
+    front:{x:frontX,y:frontY,z:path[0][2]},
+    rear:{x:rearX,y:rearY,z:path.at(-1)[2]}
+   };
+  };
+  for(const side of [-1,1])shoulderHarness(side);
   if(p.armor)for(const side of [-1,1])box(torso,'Placa blindatge',[.14,.18,.028],[side*.08,.30,-.16],0x34443e);
  }else if(role==='general'){
   for(const side of [-1,1]){const lapel=box(torso,'Solapa',[.065,.19,.023],[side*.07,.34,-.119],p.trim);lapel.rotation.z=side*.28;for(const y of [.12,.18,.24])oval(torso,'Botó',[.009,.009,.006],[side*.045,y,-.126],gold)}
@@ -295,7 +347,7 @@ export function createHumanProposal(T,role,style='a'){
  // remain addressable in the editor and in JSON drafts.
  const merge=g=>{
   for(const child of [...g.children])if(child.isGroup)merge(child);
-  const batches=new Map();for(const m of g.children)if(m.isMesh&&!m.userData.humanLandmark&&!m.userData.humanChestFit&&!m.userData.humanChestSurface&&!m.userData.humanChestAntenna&&!m.userData.humanHandSurface&&!m.userData.humanThumb){if(!batches.has(m.material))batches.set(m.material,[]);batches.get(m.material).push(m)}
+  const batches=new Map();for(const m of g.children)if(m.isMesh&&!m.userData.humanLandmark&&!m.userData.humanChestFit&&!m.userData.humanChestSurface&&!m.userData.humanHarnessStrap&&!m.userData.humanChestAntenna&&!m.userData.humanHandSurface&&!m.userData.humanThumb){if(!batches.has(m.material))batches.set(m.material,[]);batches.get(m.material).push(m)}
   for(const [material,items]of batches){if(items.length<2)continue;const positions=[],normals=[],names=[];
    for(const m of items){m.updateMatrix();const geo=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();geo.applyMatrix4(m.matrix);positions.push(...geo.attributes.position.array);normals.push(...geo.attributes.normal.array);names.push(m.name);g.remove(m);geo.dispose();m.geometry.dispose()}
    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));geo.userData.labOwned=true;
@@ -304,7 +356,7 @@ export function createHumanProposal(T,role,style='a'){
  };merge(root);
  root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
  root.scale.setScalar(p.height/height);
- root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:5},humanHeight:p.height,labAssemblies:true};
+ root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:7},humanHeight:p.height,labAssemblies:true};
  return root;
 }
 

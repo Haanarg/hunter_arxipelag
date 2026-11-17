@@ -86,6 +86,35 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
    assert(lenses,'Dos vidres quadrats');assert.equal(lenses.geometry.attributes.position.count,72,'Vidres rectangulars amb sis cares');
    assert(Math.abs(rest.shoulderL.position.x)>.245,'Protagonista més ample d’espatlles');
   }
+  // Only military roles receive two broad, solid, independently editable
+  // straps joining the front vest to the actual backpack surface.
+  const straps=meshes.filter(m=>m.userData.humanHarnessStrap);
+  if(['player','soldier','rocket','elite'].includes(role)){
+   assert.equal(straps.length,2,'Dues cintes a les espatlles '+role+style);
+   assert.deepEqual(straps.map(m=>m.userData.humanHarnessStrap.side).sort(),[-1,1]);
+   const vest=meshes.find(m=>m.name==='Armilla');
+   const bag=meshes.find(m=>m.name==='Bossa');
+   assert(vest&&bag,'Armilla i motxilla amb malles reals '+role+style);
+   for(const strap of straps){
+    const {width,thickness,front,rear}=strap.userData.humanHarnessStrap;
+    assert(width>=.063&&thickness>=.020,'Cinta ampla i amb gruix');
+    assert(front.z<-.06&&rear.z>.17&&rear.y<front.y+.08,'Cinta travessa l’espatlla fins a la motxilla');
+    const frontSurface=humanChestSurfaceZ([vest],front.x,front.y,-1);
+    const rearSurface=humanChestSurfaceZ([bag],rear.x,rear.y,1);
+    assert(frontSurface!==null&&rearSurface!==null,'Ancoratges sobre malles');
+    assert(Math.abs(front.z-frontSurface)<.026,'Cinta enganxada a l’armilla');
+    assert(Math.abs(rear.z-rearSurface)<.026,'Cinta enganxada a la motxilla');
+    assert(new T.Box3().setFromObject(strap,true).intersectsBox(new T.Box3().setFromObject(vest,true)),'Contacte amb l’armilla');
+    assert(new T.Box3().setFromObject(strap,true).intersectsBox(new T.Box3().setFromObject(bag,true)),'Contacte amb la motxilla');
+    const attr=strap.geometry.attributes.position,index=strap.geometry.index,edges=new Map();
+    assert(index?.count>80&&attr.count>20,'Cinta corbada amb cos 3D');
+    for(let i=0;i<index.count;i+=3)for(let j=0;j<3;j++){
+     const a=index.getX(i+j),b=index.getX(i+(j+1)%3),key=Math.min(a,b)+':'+Math.max(a,b);
+     edges.set(key,(edges.get(key)||0)+1);
+    }
+    assert([...edges.values()].every(v=>v===2),'Cinta tancada sense cares obertes');
+   }
+  }else assert.equal(straps.length,0,'Sense cintes militars a '+role);
   const size=new T.Box3().setFromObject(model).getSize(new T.Vector3());
   assert(Math.abs(size.y-p.height)<.002,'Alçada del joc '+role+style);
   assert(size.x/size.y<.40,'Proporcions estretes, braços i cap humans '+role+style);
@@ -173,7 +202,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,14);assert.equal(choices.size,14);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V6'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V7'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));

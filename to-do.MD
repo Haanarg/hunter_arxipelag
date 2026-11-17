@@ -1,3 +1,8 @@
+**2026-11-17 · HUMANS V7 · cintes amples d'armilla a motxilla:**
+- [x] Afegides dues cintes 3D amples i corbades sobre les espatlles als candidats A/B de protagonista, soldat, bazuca i elit. Comencen a la superfície triangulada de l'armilla i arriben a la superfície posterior real de la motxilla, amb ancoratges mesurats i peces seleccionables independentment a l'editor.
+- [x] Afegits tests de presència només als quatre rols militars, d'ancoratges geomètrics, gruix i malla tancada. Revisió del laboratori V7.
+- [ ] Inspecció visual WebGL del resultat; els models originals del joc no es modifiquen sense aprovació.
+
 **2026-11-17 · HUMANS V6 · avanç del cap i reducció del clatell:**
 - [x] Avançat **0,020 unitats anatòmiques** cap a -Z el pivot del cap de tots els 14 candidats humans A/B (set rols), amb el coll avançat 0,010 unitats (eix recte i gola connectada). La mandíbula, el nas, les ulleres, el barret i el cabell es mouen com una unitat i conserven l'animació.
 - [x] Actualitzades les etiquetes V6, la revisió del laboratori i el test geomètric per a tots els rols i variants; es mantenen les comprovacions existents de gola-crani, proporcions i articulacions.
