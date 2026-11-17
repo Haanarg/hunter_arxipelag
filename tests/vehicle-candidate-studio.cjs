@@ -62,8 +62,9 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
  assert(compoundEntry.includes('window.HUNTER_PLAYER_BATCH=playerBatching;'));
  assert(compoundFactory.includes('vehicleModels.createFactory(T,'));
  assert(!compoundFactory.includes('window.HUNTER_VEHICLES.createFactory('));
- assert(compoundHtml.includes('compound-preview.mjs?rev='+revision));
- assert(compoundEntry.includes('compound-concepts.mjs?rev='+revision));
+ // These previews have their own revisions; changing the human lab must not break their cache identifiers.
+ assert(/compound-preview\.mjs\?rev=[\w-]+/.test(compoundHtml));
+ assert(/compound-concepts\.mjs\?rev=[\w-]+/.test(compoundEntry));
  const modelEditor=read('src/vehicles-externs-proves.mjs');
  assert(/renderer\.setScissorTest\(false\);\s*renderer\.clear\(true,true,true\);\s*renderer\.setScissorTest\(true\);/.test(modelEditor),'The full WebGL canvas must be cleared before each clipped frame');
  assert(html.includes('body[data-editor-kind=""] #draw{display:none!important}'));
