@@ -22,7 +22,7 @@ export function createGameWeaponPreview(T,kind){
    mesh.position.set(x,y,z);parent.add(mesh);return mesh;
   };
   const player=api.createPlayer(T,{box});
-  source=Object.fromEntries(GAME_WEAPON_TYPES.map(type=>[type,player.userData[type==='pistol'?'gun':type]]));
+  source=Object.fromEntries(GAME_WEAPON_TYPES.map(type=>[type,player.userData[type==='pistol'?'gun':type==='cutters'?'cisalla':type]]));
   for(const type of GAME_WEAPON_TYPES)if(!source[type]?.isObject3D)
    throw Error('Arma real absent al personatge del joc: '+type);
  }
