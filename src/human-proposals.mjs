@@ -1,7 +1,7 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs?rev=humans-v5';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {createGameWeaponPreview} from './human-weapon-preview.mjs';
-export const HUMAN_VERSION='humans-v11';
+export const HUMAN_VERSION='humans-v12';
 export const HUMAN_PREVIEW_WEAPONS=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters']);
 // Anatomical adjustment for every A/B human candidate. -Z faces forward.
 export const HUMAN_HEAD_ADVANCE=.020;
@@ -106,6 +106,24 @@ export function createHumanProposal(T,role,style='a'){
  const limb=(g,name,length,top,middle,bottom,c)=>{
   const calf=name==='Panxell',thigh=name==='Cuixa',forearm=name==='Avantbraç';
   const back=calf ? .018 : thigh ? .008 : 0;
+  if(calf){
+   // V12: leave the upper calf and gastrocnemius bulge EXACTLY as in V11.
+   // Below 65% of the shin, the Achilles/tendon zone narrows gradually
+   // toward the ankle instead of keeping an almost cylindrical silhouette.
+   const rings=[
+    [.018,top*.81,top*.84],
+    [-length*.13,top,top*.96],
+    [-length*.34,(top+middle)*.54,Math.max(top,middle)*.97,back],
+    [-length*.65,middle,middle*.91,back*.7],
+    [-length*.77,top*.90,top*.85,.009],
+    [-length*.88,top*.70,top*.67,.005],
+    [-length*.96,bottom*1.14,bottom*1.10,.002],
+    [-length-.008,bottom,bottom*.92,0]
+   ];
+   const calfMesh=loft(g,name,rings,c);
+   calfMesh.userData.humanCalfProfile={version:12,length,top,middle,bottom};
+   return calfMesh;
+  }
   return loft(g,name,[[.018,top*.81,top*.84],[-length*.13,top,top*.96],[-length*.34,(top+middle)*.54,Math.max(top,middle)*.97,back],[-length*.65,middle,middle*.91,back*.7],[-length-.008,bottom,bottom*.94,forearm ? -.003 : 0]],c);
  };
  // Broader shoulders and fuller limbs for the protagonist; joint heights stay anatomical.
@@ -194,12 +212,12 @@ export function createHumanProposal(T,role,style='a'){
   limb(hip,'Cuixa',BODY.thigh,.104*L,.083*L,.064*L,role==='farmer'?0x746c59:p.uniform);
   const knee=joint(hip,'knee'+suffix,'Genoll '+label,[0,-BODY.thigh,0]);
   oval(knee,'Ròtula',[.067*L,.063,.065*L],[0,0,-.005],p.uniform);
-  limb(knee,'Panxell',BODY.shin,.064*L,.076*L,.040*L,role==='farmer'?0x746c59:p.uniform);
+  limb(knee,'Panxell',BODY.shin,.064*L,.076*L,.029*L,role==='farmer'?0x746c59:p.uniform);
   const ankle=joint(knee,'ankle'+suffix,'Turmell '+label,[0,-BODY.shin,0]);feet.push(ankle);
   // The boot follows the lower shin. The pivot sits at the real instep
   // junction; the heel no longer protrudes far behind the Achilles tendon.
   const bootSegments=Math.ceil(s.segments/4)*4; // Exact lateral/toe/heel silhouette at 90° intervals.
-  const boot=loft(ankle,'Bota',[[.085,.045,.045,.006],[.042,.047,.055,.003],[.007,.050,.072,-.017],[-.030,.055,.102,-.051],[-.054,.055,.109,-.051]],shoe,bootSegments);
+  const boot=loft(ankle,'Bota',[[.085,.038,.038,.006],[.042,.041,.048,.003],[.007,.046,.066,-.017],[-.030,.055,.102,-.051],[-.054,.055,.109,-.051]],shoe,bootSegments);
   boot.userData.humanBootShell=true;
   const sole=loft(ankle,'Sola',[[-.054,.057,.111,-.051],[-.070,.057,.111,-.051]],0x1d2521,bootSegments);
   sole.userData.humanLandmark='sole';
@@ -371,7 +389,7 @@ export function createHumanProposal(T,role,style='a'){
  // remain addressable in the editor and in JSON drafts.
  const merge=g=>{
   for(const child of [...g.children])if(child.isGroup)merge(child);
-  const batches=new Map();for(const m of g.children)if(m.isMesh&&!m.userData.humanLandmark&&!m.userData.humanChestFit&&!m.userData.humanChestSurface&&!m.userData.humanHarnessStrap&&!m.userData.humanChestAntenna&&!m.userData.humanHandSurface&&!m.userData.humanThumb&&!m.userData.humanKneePad){if(!batches.has(m.material))batches.set(m.material,[]);batches.get(m.material).push(m)}
+  const batches=new Map();for(const m of g.children)if(m.isMesh&&!m.userData.humanLandmark&&!m.userData.humanChestFit&&!m.userData.humanChestSurface&&!m.userData.humanHarnessStrap&&!m.userData.humanChestAntenna&&!m.userData.humanHandSurface&&!m.userData.humanThumb&&!m.userData.humanKneePad&&!m.userData.humanCalfProfile){if(!batches.has(m.material))batches.set(m.material,[]);batches.get(m.material).push(m)}
   for(const [material,items]of batches){if(items.length<2)continue;const positions=[],normals=[],names=[];
    for(const m of items){m.updateMatrix();const geo=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();geo.applyMatrix4(m.matrix);positions.push(...geo.attributes.position.array);normals.push(...geo.attributes.normal.array);names.push(m.name);g.remove(m);geo.dispose();m.geometry.dispose()}
    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));geo.userData.labOwned=true;
@@ -380,7 +398,7 @@ export function createHumanProposal(T,role,style='a'){
  };merge(root);
  root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
  root.scale.setScalar(p.height/height);
- root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:11},humanHeight:p.height,labAssemblies:true};
+ root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:12},humanHeight:p.height,labAssemblies:true};
  if(role==='player')setHumanPreviewWeapon(T,root,'pistol');
  return root;
 }

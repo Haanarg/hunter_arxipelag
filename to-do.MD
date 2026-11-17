@@ -1,3 +1,9 @@
+**2026-11-17 · HUMANS V12 · afinament progressiu dels panxells:**
+- [x] 14 candidats humans (7 rols × A/B): mantenir exactament les quatre seccions superiors dels bessons de V11, afegir tres seccions graduals sota el ventre muscular per afinar la tíbia i el tendó d'Aquil·les fins a un radi al turmell de 0,029×L (abans 0,040×L).
+- [x] Ajust mínim de la canya de les botes per encaixar amb els turmells més prims, sense alterar-ne el taló ni la sola aprovats a V11.
+- [x] Marcatge de malla de panxell i proves geomètriques per perfil, simetria i continuïtat.
+- [ ] Revisar visualment la transició bessó-turmell i caminar/córrer a WebGL. Models originals del joc intactes.
+
 **2026-11-17 · HUMANS V11 · verificació de geometria:**
 - [x] Les primeres proves detectaren una discrepància de la punta i el taló perquè els perfils de 10/14 segments no tenien vèrtex als eixos 90°; corregit amb 12/16 segments per reproduir extrems i mesurar-los exactament.
 - [ ] Repetir verificació CI i desplegament sobre la revisió ankle-2.

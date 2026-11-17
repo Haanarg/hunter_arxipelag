@@ -53,6 +53,30 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   assert(rest.elbowL.position.length()+rest.wristL.position.length()>.69,'Braços allargats');
   assert(rest.ankleL.position.length()>.48&&rest.kneeL.position.length()<.50,'Genolls elevats; turmell abaixat V11');
   // Measure the indexed shoe and sole vertices, not a nominal bounding box.
+  // V12: geometry-derived transverse radii through the full shin.
+  // Verify the unchanged bulging calf and the progressively narrower Achilles.
+  const calves=meshes.filter(m=>m.userData.humanCalfProfile);
+  assert.equal(calves.length,2,'Dos panxells independents i editables');
+  const calfRings=calf=>{
+   const attr=calf.geometry.attributes.position,rows=new Map();
+   for(let i=0;i<attr.count;i++){const y=attr.getY(i).toFixed(5);
+    if(!rows.has(y))rows.set(y,[]);
+    rows.get(y).push([attr.getX(i),attr.getZ(i)]);
+   }
+   return [...rows.entries()].map(([y,coords])=>({y:Number(y),width:Math.max(...coords.map(p=>Math.abs(p[0]))),rear:Math.max(...coords.map(p=>p[1]))})).sort((a,b)=>b.y-a.y);
+  };
+  const [calfLeft,calfRight]=calves.map(calfRings);
+  assert.equal(calfLeft.length,8,'Vuit seccions del panxell');
+  assert.deepEqual(calfLeft,calfRight,'Panxells simètrics esquerra/dreta');
+  const [upper,nearKnee,belly,bellyEnd,taper1,taper2,taper3,ankleBase]=calfLeft;
+  const {middle,top,bottom,length}=calves[0].userData.humanCalfProfile;
+  assert.equal(calves[0].userData.humanCalfProfile.version,12);
+  assert(Math.abs(belly.width-(top+middle)*.54)<1e-5,'Bessó superior original intacte');
+  assert(Math.abs(bellyEnd.width-middle)<1e-5,'Volum del bessó conservat fins a .65 de la canya');
+  assert(Math.abs(taper1.width-top*.90)<1e-5&&Math.abs(taper2.width-top*.70)<1e-5,'Afinament progressiu sense escaló');
+  assert(bellyEnd.width>taper1.width&&taper1.width>taper2.width&&taper2.width>taper3.width&&taper3.width>ankleBase.width);
+  assert(ankleBase.width/bellyEnd.width<.40,'Turmell clarament més estret que el bessó');
+  assert(Math.abs(ankleBase.y+length+.008)<.00002,'Encaix amb el turmell V11');
   const boots=meshes.filter(m=>m.userData.humanBootShell),outsoles=meshes.filter(m=>m.userData.humanLandmark==='sole');
   assert.equal(boots.length,2,'Botes editables a banda i banda');
   assert.equal(outsoles.length,2,'Soles reals per contacte amb el terra');
@@ -306,7 +330,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,14);assert.equal(choices.size,14);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V11'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V12'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));
