@@ -1,3 +1,6 @@
+**2026-11-17 · HUMANS V9 · correcció posterior de col·lisió:**
+- [x] Armes llargues en ajupir-se i treballar: postura de transport sobre els genolls, amb el canó lleugerament cap avall per evitar que travessi el terra; repòs general vertical cap avall i apuntat horitzontal es mantenen sense canvis.
+
 **2026-11-17 · HUMANS V9 · orientació d'armes a les postures:**
 - [x] Compensació del canell amb quaternions sobre els eixos reals del model: pistola, AEK-971, SV-98, bazuca i fusells dels soldats cap avall en repòs (també caminant, corrent i treballant); canons horitzontals cap endavant quan apunten.
 - [x] Ganivet amb la fulla vertical cap amunt; cisalla com a eina cap avall. L'IK de la mà esquerra només intenta subjectar les armes llargues i la pistola, no el ganivet ni les cisalles.

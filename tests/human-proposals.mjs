@@ -141,8 +141,13 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
     assert.equal(setHumanPreviewWeapon(T,model,type),true,'Es pot seleccionar '+type);
     assert.equal(mount.userData.humanWeapon,type);
     assert(mount.children.some(c=>c.userData.gameWeaponType===type),'Arma del joc carregada');
-    const expected=(mode)=>type==='knife'?new T.Vector3(0,1,0):
-     mode==='aim'&&type!=='cutters'?new T.Vector3(0,0,-1):new T.Vector3(0,-1,0);
+    const expected=(mode)=>{
+     if(type==='knife')return new T.Vector3(0,1,0);
+     if(mode==='aim'&&type!=='cutters')return new T.Vector3(0,0,-1);
+     if(['bazooka','assault','sniper'].includes(type)&&['crouch','work'].includes(mode))
+      return new T.Vector3(0,-.20,-.9797958971).normalize();
+     return new T.Vector3(0,-1,0);
+    };
     const axis=()=>['knife','cutters'].includes(type)?new T.Vector3(0,-1,0):new T.Vector3(0,0,-1);
     const checkDirection=(mode)=>{
      const forward=axis().applyQuaternion(mount.getWorldQuaternion(new T.Quaternion())).normalize();

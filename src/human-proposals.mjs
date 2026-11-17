@@ -463,7 +463,12 @@ function orientHumanEquippedWeapon(model,weapon,mode,rig){
  const type=weapon.userData.humanWeapon;
  const blade=type==='knife',tool=type==='cutters';
  const source=rig.source.set(0,blade||tool?-1:0,blade||tool?0:-1);
- const target=rig.direction.set(0,blade?1:mode==='aim'&&!tool?0:-1,blade||tool?0:mode==='aim'?-1:0);
+ const long=type==='rocket'||type==='bazooka'||type==='sniper'||type==='assault'||type==='rifle';
+ // While crouching or working, a long muzzle held straight down could pierce
+ // the ground. Carry it across the knees, pitched slightly toward the floor.
+ const lowered=long&&(mode==='crouch'||mode==='work');
+ const target=rig.direction.set(0,blade?1:mode==='aim'&&!tool?0:lowered?-.20:-1,
+  blade||tool?0:mode==='aim'?-1:lowered?-.9797958971:0);
  model.getWorldQuaternion(rig.modelQ);
  weapon.parent.getWorldQuaternion(rig.parentQ);
  target.applyQuaternion(rig.modelQ).applyQuaternion(rig.parentQ.invert()).normalize();
