@@ -38,6 +38,8 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Comprovar contracte publicable del laboratori
         run: npm run test:deploy
+      - name: Validar models humans i editor en temps real
+        run: npm run test:lab
       - name: Comprovar versió i bundle publicable
         run: npm run check:build
       - name: Comprovar la compilació del Worker

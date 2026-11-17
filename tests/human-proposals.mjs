@@ -169,7 +169,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
  assert.equal(shapes.size,2);
 }
 assert.equal(count,14);assert.equal(choices.size,14);
-const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../vehicles-externs-proves.html',import.meta.url),'utf8');
+const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../proves.html',import.meta.url),'utf8');
 assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V5'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
@@ -179,5 +179,8 @@ assert(lab.includes('!original&&!currentType.human&&'),'Les proporcions humanes 
 for(const mode of ['walk','run','crouch','aim','work','wave'])assert(html.includes('value="'+mode+'"'));
 assert(!readFileSync(new URL('../src/bootstrap.mjs',import.meta.url),'utf8').includes('human-proposals'),'Candidats fora del joc');
 const evidenceUI=readFileSync(new URL('../src/human-lab-evidence-ui.mjs',import.meta.url),'utf8');
-assert(!html.includes('C · Àgil')&&!evidenceUI.includes("'c'"),'Sense C al selector ni als informes');
+assert(!html.includes('C · Àgil')&&!html.includes('A/B/C')&&!evidenceUI.includes("'c'"),'Sense C al selector ni als informes');
+assert(html.includes('id="sectionTabs"')&&html.includes('data-section="characters"'),'Editor humà a la pàgina principal de proves');
+const liveDetails=html.match(/<details\s+id="liveEditor"[^>]*>/)?.[0];
+assert(liveDetails&&!/\sopen(?:\s|=|>)/.test(liveDetails),'Refinat plegat per defecte');
 console.log('PASS 7 originals, 14 candidats, 16 articulacions, moviment, edició i JSON');

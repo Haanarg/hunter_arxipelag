@@ -1,3 +1,9 @@
+**2026-11-17 · Revisió final del treball «Refinament de models en temps real»:**
+- [x] HUMANS V5 manté 7 originals i 14 candidats A/B; C retirat. Proporcions de vuit caps, pivot cranial, gola/coll, nas tancat, mans contínues amb polzes davant, ulleres quadrades, accessoris del tors i cicle de cursa amb turmells articulats i transició caminar–córrer, amb regressions geomètriques automatitzades.
+- [x] L'editor real resideix a `proves.html`: refinat plegat per defecte, guies 0–8, anotacions, cua, desfer/refer i evidència/exportació; arreglat el test que encara apuntava a l'antiga pàgina de redirecció. Eliminat el text obsolet A/B/C.
+- [x] Afegida l'execució de la bateria focalitzada `test:lab` a CI de desplegament, amb verificació d'integritat a Cloudflare. Les 29 proves essencials del joc continuen independents.
+- [ ] Revisió visual WebGL dels 14 candidats i valoració/selecció explícita de l'usuari. **No** s'integren els candidats humans al joc sense triar-los, ni es dona per validada la seva aparença dins la partida només amb tests Node.
+
 **2026-11-16 · HUMANS V5 · corpulència, nas, coll i retirada de C:**
 - [x] Protagonista A/B: amplada ×1,18, gruix dels membres ×1,22 i profunditat del tors ×1,16; mateixes alçades anatòmiques. Ulleres rectangulars amb muntura; accessoris del pit, punys, genolleres i colzeres ajustats a la nova superfície.
 - [x] Nas dels set perfils: volum tancat, triangles orientats cap enfora i base encastada a la cara. Coll amb eix vertical i gola que entra realment sota la mandíbula; pivot posterior i animacions conservats.
