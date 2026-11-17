@@ -521,12 +521,13 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
  let rigs=rigCache.get(root);
  if(!rigs){rigs=[];root.traverse(n=>{if(!n.userData.humanProposal)return;const joints={};let weapon;n.traverse(j=>{const id=j.userData.humanMotionJoint;if(id)joints[id]=j;if(j.userData.humanWeapon)weapon=j});rigs.push({model:n,joints,weapon,orientation:{
  source:new THREE.Vector3(),direction:new THREE.Vector3(),
- modelQ:new THREE.Quaternion(),parentQ:new THREE.Quaternion()
+ modelQ:new THREE.Quaternion(),parentQ:new THREE.Quaternion(),
+ wrist:new THREE.Vector3(),elbow:new THREE.Vector3(),gripWorld:new THREE.Vector3(),down:new THREE.Vector3()
  }})});rigCache.set(root,rigs)}
  for(const {model,joints:j,weapon,orientation}of rigs){
   const set=(id,x=0,y=0,z=0)=>{if(j[id])j[id].rotation.set(x,y,z)};
   for(const n of Object.values(j)){n.rotation.set(0,0,0);n.position.set(0,0,0)}
-  if(mode==='rest'){model.updateMatrixWorld(true);orientHumanEquippedWeapon(model,weapon,mode,orientation);continue}
+  if(mode==='rest'){model.updateMatrixWorld(true);orientHumanEquippedWeapon(model,weapon,mode,orientation,j);continue}
   const walk=mode==='walk'||mode==='run',blend=walk?clamp01(locomotion?.blend??(mode==='run'?1:0)):0;
   const cyclePhase=walk?(locomotion?.phase??time*gaitRate(blend)):0,phase=cyclePhase*Math.PI*2,breath=Math.sin(time*1.8);
   // Facing -Z, negative spine X bends the shoulders FORWARD.
@@ -538,6 +539,19 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
    set('shoulder'+side,walk?-gait.hip*mix(.72,.86,blend):.025*breath,0,-sign*.06);
    set('elbow'+side,walk?mix(.18+.16*Math.max(0,Math.sin(a)),1.15+.17*Math.sin(a),blend):.10);
    set('wrist'+side,0,0,sign*.035);
+  }
+  // A braced two-handed pose develops as the gait transitions to running.
+  // Pistols keep the normal right-arm swing instead of a fixed cross-body pose.
+  const carrying=mode==='run'&&weapon&&['rocket','bazooka','sniper','assault','rifle'].includes(weapon.userData.humanWeapon);
+  if(carrying){
+   const hold=clamp01((blend-.20)/.80);
+   const sr=j.shoulderR?.rotation.x??0,er=j.elbowR?.rotation.x??0;
+   const sl=j.shoulderL?.rotation.x??0,el=j.elbowL?.rotation.x??0;
+   set('shoulderR',mix(sr,.78,hold),0,-.09*hold);
+   set('elbowR',mix(er,.88,hold));
+   set('wristR',0,0,-.03*hold);
+   set('shoulderL',mix(sl,.72,hold),0,.12*hold);
+   set('elbowL',mix(el,1.05,hold));
   }
   if(mode==='crouch'){
    set('spine',-.24);for(const side of ['L','R']){set('hip'+side,1.02);set('knee'+side,-1.78);set('ankle'+side,.76);set('shoulder'+side,.30);set('elbow'+side,.60)}
@@ -572,7 +586,8 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
    j.pelvis.position.y=walk?mix(planted,stableRun,blend)+flightLift(cyclePhase,blend):planted;
   }
   model.updateMatrixWorld(true);
-  orientHumanEquippedWeapon(model,weapon,mode,orientation);
+  orientHumanEquippedWeapon(model,weapon,mode,orientation,j);
+  if(carrying&&blend>.8)supportHumanRunningLongGun(model,weapon,j,orientation);
   if(mode==='aim'&&weapon&&!['knife','cutters'].includes(weapon.userData.humanWeapon)&&j.shoulderL&&j.elbowL){
    // Geometric support-hand IK follows the actual decorative prop, including
    // edits to its position. The palm stays on the grip as the torso turns.
