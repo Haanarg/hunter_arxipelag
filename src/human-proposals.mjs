@@ -1,7 +1,9 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs?rev=humans-v5';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {createGameWeaponPreview} from './human-weapon-preview.mjs';
-export const HUMAN_VERSION='humans-v14';
+export const HUMAN_VERSION='humans-v15';
+// Reduce only the protagonist's thigh cross-section; preserve length, hip and knee pivots.
+export const HUMAN_PLAYER_THIGH_FACTOR=.94;
 export const HUMAN_PREVIEW_WEAPONS=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters']);
 // Anatomical adjustment for every A/B human candidate. -Z faces forward.
 export const HUMAN_HEAD_ADVANCE=.020;
@@ -209,7 +211,11 @@ export function createHumanProposal(T,role,style='a'){
  for(const side of [-1,1]){
   const suffix=side<0?'L':'R',label=side<0?'esquerre':'dret';
   const hip=joint(pelvis,'hip'+suffix,'Maluc '+label,[side*.103*W,BODY.hip,0]);
-  limb(hip,'Cuixa',BODY.thigh,.104*L,.083*L,.064*L,role==='farmer'?0x746c59:p.uniform);
+  // V15: slightly slimmer protagonist thighs (~6% in width and depth).
+  // Other roles and the hip/knee positions retain their previous proportions.
+  const thighFactor=role==='player'?HUMAN_PLAYER_THIGH_FACTOR:1;
+  const thigh=limb(hip,'Cuixa',BODY.thigh,.104*L*thighFactor,.083*L*thighFactor,.064*L*thighFactor,role==='farmer'?0x746c59:p.uniform);
+  thigh.userData.humanThighFactor=thighFactor;
   const knee=joint(hip,'knee'+suffix,'Genoll '+label,[0,-BODY.thigh,0]);
   oval(knee,'Ròtula',[.067*L,.063,.065*L],[0,0,-.005],p.uniform);
   limb(knee,'Panxell',BODY.shin,.064*L,.076*L,.029*L,role==='farmer'?0x746c59:p.uniform);
@@ -405,7 +411,7 @@ export function createHumanProposal(T,role,style='a'){
  };merge(root);
  root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
  root.scale.setScalar(p.height/height);
- root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:14},humanHeight:p.height,labAssemblies:true};
+ root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:15},humanHeight:p.height,labAssemblies:true};
  if(role==='player')setHumanPreviewWeapon(T,root,'pistol');
  return root;
 }

@@ -1,3 +1,9 @@
+**2026-11-17 · HUMANS V15 · protagonista verd més clar i cuixes més lleugeres:**
+- [x] Referència comprovada al codi del protagonista del joc: palette.player.primary=0x3ee43a. Color del candidat A/B actualitzat de 0x54804a a 0x60c754: més lluminós i proper a l'original sense copiar-ne completament la saturació; mantenir els detalls foscos de l'armilla.
+- [x] Cuixes exclusivament del protagonista A/B afinades un 6% en els radis, sense alterar-ne llargada ni pivots, genolleres, panxells ni botes. Altres 6 rols intactes.
+- [x] Proves del color contra la paleta original, mides de geometria reals i simetria dels dos costats.
+- [ ] Validació visual a WebGL de color i silueta. Originals del joc intactes.
+
 **2026-11-17 · HUMANS V14 · armes baixes i bazuca a l'espatlla:**
 - [x] Armes llargues recollides davant del pit, creuades en diagonal però amb canó cap avall durant la cursa; colzes flexionats, mà esquerra al guardamà seguint el moviment.
 - [x] Bazuca del protagonista i dels soldats A/B augmentada un 50% (incloses totes les peces i els punts de subjecció).

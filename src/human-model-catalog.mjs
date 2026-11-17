@@ -1,5 +1,7 @@
+// More luminous than V14, but softer than the original game's #3ee43a.
+export const HUMAN_PLAYER_GREEN=0x60c754;
 export const HUMAN_PROFILES=Object.freeze({
- player:{name:'Protagonista',height:2.0,uniform:0x54804a,trim:0x344c2c,hat:'cap',skin:0xd6a37e,weapon:'pistol'},
+ player:{name:'Protagonista',height:2.0,uniform:HUMAN_PLAYER_GREEN,trim:0x344c2c,hat:'cap',skin:0xd6a37e,weapon:'pistol'},
  soldier:{name:'Soldat',height:2.0,uniform:0xa83f46,trim:0x582e36,hat:'beret',skin:0xc68f6d,weapon:'rifle'},
  rocket:{name:'Soldat amb bazuca',height:2.0,uniform:0xa83f46,trim:0x582e36,hat:'beret',skin:0xc68f6d,weapon:'rocket'},
  elite:{name:'Soldat d’elit',height:2.0,uniform:0x49564e,trim:0x2b3431,hat:'helmet',skin:0xba8768,weapon:'rifle',armor:true},

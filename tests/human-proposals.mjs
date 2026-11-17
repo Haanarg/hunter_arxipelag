@@ -1,11 +1,20 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as T from '../vendor/three-r186.module.mjs';
-import {HUMAN_PROFILES,HUMAN_CATALOG,HUMAN_STYLES} from '../src/human-model-catalog.mjs';
-import {createHumanProposal,setHumanPreviewWeapon,HUMAN_PREVIEW_WEAPONS,poseHumanProposal,HUMAN_VERSION,HUMAN_HEAD_ADVANCE,HUMAN_NECK_FOLLOW,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait,HUMAN_BOOT_SPEC} from '../src/human-proposals.mjs';
+import {HUMAN_PROFILES,HUMAN_CATALOG,HUMAN_STYLES,HUMAN_PLAYER_GREEN} from '../src/human-model-catalog.mjs';
+import {palette} from '../src/palette-core.mjs';
+import {createHumanProposal,setHumanPreviewWeapon,HUMAN_PREVIEW_WEAPONS,poseHumanProposal,HUMAN_VERSION,HUMAN_HEAD_ADVANCE,HUMAN_NECK_FOLLOW,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait,HUMAN_BOOT_SPEC,HUMAN_PLAYER_THIGH_FACTOR} from '../src/human-proposals.mjs';
 import {createCurrentHuman} from '../src/human-current-models.mjs';
 globalThis.window=globalThis;
 assert.equal(HUMAN_CATALOG.length,7);assert(HUMAN_CATALOG.every(c=>!c.validated&&c.kind==='huma'&&c.options.length===2));
+// Compare directly with the canonical game palette, not an invented reference.
+const rgb=c=>[(c>>16)&255,(c>>8)&255,c&255];
+const delta=(a,b)=>Math.hypot(...rgb(a).map((v,i)=>v-rgb(b)[i]));
+const previousGreen=0x54804a;
+assert(HUMAN_PLAYER_GREEN!==previousGreen&&delta(HUMAN_PLAYER_GREEN,palette.player.primary)<delta(previousGreen,palette.player.primary),
+ 'Verd V15 més semblant al protagonista original');
+assert(rgb(HUMAN_PLAYER_GREEN)[1]>rgb(previousGreen)[1]+50,'Verd perceptiblement més clar');
+assert(HUMAN_PLAYER_THIGH_FACTOR>.90&&HUMAN_PLAYER_THIGH_FACTOR<.98,'Cuixes afinades moderadament');
 const choices=new Set();let count=0;
 for(const blend of [0,.25,.5,.75,1]){
  const samples=Array.from({length:201},(_,i)=>sampleHumanGait(i/200,blend));
@@ -44,6 +53,23 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   const model=createHumanProposal(T,role,style),joints={},rest={},meshes=[];choices.add(role+style);
   model.traverse(n=>{if(n.userData.humanMotionJoint)joints[n.userData.humanMotionJoint]=n;if(n.userData.humanRestJoint)rest[n.userData.humanRestJoint]=n;if(n.isMesh)meshes.push(n)});
   assert.equal(Object.keys(joints).length,16);
+  // Read geometry from actual created thighs, with both sides and A/B.
+  const thighs=meshes.filter(m=>m.userData.humanThighFactor!==undefined);
+  assert.equal(thighs.length,2,'Dues cuixes independents');
+  const expectedFactor=role==='player'?HUMAN_PLAYER_THIGH_FACTOR:1;
+  const expectedWidth=.104*s.limbs*(role==='player'?1.22:1)*expectedFactor;
+  for(const thigh of thighs){
+   assert.equal(thigh.userData.humanThighFactor,expectedFactor);
+   const pos=thigh.geometry.attributes.position;
+   let maxX=0;for(let k=0;k<pos.count;k++)maxX=Math.max(maxX,Math.abs(pos.getX(k)));
+   assert(Math.abs(maxX-expectedWidth)<.00001,'Amplada real de cuixa '+role+style);
+   const target=role==='player'?HUMAN_PLAYER_GREEN:HUMAN_PROFILES[role].uniform;
+   assert.equal(thigh.material.color.getHex(),role==='farmer'?0x746c59:target,'Color de cuixa '+role+style);
+  }
+  if(role==='player'){
+   const torso=meshes.find(m=>m.name==='Tronc anatòmic');
+   assert(torso&&torso.material.color.getHex()===HUMAN_PLAYER_GREEN,'Tronc verd clar igual que cames');
+  }
   assert.equal(rest.neck.position.z,.012-HUMAN_NECK_FOLLOW,'Coll vertical avançat 1 cm per mantenir la gola sota la mandíbula');
   assert.equal(rest.head.position.z,.065-(HUMAN_HEAD_ADVANCE-HUMAN_NECK_FOLLOW),'Pivot del cap avançat respecte del coll');
   assert(Math.abs((.012-rest.neck.position.z)+(.065-rest.head.position.z)-HUMAN_HEAD_ADVANCE)<1e-9,'Cap avançat 2 cm en conjunt');
@@ -396,7 +422,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,14);assert.equal(choices.size,14);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V14'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V15'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));
