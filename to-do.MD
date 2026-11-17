@@ -1,3 +1,10 @@
+**2026-11-17 · HUMANS V8 · armes reals, animació i escala de 2 m:**
+- [x] Genolleres ovalades anatòmiques per als militars A/B; la imatge de referència no és visible en aquest torn.
+- [x] Protagonista A/B: selector de pistola silenciada, AEK-971, SV-98, bazuca, ganivet i cisalla que reutilitza els models geomètrics de `src/characters.js`; pot combinar-se amb tots els moviments.
+- [x] Corregida la inclinació cap endavant en córrer, ajupir-se i treballar; reduïda l'oscil·lació vertical de la cursa.
+- [x] Guies anatòmiques desactivades per defecte. Set rols A/B i referències originals a 2,00 m al **laboratori**, escalant uniformement totes les parts; el joc continua intacte.
+- [ ] Revisió visual WebGL d'armes, genolleres i cursa; aprovació de candidats abans d'integrar-los al joc.
+
 **2026-11-17 · HUMANS V7 · cintes amples d'armilla a motxilla:**
 - [x] Afegides dues cintes 3D amples i corbades sobre les espatlles als candidats A/B de protagonista, soldat, bazuca i elit. Comencen a la superfície triangulada de l'armilla i arriben a la superfície posterior real de la motxilla, amb ancoratges mesurats i peces seleccionables independentment a l'editor.
 - [x] Afegits tests de presència només als quatre rols militars, d'ancoratges geomètrics, gruix i malla tancada. Revisió del laboratori V7.

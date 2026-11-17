@@ -1,11 +1,11 @@
 export const HUMAN_PROFILES=Object.freeze({
- player:{name:'Protagonista',height:2.84648,uniform:0x54804a,trim:0x344c2c,hat:'cap',skin:0xd6a37e,weapon:'pistol'},
- soldier:{name:'Soldat',height:2.928,uniform:0xa83f46,trim:0x582e36,hat:'beret',skin:0xc68f6d,weapon:'rifle'},
- rocket:{name:'Soldat amb bazuca',height:2.928,uniform:0xa83f46,trim:0x582e36,hat:'beret',skin:0xc68f6d,weapon:'rocket'},
- elite:{name:'Soldat d’elit',height:2.928,uniform:0x49564e,trim:0x2b3431,hat:'helmet',skin:0xba8768,weapon:'rifle',armor:true},
- general:{name:'General',height:2.84,uniform:0x692c3a,trim:0xac4450,hat:'officer',skin:0xc99370,weapon:'rifle'},
- farmer:{name:'Pagès presoner',height:2.84648,uniform:0xb2a68a,trim:0x706754,hat:'straw',skin:0xb68160,civilian:true},
- mechanic:{name:'Mecànic',height:2.84648,uniform:0x47758b,trim:0x2d4b5f,hat:'workcap',skin:0xc99471,civilian:true}
+ player:{name:'Protagonista',height:2.0,uniform:0x54804a,trim:0x344c2c,hat:'cap',skin:0xd6a37e,weapon:'pistol'},
+ soldier:{name:'Soldat',height:2.0,uniform:0xa83f46,trim:0x582e36,hat:'beret',skin:0xc68f6d,weapon:'rifle'},
+ rocket:{name:'Soldat amb bazuca',height:2.0,uniform:0xa83f46,trim:0x582e36,hat:'beret',skin:0xc68f6d,weapon:'rocket'},
+ elite:{name:'Soldat d’elit',height:2.0,uniform:0x49564e,trim:0x2b3431,hat:'helmet',skin:0xba8768,weapon:'rifle',armor:true},
+ general:{name:'General',height:2.0,uniform:0x692c3a,trim:0xac4450,hat:'officer',skin:0xc99370,weapon:'rifle'},
+ farmer:{name:'Pagès presoner',height:2.0,uniform:0xb2a68a,trim:0x706754,hat:'straw',skin:0xb68160,civilian:true},
+ mechanic:{name:'Mecànic',height:2.0,uniform:0x47758b,trim:0x2d4b5f,hat:'workcap',skin:0xc99471,civilian:true}
 });
 export const HUMAN_STYLES=Object.freeze({
  a:{name:'A · Natural',note:'Proporcions equilibrades · anatomia definida',width:1,head:1,limbs:1,segments:10,detail:1},

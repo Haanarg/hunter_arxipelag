@@ -6,7 +6,7 @@ let loading;
 async function factories(){
  globalThis.HUNTER_PLAYER_MODEL=playerModel;
  globalThis.HUNTER_PALETTE=palette;
- if(!loading)loading=Promise.all([import('./characters.js'),import('./general-model.js'),import('./prisoners.js')]);
+ if(!loading)loading=Promise.all([import('./bolt-cutters.js'),import('./characters.js'),import('./general-model.js'),import('./prisoners.js')]);
  await loading;
 }
 // Use the actual game factories. Only discard execution references that
@@ -33,5 +33,12 @@ export async function createCurrentHuman(T,role){
  }
  root.traverse(n=>{n.userData={};if(n.isMesh){n.geometry.userData.labOwned=true;n.material.userData.labOwned=true}});
  root.name='Actual · '+HUMAN_PROFILES[role].name;
- root.userData.humanOriginal=role;return root;
+ // Lab-only scaling; no runtime gameplay model is modified.
+ root.updateMatrixWorld(true);
+ const bounds=new T.Box3().setFromObject(root),factor=2/bounds.getSize(new T.Vector3()).y;
+ root.scale.multiplyScalar(factor);
+ root.position.y-=bounds.min.y*factor;
+ root.userData.humanOriginal=role;
+ root.userData.previewOnlyScale=factor;root.userData.previewHeight=2;
+ return root;
 }
