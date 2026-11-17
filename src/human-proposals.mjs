@@ -404,7 +404,7 @@ export function setHumanPreviewWeapon(T,root,kind){
  if(['assault','sniper','bazooka'].includes(kind)){
   const grip=new T.Object3D();
   grip.name='Presa esquerra de cursa';
-  grip.position.set(...{assault:[-.11,-.12,-.95],sniper:[-.13,-.17,-1.15],bazooka:[-.22,-.31,-.60]}[kind]);
+  grip.position.set(...{assault:[-.11,-.12,-.63],sniper:[-.13,-.17,-.76],bazooka:[-.22,-.31,-.42]}[kind]);
   grip.userData.humanRunSupportGrip=true;
   visual.add(grip);
  }
@@ -547,8 +547,8 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
    const hold=clamp01((blend-.20)/.80);
    const sr=j.shoulderR?.rotation.x??0,er=j.elbowR?.rotation.x??0;
    const sl=j.shoulderL?.rotation.x??0,el=j.elbowL?.rotation.x??0;
-   set('shoulderR',mix(sr,.78,hold),0,-.09*hold);
-   set('elbowR',mix(er,.88,hold));
+   set('shoulderR',mix(sr,.38,hold),0,-.09*hold);
+   set('elbowR',mix(er,1.27,hold));
    set('wristR',0,0,-.03*hold);
    set('shoulderL',mix(sl,.72,hold),0,.12*hold);
    set('elbowL',mix(el,1.05,hold));
