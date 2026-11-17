@@ -34,7 +34,7 @@ npm run build:worker  # prepara el Worker
 
 ## Proves
 
-La bateria habitual s'ha reduït a **13 comprovacions essencials**. Es conserva la verificació de versió, arrencada del món i objectiu, moviment, rellotge, dany de vehicles, guardat i autodesat, sincronització i inici del COOP, sales i backend.
+La bateria habitual s'ha reduït a **29 comprovacions essencials**. Es conserva la verificació de versió, arrencada del món i objectiu, moviment, rellotge, dany de vehicles, guardat i autodesat, sincronització i inici del COOP, sales i backend.
 
 ```bash
 npm ci --ignore-scripts
@@ -42,7 +42,7 @@ npm test             # bateria bàsica (també npm run test:basic)
 npm run check:build  # coherència del bundle de producció
 ```
 
-`npm run test:regression:once` es manté com a àlies compatible de `npm test`. Les regressions especialitzades antigues s'han retirat, i també els workflows manuals de proves. El workflow únic `.github/workflows/rebuild-runtime.yml` executa la bateria bàsica i comprova/regenera el runtime.
+`npm run test:regression:once` es manté com a àlies compatible de `npm test`. Les regressions específiques es conserven a `npm run test:models`, `npm run test:performance` i `npm run test:lab` quan cal. El workflow manual de runtime es manté. El workflow únic `.github/workflows/rebuild-runtime.yml` executa la bateria bàsica i comprova/regenera el runtime.
 
 Les proves Node no substitueixen una partida real, una revisió WebGL/Android o una sessió HOST/GUEST en dos dispositius. Els recursos de `tests/fixtures/` i `tests/helpers/` es conserven per prudència.
 
@@ -68,10 +68,10 @@ Les proves Node no substitueixen una partida real, una revisió WebGL/Android o 
 
 ## Laboratori de models 3D — editor de proves per defecte
 
-**Tanqueta BTR-82 (prototip actual):** l'experiment v3k conserva un casc simètric només a esquerra/dreta, la torreta de perfil posterior retallat, les vuit rodes A4.3 i el canó de dues peces. El laboratori principal és `vehicles-externs-proves.html` (original i v3k). **El model 3B ja s'utilitza a la partida**: vuit rodes A4.3 animades, casc angular simètric, torreta amb retall corbat frontal i canó 33 cm més baix. El motor de conducció, col·lisions i dany no s'ha modificat.
+**Tanqueta BTR-82 (prototip actual):** l'experiment v3k conserva un casc simètric només a esquerra/dreta, la torreta de perfil posterior retallat, les vuit rodes A4.3 i el canó de dues peces. El laboratori principal és `proves.html` (original i v3k). **El model 3B ja s'utilitza a la partida**: vuit rodes A4.3 animades, casc angular simètric, torreta amb retall corbat frontal i canó 33 cm més baix. El motor de conducció, col·lisions i dany no s'ha modificat.
 
 
-El banc de proves de vehicles és [vehicles-externs-proves.html](vehicles-externs-proves.html), publicat a `https://hunter.paradoxa.cat/vehicles-externs-proves.html`. La interfície de referència incorpora l'**editor de marques 3D**, reutilitzable per a tots els vehicles i per a futurs models. El codi general és `src/vehicle-annotation-editor.mjs`; no s'ha d'acoblar exclusivament a la tanqueta.
+L'editor unificat de personatges, vehicles, natura, animacions i complexos és [proves.html](proves.html), publicat a `https://hunter.paradoxa.cat/proves.html`. La interfície de referència incorpora l'**editor de marques 3D**, reutilitzable per a tots els vehicles i per a futurs models. El codi general és `src/vehicle-annotation-editor.mjs`; no s'ha d'acoblar exclusivament a la tanqueta.
 
 Modes de l'editor: **Unir peces** (grups acolorits), **Tapar forats** (cercle sobre la superfície real; verd si identifica un contorn de vora lliure simple i prou pla, blau si no) i **Eliminar peces** (marques no destructives). **Tapar forats modifica la geometria de la variant en memòria amb un clic** quan troba un contorn segur, amb «Desfer» per recuperar la malla i el material; el mode blau només registra una anotació de zona pendent. La reparació topològica resideix a `src/vehicle-hole-brush.mjs` i no fa servir plans virtuals. La resta de marques no modifiquen malles i es poden copiar amb coordenades i instruccions. Alt + arrossegar gira la càmera i Alt + roda fa zoom. Els tancaments fets a memòria no es desen automàticament al GLB del repositori. La casella **Forats grans (contorn tancat)** amplia la cerca fins a llaços més extensos (pinzell fins a 2,5 m, contorns amb més vèrtexs, proximitat a arestes i comprovació d'àrea/planaritat); el visor mostra la triangulació en verd abans de clicar i es pot desfer. **No** resol desaparicions d'una cara completa sense perímetre de vores tancat: cal una reconstrucció manual que encaixi a les vores reals. L'eina **Pintar xapa (arrossegar)** (`src/vehicle-surface-paint.mjs`) crea una cinta de triangles mentre es pinta, vinculada a la superfície del model, amb un pont tangent de màxim 0,58 m si el raig travessa una escletxa. Es pot reflectir automàticament al pla X=0 amb «Simetria de la xapa». Es mostra al moment i es retira amb «Desfer». No solda les vores ni fa simètrica tota la geometria preexistent; les reparacions continuen sent temporals en memòria i requereixen validació visual.
 

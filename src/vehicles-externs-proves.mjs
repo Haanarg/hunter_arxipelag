@@ -4,7 +4,7 @@ import {createHumanProposal,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,
 import {createCurrentHuman} from './human-current-models.mjs?rev=humans-v5';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261116-humans-v5';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261117-proves-sections-1';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs?rev=mi24-d-approved-1';
@@ -19,7 +19,7 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261116-humans-v5';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261117-proves-sections-1';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const humanList=document.querySelector('#humanList'),ALL_CATALOG=[...CATALOG,...HUMAN_CATALOG];
@@ -357,7 +357,9 @@ async function loadExternal(slot,entry,used,token){
    slot.status.textContent='No s’ha pogut carregar el model: '+(e?.message||String(e)).slice(0,120)+'. Pots importar el GLB local.';
  }
 }
+let lastHuman=HUMAN_CATALOG[0],lastVehicle=CATALOG[0];
 async function choose(config){
+ if(config.human)lastHuman=config;else lastVehicle=config;
  liveEditor.reset();
  vehicleEditor.reset();
   currentType=config;generation++;
@@ -527,6 +529,7 @@ function drawHumanGuide(slot,w,h){
 
 function draw(now){
  requestAnimationFrame(draw);
+ if(document.getElementById('modelWorkshop')?.hidden){prev=now;return;}
  const dt=Math.min(.07,(now-prev)/1000);prev=now;
  if(document.querySelector('#animate').checked){
    for(const slot of slots){slot.mixer?.update(dt);if(slot.model)stepKamovRotors(slot.model,dt);}
@@ -701,13 +704,17 @@ for(const config of ALL_CATALOG){
  button.append(small);button.addEventListener('click',()=>choose(config));
  (config.human?humanList:list).append(button);
 }
+window.addEventListener('hunter:proves-section',event=>{
+ const wanted=event.detail==='characters'?lastHuman:event.detail==='vehicles'?lastVehicle:null;
+ if(wanted&&currentType.id!==wanted.id)choose(wanted);
+});
 addEventListener('resize',resizeRenderer);
 resizeRenderer();requestAnimationFrame(draw);
 const params=new URLSearchParams(location.search),requestedType=params.get('model')||params.get('vehicle');
 fetch('./assets/vehicle-candidates/manifest.json',{cache:'no-store'})
  .then(response=>response.ok?response.json():null)
- .then(manifest=>{savedManifest=manifest;return choose(ALL_CATALOG.find(c=>c.id===(resumedView?.type||requestedType))||CATALOG[0]);})
- .catch(error=>{console.warn('Manifest local no disponible',error);choose(ALL_CATALOG.find(c=>c.id===(resumedView?.type||requestedType))||CATALOG[0]);});
+ .then(manifest=>{savedManifest=manifest;return choose((()=>{const saved=ALL_CATALOG.find(c=>c.id===(resumedView?.type||requestedType));const kind=document.body.dataset.editorKind;return saved&&((kind==='characters')===!!saved.human)?saved:kind==='characters'?HUMAN_CATALOG[0]:CATALOG[0]})());})
+ .catch(error=>{console.warn('Manifest local no disponible',error);choose((()=>{const saved=ALL_CATALOG.find(c=>c.id===(resumedView?.type||requestedType));const kind=document.body.dataset.editorKind;return saved&&((kind==='characters')===!!saved.human)?saved:kind==='characters'?HUMAN_CATALOG[0]:CATALOG[0]})());});
 
 // A tiny manifest is the only periodic request; edited drafts are never discarded.
 setInterval(async()=>{

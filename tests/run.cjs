@@ -41,7 +41,6 @@ const suites={
     "palm-lod-copy.mjs"
   ],
   "models": [
-    "civilian-car-roof-candidate.mjs",
     "gaz-tigr-approved.mjs",
     "gaz-tigr-door-contours.mjs",
     "t90m-game-integration.mjs",

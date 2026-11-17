@@ -28,12 +28,21 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
  assert.deepEqual(walk(dir).sort(),listed.sort(),'Unlisted or missing candidate GLB');
  const revision=JSON.parse(read('assets/vehicle-candidates/lab-revision.json')).revision;
  assert(typeof revision==='string'&&revision.length>0);
- const html=read('vehicles-externs-proves.html'),entry=read('src/vehicles-externs-proves.mjs');
+ const html=read('proves.html'),entry=read('src/vehicles-externs-proves.mjs');
  assert(read('src/vehicle-live-editor.mjs').includes("LAB_REVISION='"+revision+"'"));
  assert(html.includes('src/vehicles-externs-proves.mjs?rev='+revision));
  for(const module of ['vehicle-live-editor.mjs','vehicle-candidate-catalog.mjs'])assert(entry.includes(module+'?rev='+revision));
- for(const id of ['liveEditor','vehicleList','humanList','humanMotion','liveClearResolved'])assert(html.includes('id="'+id+'"'),'Missing lab control '+id);
+ for(const id of ['liveEditor','vehicleList','humanList','humanMotion','liveClearResolved','sectionTabs','sectionPreview','sectionFrame'])assert(html.includes('id="'+id+'"'),'Missing lab control '+id);
  // Parse the active lab entry and helpers, not tests of retired vehicles.
- for(const file of ['vehicles-externs-proves.mjs','vehicle-candidate-catalog.mjs','vehicle-live-editor.mjs','vehicle-live-geometry.mjs','vehicle-annotation-editor.mjs','vehicle-hole-brush.mjs','human-proposals.mjs','human-model-catalog.mjs','human-current-models.mjs','human-lab-evidence.mjs','human-lab-evidence-ui.mjs'])execFileSync(process.execPath,['--check',path.join(root,'src',file)],{stdio:'inherit'});
- console.log('PASS lab: current fleet, asset manifest, revision and syntax');
+ for(const file of ['proves-hub.mjs','vehicles-externs-proves.mjs','vehicle-candidate-catalog.mjs','vehicle-live-editor.mjs','vehicle-live-geometry.mjs','vehicle-annotation-editor.mjs','vehicle-hole-brush.mjs','human-proposals.mjs','human-model-catalog.mjs','human-current-models.mjs','human-lab-evidence.mjs','human-lab-evidence-ui.mjs'])execFileSync(process.execPath,['--check',path.join(root,'src',file)],{stdio:'inherit'});
+ // Parse the inline startup module as well; broken dynamic imports must block deploy.
+ const inline=[...html.matchAll(/<script type="module">([\s\S]*?)<\/script>/g)].map(m=>m[1]);
+ assert.equal(inline.length,1,'Exactly one inline editor bootstrap expected');
+ execFileSync(process.execPath,['--check','--input-type=module'],{input:inline[0],stdio:['pipe','pipe','pipe']});
+ assert(html.includes("import('./src/vehicles-externs-proves.mjs?rev="+revision+"')"));
+ const hub=await import('../src/proves-hub.mjs');
+ assert.deepEqual(hub.SECTIONS.map(s=>s.id),['characters','vehicles','nature','animations','compounds']);
+ for(const section of Object.values(hub.SECTION_TOOLS))for(const tool of section)if(tool.url)assert(fs.existsSync(path.join(root,tool.url.split('?')[0])),'Missing preview: '+tool.url);
+ assert(!html.includes('knifeAttackConcepts')&&!html.includes('createKnifePoseConcept'));
+ console.log('PASS lab: 5 sections, live editor, preview pages, asset manifest, revision and syntax');
 })().catch(e=>{console.error(e);process.exitCode=1;});
