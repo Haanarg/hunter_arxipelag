@@ -1,7 +1,8 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs?rev=humans-v5';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {createGameWeaponPreview} from './human-weapon-preview.mjs';
-export const HUMAN_VERSION='humans-v15';
+export const HUMAN_VERSION='humans-v16';
+export const HUMAN_SHOULDER_V16=Object.freeze({pivotWidth:.202,previousPivotWidth:.211,previousDeltoidRadius:.078,medialOffsets:Object.freeze([.034,.025,.016,.008,0])});;
 // Reduce only the protagonist's thigh cross-section; preserve length, hip and knee pivots.
 export const HUMAN_PLAYER_THIGH_FACTOR=.94;
 export const HUMAN_PREVIEW_WEAPONS=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters']);
@@ -133,7 +134,7 @@ export function createHumanProposal(T,role,style='a'){
  const pelvis=joint(root,'pelvis','Pelvis',[0,BODY.pelvis,0]);
  loft(pelvis,'Malucs i cintura',[[-.13,.132*W,.10],[-.08,.165*W,.13,.014],[-.01,.174*W,.137,.014],[.08,.146*W,.111]],role==='farmer'?0x746c59:p.uniform).userData.humanLandmark='pelvis';
  const torso=joint(pelvis,'spine','Tors',[0,BODY.spine,0]);
- const torsoShell=loft(torso,'Tronc anatòmic',[[0,.145*W,.105],[.08,.143*W,.108],[.17,.164*W,.116],[.28,.193*W,.132,.006],[.36,.207*W,.128,.009],[.425,.196*W,.117,.012],[.468,.128*W,.092,.012],[.490,.084*W,.073,.012]].map(([y,x,z,offset=0])=>[y,x,z*D,offset]),p.uniform,bodySegments,role==='player');
+ const torsoShell=loft(torso,'Tronc anatòmic',[[0,.145*W,.105],[.08,.143*W,.108],[.17,.164*W,.116],[.28,.193*W,.132,.006],[.36,.207*W,.128,.009],[.425,.196*W,.117,.012],[.468,.145*W,.092,.012],[.490,.084*W,.073,.012]].map(([y,x,z,offset=0])=>[y,x,z*D,offset]),p.uniform,bodySegments,role==='player');
  const belt=loft(pelvis,'Cinturó',[[.048,.158*W,.122],[.085,.158*W,.122]],dark);
  box(pelvis,'Sivella',[.052,.04,.015],[0,.066,-.127],role==='general'?gold:0x9a9c85);
  for(const side of [-1,1]){
@@ -228,11 +229,27 @@ export function createHumanProposal(T,role,style='a'){
   const sole=loft(ankle,'Sola',[[-.054,.057,.111,-.051],[-.070,.057,.111,-.051]],0x1d2521,bootSegments);
   sole.userData.humanLandmark='sole';
   if(s.detail===2)for(let j=0;j<4;j++)box(ankle,'Cordons',[.058,.006,.012],[0,.045-j*.010,-.052-j*.011],0x8b8b74);
-  const shoulder=joint(torso,'shoulder'+suffix,'Espatlla '+label,[side*.211*W,BODY.shoulder,.006]);
-  loft(shoulder,'Deltoide',[[.035,.038*L,.045*L],[.007,.066*L,.072*L],[-.047,.078*L,.081*L],[-.103,.065*L,.064*L],[-.14,.046*L,.046*L]],p.uniform);
+  // V16: narrow the upper silhouette and pull the shoulder into the
+  // clavicle. Keep its height and the animated elbow/wrist chain unchanged.
+  const shoulder=joint(torso,'shoulder'+suffix,'Espatlla '+label,[side*HUMAN_SHOULDER_V16.pivotWidth*W,BODY.shoulder,.006]);
+  const deltoid=loft(shoulder,'Deltoide',[
+   [.048,.032*L,.039*L],  // Narrow shoulder root: no raised spherical cap
+   [.010,.048*L,.054*L],  // Clavicle flows into the torso
+   [-.040,.061*L,.069*L],
+   [-.095,.061*L,.064*L], // Blend into the upper arm instead of bulging
+   [-.148,.054*L,.051*L]
+  ],p.uniform);
+  const shoulderVertices=deltoid.geometry.attributes.position,ringSize=s.segments;
+  for(let ring=0;ring<HUMAN_SHOULDER_V16.medialOffsets.length;ring++){
+   const inward=-side*HUMAN_SHOULDER_V16.medialOffsets[ring]*W;
+   for(let k=ring*ringSize;k<(ring+1)*ringSize;k++)shoulderVertices.setX(k,shoulderVertices.getX(k)+inward);
+  }
+  shoulderVertices.needsUpdate=true;
+  deltoid.geometry.computeVertexNormals();
+  deltoid.userData.humanShoulderV16={side,width:W,limb:L};
   const bare=p.civilian&&role!=='mechanic';
-  limb(shoulder,'Braç',BODY.upperArm,.068*L,.060*L,.046*L,bare?p.skin:p.uniform);
-  if(bare)limb(shoulder,'Màniga curta',.13,.078*L,.072*L,.070*L,p.uniform);
+  limb(shoulder,'Braç',BODY.upperArm,.063*L,.058*L,.046*L,bare?p.skin:p.uniform);
+  if(bare)limb(shoulder,'Màniga curta',.13,.069*L,.063*L,.058*L,p.uniform);
   const elbow=joint(shoulder,'elbow'+suffix,'Colze '+label,[0,-BODY.upperArm,0]);
   oval(elbow,'Articulació colze',[.048*L,.044,.047*L],[0,0,0],p.civilian?p.skin:p.uniform);
   limb(elbow,'Avantbraç',BODY.forearm,.049*L,.052*L,.030*L,p.civilian?p.skin:p.uniform);
@@ -402,7 +419,7 @@ export function createHumanProposal(T,role,style='a'){
  // remain addressable in the editor and in JSON drafts.
  const merge=g=>{
   for(const child of [...g.children])if(child.isGroup)merge(child);
-  const batches=new Map();for(const m of g.children)if(m.isMesh&&!m.userData.humanLandmark&&!m.userData.humanChestFit&&!m.userData.humanChestSurface&&!m.userData.humanHarnessStrap&&!m.userData.humanChestAntenna&&!m.userData.humanHandSurface&&!m.userData.humanThumb&&!m.userData.humanKneePad&&!m.userData.humanCalfProfile&&!m.userData.humanThighFactor){if(!batches.has(m.material))batches.set(m.material,[]);batches.get(m.material).push(m)}
+  const batches=new Map();for(const m of g.children)if(m.isMesh&&!m.userData.humanLandmark&&!m.userData.humanChestFit&&!m.userData.humanChestSurface&&!m.userData.humanHarnessStrap&&!m.userData.humanChestAntenna&&!m.userData.humanHandSurface&&!m.userData.humanThumb&&!m.userData.humanKneePad&&!m.userData.humanCalfProfile&&!m.userData.humanThighFactor&&!m.userData.humanShoulderV16){if(!batches.has(m.material))batches.set(m.material,[]);batches.get(m.material).push(m)}
   for(const [material,items]of batches){if(items.length<2)continue;const positions=[],normals=[],names=[];
    for(const m of items){m.updateMatrix();const geo=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();geo.applyMatrix4(m.matrix);positions.push(...geo.attributes.position.array);normals.push(...geo.attributes.normal.array);names.push(m.name);g.remove(m);geo.dispose();m.geometry.dispose()}
    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));geo.userData.labOwned=true;
@@ -411,7 +428,7 @@ export function createHumanProposal(T,role,style='a'){
  };merge(root);
  root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
  root.scale.setScalar(p.height/height);
- root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:15},humanHeight:p.height,labAssemblies:true};
+ root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:16},humanHeight:p.height,labAssemblies:true};
  if(role==='player')setHumanPreviewWeapon(T,root,'pistol');
  return root;
 }

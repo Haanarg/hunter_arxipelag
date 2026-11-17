@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import * as T from '../vendor/three-r186.module.mjs';
 import {HUMAN_PROFILES,HUMAN_CATALOG,HUMAN_STYLES,HUMAN_PLAYER_GREEN} from '../src/human-model-catalog.mjs';
 import {palette} from '../src/palette-core.mjs';
-import {createHumanProposal,setHumanPreviewWeapon,HUMAN_PREVIEW_WEAPONS,poseHumanProposal,HUMAN_VERSION,HUMAN_HEAD_ADVANCE,HUMAN_NECK_FOLLOW,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait,HUMAN_BOOT_SPEC,HUMAN_PLAYER_THIGH_FACTOR} from '../src/human-proposals.mjs';
+import {createHumanProposal,setHumanPreviewWeapon,HUMAN_PREVIEW_WEAPONS,poseHumanProposal,HUMAN_VERSION,HUMAN_HEAD_ADVANCE,HUMAN_NECK_FOLLOW,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait,HUMAN_BOOT_SPEC,HUMAN_PLAYER_THIGH_FACTOR,HUMAN_SHOULDER_V16} from '../src/human-proposals.mjs';
 import {createCurrentHuman} from '../src/human-current-models.mjs';
 globalThis.window=globalThis;
 assert.equal(HUMAN_CATALOG.length,7);assert(HUMAN_CATALOG.every(c=>!c.validated&&c.kind==='huma'&&c.options.length===2));
@@ -66,6 +66,39 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
    const target=role==='player'?HUMAN_PLAYER_GREEN:HUMAN_PROFILES[role].uniform;
    assert.equal(thigh.material.color.getHex(),role==='farmer'?0x746c59:target,'Color de cuixa '+role+style);
   }
+  // V16: verify both deltoids from the actual vertices. The outermost
+  // contour must be notably closer to the body, while the medial surface
+  // intersects torso and upper-arm geometry rather than floating beside it.
+  const shoulderMeshes=meshes.filter(m=>m.userData.humanShoulderV16);
+  assert.equal(shoulderMeshes.length,2,'Deltoides independents i simètrics');
+  const torsoShell=meshes.find(m=>m.name==='Tronc anatòmic'||m.userData.batchedParts?.includes('Tronc anatòmic'));
+  assert(torsoShell,'Tronc per verificar la unió');
+  const shoulderResults=[];
+  model.updateMatrixWorld(true);
+  for(const shoulderMesh of shoulderMeshes){
+   const {side,width,limb}=shoulderMesh.userData.humanShoulderV16;
+   const joint=joints[side<0?'shoulderL':'shoulderR'];
+   assert.equal(shoulderMesh.parent,joint,'Deltoide articulat sobre espatlla');
+   const geom=shoulderMesh.geometry,verts=geom.attributes.position;
+   const seg=HUMAN_STYLES[style].segments;
+   assert.equal(verts.count,seg*5,'Cinc seccions anatòmiques d’espatlla');
+   let outward=-Infinity, inward=Infinity;
+   for(let k=0;k<verts.count;k++){
+    const v=side*verts.getX(k);
+    outward=Math.max(outward,v);inward=Math.min(inward,v);
+   }
+   const oldOut=HUMAN_SHOULDER_V16.previousPivotWidth*width+HUMAN_SHOULDER_V16.previousDeltoidRadius*limb;
+   const newOut=HUMAN_SHOULDER_V16.pivotWidth*width+outward;
+   assert(oldOut-newOut>.020*limb,'Deltoide més arrapat al cos ('+(oldOut-newOut)+')');
+   assert(inward<-.038*limb,'Cara interior entra al tors');
+   const shoulderBox=new T.Box3().setFromObject(shoulderMesh,true);
+   const torsoBox=new T.Box3().setFromObject(torsoShell,true);
+   assert(shoulderBox.intersectsBox(torsoBox),'Deltoide tocant el tronc');
+   const arm=meshes.find(m=>m.parent===joint&&(m.name==='Braç'||m.userData.batchedParts?.includes('Braç')));
+   assert(arm&&shoulderBox.intersectsBox(new T.Box3().setFromObject(arm,true)),'Deltoide connectat al braç');
+   shoulderResults.push({side,outward:newOut,inward});
+  }
+  assert(Math.abs(shoulderResults[0].outward-shoulderResults[1].outward)<1e-6,'Amplada simètrica A/B');
   if(role==='player'){
    const torso=meshes.find(m=>m.name==='Tronc anatòmic'||m.userData.batchedParts?.includes('Tronc anatòmic'));
    assert(torso&&torso.material.color.getHex()===HUMAN_PLAYER_GREEN,'Tronc verd clar igual que cames');
@@ -422,7 +455,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,14);assert.equal(choices.size,14);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V15'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V16'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));

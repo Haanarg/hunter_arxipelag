@@ -1,3 +1,9 @@
+**2026-11-17 · HUMANS V16 · espatlles anatòmiques:**
+- [x] 14 candidats A/B: deltoides amb cinc seccions menys voluminoses, inserció medial sota la clavícula i unió gradual amb el braç. Pivot lateral apropat 9 mm al cos sense variar l'alçada ni el rig d'espatlla-colze-canell.
+- [x] Clavícula lleugerament més integrada al tors i radi superior del braç reduït (igualment a la màniga curta civil) per evitar una protuberància esfèrica a l'espatlla. Guies i postura neutra preservades.
+- [x] Proves de vèrtexs del deltoide: reducció de sortint lateral, simetria bilateral i intersecció amb les geometries reals del tors i el braç. Armes i animacions sense canvis.
+- [ ] Validació visual de postura neutra, caminar, córrer i apuntar a WebGL. Originals del joc intactes.
+
 **HUMANS V15 · segona revisió de proves:**
 - [x] Corregida referència a l'estil A/B de la prova de cuixes; marcatge explícit per evitar que la fusió de malles perdi la referència geomètrica. Ajustada la comprovació del tronc per acceptar agrupació per materials.
 - [ ] CI i desplegament definitiu pendents.
