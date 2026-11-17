@@ -67,6 +67,8 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
  const modelEditor=read('src/vehicles-externs-proves.mjs');
  assert(/renderer\.setScissorTest\(false\);\s*renderer\.clear\(true,true,true\);\s*renderer\.setScissorTest\(true\);/.test(modelEditor),'The full WebGL canvas must be cleared before each clipped frame');
  assert(html.includes('body[data-editor-kind=""] #draw{display:none!important}'));
+ const {runCompoundPreviewSmoke}=await import('./compound-preview-smoke.mjs');
+ runCompoundPreviewSmoke();
  const hub=await import('../src/proves-hub.mjs');
  assert.deepEqual(hub.SECTIONS.map(s=>s.id),['characters','vehicles','nature','animations','compounds']);
  for(const section of Object.values(hub.SECTION_TOOLS))for(const tool of section)if(tool.url)assert(fs.existsSync(path.join(root,tool.url.split('?')[0])),'Missing preview: '+tool.url);
