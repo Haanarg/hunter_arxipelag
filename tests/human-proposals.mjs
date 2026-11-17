@@ -197,6 +197,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
     assert(mount.children.some(c=>c.userData.gameWeaponType===type),'Arma del joc carregada');
     const expected=(mode)=>{
      if(type==='knife')return new T.Vector3(0,1,0);
+     if(type==='bazooka'&&['rest','idle','walk','wave'].includes(mode))return new T.Vector3(0,-.64,-.7683749085).normalize();
      if(mode==='aim'&&type!=='cutters')return new T.Vector3(0,0,-1);
      if(['bazooka','assault','sniper'].includes(type)&&['crouch','work'].includes(mode))
       return new T.Vector3(0,-.20,-.9797958971).normalize();
@@ -306,7 +307,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
    for(const mode of ['rest','aim']){
     poseHumanProposal(model,0,mode);
     const dir=new T.Vector3(0,0,-1).applyQuaternion(held.getWorldQuaternion(new T.Quaternion()));
-    const desired=new T.Vector3(0,mode==='aim'?0:-1,mode==='aim'?-1:0);
+    const desired=role==='rocket'&&mode==='rest'?new T.Vector3(0,-.64,-.7683749085).normalize():new T.Vector3(0,mode==='aim'?0:-1,mode==='aim'?-1:0);
     assert(dir.dot(desired)>.999,'Canó de '+role+' en '+mode);
    }
    if(['rifle','rocket'].includes(p.weapon)){

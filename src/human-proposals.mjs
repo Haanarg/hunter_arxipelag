@@ -523,14 +523,16 @@ function orientHumanEquippedWeapon(model,weapon,mode,rig,j){
  const long=['rocket','bazooka','sniper','assault','rifle'].includes(type);
  const source=rig.source.set(0,blade||tool?-1:0,blade||tool?0:-1);
  const lowered=long&&(mode==='crouch'||mode==='work');
+ // Oversized bazookas must not drag their muzzles on the ground in idle.
+ const bazookaCarry=['bazooka','rocket'].includes(type)&&['rest','idle','walk','wave'].includes(mode);
  const target=rig.direction;
  if(mode==='run'&&type==='pistol'&&j?.elbowR&&j.wristR){
   // Right-arm swing drives the pistol. No frozen model-space barrel axis.
   target.copy(j.wristR.getWorldPosition(rig.wrist)).sub(j.elbowR.getWorldPosition(rig.elbow)).normalize();
  }else{
   target.set(mode==='run'&&long?-.28:0,
-   blade?1:mode==='aim'&&!tool?0:mode==='run'&&long?-.72:lowered?-.20:-1,
-   blade||tool?0:mode==='aim'?-1:mode==='run'&&long?-.64:lowered?-.9797958971:0)
+   blade?1:mode==='aim'&&!tool?0:mode==='run'&&long?-.72:lowered?-.20:bazookaCarry?-.64:-1,
+   blade||tool?0:mode==='aim'?-1:mode==='run'&&long?-.64:lowered?-.9797958971:bazookaCarry?-.7683749085:0)
    .normalize().applyQuaternion(model.getWorldQuaternion(rig.modelQ));
  }
  weapon.parent.getWorldQuaternion(rig.parentQ);
