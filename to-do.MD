@@ -1,3 +1,9 @@
+**2026-11-17 · HUMANS V13 · punta del peu posterior en córrer:**
+- [x] Inspirat en la referència d'esquelet corrent: al final de l'impuls la punta del peu posterior apunta majoritàriament enrere i només lleugerament cap avall, en prolongació de la cama. La flexió del turmell i la recuperació tornen progressivament sense salts de fase.
+- [x] S'han revisat les claus de cursa (fases 0.29–0.53) i el límit de flexió del turmell durant la cursa; es manté el límit anterior caminant. Sense canviar ni proporcions, ni posició dels turmells, ni geometria de les botes de V12.
+- [x] Proves amb vèrtexs d'empenya/sola transformats en els 14 candidats A/B per garantir punta darrere del taló durant l'impuls i endavant durant la marxa.
+- [ ] Revisió visual de les fases a WebGL. No integrar al joc definitiu fins a validació.
+
 **2026-11-17 · HUMANS V12 · afinament progressiu dels panxells:**
 - [x] 14 candidats humans (7 rols × A/B): mantenir exactament les quatre seccions superiors dels bessons de V11, afegir tres seccions graduals sota el ventre muscular per afinar la tíbia i el tendó d'Aquil·les fins a un radi al turmell de 0,029×L (abans 0,040×L).
 - [x] Ajust mínim de la canya de les botes per encaixar amb els turmells més prims, sense alterar-ne el taló ni la sola aprovats a V11.

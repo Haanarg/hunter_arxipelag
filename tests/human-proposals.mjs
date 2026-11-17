@@ -9,7 +9,7 @@ assert.equal(HUMAN_CATALOG.length,7);assert(HUMAN_CATALOG.every(c=>!c.validated&
 const choices=new Set();let count=0;
 for(const blend of [0,.25,.5,.75,1]){
  const samples=Array.from({length:201},(_,i)=>sampleHumanGait(i/200,blend));
- assert(samples.every(p=>p.knee<=.00001&&p.ankle>=-.751&&p.ankle<=.821));
+ assert(samples.every(p=>p.knee<=.00001&&p.ankle>=(-.75-.65*blend)-.001&&p.ankle<=.821));
  assert(Math.abs(samples[0].footPitch-samples.at(-1).footPitch)<1e-9);
  for(let i=1;i<samples.length;i++)assert(Math.abs(samples[i].footPitch-samples[i-1].footPitch)<.15,'Peu sense salts');
  assert(Math.max(...samples.map(p=>p.footPitch))>.01&&Math.min(...samples.map(p=>p.footPitch))<-.35,'Taló i punta no paral·lels al terra');
@@ -22,7 +22,17 @@ for(const mode of ['run','walk']){
  assert(Math.abs(clock.blend-(mode==='run'?1:0))<.002);
 }
 assert(Number.isFinite(before.ankle));
-console.log('PASS transició caminar/córrer, fase contínua i flexió de turmell');
+// Trailing sprint foot points BACK, not at the floor. The user-supplied
+// running skeleton shows the toe continuing the line of the rearward shin.
+const toeVector=g=>({rear:-Math.cos(g.footPitch),down:Math.sin(g.footPitch)});
+for(const phase of [.39,.42,.46,.48]){
+ const vector=toeVector(sampleHumanGait(phase,1));
+ assert(vector.rear>.70,'Impuls final: punta del peu enrere, fase '+phase);
+ assert(vector.down>-.70,'Impuls final: no apunta verticalment al terra, fase '+phase);
+}
+assert(toeVector(sampleHumanGait(.39,0)).rear<0,'Caminar conserva la planta mirant endavant');
+assert(Math.abs(sampleHumanGait(0,1).footPitch-sampleHumanGait(1,1).footPitch)<1e-9,'Cicle de cursa tancat');
+console.log('PASS transició caminar/córrer, fase contínua i punta posterior de cursa');
 for(const [role,p]of Object.entries(HUMAN_PROFILES)){
  assert.throws(()=>createHumanProposal(T,role,'c'),/desconeguda/,'Variant C retirada');
  const actual=await createCurrentHuman(T,role);assert.equal(actual.userData.humanOriginal,role);
@@ -258,6 +268,17 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   assert(joints.spine.rotation.x<-.15,'Ajupir-se: inclinar el cos endavant');
   poseHumanProposal(model,.25,'work');assert(joints.spine.rotation.x<-.20,'Treballar: inclinar-se endavant');
   poseHumanProposal(model,.25,'run',{phase:.25,blend:1});assert(joints.spine.rotation.x<-.08,'Córrer: inclinar-se endavant');
+  // Verify the actual transformed outsole: toe (local -Z) is behind the
+  // heel on the final running stride, slightly downward, across all 14 rigs.
+  poseHumanProposal(model,0,'run',{phase:.39,blend:1});
+  const ankle=joints.ankleL,heel=ankle.localToWorld(new T.Vector3(0,-.07,.060));
+  const toe=ankle.localToWorld(new T.Vector3(0,-.07,-.162)),direction=toe.sub(heel);
+  assert(direction.z>.14*model.scale.x,'La punta real mira enrere en la cursa '+role+style);
+  assert(direction.y<0&&Math.abs(direction.y)<direction.z*.70,'Punta enrere lleugerament avall, no vertical '+role+style);
+  poseHumanProposal(model,0,'walk',{phase:.39,blend:0});
+  const heelWalk=ankle.localToWorld(new T.Vector3(0,-.07,.060));
+  const toeWalk=ankle.localToWorld(new T.Vector3(0,-.07,-.162));
+  assert(toeWalk.z-heelWalk.z<0,'La marxa normal no inverteix els peus '+role+style);
   for(const mode of ['idle','walk','run','crouch','aim','work','wave'])for(const t of [0,.25,.5,1]){
    poseHumanProposal(model,t,mode);model.updateMatrixWorld(true);
    model.traverse(n=>assert(n.matrixWorld.elements.every(Number.isFinite),role+style+mode));
@@ -330,7 +351,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,14);assert.equal(choices.size,14);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V12'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V13'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));

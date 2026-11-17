@@ -134,7 +134,7 @@ body[data-editor-kind=""] #draw{display:none!important}
  <label id="humanWeaponControl" hidden>Arma del protagonista <select id="humanWeapon"><option value="pistol">Pistola silenciada</option><option value="assault">Fusell AEK-971</option><option value="sniper">Franctirador SV-98</option><option value="bazooka">Bazuca</option><option value="knife">Ganivet</option><option value="cutters">Cisalla</option></select></label>
  <label>Velocitat <input id="humanSpeed" type="range" min="0.25" max="1.5" step="0.05" value="1" aria-label="Velocitat de l’animació"></label>
  <button id="humanRest" type="button">Postura neutra</button>
- <label><input id="humanGuides" type="checkbox"> Guies anatòmiques (0–8)</label> <strong id="humanRevision">HUMANS V12</strong> <output id="humanGaitMix" aria-live="off"></output>
+ <label><input id="humanGuides" type="checkbox"> Guies anatòmiques (0–8)</label> <strong id="humanRevision">HUMANS V13</strong> <output id="humanGaitMix" aria-live="off"></output>
  <p>Guies en postura neutra, vista frontal/lateral/posterior. Punts verds = articulacions i extrems reals; taronja = pivot del cap. El 0 és el crani sense barret, el 8 la sola. Canvia Caminar ↔ Córrer durant l’animació per provar la transició progressiva.</p>
 </section>
 <details id="humanEvidence" class="annotation-tools" hidden><summary>Fitxa de validació humana · exportació de malles reals</summary>
@@ -200,14 +200,14 @@ body[data-editor-kind=""] #draw{display:none!important}
  <a id="sectionOpen" target="_blank" rel="noopener noreferrer" href="#" hidden></a>
  <iframe id="sectionFrame" title="Visor de proves" loading="lazy" allow="fullscreen" hidden></iframe>
 </section></main>
-<script type="module" src="./src/proves-hub.mjs?rev=live-editor-20261117-humans-v12-calf-taper-1"></script>
+<script type="module" src="./src/proves-hub.mjs?rev=live-editor-20261117-humans-v13-trailing-foot-1"></script>
 <script type="module">
 let workshopStarted=false;
 function loadWorkshop(){
  if(workshopStarted)return;
  workshopStarted=true;
  // Report import failures instead of leaving a blank editor.
- import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261117-humans-v12-calf-taper-1')
+ import('./src/vehicles-externs-proves.mjs?rev=live-editor-20261117-humans-v13-trailing-foot-1')
   .catch(error=>{
    workshopStarted=false;
    console.error('Error en arrencar l’editor:',error);

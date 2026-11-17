@@ -1,7 +1,7 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs?rev=humans-v5';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {createGameWeaponPreview} from './human-weapon-preview.mjs';
-export const HUMAN_VERSION='humans-v12';
+export const HUMAN_VERSION='humans-v13';
 export const HUMAN_PREVIEW_WEAPONS=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters']);
 // Anatomical adjustment for every A/B human candidate. -Z faces forward.
 export const HUMAN_HEAD_ADVANCE=.020;
@@ -398,7 +398,7 @@ export function createHumanProposal(T,role,style='a'){
  };merge(root);
  root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
  root.scale.setScalar(p.height/height);
- root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:12},humanHeight:p.height,labAssemblies:true};
+ root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:13},humanHeight:p.height,labAssemblies:true};
  if(role==='player')setHumanPreviewWeapon(T,root,'pistol');
  return root;
 }
@@ -444,16 +444,20 @@ export function setHumanPreviewWeapon(T,root,kind){
 // Gait angles (radians): hip, knee, foot pitch in the body sagittal plane.
 // Both cycles start at forward foot contact; negative foot pitch is toe-down.
 // Walk: heel strike, flat support, toe-off, swing. Run: shorter stance,
-// stronger toe-off, folded swing and a brief aerial phase.
+// rearward-pointing trailing toe during the final push-off, folded swing
+// and a brief aerial phase. Local -Z is the toe and the character's front.
 const WALK_GAIT=[
  [0,.36,-.06,.21],[.115,.22,-.25,0],[.30,-.05,-.07,0],
  [.50,-.34,-.12,-.30],[.62,-.40,-.48,-.55],[.74,-.02,-1.0,-.48],
  [.87,.38,-.40,.10],[1,.36,-.06,.21]
 ];
 const RUN_GAIT=[
- [0,.60,-.22,.07],[.13,.15,-.53,-.12],[.29,-.43,-.38,-.55],
- [.39,-.55,-.85,-.91],[.53,-.15,-1.80,-1.40],[.69,.55,-1.45,-.55],
- [.85,.78,-.62,.10],[1,.60,-.22,.07]
+ [0,.60,-.22,.07],[.13,.15,-.53,-.12],
+ [.29,-.43,-.38,-1.45],           // The trailing foot begins to point rearward.
+ [.39,-.55,-.85,-2.68],           // Last push-off: toe backward, only slightly downward.
+ [.48,-.40,-1.38,-2.48],          // Continue the rearward extension into flight.
+ [.53,-.15,-1.80,-2.10],          // Knee folds; foot follows the recovering shin.
+ [.69,.55,-1.45,-.55],[.85,.78,-.62,.10],[1,.60,-.22,.07]
 ];
 const mix=(a,b,t)=>a+(b-a)*t,clamp01=x=>Math.max(0,Math.min(1,x));
 const cycle=x=>((x%1)+1)%1;
@@ -472,9 +476,11 @@ function sampleGait(keys,phase){
 }
 export function sampleHumanGait(phase,blend){
  const t=clamp01(blend),walk=sampleGait(WALK_GAIT,phase),run=sampleGait(RUN_GAIT,phase),[hip,knee,foot]=walk.map((v,i)=>mix(v,run[i],t));
- // The ankle adds its own flexion, rather than canceling the hip and knee
- // and keeping the entire boot horizontal as in V2.
- const ankle=Math.max(-.75,Math.min(.82,foot-hip-knee));
+ // The ankle adds its own flexion rather than cancelling hip and knee.
+ // Only sprinting allows the stronger plantar-flexion needed to align the
+ // trailing shoe with the rearward shin; walking retains its original limit.
+ const minAnkle=mix(-.75,-1.40,t);
+ const ankle=Math.max(minAnkle,Math.min(.82,foot-hip-knee));
  return {hip,knee,ankle,footPitch:hip+knee+ankle};
 }
 const gaitRate=blend=>mix(5.5,9,blend)/(2*Math.PI);
