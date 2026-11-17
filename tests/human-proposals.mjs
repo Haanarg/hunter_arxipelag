@@ -306,7 +306,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,14);assert.equal(choices.size,14);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V10'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V11'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));
