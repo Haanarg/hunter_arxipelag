@@ -1,4 +1,5 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs?rev=humans-v5';
+import {createGameWeaponPreview} from './human-weapon-preview.mjs';
 export const HUMAN_VERSION='humans-v8';
 export const HUMAN_PREVIEW_WEAPONS=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters']);
 // Anatomical adjustment for every A/B human candidate. -Z faces forward.
@@ -376,9 +377,7 @@ export function setHumanPreviewWeapon(T,root,kind){
  let mount=null;
  root.traverse(o=>{if(o.userData.humanPreviewWeapon)mount=o});
  if(!mount)return false;
- const factory=globalThis.HUNTER_CHARACTERS?.createLabWeapon;
- if(typeof factory!=='function')throw Error('No s’han carregat les geometries d’armes del joc');
- const visual=factory(T,kind);
+ const visual=createGameWeaponPreview(T,kind);
  visual.scale.setScalar({pistol:.25,assault:.22,sniper:.18,bazooka:.25,knife:.28,cutters:.30}[kind]);
  for(const child of [...mount.children]){
   child.traverse(obj=>{

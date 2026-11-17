@@ -1,10 +1,12 @@
 import {playerModel} from './player-model-core.mjs';
+import {playerBatching} from './player-batching-core.mjs';
 import {palette} from './palette-core.mjs';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs';
 import {HUMAN_PROFILES} from './human-model-catalog.mjs';
 let loading;
 async function factories(){
  globalThis.HUNTER_PLAYER_MODEL=playerModel;
+ globalThis.HUNTER_PLAYER_BATCH=playerBatching;
  globalThis.HUNTER_PALETTE=palette;
  if(!loading)loading=Promise.all([import('./bolt-cutters.js'),import('./characters.js'),import('./general-model.js'),import('./prisoners.js')]);
  await loading;

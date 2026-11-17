@@ -135,6 +135,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
    assert(gameGun.some(m=>m.geometry.type==='CylinderGeometry'),'Canó real de la pistola silenciada');
    const mount=model.getObjectByName('Arma del joc');
    assert(mount?.userData.humanGameWeaponSource==='characters.js');
+   assert(!readFileSync(new URL('../src/characters.js',import.meta.url),'utf8').includes('createLabWeapon(T,kind)'),'No modificar el runtime del joc per a un visor');
    assert.equal(mount.userData.humanWeapon,'pistol');
    for(const type of HUMAN_PREVIEW_WEAPONS){
     assert.equal(setHumanPreviewWeapon(T,model,type),true,'Es pot seleccionar '+type);
