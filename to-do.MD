@@ -1,3 +1,8 @@
+**2026-11-17 · HUMANS V6 · avanç del cap i reducció del clatell:**
+- [x] Avançat **0,020 unitats anatòmiques** cap a -Z el pivot del cap de tots els 14 candidats humans A/B (set rols), sense moure l'eix vertical del coll. La mandíbula, el nas, les ulleres, el barret i el cabell es mouen com una unitat i conserven l'animació.
+- [x] Actualitzades les etiquetes V6, la revisió del laboratori i el test geomètric per a tots els rols i variants; es mantenen les comprovacions existents de gola-crani, proporcions i articulacions.
+- [ ] Validació visual del nou perfil al navegador. Els set originals del joc continuen intactes com a referència, d'acord amb la regla d'aprovar abans d'integrar candidats.
+
 **2026-11-17 · Revisió final del treball «Refinament de models en temps real»:**
 - [x] HUMANS V5 manté 7 originals i 14 candidats A/B; C retirat. Proporcions de vuit caps, pivot cranial, gola/coll, nas tancat, mans contínues amb polzes davant, ulleres quadrades, accessoris del tors i cicle de cursa amb turmells articulats i transició caminar–córrer, amb regressions geomètriques automatitzades.
 - [x] L'editor real resideix a `proves.html`: refinat plegat per defecte, guies 0–8, anotacions, cua, desfer/refer i evidència/exportació; arreglat el test que encara apuntava a l'antiga pàgina de redirecció. Eliminat el text obsolet A/B/C.

@@ -1,5 +1,7 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs?rev=humans-v5';
-export const HUMAN_VERSION='humans-v5';
+export const HUMAN_VERSION='humans-v6';
+// Anatomical adjustment for every A/B human candidate. -Z faces forward.
+export const HUMAN_HEAD_ADVANCE=.020;
 
 // Eight-head anatomical template, before role-specific headwear and game scaling.
 // Reference image: knee slightly above division 6; elbows near 5 heads from floor;
@@ -119,7 +121,9 @@ export function createHumanProposal(T,role,style='a'){
  // The throat continues into the underside of the jaw, while the upper
  // rings are buried in the cranium. Do not bow the neck back toward the pivot.
  loft(neck,'Coll anatòmic i clatell',[[-.050,.090,.080,.002],[-.018,.078,.072,.002],[.012,.065,.063,.002],[.040,.063,.062,.002],[.068,.063,.062,.002],[.096,.061,.059,.002],[.124,.055,.055,.002],[.148,.040,.040,.002]],p.skin).userData.humanLandmark='neck';
- const head=joint(neck,'head','Cap',[0,.095,.065]);
+ // Move the pivot forward, bringing the entire head, face and headwear with it.
+ // Preserve the vertical cervical column and its connection beneath the jaw.
+ const head=joint(neck,'head','Cap',[0,.095,.065-HUMAN_HEAD_ADVANCE]);
  head.scale.set(s.head,.95,s.head);
  loft(head,'Mandíbula i crani',[[0,.032,.033,-.062,.046],[.018,.055,.056,-.041,.039],[.043,.075,.079,-.019,.031],[.081,.086,.095,.003,.017],[.128,.093,.104,.010],[.174,.094,.103,.012],[.216,.076,.082,.016],[.242,.047,.049,.015],[.252,.012,.015,.014]],p.skin,Math.max(10,s.segments)).userData.humanLandmark='skull';
  // Closed five-vertex nose with outward winding (-Z is the face front).

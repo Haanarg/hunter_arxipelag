@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as T from '../vendor/three-r186.module.mjs';
 import {HUMAN_PROFILES,HUMAN_CATALOG,HUMAN_STYLES} from '../src/human-model-catalog.mjs';
-import {createHumanProposal,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait} from '../src/human-proposals.mjs';
+import {createHumanProposal,poseHumanProposal,HUMAN_VERSION,HUMAN_HEAD_ADVANCE,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait} from '../src/human-proposals.mjs';
 import {createCurrentHuman} from '../src/human-current-models.mjs';
 globalThis.window=globalThis;
 assert.equal(HUMAN_CATALOG.length,7);assert(HUMAN_CATALOG.every(c=>!c.validated&&c.kind==='huma'&&c.options.length===2));
@@ -33,6 +33,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   const model=createHumanProposal(T,role,style),joints={},rest={},meshes=[];choices.add(role+style);
   model.traverse(n=>{if(n.userData.humanMotionJoint)joints[n.userData.humanMotionJoint]=n;if(n.userData.humanRestJoint)rest[n.userData.humanRestJoint]=n;if(n.isMesh)meshes.push(n)});
   assert.equal(Object.keys(joints).length,16);
+  assert.equal(rest.head.position.z,.065-HUMAN_HEAD_ADVANCE,'El pivot del cap avança 2 cm, també amb barret i ulleres');
   assert.equal(rest.kneeL.parent,joints.hipL);assert.equal(rest.ankleR.parent,joints.kneeR);
   assert.equal(rest.elbowL.parent,joints.shoulderL);assert.equal(rest.wristR.parent,joints.elbowR);
   poseHumanProposal(model,0,'rest');
@@ -170,7 +171,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,14);assert.equal(choices.size,14);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V5'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V6'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));
