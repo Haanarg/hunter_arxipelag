@@ -8,6 +8,17 @@ const root=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 (async()=>{
  const {CATALOG}=await import('../src/vehicle-candidate-catalog.mjs');
+ // The real in-game factory is also imported by the editor. Keep runtime dependencies.
+ const {vehicleModels}=await import('../src/vehicle-model-core.mjs');
+ const THREE=await import('../vendor/three-r186.module.mjs');
+ const factory=vehicleModels.createFactory(THREE,{
+  box:(parent,w,h,d,color)=>{const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color}));parent.add(mesh);return mesh},
+  material:color=>new THREE.MeshStandardMaterial({color}),
+  shadows:false
+ });
+ const hover=factory('hover');
+ assert.equal(hover.userData.hovercraftModel,'D-model-3','Approved hovercraft must be available in the actual game factory');
+ 
  const {vehicleSpecs}=await import('../src/vehicle-specs.mjs');
  const ids=CATALOG.map(c=>c.id);
  assert.equal(new Set(ids).size,ids.length,'Duplicate catalog id');
