@@ -355,7 +355,7 @@ export function createHumanProposal(T,role,style='a'){
   }
   if(p.weapon==='rocket'||p.weapon==='rifle'){
    const grip=group(weapon,'Presa esquerra de cursa');
-   grip.position.set(p.weapon==='rocket'?-.075:-.044,-.03,p.weapon==='rocket'?-.40:-.205);
+   grip.position.set(p.weapon==='rocket'?-.095:-.044,-.03,p.weapon==='rocket'?-.14:-.205);
    grip.userData.humanRunSupportGrip=true;
   }
  }
