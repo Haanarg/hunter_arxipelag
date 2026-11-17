@@ -1,5 +1,6 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs?rev=humans-v5';
-export const HUMAN_VERSION='humans-v7';
+export const HUMAN_VERSION='humans-v8';
+export const HUMAN_PREVIEW_WEAPONS=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters']);
 // Anatomical adjustment for every A/B human candidate. -Z faces forward.
 export const HUMAN_HEAD_ADVANCE=.020;
 // The straight cervical column follows halfway, so the throat remains tucked
@@ -210,7 +211,9 @@ export function createHumanProposal(T,role,style='a'){
   const thumb=oval(hand,'Polze',[.013,.033,.014],[-side*.034,-.037,-.003],p.skin);
   thumb.rotation.z=-side*.30;thumb.userData.humanThumb=true;
   if(!p.civilian&&role!=='general'){
-   box(knee,'Genollera',[.12*L,.125,.037],[0,-.008,-.061*L],p.trim);
+   // Anatomical elongated oval, convex toward the front, not a box.
+   const pad=oval(knee,'Genollera ovalada',[.071*L,.090,.032],[0,-.008,-.064*L],p.trim);
+   pad.userData.humanKneePad=true;
    if(s.detail===2){box(elbow,'Colzera',[.078*L,.087,.031],[0,.0,.047*L],p.trim);box(hip,'Butxaca lateral',[.04*L,.14,.10*L],[side*.102*L,-.20,.005],p.trim)}
   }
   if(role==='general'){
@@ -331,8 +334,14 @@ export function createHumanProposal(T,role,style='a'){
  // Decorative game props distinguish the existing roles; no functional parts.
  if(p.weapon){
   let parent;root.traverse(n=>{if(n.userData.humanMotionJoint==='wristR')parent=n});
-  const weapon=group(parent,p.weapon==='rocket'?'Bazuca':p.weapon==='rifle'?'Fusell':'Pistola');weapon.position.set(0,-.055,-.015);weapon.rotation.x=-Math.PI/2;weapon.userData.humanWeapon=p.weapon;
-  if(p.weapon==='rocket'){
+  const weapon=group(parent,role==='player'?'Arma del joc':p.weapon==='rocket'?'Bazuca':p.weapon==='rifle'?'Fusell':'Pistola');
+  weapon.position.set(0,-.055,role==='player'?-.09:-.015);
+  weapon.rotation.x=role==='player'?0:-Math.PI/2;
+  weapon.userData.humanWeapon=p.weapon;
+  if(role==='player'){
+   // Meshes installed after batching so they stay individually selectable.
+   weapon.userData.humanPreviewWeapon=true;
+  }else if(p.weapon==='rocket'){
    const body=tube(weapon,'Tub bazuca',.056,.065,.96,[0,.04,-.18],0x566149,10);body.rotation.x=Math.PI/2;
    for(const z of [-.68,.30]){const rim=tube(weapon,'Extrem bazuca',.074,.074,.04,[0,.04,z],dark,10);rim.rotation.x=Math.PI/2}
    box(weapon,'Empunyadura bazuca',[.045,.10,.06],[0,-.04,0],dark);
@@ -347,7 +356,7 @@ export function createHumanProposal(T,role,style='a'){
  // remain addressable in the editor and in JSON drafts.
  const merge=g=>{
   for(const child of [...g.children])if(child.isGroup)merge(child);
-  const batches=new Map();for(const m of g.children)if(m.isMesh&&!m.userData.humanLandmark&&!m.userData.humanChestFit&&!m.userData.humanChestSurface&&!m.userData.humanHarnessStrap&&!m.userData.humanChestAntenna&&!m.userData.humanHandSurface&&!m.userData.humanThumb){if(!batches.has(m.material))batches.set(m.material,[]);batches.get(m.material).push(m)}
+  const batches=new Map();for(const m of g.children)if(m.isMesh&&!m.userData.humanLandmark&&!m.userData.humanChestFit&&!m.userData.humanChestSurface&&!m.userData.humanHarnessStrap&&!m.userData.humanChestAntenna&&!m.userData.humanHandSurface&&!m.userData.humanThumb&&!m.userData.humanKneePad){if(!batches.has(m.material))batches.set(m.material,[]);batches.get(m.material).push(m)}
   for(const [material,items]of batches){if(items.length<2)continue;const positions=[],normals=[],names=[];
    for(const m of items){m.updateMatrix();const geo=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();geo.applyMatrix4(m.matrix);positions.push(...geo.attributes.position.array);normals.push(...geo.attributes.normal.array);names.push(m.name);g.remove(m);geo.dispose();m.geometry.dispose()}
    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));geo.userData.labOwned=true;
@@ -356,8 +365,42 @@ export function createHumanProposal(T,role,style='a'){
  };merge(root);
  root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
  root.scale.setScalar(p.height/height);
- root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:7},humanHeight:p.height,labAssemblies:true};
+ root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:8},humanHeight:p.height,labAssemblies:true};
+ if(role==='player')setHumanPreviewWeapon(T,root,'pistol');
  return root;
+}
+
+/** Switch the player's actual game weapon mesh without rebuilding the body. */
+export function setHumanPreviewWeapon(T,root,kind){
+ if(!HUMAN_PREVIEW_WEAPONS.includes(kind))throw Error('Arma no reconeguda: '+kind);
+ let mount=null;
+ root.traverse(o=>{if(o.userData.humanPreviewWeapon)mount=o});
+ if(!mount)return false;
+ const factory=globalThis.HUNTER_CHARACTERS?.createLabWeapon;
+ if(typeof factory!=='function')throw Error('No s’han carregat les geometries d’armes del joc');
+ const visual=factory(T,kind);
+ visual.scale.setScalar({pistol:.25,assault:.22,sniper:.18,bazooka:.25,knife:.28,cutters:.30}[kind]);
+ for(const child of [...mount.children]){
+  child.traverse(obj=>{
+   if(obj.isMesh){
+    obj.geometry?.dispose();
+    for(const mat of Array.isArray(obj.material)?obj.material:[obj.material])mat?.dispose();
+   }
+  });
+  mount.remove(child);
+ }
+ visual.traverse(obj=>{
+  if(obj.isMesh){
+   obj.userData.humanGameWeaponPart=kind;
+   obj.geometry.userData.labOwned=true;
+   for(const mat of Array.isArray(obj.material)?obj.material:[obj.material])mat.userData.labOwned=true;
+  }
+ });
+ mount.add(visual);
+ mount.userData.humanWeapon=kind;
+ mount.userData.humanGameWeaponSource='characters.js';
+ root.userData.equippedPreviewWeapon=kind;
+ return true;
 }
 
 // Gait angles (radians): hip, knee, foot pitch in the body sagittal plane.
@@ -409,7 +452,7 @@ function flightLift(phase,blend){
  // (and again half a cycle later); fade the lift with gait blending.
  const p=cycle(phase*2)/2;
  if(p<=.39||p>=.50)return 0;
- return .085*blend*blend*Math.sin(Math.PI*(p-.39)/.11)**2;
+ return .012*blend*blend*Math.sin(Math.PI*(p-.39)/.11)**2;
 }
 const rigCache=new WeakMap();
 export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
@@ -421,7 +464,8 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
   if(mode==='rest'){model.updateMatrixWorld(true);continue}
   const walk=mode==='walk'||mode==='run',blend=walk?clamp01(locomotion?.blend??(mode==='run'?1:0)):0;
   const cyclePhase=walk?(locomotion?.phase??time*gaitRate(blend)):0,phase=cyclePhase*Math.PI*2,breath=Math.sin(time*1.8);
-  set('spine',walk?mix(.035,.15,blend):.008*breath,walk?Math.sin(phase)*mix(.055,.095,blend):Math.sin(time*.7)*.02);
+  // Facing -Z, negative spine X bends the shoulders FORWARD.
+  set('spine',walk?mix(-.028,-.145,blend):.008*breath,walk?Math.sin(phase)*mix(.020,.030,blend):Math.sin(time*.7)*.015);
   set('neck',0,mode==='idle'?Math.sin(time*.6)*.08:0);set('head',-.015*breath);
   for(const [i,side]of ['L','R'].entries()){
    const sign=i?-1:1,a=phase+i*Math.PI,gait=walk?sampleHumanGait(cyclePhase+i*.5,blend):{hip:0,knee:0,ankle:0};
@@ -431,12 +475,12 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
    set('wrist'+side,0,0,sign*.035);
   }
   if(mode==='crouch'){
-   set('spine',.20);for(const side of ['L','R']){set('hip'+side,1.02);set('knee'+side,-1.78);set('ankle'+side,.76);set('shoulder'+side,.30);set('elbow'+side,.60)}
+   set('spine',-.24);for(const side of ['L','R']){set('hip'+side,1.02);set('knee'+side,-1.78);set('ankle'+side,.76);set('shoulder'+side,.30);set('elbow'+side,.60)}
   }else if(mode==='aim'){
    const pistol=weapon?.userData.humanWeapon==='pistol',upper=pistol?.90:.45,lower=pistol?.90:2.0;
-   set('spine',.045,-.12);set('head',0,.12);set('shoulderR',upper,.20,-.10);set('elbowR',lower);set('wristR',Math.PI/2-upper-lower);
+   set('spine',-.045,-.12);set('head',0,.12);set('shoulderR',upper,.20,-.10);set('elbowR',lower);set('wristR',Math.PI/2-upper-lower);
   }else if(mode==='work'){
-   set('spine',.35);set('neck',.15);set('hipL',.24);set('hipR',.24);set('kneeL',-.42);set('kneeR',-.42);
+   set('spine',-.32);set('neck',.10);set('hipL',.24);set('hipR',.24);set('kneeL',-.42);set('kneeR',-.42);
    set('ankleL',.18);set('ankleR',.18);set('shoulderL',1.10,0,.15);set('shoulderR',.90,0,-.12);
    set('elbowL',.32);set('elbowR',.50+Math.sin(time*5)*.23);set('wristR',Math.sin(time*5)*.12,0,.08);
   }else if(mode==='wave'){
@@ -444,7 +488,7 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
   }
   // Ground clearance follows the actual tilted boot soles, with a brief
   // true aerial phase in the running cycle.
-  if(j.pelvis)set('pelvis',0,walk?-Math.sin(phase)*.035:0,walk?Math.cos(phase)*.018:0);
+  if(j.pelvis)set('pelvis',0,walk?-Math.sin(phase)*.008:0,walk?Math.cos(phase)*.006:0);
   model.updateMatrixWorld(true);
   // Measure actual transformed sole contact points, including editable
   // leg lengths and pelvis roll. No previous fixed skeleton dimensions.
@@ -456,7 +500,12 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
     ankle.localToWorld(point);model.worldToLocal(point);lowest=Math.min(lowest,point.y);
    }
   }
-  if(j.pelvis&&Number.isFinite(lowest))j.pelvis.position.y=-lowest+(walk?flightLift(cyclePhase,blend):0);
+  // Avoid using the swing-foot's height as the whole body's vertical
+  // position during running; only correct penetration below the floor.
+  if(j.pelvis&&Number.isFinite(lowest)){
+   const planted=-lowest,stableRun=Math.max(0,planted);
+   j.pelvis.position.y=walk?mix(planted,stableRun,blend)+flightLift(cyclePhase,blend):planted;
+  }
   model.updateMatrixWorld(true);
   if(mode==='aim'&&weapon&&j.shoulderL&&j.elbowL){
    // Geometric support-hand IK follows the actual decorative prop, including

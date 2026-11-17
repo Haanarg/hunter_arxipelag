@@ -231,6 +231,30 @@ function createSharedBazooka(T,box){
  bazooka.rotation.x=-.08;return bazooka;
 }
 window.HUNTER_CHARACTERS=Object.freeze({
+  // Actual game geometry: one source for the runtime and human preview.
+  createLabWeapon(T,kind){
+    const root=new T.Group(),mat=c=>new T.MeshStandardMaterial({color:c,roughness:.78,flatShading:true});
+    const box=(parent,w,h,d,c,x=0,y=0,z=0)=>{
+      const m=new T.Mesh(new T.BoxGeometry(w,h,d),mat(c));m.position.set(x,y,z);
+      m.castShadow=m.receiveShadow=true;parent.add(m);return m;
+    };
+    if(kind==='pistol'){
+      const pistol=createPlayerPistol(T,root);pistol.flash.visible=false;
+    }else if(kind==='assault'||kind==='sniper'){
+      root.add(createHunterLongGunVisual(T,kind));
+    }else if(kind==='bazooka'){
+      root.add(createSharedBazooka(T,box));
+    }else if(kind==='knife'){
+      makePlayerKnife(T,root,box);
+      root.position.set(0,0,0);
+    }else if(kind==='cutters'){
+      if(!window.HUNTER_BOLT_CUTTERS)throw Error('Falta la fàbrica real de cisalles');
+      root.add(window.HUNTER_BOLT_CUTTERS.create(T));
+    }else throw Error('Arma desconeguda: '+kind);
+    root.name='Arma real del joc · '+kind;
+    root.userData.gameWeaponType=kind;
+    return root;
+  },
   grenadeChargeArmPose,
   knifePose4B:PLAYER_KNIFE_4B,
   knifeAttack3B:PLAYER_KNIFE_ATTACK_3B,
