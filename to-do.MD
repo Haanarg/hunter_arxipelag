@@ -1,3 +1,10 @@
+**2026-11-17 · HUMANS V14 · armes baixes i bazuca a l'espatlla:**
+- [x] Armes llargues recollides davant del pit, creuades en diagonal però amb canó cap avall durant la cursa; colzes flexionats, mà esquerra al guardamà seguint el moviment.
+- [x] Bazuca del protagonista i dels soldats A/B augmentada un 50% (incloses totes les peces i els punts de subjecció).
+- [x] Apuntat amb bazuca: el tub recolza geomètricament sobre l'espatlla dreta, canó endavant, dues mans subjecten les empunyadures mitjançant IK. En deixar d'apuntar, el pivot torna al canell.
+- [x] Proves del sentit del canó en cursa, mida ×1,5, ancoratge sobre l'espatlla, dues mans i retorn a altres postures.
+- [ ] Confirmació visual amb WebGL; models integrats al joc intactes fins a l'aprovació.
+
 **2026-11-17 · HUMANS V13 · punta del peu posterior en córrer:**
 - [x] Inspirat en la referència d'esquelet corrent: al final de l'impuls la punta del peu posterior apunta majoritàriament enrere i només lleugerament cap avall, en prolongació de la cama. La flexió del turmell i la recuperació tornen progressivament sense salts de fase.
 - [x] S'han revisat les claus de cursa (fases 0.29–0.53) i el límit de flexió del turmell durant la cursa; es manté el límit anterior caminant. Sense canviar ni proporcions, ni posició dels turmells, ni geometria de les botes de V12.

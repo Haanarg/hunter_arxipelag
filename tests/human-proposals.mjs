@@ -210,7 +210,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
       assert(forward.dot(arm)>.995,'Pistola seguint l’eix real del braç dret');
      }else if(mode==='run'&&['assault','sniper','bazooka'].includes(type)){
       const local=forward.applyQuaternion(model.getWorldQuaternion(new T.Quaternion()).invert());
-      assert(local.x<-.50&&local.z<-.70&&local.y<-.08,'Arma llarga creuada davant del cos');
+      assert(local.x<-.16&&local.z<-.45&&local.y<-.58,'Arma llarga recollida davant pit, canó cap avall');
       let grip=null;mount.traverse(n=>{if(n.userData.humanRunSupportGrip)grip=n});
       assert(grip,'Presa esquerra de cursa per a '+type);
       const contact=grip.getWorldPosition(new T.Vector3()).distanceTo(joints.wristL.getWorldPosition(new T.Vector3()));
@@ -314,13 +314,57 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
      poseHumanProposal(model,.25,'run',{phase,blend:1});
      const direction=new T.Vector3(0,0,-1).applyQuaternion(held.getWorldQuaternion(new T.Quaternion()))
       .applyQuaternion(model.getWorldQuaternion(new T.Quaternion()).invert());
-     assert(direction.x<-.50&&direction.z<-.70,'Soldat amb arma creuada');
+     assert(direction.x<-.16&&direction.y<-.58&&direction.z<-.45,'Soldat amb arma creuada cap avall');
      let grip=null;held.traverse(n=>{if(n.userData.humanRunSupportGrip)grip=n});
      assert(grip,'Guardamà del fusell/bazuca del soldat');
      const contact=grip.getWorldPosition(new T.Vector3()).distanceTo(joints.wristL.getWorldPosition(new T.Vector3()));
      assert(contact<.16,'Mà esquerra del soldat sobre el guardamà '+role+' '+contact);
     }
    }
+  }
+  // Actual launcher scale and right-shoulder resting pose (both A/B).
+  if(role==='player'){
+   const mount=model.getObjectByName('Arma del joc');
+   setHumanPreviewWeapon(T,model,'bazooka');
+   const visual=mount.children.find(n=>n.userData.gameWeaponType==='bazooka');
+   assert(Math.abs(visual.scale.x-.375)<1e-10,'Protagonista: bazuca +50%');
+   poseHumanProposal(model,0,'aim');
+   assert.strictEqual(mount.parent,joints.spine,'Bazuca del protagonista ancorada al tors');
+   let seat=null,right=null,left=null;
+   mount.traverse(n=>{if(n.userData.humanBazookaShoulderSeat)seat=n;
+    if(n.userData.humanBazookaRightGrip)right=n;
+    if(n.userData.humanRunSupportGrip)left=n});
+   assert(seat&&right&&left,'Bazuca amb suport espatlla i dues empunyadures');
+   const target=joints.shoulderR.getWorldPosition(new T.Vector3())
+    .add(new T.Vector3(0,.045,-.015).applyQuaternion(model.getWorldQuaternion(new T.Quaternion())));
+   const gap=seat.getWorldPosition(new T.Vector3()).distanceTo(target);
+   assert(gap<.002,'Bazuca protagonista recolzada a espatlla: '+gap);
+   for(const [side,grip] of [['R',right],['L',left]]){
+    const d=grip.getWorldPosition(new T.Vector3()).distanceTo(joints['wrist'+side].getWorldPosition(new T.Vector3()));
+    assert(d<.17,'Bazuca protagonista agafada amb mà '+side+' '+d);
+   }
+   poseHumanProposal(model,0,'rest');assert.strictEqual(mount.parent,joints.wristR,'Arma torna a canell quan deixa d’apuntar');
+   setHumanPreviewWeapon(T,model,'pistol');poseHumanProposal(model,0,'rest');
+  }
+  if(role==='rocket'){
+   const mount=meshes.find(m=>m.parent?.userData.humanWeapon==='rocket')?.parent;
+   assert(mount&&Math.abs(mount.scale.x-1.5)<1e-10,'Soldat: bazuca +50%');
+   poseHumanProposal(model,0,'aim');
+   assert.strictEqual(mount.parent,joints.spine,'Bazuca soldat ancorada al tors');
+   let seat=null,right=null,left=null;
+   mount.traverse(n=>{if(n.userData.humanBazookaShoulderSeat)seat=n;
+    if(n.userData.humanBazookaRightGrip)right=n;
+    if(n.userData.humanRunSupportGrip)left=n});
+   assert(seat&&right&&left,'Soldat: suport espatlla i dues empunyadures');
+   const target=joints.shoulderR.getWorldPosition(new T.Vector3())
+    .add(new T.Vector3(0,.045,-.015).applyQuaternion(model.getWorldQuaternion(new T.Quaternion())));
+   const gap=seat.getWorldPosition(new T.Vector3()).distanceTo(target);
+   assert(gap<.002,'Bazuca soldat recolzada a espatlla: '+gap);
+   for(const [side,grip] of [['R',right],['L',left]]){
+    const d=grip.getWorldPosition(new T.Vector3()).distanceTo(joints['wrist'+side].getWorldPosition(new T.Vector3()));
+    assert(d<.17,'Bazuca soldat agafada amb mà '+side+' '+d);
+   }
+   poseHumanProposal(model,0,'rest');assert.strictEqual(mount.parent,joints.wristR,'Arma del soldat torna al canell');
   }
   poseHumanProposal(model,0,'rest');
   for(const [side,sign] of [['L',-1],['R',1]]){
@@ -351,7 +395,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,14);assert.equal(choices.size,14);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V13'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V14'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));
