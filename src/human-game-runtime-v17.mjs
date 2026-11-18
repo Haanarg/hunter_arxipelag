@@ -94,6 +94,10 @@ function installCanonicalPlayer(T,model){
  const rest=Object.fromEntries(Object.entries(control).map(([id,bone])=>[id,bone.quaternion.clone().invert()]));
  const lowerRest=u.lowerBody.quaternion.clone().invert(),upperRest=u.upperBody.quaternion.clone().invert();
  const pelvisY=u.hipHeight,spineY=u.upperBodyPivotHeight,actualSpineY=j.spine.position.y;
+ // A .72m crouch offset belonged to the old ~4m controller. Scale only
+ // that movement distance to the native 2m pelvis; NEVER scale the meshes.
+ const canonicalPelvisY=j.pelvis.parent.position.y*visual.scale.y;
+ const crouchRatio=Math.min(1,canonicalPelvisY/pelvisY);
  const weapons=[
   ['gun',.40,-.095,-.085,-Math.PI/2],
   ['assault',.27,-.11,-.12,-.35],
@@ -106,11 +110,11 @@ function installCanonicalPlayer(T,model){
  function sync(){
   // No per-piece stretch, transform baking or alternative game anatomy.
   const dy=u.lowerBody.position.y-pelvisY;
-  visual.position.y=dy;
+  visual.position.y=dy*crouchRatio;
   j.pelvis.quaternion.copy(lowerRest).multiply(u.lowerBody.quaternion);
   j.spine.quaternion.copy(j.pelvis.quaternion).invert()
    .multiply(upperRest).multiply(u.upperBody.quaternion);
-  j.spine.position.y=actualSpineY+(u.upperBody.position.y-spineY)-dy;
+  j.spine.position.y=actualSpineY+((u.upperBody.position.y-spineY)-dy)*crouchRatio;
   for(const [id,bone]of Object.entries(control))j[id].quaternion.copy(rest[id]).multiply(bone.quaternion);
   for(const [kind,scale,y,z,pitch]of weapons){
    const source=u[kind];if(!source||!source.visible) {
