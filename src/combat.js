@@ -1161,8 +1161,10 @@ function updateLightAimReticle(dt){
     const focus=window.HUNTER_SCOPE_FOCUS.create(P.x,P.y+1.76,P.z,scopeYaw,scopePitch);
     const d=sniperShotVector(sniperMuzzleWorld(scopeYaw,scopePitch),sniperReticlePoint(focus),focus);
     (pl.userData.visualAimDirection??=new THREE.Vector3()).copy(d);
+    pl.userData.visualAimScope=true;
     hide();return;
   }
+  if(pl?.userData)pl.userData.visualAimScope=false;
   lightReticleRefresh-=dt;
   if(lightReticleRefresh>0)return;
   lightReticleRefresh=.06;
@@ -1492,9 +1494,13 @@ function cutBarbedWire(){
 function assaultMuzzleWorld(){
   const u=pl.userData,muzzle=u.assaultMuzzle;
   if(!u.assault||!muzzle)throw new Error('Falta el pivot del canó del fusell d\'assalt');
-  // El rig ja està orientat per l'autoaim visual.
   pl.position.x=P.x;pl.position.z=P.z;pl.rotation.y=P.hd;
   pl.updateMatrixWorld(true);
+  // Les bales surten de la boca VISIBLE del fusell, no del model
+  // antic ocult que continua controlant l'animació i la física.
+  const proxy=u.humanGameCanonicalRig?.getObjectByName('Arma canònica · assault');
+  const visualMuzzle=proxy?.getObjectByName('hunter-assault-muzzle');
+  if(proxy?.visible&&visualMuzzle)return visualMuzzle.getWorldPosition(new THREE.Vector3());
   return muzzle.getWorldPosition(new THREE.Vector3());
 }
 // Ràfega de tres bales, separades 75 ms. Cap temporitzador real:

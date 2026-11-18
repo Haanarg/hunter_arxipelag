@@ -658,9 +658,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // No girar cap al sud quan l'autoapuntat ja no és actiu.
      const hasAim=!!(assaultRifleEquipped||sniperEquipped||bazookaEquipped||
        !grenadeEquipped&&!cisallaEquipped&&(u.visualAimTargetLocked||u.pistolAimTime>0));
-     if(hasAim&&u.visualAimDirection&&!inVehicle){
+     if(hasAim&&!inVehicle){
       player.getWorldQuaternion(u.visualAimRootQ).invert();
-      u.visualAimRootDirection.copy(u.visualAimDirection)
+      u.visualAimRootDirection.copy((u.visualAimTargetLocked||u.visualAimScope)&&u.visualAimDirection?u.visualAimDirection:u.visualAimFallback)
         .applyQuaternion(u.visualAimRootQ).normalize();
       const d=u.visualAimRootDirection;
       const yaw=Math.atan2(-d.x,-d.z);
@@ -701,7 +701,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // l'arma conserva el rumb real del personatge, no el nord del mapa.
     player.getWorldQuaternion(u.visualAimWorldQ);
     u.visualAimFallback.copy(u.visualAimForward).applyQuaternion(u.visualAimWorldQ);
-    const worldDirection=u.visualAimDirection||u.visualAimFallback;
+    const worldDirection=(u.visualAimTargetLocked||u.visualAimScope)&&u.visualAimDirection?u.visualAimDirection:u.visualAimFallback;
     if(worldDirection.lengthSq()>.01)
       u.visualAimSmoothed.lerp(worldDirection,1-Math.exp(-13*dt)).normalize();
     player.updateMatrixWorld(true);
