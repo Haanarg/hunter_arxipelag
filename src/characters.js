@@ -402,7 +402,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
 
     const cisalla=window.HUNTER_BOLT_CUTTERS.create(THREE);
     // Eix central al pit, amb les fulles avançades i amunt.
-    cisalla.position.set(0,.24,-.42);cisalla.rotation.x=-.48;
+    cisalla.position.set(0,.24,-.42);cisalla.rotation.x=1.05; // Fulles per davant, perpendiculars a la mà.
     cisalla.scale.setScalar(.7);u.upperBody.add(cisalla);cisalla.visible=false;
     // Les mans van a les puntes inferiors dels dos mànecs.
     const leftCutGrip=new THREE.Object3D(),rightCutGrip=new THREE.Object3D();
