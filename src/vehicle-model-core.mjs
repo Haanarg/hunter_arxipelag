@@ -225,7 +225,7 @@ export const vehicleModels=Object.freeze({
         const bike=createStreetfighter25(THREE,{color,material});
         // Reducció del 26,7%: la streetfighter era desproporcionada
         // respecte al nou conductor de 2 m i al radi de les rodes.
-        const visualScale=1.1;
+        const visualScale=1.1*1.25; // Augment de la moto en un 25%.
         bike.scale.setScalar(visualScale);
         g.add(bike);
         g.userData.wheels=bike.userData.wheels;
