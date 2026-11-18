@@ -121,7 +121,7 @@ input[type=range]{width:100%;accent-color:#ffc16c;cursor:pointer}
    <span class="caption">Llegenda de formes i opacitats</span>
    <div class="legend"><div><b>01 · Pop:</b> poliedres opacs, cons radials.</div><div><b>02 · Bombolles:</b> esferes semitransparents, masses de fum.</div><div><b>03 · Ona:</b> esferes fines, anells i fragments visibles a través del foc.</div><div><b>04 · Fragments:</b> tetràedres, traces llargues i espurnes.</div></div>
    <div class="swatches" aria-label="Paleta càlida"><i style="background:#fff8b1"></i><i style="background:#ffe44e"></i><i style="background:#ffb02f"></i><i style="background:#ff6726"></i><i style="background:#e64736"></i><i style="background:#62616b"></i></div>
-   <p class="note">El C4 té més escala, expansió vertical, segona pulsació i fum més persistent. Aquestes diferències són només visuals.</p>
+   <p class="note">El C4 té radi de dany de 72 m i 80 PV al centre al joc. La previsualització manté les quatre propostes arcade amb el nou esclat visual ampliat; només és visual.</p>
   </div>
  </aside>
 </main>
@@ -247,8 +247,8 @@ function makeActor(style,card){
  return {style,card,scene,cam,pools,flash,shell,ring,ringTwo,glow,start:0,seed:0,yaw:-.12,pitch:.33,zoom:1};
 }
 for(let i=0;i<4;i++)actor.push(makeActor(styles[i],cards[i]));
-function duration(){return mode==='c4'?4.5:3.15}
-function blastSize(){return mode==='c4'?1.66:1}
+function duration(){return mode==='c4'?5.1:3.15}
+function blastSize(){return mode==='c4'?2.24:1}
 function buildParticles(a){
  const s=a.style,big=mode==='c4',size=blastSize(),rng=pseudoSeed((a.seed*16807+(big?9127:1223)+a.style.id*8767)>>>0);
  for(const [kind,p] of Object.entries(a.pools)){
@@ -275,7 +275,7 @@ function fire(i){const a=actor[i];a.start=clock;a.seed=(++explosionCount)+761;a.
 function fireAll(){const seed=++explosionCount;for(const a of actor){a.start=clock;a.seed=seed;buildParticles(a)}}
 function switchMode(next){
  mode=next;$('grenade').setAttribute('aria-pressed',String(next==='grenade'));$('c4').setAttribute('aria-pressed',String(next==='c4'));
- $('modeDetail').textContent=next==='grenade'?'Granada: esclat compacte, ràpid, amb poca durada.':'C4: explosió més gran i alta, doble pulsació i fum persistent.';
+ $('modeDetail').textContent=next==='grenade'?'Granada: esclat compacte, ràpid, amb poca durada.':'C4: radi 72 m (+50%), 80 PV al centre i ona arcade 03 ampliada.';
  fireAll();
 }
 const dummy=new THREE.Object3D();
