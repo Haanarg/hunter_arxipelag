@@ -1,3 +1,8 @@
+**2026-11-18 · HUMANS V18 · geometria dels faldons corregida:**
+- [x] El primer quadrilàter del faldó feia servir l'índex -1 (convertit a 65535 en Uint16). S'ha corregit la progressió de columnes: totes les cares apunten a vèrtexs vàlids i l'OBJ es pot exportar sense errors.
+- [x] Pressupost de malles compatible amb les peces noves de la cassaca llarga; límit de 13.000 triangles sense relaxar, prova explícita de cada índex vàlid i controls d'articulació preservats.
+- [ ] Confirmació CI, desplegament i revisió visual.
+
 **2026-11-18 · Paritat coll/cap del protagonista al joc (HUMANS V18):**
 - [x] Diagnosi: el pont entre editor i joc escalava crani i coll per separat i ignorava el desplaçament anteroposterior real del pivot cranial, fent que el coll no correspongués a la geometria original.
 - [x] L'ancoratge del coll deriva ara del vector tridimensional coll→cap del laboratori. L'escala del crani compensa automàticament la variant compacta o normal del pivot del joc, sense moure'n les animacions.

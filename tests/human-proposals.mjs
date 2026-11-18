@@ -88,6 +88,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
     for(let i=0;i<v.count;i++)yn.push(v.getY(i));
     assert(Math.min(...yn)<-.42&&Math.max(...yn)>.04,'Cassaca llarga sota els malucs');
     assert(t.geometry.index?.count>=150,'Malla corba i segmentada');
+    assert([...t.geometry.index.array].every(i=>i<t.geometry.attributes.position.count),'Índex correcte a tots els triangles de cassaca');
    }
    poseHumanProposal(model,0,'run',{phase:.25,blend:1});model.updateMatrixWorld(true);
    const coat=tails[0],p0=coat.getWorldPosition(new T.Vector3()).clone();
@@ -302,7 +303,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   let triangles=0;for(const m of meshes){assert([...m.geometry.attributes.position.array].every(Number.isFinite));assert(m.geometry.userData.labOwned);triangles+=(m.geometry.index?.count??m.geometry.attributes.position.count)/3}
   const bodyMeshes=meshes.filter(m=>!m.userData.humanGameWeaponPart);
   const bodyTriangles=bodyMeshes.reduce((n,m)=>n+(m.geometry.index?.count??m.geometry.attributes.position.count)/3,0);
-  assert(bodyTriangles<13000&&bodyMeshes.length-shoulderMeshes.length-fly.length-tails.length-moustache.length-meshes.filter(m=>m.userData.humanGeneralCoatTrimV18||m.userData.humanGeneralCoatWaistV18).length<(role==='player'?65:55),'Pressupost de malles conservat excepte els dos deltoides independents V16');
+  assert(bodyTriangles<13000&&bodyMeshes.length<(role==='general'?85:role==='player'?85:60),'Pressupost de malles conservat excepte els dos deltoides independents V16');
   const pads=meshes.filter(m=>m.userData.humanKneePad);
   assert.equal(pads.length,['player','soldier','rocket','elite'].includes(role)?2:0,'Genolleres ovalades als soldats i al protagonista');
   for(const pad of pads){

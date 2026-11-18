@@ -477,7 +477,7 @@ export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
       const z=(front?-1:1)*Math.cos(theta)*rZ+shift;
       positions.push(x,y,z);
       if(row===tails.length-1)hem.push(new T.Vector3(x,y,z));
-      if(row===0||k===cols-1)continue;
+      if(row===0||k===0)continue; // a-1 and b-1 are valid only from column 1
       const a=(row-1)*cols+k,b=row*cols+k;
       if(front)indices.push(a-1,a,b-1,a,b,b-1);
       else indices.push(a-1,b-1,a,a,b-1,b);
