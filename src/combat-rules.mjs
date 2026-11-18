@@ -155,8 +155,8 @@ export function wallBlastDamage(w,x,y,z,r,dmg){
  // Un mur de fusta de 68 m no rep la granada només al seu centre:
  // mesuram la distància al punt més proper del tram real. La resta
  // dels murs conserven intacta la seva regla de dany.
- const wx=w.weakWood?Math.max(w.x0,Math.min(x,w.x1)):(w.x0+w.x1)/2,
-       wz=w.weakWood?Math.max(w.z0,Math.min(z,w.z1)):(w.z0+w.z1)/2;
+ const wx=w.weakWood||w.hangarRearWall?Math.max(w.x0,Math.min(x,w.x1)):(w.x0+w.x1)/2,
+       wz=w.weakWood||w.hangarRearWall?Math.max(w.z0,Math.min(z,w.z1)):(w.z0+w.z1)/2;
  return explosionDamage(dmg,Math.hypot(wx-x,wz-z),r);
 }
 export function roofBlastDamage(b,x,z,r,dmg){
