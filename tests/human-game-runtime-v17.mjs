@@ -109,6 +109,17 @@ for(const role of ['player','soldier','rocket','elite','general']){
   assert(moved>.35&&moved<.45,'Game pose drives native shoulder joint');
   u.ar.rotation.x=oldR;g.updateMatrixWorld(true);
   assert(restShoulder.angleTo(bones.shoulderR.quaternion)<.002,'Rest pose exactly recovers editor geometry');
+  // Actual characters.createPlayer applies 2/3 scale at the very end.
+  // This must not shrink the editor's 2.00m native model to 1.33m.
+  g.scale.setScalar(2/3);g.updateMatrixWorld(true);
+  const scaledView=new T.Box3();
+  for(const mesh of actual)scaledView.union(new T.Box3().setFromObject(mesh,true));
+  const inGameSize=scaledView.getSize(new T.Vector3());
+  assert(Math.abs(inGameSize.y-2)<.002,
+   'Player retains editor height after gameplay 2/3 root scale: '+inGameSize.y);
+  const sampleRatio=canonical.getWorldScale(new T.Vector3());
+  assert(Math.abs(sampleRatio.x-reference.scale.x)<.002,'Gameplay scale fully canceled uniformly');
+  g.scale.setScalar(1);g.updateMatrixWorld(true);
   const gunProxy=canonical.getObjectByName('Arma canònica · gun');
   assert(gunProxy&&gunProxy.parent===bones.wristR,'Visible pistol grip on editor wrist');
   assert(!part.visible&&part.parent===gun,'Old ghost gun is not visible or detached from gameplay controller');

@@ -93,6 +93,7 @@ function installCanonicalPlayer(T,model){
  };
  const rest=Object.fromEntries(Object.entries(control).map(([id,bone])=>[id,bone.quaternion.clone().invert()]));
  const lowerRest=u.lowerBody.quaternion.clone().invert(),upperRest=u.upperBody.quaternion.clone().invert();
+ const editorScale=visual.scale.clone();
  const pelvisY=u.hipHeight,spineY=u.upperBodyPivotHeight,actualSpineY=j.spine.position.y;
  // A .72m crouch offset belonged to the old ~4m controller. Scale only
  // that movement distance to the native 2m pelvis; NEVER scale the meshes.
@@ -108,7 +109,12 @@ function installCanonicalPlayer(T,model){
   ['grenade',.38,-.09,-.05,0]
  ],proxies=new Map();
  function sync(){
-  // No per-piece stretch, transform baking or alternative game anatomy.
+  // Gameplay resizes its actor ROOT to 2/3 after creation. Cancel only that
+  // outer scale on the unmodified, uniformly scaled lab visual: its world
+  // silhouette and height remain exactly the editor's 2.00 m.
+  if(Math.min(Math.abs(model.scale.x),Math.abs(model.scale.y),Math.abs(model.scale.z))<1e-6)
+   throw Error('Escala visual del protagonista no vàlida');
+  visual.scale.set(editorScale.x/model.scale.x,editorScale.y/model.scale.y,editorScale.z/model.scale.z);
   const dy=u.lowerBody.position.y-pelvisY;
   visual.position.y=dy*crouchRatio;
   j.pelvis.quaternion.copy(lowerRest).multiply(u.lowerBody.quaternion);
