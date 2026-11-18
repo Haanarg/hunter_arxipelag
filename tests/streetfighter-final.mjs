@@ -73,21 +73,21 @@ for(const color of [0xc94e3f,0xa4ec24,0xffdf18,0xef35a8,0x228fef,0xff7b19,0x181c
  assert.equal(model.scale.x,vehicleModels.scales.moto,'No duplicar el factor del vehicle');
  const bikeVisual=model.getObjectByName('naked-streetfighter-25');
  assert(bikeVisual,'Falta la moto 25%');
- assert.equal(bikeVisual.scale.x,1.5,'Restaurada la mida de la versió 0.6.187');
- assert.equal(bikeVisual.scale.x/1.5,1,'No ha de quedar cap reducció del 25%');
- assert.equal(model.userData.motorcycleVisualScale,1.5,'La moto recupera la mida de referència');
- const bounds=new THREE.Box3().setFromObject(model);
+ assert.equal(bikeVisual.scale.x,1.1,'Streetfighter 26,7% menor');
+ assert(bikeVisual.scale.x<1.5,'La moto ja no té la mida desproporcionada');
+ assert.equal(model.userData.motorcycleVisualScale,1.1,'Mida de la moto compartida amb el rider');
+ const bounds=new THREE.Box3().setFromObject(bikeVisual);
  const actual=bounds.getSize(new THREE.Vector3());
- assert(Math.abs(actual.z-M.dimensions.length*1.5*vehicleModels.scales.moto)<.12,'La llargada és la de la versió 0.6.187');
+ assert(Math.abs(actual.z-M.dimensions.length*1.1*vehicleModels.scales.moto)<.12,'La llargada real de la moto és la reduïda');
  // El proxy de LOD distant també pertany al model i pot eixamplar
  // Box3 encara que estigui ocult. La mida del cos real es comprova
  // a partir de la geometria precompilada i l'escala del seu únic pare.
  const bodyWidth=M.dimensions.width*bikeVisual.scale.x*vehicleModels.scales.moto;
- assert(bodyWidth>1.4&&bodyWidth<1.65,'Amplada restaurada del model original preferit');
+ assert(bodyWidth>1.05&&bodyWidth<1.18,'Amplada proporcionada de la moto');
  const [front,rear]=model.userData.wheels;
  assert.equal(front.parent,model.userData.steeringPivots[0]);
  assert(front.userData.radius>0&&rear.userData.radius>0);
- assert(Math.abs(front.userData.radius-M.wheelRadius*1.5*vehicleModels.scales.moto)<1e-6);
+ assert(Math.abs(front.userData.radius-M.wheelRadius*1.1*vehicleModels.scales.moto)<1e-6);
  const pivot=model.userData.steeringPivots[0];
  const target=vehicleModels.steeringMax.moto;
  vehicleModels.animateSteering(model,'moto',1,1);
@@ -96,11 +96,11 @@ for(const color of [0xc94e3f,0xa4ec24,0xffdf18,0xef35a8,0x228fef,0xff7b19,0x181c
  assert(Math.abs(pivot.rotation.y-target)<.001,'Rodar la roda no gira el manillar');
  assert(list(model).filter(x=>x.userData.colorPanel).every(x=>x.material.color.getHex()===color));
 }
-// El rider torna a mida completa, inclosa la silueta distant.
+// El rider és de talla humana i la moto ha perdut volum.
 const riderSource=readFileSync(new URL('../src/rider.js',import.meta.url),'utf8');
-assert(riderSource.includes("const riderScale=car?.82:v.t==='hover'?.63:1"),'El motorista recupera la mida anterior');
-assert(riderSource.includes("size=v.o?.userData?.motorcycleVisualScale??1"),'Mans i seient mantenen la proporció de la moto restaurada');
-assert(!riderSource.includes('motorcycleLocalFit'),'No cal compensació de mida per al pilot distant');
+assert(riderSource.includes("(v.t==='moto'||v.t==='bici')?.56:1"),'Motorista i ciclista a mida humana');
+assert(riderSource.includes("size=v.o?.userData?.motorcycleVisualScale??1"),'Manillar i seient comparteixen escala');
+assert(riderSource.includes('seat*invScale,seatZ*invScale'),'La pose s’ajusta al seient amb el nou factor');
 assert.deepEqual(vehicleSpecs.hitboxes.moto,[1.65,4.25],'Hitbox restaurada');
 assert.equal(vehicleSpecs.radii.moto,2.3,'Radi de detecció restaurat');
-console.log('Naked streetfighter: moto i motorista restaurats a 0.6.187, connector intacte, '+M.triangles+' triangles.');
+console.log('Naked streetfighter: moto reduïda i motorista proporcionat, '+M.triangles+' triangles.');
