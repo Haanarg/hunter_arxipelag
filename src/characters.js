@@ -870,7 +870,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // El rig de pistola hi superposa una presa a dues mans només durant el tir.
     // No sobrescriure la rotació de quaternion calculada per l'IK
     // del rifle: tornar y=0 aquí separava les mans de les dues preses.
-    if(!sniper&&!assault&&!bazooka){
+    if(!sniper&&!assault&&!bazooka&&!grenade&&!throwing){
       u.ar.rotation.y=0;u.al.rotation.y=0;
       u.aer.rotation.y=0;u.ael.rotation.y=0;
     }
