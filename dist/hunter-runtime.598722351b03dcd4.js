@@ -4699,7 +4699,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     a.knees.forEach((j,i)=>blend(j,-(.06+Math.max(0,Math.sin(phase)*(i?1:-1))*.8*(moving?1:0))));
     const bazookaAim=!!a.rocketSoldier&&aim;
     a.arms.forEach((j,i)=>blend(j,bazookaAim?(i?1.2:1.04):aim?(i?.96:1.03):(i?swing:-swing)*.5,
-      bazookaAim?(i?-.16:.23):aim?(i?-.05:.12):(i?.025:-.025)));
+      bazookaAim?(i?-.16:.23):aim?(i?-.05:.12):(i?.12:-.12)));
     a.elbows.forEach((j,i)=>blend(j,bazookaAim?(i?.75:.83):aim?(i?.61:.55):
       .16+Math.max(0,Math.cos(phase)*(i?-1:1))*.18*(moving?1:0)));
     if(a.rocketSoldier&&a.enemyBazookaIK&&a.enemyLOD==='full'){
@@ -4990,13 +4990,16 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // els genolls es recullen durant la fase aèria de cada gambada.
     // Inclina només el tronc superior al voltant de la cintura: els malucs
     // i les cames no es desplacen cap endavant amb l'arrel del personatge.
-    u.upperBody.rotation.x+=(-.32*run-.18*crouch-u.upperBody.rotation.x)*k;
+    u.upperBody.rotation.x+=(-.145*run-.18*crouch-u.upperBody.rotation.x)*k;
     // A terra i en sortir de l'aigua, desfem el gir propi del crol.
     // La cintura segueix l'angle REAL de la retícula en comptes de
     // girar sempre 18° cap al mateix costat. Les cames conserven P.hd.
     // Això permet que les mans arribin al rifle amb autoaim lateral.
     let waistAim=0;
-    if(u.visualAimDirection&&!inVehicle){
+    // No girar cap al sud quan l'autoapuntat ja no és actiu.
+     const hasAim=!!(assaultRifleEquipped||sniperEquipped||bazookaEquipped||
+       !grenadeEquipped&&!cisallaEquipped&&(u.visualAimTargetLocked||u.pistolAimTime>0));
+     if(hasAim&&u.visualAimDirection&&!inVehicle){
       player.getWorldQuaternion(u.visualAimRootQ).invert();
       u.visualAimRootDirection.copy(u.visualAimDirection)
         .applyQuaternion(u.visualAimRootQ).normalize();
@@ -5157,7 +5160,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
       // A la cursa, els braços bombegen més i els colzes van flexionats.
       const armSwing=(.46+.46*run)*walk;
       tx(u.al,-armSwing+.018*breath);tx(u.ar,armSwing-.018*breath);
-      tz(u.al,-.025-.035*run);tz(u.ar,.025+.035*run);
+      tz(u.al,-.12-.035*run);tz(u.ar,.12+.035*run);
       tz(u.ael,-.04);tz(u.aer,.04);
       const bendL=.16+.60*run+Math.max(0,Math.cos(ph))*.2*move,
             bendR=.16+.60*run+Math.max(0,-Math.cos(ph))*.2*move;
@@ -5212,8 +5215,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.gun.quaternion.copy(rig.idleQ).slerp(rig.aimQ,blend);
     u.pistolSlide.position.z=kick*.065;
     u.pistolFlash.visible=false; // Pistola silenciada.
-    if(move>.02)player.position.y+=Math.abs(Math.sin(ph))*(.085+.065*run)*move;
-    else player.position.y+=breath*.012;
+    // La cursa no afegeix saltets artificials a la posició visual.
+    if(move<=.02)player.position.y+=breath*.012;
   }
 });
 
@@ -7845,8 +7848,21 @@ function secondaryWeapon(){if(playerEject||playerFall)return false;if(nativeCoop
 // l'abast màxim. La mateixa velocitat serveix per a la mira i el projectil.
 const GRENADE_CHARGE_SECONDS=1.4,GRENADE_MIN_SPEED=3.5,GRENADE_MAX_SPEED=33;
 let grenadeCharge=null,grenadeAimVisual=null;
+function grenadeHandOrigin(){
+  if(cv||!pl?.userData?.humanGameCanonicalJoints?.wristR)return null;
+  pl.position.x=P.x;pl.position.z=P.z;pl.rotation.y=P.hd;
+  pl.updateMatrixWorld(true);
+  return pl.userData.humanGameCanonicalJoints.wristR.getWorldPosition(new THREE.Vector3());
+}
 function grenadeLaunchParams(power=0,origin=P,hd=P.hd){
-  return window.HUNTER_SHARED_WEAPONS.grenadeLaunch(power,origin,hd);
+  const flight=window.HUNTER_SHARED_WEAPONS.grenadeLaunch(power,origin,hd);
+  const hand=origin===P?grenadeHandOrigin():null;
+  if(hand){
+    flight.x=hand.x-Math.sin(hd)*.12;
+    flight.y=hand.y+.04;
+    flight.z=hand.z-Math.cos(hd)*.12;
+  }
+  return flight;
 }
 function bunkerProjectileSurface(x,z,y,water=false){
   const floor=bunkerSubFloorAt(x,z,y);
@@ -7982,7 +7998,7 @@ function throwGrenade(power=0){if(playerEject||playerFall)return false;if(native
   fcd=.7;setDis(false);
   pl.userData.grenadeThrow=.55;pl.userData.grenadeReleased=false;
   pl.userData.grenadeThrowPower=Math.max(0,Math.min(1,power));
-  pl.userData.grenadePending={t:.23,flight};
+  pl.userData.grenadePending={t:.23,flight,fromPlayerHand:true};
   msg='Granades: '+(inv.granada||0);msgT=1.5;
   return true;
 }
@@ -7993,8 +8009,17 @@ function createGrenadeModel(){
   const cap=new THREE.Mesh(new THREE.BoxGeometry(.08,.13,.08),new THREE.MeshStandardMaterial({color:0x252b27,roughness:.7,metalness:.25}));cap.position.y=.18;o.add(cap);
 return o;}
 function launchGrenade(pending){
-  const flight=pending.flight||grenadeLaunchParams(),{x,y,z,vx,vy,vz,t}=flight,
-        o=createGrenadeModel();
+  const flight=pending.flight||grenadeLaunchParams();
+  if(pending.fromPlayerHand){
+    // Al fotograma d'alliberament el projectil surt de la mà animada.
+    const hand=grenadeHandOrigin();
+    if(hand){
+      flight.x=hand.x-Math.sin(P.hd)*.12;
+      flight.y=hand.y+.04;
+      flight.z=hand.z-Math.cos(P.hd)*.12;
+    }
+  }
+  const {x,y,z,vx,vy,vz,t}=flight,o=createGrenadeModel();
   o.position.set(x,y,z);world.add(o);
   grenades.push({x,y,z,vx,vy,vz,t,o,sx:x,sy:y,sz:z});
 }
@@ -20709,7 +20734,10 @@ if(!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive){
   // Ajustam la malla a la sola real de les botes i al triangle visible,
   // també en pendents. No canviam P.y ni la detecció física del terra.
   pl.updateMatrixWorld(true);
-  const soles=pl.userData.soleContacts||[],point=pl.userData.soleWorldScratch??=new THREE.Vector3();
+  const canonical=pl.userData.humanGameCanonicalSoles;
+  const soles=canonical?.length===2?canonical:pl.userData.soleContacts||[],
+        point=pl.userData.soleWorldScratch??=new THREE.Vector3(),
+        soleBounds=pl.userData.soleBoundsScratch??=new THREE.Box3();
   let clearance=Infinity;
   for(const sole of soles){
     sole.getWorldPosition(point);
@@ -20722,7 +20750,8 @@ if(!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive){
     // que efectivament es dibuixa (i que rep l'ombra).
     const natural=Math.abs(floor-Math.max(0,physical))<.18;
     const target=natural&&Number.isFinite(visible)?visible:floor;
-    clearance=Math.min(clearance,point.y-target);
+    const soleY=canonical?.length===2?soleBounds.setFromObject(sole).min.y:point.y;
+    clearance=Math.min(clearance,soleY-target);
   }
   // Sense espai artificial entre soles i sòl. En pendent el contacte
   // s'avalua per separat a cada peu abans de traslladar tot el rig.
