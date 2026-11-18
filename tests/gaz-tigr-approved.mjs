@@ -10,7 +10,8 @@ assert.equal(a.userData.gazModel,'Tigr-M');
 assert.equal(a.userData.wheels.length,4);
 assert.equal(a.userData.steeringPivots.length,2);
 assert.notEqual(a.userData.wheels[0],b.userData.wheels[0]);
-assert(a.userData.wheels.every(w=>w.userData.radius>.65));
+assert(a.userData.wheels.every(w=>w.userData.radius>.85));
+assert.equal(a.scale.x,1.25,'El model GAZ és un 25% més gran');
 const create=vehicleModels.createFactory(THREE,{
  box(){throw new Error('Fallback del cotxe utilitzat incorrectament')},
  material(){throw new Error('Material de fallback')},

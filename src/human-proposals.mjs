@@ -204,6 +204,12 @@ export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
  // The throat continues into the underside of the jaw, while the upper
  // rings are buried in the cranium. Do not bow the neck back toward the pivot.
  loft(neck,'Coll anatòmic i clatell',[[-.050,.090,.080,.002],[-.018,.078,.072,.002],[.012,.065,.063,.002],[.040,.063,.062,.002],[.068,.063,.062,.002],[.096,.061,.059,.002],[.124,.055,.055,.002],[.148,.040,.040,.002]],p.skin).userData.humanLandmark='neck';
+ // Teixit de transició curt entre clatell i mandíbula: dissimula
+ // la costura sense alterar el coll vertical, el cap ni els pivots.
+ const neckBlend=loft(neck,'Transició coll-crani',
+   [[.016,.061,.059,-.003],[.040,.070,.068,-.005],[.071,.073,.069,-.006],
+    [.102,.065,.063,-.005],[.126,.050,.049,-.003]],p.skin,Math.max(10,s.segments));
+ neckBlend.userData.humanNeckBlend=true;
  // Move the pivot forward, bringing the entire head, face and headwear with it.
  // Preserve the vertical cervical column and its connection beneath the jaw.
  const head=joint(neck,'head','Cap',[0,.095,.065-(HUMAN_HEAD_ADVANCE-HUMAN_NECK_FOLLOW)]);

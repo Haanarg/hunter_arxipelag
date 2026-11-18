@@ -149,7 +149,7 @@ window.HUNTER_RIDER=Object.freeze({
       // Les motos i bicicletes feien servir un rider de gairebé 4 m a
       // escala 1, desproporcionat respecte als manillars i als seients.
       const gazTigr=car&&v.o?.userData?.gazModel==='Tigr-M';
-      const riderScale=gazTigr?.66:car?.82:v.t==='hover'?.63:
+      const riderScale=gazTigr?.825:car?.82:v.t==='hover'?.63:
         (v.t==='moto'||v.t==='bici')?.56:1;
       g.scale.setScalar(riderScale);
       g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);
@@ -183,14 +183,15 @@ window.HUNTER_RIDER=Object.freeze({
         // Posicions físiques convertides al sistema del rider escalat.
         const civil=v.t==='cotxe_civil',
               humvee=!civil&&v.o?.userData?.humveeModel==='D3.1',
+              cabinScale=gazTigr?1.25:1,
               // The Humvee cabin is forward-facing -Z and wider than the
               // previous military car. Rider and wheel now share this seat.
-              seatX=(civil?.613:humvee?.84:.72)*sc*(passenger?1:-1),
-              seatY=(civil?1.14:humvee?1.24:1.22)*sc,
-              seatZ=(civil?-.60:humvee?-.26:.42)*sc,
+              seatX=(civil?.613:humvee?.84:.72)*sc*cabinScale*(passenger?1:-1),
+              seatY=(civil?1.14:humvee?1.24:1.22)*sc*cabinScale,
+              seatZ=(civil?-.60:humvee?-.26:.42)*sc*cabinScale,
               steeringX=seatX,
-              steeringY=(civil?1.66:humvee?1.60:1.91)*sc,
-              steeringZ=(civil?-.94:humvee?-.87:-.67)*sc,
+              steeringY=(civil?1.66:humvee?1.60:1.91)*sc*cabinScale,
+              steeringZ=(civil?-.94:humvee?-.87:-.67)*sc*cabinScale,
               invScale=1/riderScale;
         torso.position.set(seatX*invScale,seatY*invScale,seatZ*invScale);
         torso.rotation.x=-.05;
@@ -206,7 +207,7 @@ window.HUNTER_RIDER=Object.freeze({
                     steeringY*invScale,steeringZ*invScale),
                 elbow=shoulder.clone().lerp(hand,.50),
                 foot=vec((seatX+side*.20*sc)*invScale,
-                  .87*sc*invScale,(civil?-1.31:humvee?-1.10:-.95)*sc*invScale),
+                  .87*sc*cabinScale*invScale,(civil?-1.31:humvee?-1.10:-.95)*sc*cabinScale*invScale),
                 knee=hip.clone().lerp(foot,.52);
           elbow.y-=.10*sc*invScale;
           knee.y+=.08*sc*invScale;knee.z+=.11*sc*invScale;

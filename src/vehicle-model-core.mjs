@@ -787,6 +787,10 @@ export const vehicleModels=Object.freeze({
       }
       if(t!=='barca_rems'){
         if(distant.attach(g,t)){
+          if(t==='cotxe'&&g.userData.gazModel==='Tigr-M'){
+            const proxy=g.userData.distantVehicleLOD?.proxy;
+            if(proxy){proxy.scale.setScalar(1.25);proxy.position.y*=1.25}
+          }
           // El proxy queda ocult en qualitat propera però és una malla
           // real. El recompte de batching ha de seguir sent exacte.
           batchStats.before++;batchStats.after++;
