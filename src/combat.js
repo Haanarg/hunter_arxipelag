@@ -1631,7 +1631,13 @@ function hangarRoofSegmentT(x0,y0,z0,x1,y1,z1,b){
           lx0=ax*c+ay*sn,ly0=-ax*sn+ay*c,
           lx1=bx*c+by*sn,ly1=-bx*sn+by*c,
           t=segmentAabbT(lx0,ly0,az,lx1,ly1,bz,-s.chord/2,s.chord/2,-.16,.16,-s.depth/2,s.depth/2);
-    if(t!=null&&(best==null||t<best))best=t
+    if(t!=null&&(best==null||t<best)){
+      // Un AABB girat pot envair l'interior de la volta: no aturar
+      // bales que encara són clarament sota la pell real del sostre.
+      const px=x0+(x1-x0)*t-b.x,py=y0+(y1-y0)*t-b.fy,
+        radius=b.w/2,arch=.12+Math.sqrt(Math.max(0,radius*radius-px*px));
+      if(py>=arch-.22)best=t;
+    }
   }
   return best
 }
