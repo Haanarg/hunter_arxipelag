@@ -344,7 +344,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     a.knees.forEach((j,i)=>blend(j,-(.06+Math.max(0,Math.sin(phase)*(i?1:-1))*.8*(moving?1:0))));
     const bazookaAim=!!a.rocketSoldier&&aim;
     a.arms.forEach((j,i)=>blend(j,bazookaAim?(i?1.2:1.04):aim?(i?.96:1.03):(i?swing:-swing)*.5,
-      bazookaAim?(i?-.16:.23):aim?(i?-.05:.12):(i?.025:-.025)));
+      bazookaAim?(i?-.16:.23):aim?(i?-.05:.12):(i?.12:-.12)));
     a.elbows.forEach((j,i)=>blend(j,bazookaAim?(i?.75:.83):aim?(i?.61:.55):
       .16+Math.max(0,Math.cos(phase)*(i?-1:1))*.18*(moving?1:0)));
     if(a.rocketSoldier&&a.enemyBazookaIK&&a.enemyLOD==='full'){
@@ -635,13 +635,16 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // els genolls es recullen durant la fase aèria de cada gambada.
     // Inclina només el tronc superior al voltant de la cintura: els malucs
     // i les cames no es desplacen cap endavant amb l'arrel del personatge.
-    u.upperBody.rotation.x+=(-.32*run-.18*crouch-u.upperBody.rotation.x)*k;
+    u.upperBody.rotation.x+=(-.145*run-.18*crouch-u.upperBody.rotation.x)*k;
     // A terra i en sortir de l'aigua, desfem el gir propi del crol.
     // La cintura segueix l'angle REAL de la retícula en comptes de
     // girar sempre 18° cap al mateix costat. Les cames conserven P.hd.
     // Això permet que les mans arribin al rifle amb autoaim lateral.
     let waistAim=0;
-    if(u.visualAimDirection&&!inVehicle){
+    // No girar cap al sud quan l'autoapuntat ja no és actiu.
+     const hasAim=!!(assaultRifleEquipped||sniperEquipped||bazookaEquipped||
+       !grenadeEquipped&&!cisallaEquipped&&(u.visualAimTargetLocked||u.pistolAimTime>0));
+     if(hasAim&&u.visualAimDirection&&!inVehicle){
       player.getWorldQuaternion(u.visualAimRootQ).invert();
       u.visualAimRootDirection.copy(u.visualAimDirection)
         .applyQuaternion(u.visualAimRootQ).normalize();
@@ -802,7 +805,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
       // A la cursa, els braços bombegen més i els colzes van flexionats.
       const armSwing=(.46+.46*run)*walk;
       tx(u.al,-armSwing+.018*breath);tx(u.ar,armSwing-.018*breath);
-      tz(u.al,-.025-.035*run);tz(u.ar,.025+.035*run);
+      tz(u.al,-.12-.035*run);tz(u.ar,.12+.035*run);
       tz(u.ael,-.04);tz(u.aer,.04);
       const bendL=.16+.60*run+Math.max(0,Math.cos(ph))*.2*move,
             bendR=.16+.60*run+Math.max(0,-Math.cos(ph))*.2*move;
@@ -857,8 +860,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.gun.quaternion.copy(rig.idleQ).slerp(rig.aimQ,blend);
     u.pistolSlide.position.z=kick*.065;
     u.pistolFlash.visible=false; // Pistola silenciada.
-    if(move>.02)player.position.y+=Math.abs(Math.sin(ph))*(.085+.065*run)*move;
-    else player.position.y+=breath*.012;
+    // La cursa no afegeix saltets artificials a la posició visual.
+    if(move<=.02)player.position.y+=breath*.012;
   }
 });
 
