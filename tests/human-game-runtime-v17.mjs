@@ -75,6 +75,34 @@ for(const role of ['player','soldier','rocket','elite','general']){
  assert(pieces.some(m=>m.userData.humanGameV17Source==='Bota'),'Botes V11');
  assert(pieces.some(m=>m.userData.humanGameV17Source==='Mandíbula i crani'),'Cap V17');
  assertHeadNeckParity(g,role,role+' compactD');
+ if(role==='player'){
+  const canonical=g.userData.humanGameCanonicalRig;
+  assert(canonical?.userData.humanProposal?.role==='player','Game uses editor native root as actual render body');
+  const bones=g.userData.humanGameCanonicalJoints;
+  assert.equal(Object.keys(bones).length,16,'All 16 canonical editor joints have been retained');
+  const reference=createHumanProposal(T,'player','a',{visualOnly:true});
+  const source=[],actual=[];
+  reference.traverse(n=>{if(n.isMesh)source.push(n)});
+  canonical.traverse(n=>{if(n.isMesh&&n.userData.humanCanonicalOriginalGeometry)actual.push(n)});
+  assert.equal(actual.length,source.length,'Every editor mesh is present unchanged in game');
+  for(let i=0;i<source.length;i++){
+   const a=actual[i],b=source[i],attrA=a.geometry.attributes.position,attrB=b.geometry.attributes.position;
+   assert.equal(a.name,b.name,'Native visual mesh ordering from editor');
+   assert.equal(attrA.count,attrB.count,'Native mesh vertex count: '+a.name);
+   assert.deepEqual([...attrA.array],[...attrB.array],'Exact mesh vertices, without geometric deformation: '+a.name);
+   assert.equal(a.material.color.getHex(),b.material.color.getHex(),'Editor material colour: '+a.name);
+  }
+  const bound=new T.Box3();
+  for(const mesh of actual)bound.union(new T.Box3().setFromObject(mesh));
+  assert(Math.abs(bound.getSize(new T.Vector3()).y-2)<.002,'Native game model is 2.00m, not stretched old body');
+  // The old gameplay shoulder is only a control. Animation must actually
+  // rotate the editor's corresponding shoulder pivot and preserve the torso.
+  const oldR=u.ar.rotation.x;u.ar.rotation.x+=.4;g.updateMatrixWorld(true);
+  assert(Math.abs(bones.shoulderR.rotation.x-.4)<.002,'Game pose drives native shoulder joint');
+  u.ar.rotation.x=oldR;g.updateMatrixWorld(true);
+  assert(Math.abs(bones.shoulderR.rotation.x)<.002,'Rest pose exactly recovers editor geometry');
+  console.log('PASS native game player identical to editor: 16 joints, '+actual.length+' unmodified meshes, 2.00 m');
+ }
  const box=new T.Box3().setFromObject(g);
  assert(box.max.y-box.min.y>2.8&&box.max.y-box.min.y<6.5,'Alçada comparable amb el model antic');
  if(role==='player'){

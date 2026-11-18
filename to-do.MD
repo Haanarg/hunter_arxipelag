@@ -1,3 +1,10 @@
+**2026-11-18 · Protagonista del joc = model natiu de l'editor HUMANS V18:**
+- [x] Substitució del cos visible del protagonista a peu per l'arbre original complet de l'editor, amb les 16 articulacions i cada malla/material sense deformacions, còpies a pivots antics ni escales no uniformes.
+- [x] El rig antic es conserva únicament com a controlador invisible de moviment, combat i estat; les rotacions de les seves articulacions es transfereixen als pivots reals del nou rig abans de renderitzar, eliminant les desviacions anatòmiques del coll/cap.
+- [x] Geometria del protagonista a escala real del laboratori (2,00 m); armes del joc visualitzades amb còpies associades al canell del rig canònic sense modificar els objectes utilitzats pel sistema de combat.
+- [x] Prova d'identitat geomètrica de totes les malles, vèrtexs, materials, setze articulacions, 2,00 m i animació del braç, a més de la regressió existent de jugadors i COOP.
+- [ ] Revisió visual en joc (cursa, armes i vehicle) i migració posterior dels riders i soldats a rig canònic; aquests encara utilitzen l'adaptació anterior per no trencar interaccions de vehicle/IA sense proves de poses.
+
 **2026-11-18 · HUMANS V18 · triangles de cassaca:**
 - [x] Botons daurats mil·limètrics convertits a geometria low-poly 8×4 segments, mantenint relleu/posició/color. El general B pot conservar bigoti i faldons detallats sense desbordar el pressupost de 13.000 triangles.
 - [ ] Verificar tests i Cloudflare. El pont del coll ha estat corregit separadament i es preserva.
