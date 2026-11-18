@@ -91,7 +91,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   if(role==='player'){
    assert(HUMAN_PLAYER_TROUSERS_GREEN!==HUMAN_PLAYER_GREEN,'Jaqueta i pantalons diferenciats');
    assert(thighs.every(m=>m.userData.humanTrouserLeg&&m.material.color.getHex()===HUMAN_PLAYER_TROUSERS_GREEN));
-   assert(calves.every(m=>m.material.color.getHex()===HUMAN_PLAYER_TROUSERS_GREEN),'Pantalons fins a la bota');
+
    for(const [x,y,z]of fly[0].userData.humanPantsFly.anchors){
     const front=humanChestSurfaceZ([hipShell],x,y,-1);
     assert(front!==null&&Math.abs(front-z-.005)<.00002,'Costura sobre la tela, sense flotar');
@@ -132,7 +132,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   assert(Math.abs(shoulderResults[0].outward-shoulderResults[1].outward)<1e-6,'Amplada simètrica A/B');
   if(role==='player'){
    const torso=meshes.find(m=>m.name==='Tronc anatòmic'||m.userData.batchedParts?.includes('Tronc anatòmic'));
-   assert(torso&&torso.material.color.getHex()===HUMAN_PLAYER_GREEN,'Tronc verd clar igual que cames');
+   assert(torso&&torso.material.color.getHex()===HUMAN_PLAYER_GREEN,'Jaqueta verda més clara que els pantalons');
   }
   assert.equal(rest.neck.position.z,.012-HUMAN_NECK_FOLLOW,'Coll vertical avançat 1 cm per mantenir la gola sota la mandíbula');
   assert.equal(rest.head.position.z,.065-(HUMAN_HEAD_ADVANCE-HUMAN_NECK_FOLLOW),'Pivot del cap avançat respecte del coll');
@@ -156,6 +156,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   // V12: geometry-derived transverse radii through the full shin.
   // Verify the unchanged bulging calf and the progressively narrower Achilles.
   const calves=meshes.filter(m=>m.userData.humanCalfProfile);
+  if(role==='player')assert(calves.every(m=>m.material.color.getHex()===HUMAN_PLAYER_TROUSERS_GREEN),'Pantalons fins a la bota');
   assert.equal(calves.length,2,'Dos panxells independents i editables');
   const calfRings=calf=>{
    const attr=calf.geometry.attributes.position,rows=new Map();
