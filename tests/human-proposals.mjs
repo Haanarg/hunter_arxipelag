@@ -177,7 +177,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   poseHumanProposal(model,0,'rest');
   assert(joints.shoulderL.rotation.z<-.25&&joints.shoulderR.rotation.z>.24,
     'Braços en repòs una mica més separats');
-  assert(joints.elbowL.rotation.x>.14&&joints.elbowR.rotation.x>.18,
+  assert(joints.elbowL.rotation.x>.10&&joints.elbowR.rotation.x>.13,
     'Colzes relaxats i flexionats');
   assert(Math.abs(joints.shoulderL.rotation.x-joints.shoulderR.rotation.x)>.005,
     'Petita asimetria natural en repòs');

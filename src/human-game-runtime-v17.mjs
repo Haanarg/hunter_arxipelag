@@ -169,7 +169,10 @@ function installCanonicalPlayer(T,model){
     gunAxis.copy(gunWrist).sub(gunElbow);
     if(gunAxis.lengthSq()>.00001){
      gunCarryWorld.setFromUnitVectors(gunForward,gunAxis.normalize());
-     weaponWorld.slerpQuaternions(gunCarryWorld,weaponWorld,blend);
+     // Evitar slerpQuaternions amb el destí com a segon origen:
+     // acabava sobreescrivint el quaternion real en apuntar.
+     gunCarryWorld.slerp(weaponWorld,blend);
+     weaponWorld.copy(gunCarryWorld);
     }
    }
    j.wristR.getWorldQuaternion(handWorld);
