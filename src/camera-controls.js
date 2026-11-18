@@ -1,5 +1,25 @@
 // Estat visual de la càmera: mai no modifica el rumb ni la física del vehicle.
 window.HUNTER_CAMERA_CONTROLS=Object.freeze({
+  // Òrbita efímera del protagonista amb botó dret del ratolí.
+  // El jugador no gira amb la càmera; al deixar anar, yaw i elevació
+  // retornen de manera exponencial a la perspectiva habitual.
+  createPlayerOrbit(){
+    let yaw=0,pitch=0,dragging=false;
+    const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
+    const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
+    return {
+      get yaw(){return yaw},
+      get pitch(){return pitch},
+      get weight(){return clamp((Math.abs(yaw)+Math.abs(pitch))*1.2,0,1)},
+      reset(){yaw=0;pitch=0;dragging=false},
+      begin(){dragging=true},
+      turn(dx,dy){if(!dragging)return; yaw=wrap(yaw-dx*.007);pitch=clamp(pitch+dy*.005,-.75,1.16)},
+      release(){dragging=false},
+      step(dt){if(dragging)return;const decay=Math.exp(-3.6*Math.max(0,dt));yaw*=decay;pitch*=decay;
+        if(Math.abs(yaw)<.0001)yaw=0;if(Math.abs(pitch)<.0001)pitch=0;
+      }
+    };
+  },
   createVehicleLook(){
     let offset=0,grace=0;
     const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
