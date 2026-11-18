@@ -3622,7 +3622,12 @@ if(v.t==='ferry'&&o.userData.ferryRamps){
 }
 // Direcció visual a l'eix davant (-Z): independent del rodament en X.
 window.HUNTER_VEHICLES.animateSteering(o,v.t,tr,dt);
-v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;o.userData.oars.forEach((r,i)=>{const side=i?1:-1;r.rotation.y=side*sweep;r.rotation.z=-side*(.12+dip);r.rotation.x=.06*Math.sin(rowPhase)})}if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const visualScale=o.userData.trackVisualScale||VS[v.t]||1;
+v.pedalPhase=(v.pedalPhase||0)+v.v*dt/1.5;if(o.userData.crank)o.userData.crank.rotation.x=(v.t==='bici'?-v.pedalPhase:v.pedalPhase);if(o.userData.oars){
+ const spin=v.t==='barca_rems'&&Math.abs(v.v)<.7&&Math.abs(v.yawRate||0)>.08;
+ if(spin)v.rowSpinPhase=(v.rowSpinPhase||0)+Math.abs(v.yawRate||0)*dt*7;
+ const power=Math.min(1,Math.abs(v.v)/1.6),rowPhase=spin?-(v.rowSpinPhase||0):v.t==='barca_rems'?-(v.pedalPhase||0):(v.pedalPhase||0),sweep=Math.sin(rowPhase)*.5*power,dip=.12+.18*(.5+.5*Math.cos(rowPhase))*power;
+ o.userData.oars.forEach((r,i)=>{const side=i?1:-1,stroke=spin?Math.sin(rowPhase)*(i?1:-1)*.58:side*sweep;r.rotation.y=stroke;r.rotation.z=-side*(.12+dip);r.rotation.x=spin?Math.cos(rowPhase)*(i?-.09:.09):.06*Math.sin(rowPhase)})
+ }if(o.userData.rotor)o.userData.rotor.rotation.y+=dt*(v===cv?30:v.crashing?Math.max(5,26-(v.crashT||0)*4):0);if(o.userData.fan)o.userData.fan.rotation.z+=dt*(v===cv?35:0);if(o.userData.tailRotor)o.userData.tailRotor.rotation.x+=dt*(v===cv?40:v.crashing?Math.max(7,32-(v.crashT||0)*5):0);if(v.t==='tanc')animateTankTracks(v,dt);(o.userData.wheels||[]).forEach(w=>{const side=w.userData.trackSide;if(v.t==='tanc'&&side){const visualScale=o.userData.trackVisualScale||VS[v.t]||1;
  const sideSpeed=v.v+side*(v.yawRate||0)*(o.userData.trackHalfWidth||2.1)*visualScale;
  w.rotation.x-=sideSpeed*dt/(w.userData.radius||.6)}else w.rotation.x-=v.v*dt/(w.userData.radius||.6)})
 // Registrar la pose immòbil un cop col·locada. Un canvi extern de posició
@@ -3948,17 +3953,21 @@ if(fireButton){
   const mountedRow=cv&&nativeCoopSession?.appliedVehicleRows?.get(cv.saveId),
         passenger=!!mountedRow&&mountedRow.seats?.[0]!==nativeCoopSession.self,
         personalWeapon=!cv||passenger,
+        openPistol=!!cv&&!passenger&&OPEN_RIDER_PISTOL.has(cv.t),
+        canDriverFire=!cv||['tanc','tanqueta','heli_combat','heli','llanxa_coets'].includes(cv.t)||openPistol,
         heliGrenade=cv?.t==='heli'&&!passenger,
         grenade=heliGrenade||personalWeapon&&grenadeEquipped&&(inv.granada||0)>0,
         cutters=personalWeapon&&cisallaEquipped&&(inv.cisalla||0)>0,
         knife=personalWeapon&&(knifeEquipped||!grenade&&!cutters&&!bazookaEquipped&&!sniperEquipped&&!assaultRifleEquipped&&ammo<=0),
         weapon=cutters?'cisalla':grenade?'granada':knife?'ganivet':personalWeapon&&assaultRifleEquipped?'fusell_assalt':personalWeapon&&sniperEquipped?'franctirador':'normal';
+  fireButton.hidden=!!cv&&!passenger&&!canDriverFire;
+  fireButton.style.display=fireButton.hidden?'none':'';
   if(fireButton.dataset.weapon!==weapon){
     fireButton.dataset.weapon=weapon;
     fireButton.innerHTML=(ICON[weapon]||'🎯')+
       '<span class="fire-ammo-count" aria-hidden="true"></span>';
   }
-  const ammoLeft=!personalWeapon?(heliGrenade?(inv.granada||0):'∞'):
+  const ammoLeft=openPistol?ammo:!personalWeapon?(heliGrenade?(inv.granada||0):'∞'):
     grenade?(inv.granada||0):cutters||knife?null:
       bazookaEquipped?bazookaAmmo:sniperEquipped?sniperAmmo:ammo;
   const badge=fireButton.querySelector('.fire-ammo-count');
