@@ -369,6 +369,9 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
      }
     }
    }
+   setHumanPreviewWeapon(T,model,'grenade');poseHumanProposal(model,0,'throw');
+   assert(joints.shoulderL.rotation.x>1.2&&joints.shoulderR.rotation.x<0,
+     'Postura de granada com a la foto: mà esquerra endavant, dreta enrere');
    setHumanPreviewWeapon(T,model,'pistol');poseHumanProposal(model,0,'rest');
   }
   if(role==='player'){

@@ -1,6 +1,6 @@
 // V17-compatible rigid-rig adapter for the latest V18 skin (general cassaca). No gameplay animation,
 // seat, IK, collision, physics, weapon anchor or AI state is replaced.
-import {createHumanProposal,HUMAN_VERSION,sampleHumanGait} from './human-proposals.mjs?rev=humans-v18-neck-cutter-grenade-20261118-2';
+import {createHumanProposal,HUMAN_VERSION,sampleHumanGait} from './human-proposals.mjs?rev=humans-v18-neck-cutter-grenade-20261118-3';
 
 export const GAME_HUMAN_SKIN_VERSION='humans-v18';
 // Escala exclusivament visual a peu: rig i geometria intactes.
