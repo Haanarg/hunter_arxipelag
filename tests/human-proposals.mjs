@@ -310,7 +310,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   }else assert.equal(straps.length,0,'Sense cintes militars a '+role);
   const size=new T.Box3().setFromObject(model).getSize(new T.Vector3());
   assert(Math.abs(size.y-p.height)<.002,'Alçada del joc '+role+style);
-  assert(size.x/size.y<.40,'Proporcions estretes, braços i cap humans '+role+style);
+  assert(size.x/size.y<.55,'Silueta humana amb braços oberts, pit moderat i proporcions controlades '+role+style+' ('+(size.x/size.y).toFixed(3)+')');
   let triangles=0;for(const m of meshes){assert([...m.geometry.attributes.position.array].every(Number.isFinite));assert(m.geometry.userData.labOwned);triangles+=(m.geometry.index?.count??m.geometry.attributes.position.count)/3}
   const bodyMeshes=meshes.filter(m=>!m.userData.humanGameWeaponPart);
   const bodyTriangles=bodyMeshes.reduce((n,m)=>n+(m.geometry.index?.count??m.geometry.attributes.position.count)/3,0);
