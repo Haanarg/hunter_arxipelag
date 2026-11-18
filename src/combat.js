@@ -700,10 +700,11 @@ function melee(){
 function secondaryWeapon(){if(playerEject||playerFall)return false;if(nativeCoopSession)return nativeCoopSession.channel?.combat('secondary');
   if(!cv||fcd>0)return false;const hd=cv.hd,fx_=-Math.sin(hd),fz=-Math.cos(hd),d45=Math.SQRT1_2;
   if(cv.t==='heli_combat'){if(cheats.items)cv.rockets=Math.max(cv.rockets||0,999);if((cv.rockets||0)<=0){msg='Sense míssils.';msgT=2;return false}cv.rockets--;fcd=.75;const shot=combatHeliMissileAim(cv),d=shot.direction;shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],72,COMBAT_BALANCE.weapons.heliMissile,10,'p',mS,2.4);Pj[Pj.length-1].life=3.3;Pj[Pj.length-1].weapon='heliMissile';msg='Míssils: '+cv.rockets;msgT=1;return true}
-  if(cv.t==='llanxa_coets'){/* Munició infinita. */fcd=.9;
+  if(cv.t==='llanxa_coets'){/* Munició infinita; cadència més lenta. */fcd=1.55;
     const shot=combatBoatRocketAim(cv),d=shot.direction;
     shoot(shot.x,shot.y,shot.z,d[0],d[1],d[2],68,COMBAT_BALANCE.weapons.boatRocket,11,'p',mS,2.6);
-    Pj[Pj.length-1].weapon='boatRocket';msg='Coets: ∞';msgT=1;return true}
+    Pj[Pj.length-1].weapon='boatRocket';Pj[Pj.length-1].life=4;
+    Pj[Pj.length-1].sourceVehicle=cv;msg='Coets: ∞';msgT=1;return true}
   return false
 }
 // Un toc deixa caure la granada a prop; 1,4 s de pressió assoleixen
@@ -1229,10 +1230,15 @@ const HELI_MISSILE_ANGLE=Math.PI*25/180,HELI_MISSILE_RANGE=250;
 // i el projectil comparteixen origen, elevació i autoapuntat.
 function combatBoatRocketAim(v,focus=null){
   const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),
-        x=v.x+fx*6,y=v.o.position.y+1.2,z=v.z+fz*6,
+        // El buc s'estén fins a ~8,8m de proa: sortida fora del casc,
+        // amb marge per l'avanç mentre es dispara.
+        x=v.x+fx*(4.5*VS.llanxa+2),y=v.o.position.y+2.85,z=v.z+fz*(4.5*VS.llanxa+2),
         base=Math.hypot(1,.015);
-  return {x,y,z,direction:autoAimWeaponShot(x,y,z,
-    fx/base,.015/base,fz/base,250,.82,'heavy',focus,68*HEAVY_SHOT_SPEED_FACTOR,.8)};
+  const d=autoAimWeaponShot(x,y,z,
+    fx/base,.015/base,fz/base,250,.82,'heavy',focus,68*HEAVY_SHOT_SPEED_FACTOR,.8);
+  // Llancem cap amunt, amb gravetat aplicada durant el vol.
+  const elevation=.17,len=Math.hypot(d[0],d[1]+elevation,d[2])||1;
+  return {x,y,z,direction:[d[0]/len,(d[1]+elevation)/len,d[2]/len]};
 }
 function combatHeliMissileAim(v,focus=null){
   const fx=-Math.sin(v.hd),fz=-Math.cos(v.hd),horizontal=Math.cos(HELI_MISSILE_ANGLE),
