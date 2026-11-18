@@ -124,12 +124,21 @@ for(const role of ['player','soldier','rocket','elite','general']){
   g.scale.setScalar(1);g.updateMatrixWorld(true);
   const gunProxy=canonical.getObjectByName('Arma canònica · gun');
   assert(gunProxy&&gunProxy.parent===bones.wristR,'Visible pistol grip on editor wrist');
+   // En repòs i caminar, l'arma segueix l'avantbraç del rig natiu.
+   u.pistolBlend=0;g.updateMatrixWorld(true);
+   const carried=new T.Vector3(0,0,-1).applyQuaternion(gunProxy.getWorldQuaternion(new T.Quaternion()));
+   const forearm=bones.wristR.getWorldPosition(new T.Vector3())
+     .sub(bones.elbowR.getWorldPosition(new T.Vector3())).normalize();
+   assert(carried.dot(forearm)>.999,'Pistola seguint l’avantbraç de l’editor');
+   u.pistolBlend=1;
    u.gun.quaternion.setFromAxisAngle(new T.Vector3(1,0,0),.42);
    g.updateMatrixWorld(true);
+   const center=g.worldToLocal(gunProxy.getWorldPosition(new T.Vector3()));
+   assert(Math.abs(center.x)<.17,'Pistola visible centrada davant el pit');
    const actualGun=new T.Vector3(0,0,-1).applyQuaternion(gunProxy.getWorldQuaternion(new T.Quaternion()));
    const sourceGun=new T.Vector3(0,0,-1).applyQuaternion(u.gun.getWorldQuaternion(new T.Quaternion()));
    assert(actualGun.dot(sourceGun)>.999,'Canó visible orientat com l’arma real');
-   u.gun.quaternion.identity();g.updateMatrixWorld(true);
+   u.pistolBlend=0;u.gun.quaternion.identity();g.updateMatrixWorld(true);
    for(const yaw of [0,Math.PI/2,Math.PI,3*Math.PI/2]){
     g.rotation.y=yaw;g.updateMatrixWorld(true);
     const direction=new T.Vector3(0,0,-1).applyQuaternion(g.getWorldQuaternion(new T.Quaternion()));

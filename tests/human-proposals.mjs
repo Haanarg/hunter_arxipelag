@@ -344,9 +344,9 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
     const axis=()=>['knife','cutters'].includes(type)?new T.Vector3(0,-1,0):new T.Vector3(0,0,-1);
     const checkDirection=(mode)=>{
      const forward=axis().applyQuaternion(mount.getWorldQuaternion(new T.Quaternion())).normalize();
-     if(mode==='run'&&type==='pistol'){
+     if(['walk','run','crouch'].includes(mode)&&type==='pistol'){
       const arm=joints.wristR.getWorldPosition(new T.Vector3()).sub(joints.elbowR.getWorldPosition(new T.Vector3())).normalize();
-      assert(forward.dot(arm)>.995,'Pistola seguint l’eix real del braç dret');
+      assert(forward.dot(arm)>.995,'Pistola '+mode+' seguint l’eix real del braç dret');
      }else if(mode==='run'&&['assault','sniper','bazooka'].includes(type)){
       const local=forward.applyQuaternion(model.getWorldQuaternion(new T.Quaternion()).invert());
       assert(local.x<-.16&&local.z<-.45&&local.y<-.58,'Arma llarga recollida davant pit, canó cap avall');
@@ -363,6 +363,10 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
      const gait=['walk','run'].includes(mode)?{phase:.25,blend:mode==='run'?1:0}:null;
      assert.doesNotThrow(()=>poseHumanProposal(model,.33,mode,gait),mode+' amb '+type);
      checkDirection(mode);
+     if(mode==='aim'&&type==='pistol'){
+      const wrist=model.worldToLocal(joints.wristR.getWorldPosition(new T.Vector3()));
+      assert(Math.abs(wrist.x)<.18,'Canell amb pistola apuntant al centre del pit');
+     }
     }
    }
    setHumanPreviewWeapon(T,model,'pistol');poseHumanProposal(model,0,'rest');
