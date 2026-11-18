@@ -15,7 +15,13 @@ function sourceFor(T,role){
    if(node.userData?.humanMotionJoint)joints.set(node.userData.humanMotionJoint,node);
    if(node.isMesh)parts.push(node);
   });
-  cache.set(role,{root,joints,parts});
+  const neckJoint=joints.get('neck'),headJoint=joints.get('head');
+  if(!neckJoint||!headJoint)throw Error('Falten els pivots de coll i cap del laboratori');
+  // Head pivot in the editor is NOT directly above the neck: it also has a
+  // fore/aft offset. Preserve that full vector when fitting the game skin.
+  const neckToHead=headJoint.getWorldPosition(new T.Vector3())
+   .sub(neckJoint.getWorldPosition(new T.Vector3())).divideScalar(root.scale.x);
+  cache.set(role,{root,joints,parts,neckToHead});
  }
  return cache.get(role);
 }
@@ -79,7 +85,6 @@ export function createHumanGameRuntimeV17(){
    const v=p=>model.worldToLocal(p.getWorldPosition(new T.Vector3()));
    const hipY=(v(u.ll).y+v(u.lr).y)/2;
    const shoulderY=(v(u.al).y+v(u.ar).y)/2;
-   const headY=v(u.head).y;
    const base=Math.abs(u.lkl.position.y)/SOURCE_THIGH;
    const legUpper=Math.abs(u.lkl.position.y)/SOURCE_THIGH;
    const legLower=Math.abs(u.boots[0].position.y)/SOURCE_SHIN;
@@ -90,12 +95,26 @@ export function createHumanGameRuntimeV17(){
    const upperY=u.upperBody?.position.y||0,lowerY=u.lowerBody?.position.y||0;
    const pelvis=newAnchor(T,lower,'malucs i pantalons',hipY-lowerY);
    const spine=newAnchor(T,upper,'tors i armilla',shoulderY-.435*torsoScale[1]-upperY);
-   const neck=newAnchor(T,upper,'coll',headY-.095*base*1.30-upperY);
+   const template=sourceFor(T,role),neckScale=base*1.30;
+   const neck=newAnchor(T,upper,'coll',0);
+   // The game head's pivot and scale are legacy animation contracts; don't
+   // modify either. Instead reproduce the editor's exact 3D relation
+   // between the neck and cranium (including its forward offset).
+   const headLocal=upper.worldToLocal(u.head.getWorldPosition(new T.Vector3()));
+   neck.position.copy(headLocal).addScaledVector(template.neckToHead,-neckScale);
+   // compactD heads are scaled by the old game to ~74%, while ordinary
+   // heads are unscaled. Independent hardcoded geometry scales made skulls
+   // and necks disagree. Cancel that old head scale so both use precisely
+   // the SAME final anatomical scale in all three axes.
+   const hs=u.head.scale;
+   if(Math.min(Math.abs(hs.x),Math.abs(hs.y),Math.abs(hs.z))<.01)
+    throw Error('Escala de pivot de cap no vàlida');
+   const skinHeadScales=[neckScale/hs.x,neckScale/hs.y,neckScale/hs.z];
    const targets={
     pelvis:{parent:pelvis,scales:[base*1.35,base*1.18,base*1.35]},
     spine:{parent:spine,scales:torsoScale},
-    neck:{parent:neck,scales:[base*1.30,base*1.30,base*1.30]},
-    head:{parent:u.head,scales:[base*1.73,base*1.73,base*1.73]},
+    neck:{parent:neck,scales:[neckScale,neckScale,neckScale]},
+    head:{parent:u.head,scales:skinHeadScales},
     hipL:{parent:u.ll,scales:[legUpper,legUpper,legUpper]},
     hipR:{parent:u.lr,scales:[legUpper,legUpper,legUpper]},
     kneeL:{parent:u.lkl,scales:[legLower,legLower,legLower]},
@@ -112,7 +131,8 @@ export function createHumanGameRuntimeV17(){
    const keep=node=>!!u.gun&&belongsTo(node,u.gun);
    // The originals' pivots, contact markers, and combat weapon groups stay.
    const old=removeOldMeshes(model,keep);
-   const added=copySkin(T,sourceFor(T,role),joint=>targets[joint]);
+   const added=copySkin(T,template,joint=>targets[joint]);
+   model.userData.humanGameV17NeckMatched=true;
    model.userData.humanGameV17=role;
    model.userData.humanGameV17Counts={removed:old.length,added:added.length};
    model.userData.humanGameV17PreservedRig=true;
