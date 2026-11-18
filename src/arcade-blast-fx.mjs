@@ -33,17 +33,17 @@ export function arcadeBlastProfile(kind,quality='desktop'){
   if(old)return old;
   const big=kind==='c4',projectile=kind==='projectile',
     low=quality==='mobile',factor=low?.45:.82;
-  // Escales VISUALS: granada 1×, projectil 1,5×, C4 2,55×
-  // (el C4 antic era 1,7×). Ni radi de dany ni física canvien.
+  // Mateix motor arcade 03, però amb una ona de C4 35% més gran,
+  // més fragments, fum i llum. El radi físic de 72 m es defineix al combat.
   const particleBoost=projectile?1.15:1;
   const profile=Object.freeze({
-    kind,scale:big?2.55:projectile?1.5:1,duration:big?4.4:3.1,
-    fire:Math.round((big?40:29)*factor*particleBoost),
-    smoke:Math.round((big?25:17)*factor*particleBoost),
-    dust:Math.round((big?34:25)*factor*particleBoost),
-    sparks:Math.round((big?65:48)*factor*particleBoost),
-    shards:Math.round((big?32:24)*factor*particleBoost),
-    flashDuration:big?.22:.15
+    kind,scale:big?3.45:projectile?1.5:1,duration:big?5.0:3.1,
+    fire:Math.round((big?52:29)*factor*particleBoost),
+    smoke:Math.round((big?35:17)*factor*particleBoost),
+    dust:Math.round((big?45:25)*factor*particleBoost),
+    sparks:Math.round((big?88:48)*factor*particleBoost),
+    shards:Math.round((big?44:24)*factor*particleBoost),
+    flashDuration:big?.28:.15
   });
   profileCache.set(cacheKey,profile);
   return profile;
