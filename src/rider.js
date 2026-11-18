@@ -5,6 +5,10 @@ window.HUNTER_RIDER=Object.freeze({
     // El rider és el mateix protagonista: fa servir el cap D i el coll curt,
     // sense canviar cap seient, escala del vehicle ni pivot de les extremitats.
     const model=window.HUNTER_PLAYER_MODEL.create(THREE,{headVariant:'compactD'}),rig=model.userData;
+    // Mides reals, sense valors d'escala estimats: el mateix cos complet
+    // que a peu (2 m canònics × factor visual) és la referència de bici.
+    const nativeHeight=Math.max(.001,new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3()).y);
+    const bicycleRiderScale=(window.HUNTER_HUMAN_V17?.footVisualHeight??3.2)/nativeHeight;
     const limbs=[],boots=rig.boots;
     for(let i=0;i<2;i++){
       const shoulder=i?rig.ar:rig.al,elbow=i?rig.aer:rig.ael;
@@ -155,7 +159,7 @@ window.HUNTER_RIDER=Object.freeze({
       // escala 1, desproporcionat respecte als manillars i als seients.
       const gazTigr=car&&v.o?.userData?.gazModel==='Tigr-M';
       const riderScale=gazTigr?.825:car?.82:v.t==='hover'?.63:
-        v.t==='bici'?.80:v.t==='moto'?.56:1;
+        v.t==='bici'?bicycleRiderScale:v.t==='moto'?.56:1;
       g.scale.setScalar(riderScale);
       g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);
       const far=Number.isFinite(viewDistance)&&viewDistance>
