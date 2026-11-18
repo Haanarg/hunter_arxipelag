@@ -78,7 +78,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
    assert.equal(trimmings.length,4,'Quatre ribets al baix de la cassaca');
    const width=moustache.filter(m=>m.userData.humanGeneralMoustacheV18.part==='curl')
     .map(m=>Math.abs(m.position.x)+m.scale.x);
-   assert(width.every(w>HUMAN_GENERAL_V18.oldMoustacheHalfWidth*1.5),'Bigoti molt més ample que V17');
+   assert(width.every(w=>w>HUMAN_GENERAL_V18.oldMoustacheHalfWidth*1.5),'Bigoti molt més ample que V17');
    for(const t of tails){
     const {side,front,hem,rows}=t.userData.humanGeneralCoatV18;
     assert.equal(rows,HUMAN_GENERAL_V18.coatRings);

@@ -18,7 +18,7 @@ for(const role of Object.keys(HUMAN_PROFILES)){
   if(variant!=='actual')assert.equal(s.joints.length,16);
   const obj=humanOBJ(T,root,s),lines=obj.split('\n'),verts=lines.filter(x=>x.startsWith('v ')),faces=lines.filter(x=>x.startsWith('f '));
   assert.equal(faces.length,s.triangles);assert(verts.every(x=>x.split(' ').slice(1).every(y=>Number.isFinite(Number(y)))));
-  for(const f of faces)assert(f.split(' ').slice(1).every(x=>Number(x)>0&&Number(x)<=verts.length));
+  for(const f of faces)assert(f.split(' ').slice(1).every(x=>Number(x)>0&&Number(x)<=verts.length),'OBJ '+role+'/'+variant+' '+f+' of '+verts.length+' vertices');
  }
 }
 console.log('PASS human lab: current roles/styles, OBJ, metrics, joints and origin');

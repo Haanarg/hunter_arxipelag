@@ -71,7 +71,7 @@ for(const role of ['player','soldier','rocket','elite','general']){
  }
  if(role==='general'){
   const tails=pieces.filter(m=>m.userData.humanGameV17Source?.startsWith('Faldó cassaca'));
-  const bigoti=pieces.filter(m=>m.userData.humanGameV17Source?.startsWith('Bigoti'));
+  const bigoti=pieces.filter(m=>m.userData.humanGameV17Source?.toLowerCase().includes('bigoti'));
   assert.equal(tails.length,4,'Cassaca V18 del general al joc');
   assert.equal(bigoti.length,4,'Bigoti V18 del general al joc');
   for(const tail of tails)assert([u.ll,u.lr].includes(tail.parent),'Faldons subjectes als malucs originals');
