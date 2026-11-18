@@ -44,7 +44,12 @@ function assertHeadNeckParity(game,role,label){
  console.log('DIAGNOSTIC neck/skull '+label,JSON.stringify({
   nCenter:neckBox.getCenter(new T.Vector3()).toArray(),nSize:neckBox.getSize(new T.Vector3()).toArray(),
   kCenter:headBox.getCenter(new T.Vector3()).toArray(),kSize:headBox.getSize(new T.Vector3()).toArray(),
-  gameHead:game.userData.head?.getWorldPosition(new T.Vector3()).toArray(),expected,actual
+  gameHead:game.userData.head?.getWorldPosition(new T.Vector3()).toArray(),
+  neckParent:neck.parent.name,neckLocal:neck.parent.position.toArray(),
+  neckWorld:neck.parent.getWorldPosition(new T.Vector3()).toArray(),
+  parentWorld:neck.parent.parent?.getWorldPosition(new T.Vector3()).toArray(),
+  headParent:game.userData.head?.parent?.name,
+  expected,actual
  }));
  for(const channel of ['offset','skull'])for(let i=0;i<3;i++)
   assert(Math.abs(actual[channel][i]-expected[channel][i])<.018,
