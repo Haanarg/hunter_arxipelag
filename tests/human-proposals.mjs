@@ -73,7 +73,9 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   const hPos=hipShell.geometry.attributes.position,segments=HUMAN_STYLES[style].segments;
   assert.equal(hPos.count,segments*6,'Sis seccions de maluc suaus');
   assert(Math.abs(hPos.getY(0)-HUMAN_GROIN_V17.low)<1e-6,'Cota del cavall intacta');
-  assert(hPos.getY(Math.round(segments/4))>HUMAN_GROIN_V17.low+.019,'Doble arc de l’engonal');
+  const quarter=Math.round(segments/4);
+  const expectedArch=HUMAN_GROIN_V17.frontRaise*(1-Math.abs(Math.cos(quarter*2*Math.PI/segments)));
+  assert(Math.abs(hPos.getY(quarter)-HUMAN_GROIN_V17.low-expectedArch)<.00001&&expectedArch>.012,'Arc de l’engonal mesurat amb la tessellació real');
   assert(Math.abs(hPos.getX(3*segments)-HUMAN_STYLES[style].width*(role==='player'?1.18:1)*.176)<1e-5,'Perfil de cintura ampli');
   const hipBox=new T.Box3().setFromObject(hipShell,true);
   for(const side of ['L','R']){
