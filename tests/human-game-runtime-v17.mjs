@@ -109,6 +109,16 @@ for(const role of ['player','soldier','rocket','elite','general']){
   assert(moved>.35&&moved<.45,'Game pose drives native shoulder joint');
   u.ar.rotation.x=oldR;g.updateMatrixWorld(true);
   assert(restShoulder.angleTo(bones.shoulderR.quaternion)<.002,'Rest pose exactly recovers editor geometry');
+  const gunProxy=canonical.getObjectByName('Arma canònica · gun');
+  assert(gunProxy&&gunProxy.parent===bones.wristR,'Visible pistol grip on editor wrist');
+  assert(!part.visible&&part.parent===gun,'Old ghost gun is not visible or detached from gameplay controller');
+  const oldLowerY=u.lowerBody.position.y,oldUpperY=u.upperBody.position.y;
+  u.lowerBody.position.y-=.72;u.upperBody.position.y-=.72;
+  g.updateMatrixWorld(true);
+  assert(canonical.position.y<-.30&&canonical.position.y>-.50,
+   'Old 4m crouch is translated to native 2m joints, not -0.72m full drop');
+  u.lowerBody.position.y=oldLowerY;u.upperBody.position.y=oldUpperY;
+  g.updateMatrixWorld(true);
   console.log('PASS native game player identical to editor: 16 joints, '+actual.length+' unmodified meshes, 2.00 m');
  }
  const box=new T.Box3().setFromObject(g);
