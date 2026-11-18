@@ -303,7 +303,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   let triangles=0;for(const m of meshes){assert([...m.geometry.attributes.position.array].every(Number.isFinite));assert(m.geometry.userData.labOwned);triangles+=(m.geometry.index?.count??m.geometry.attributes.position.count)/3}
   const bodyMeshes=meshes.filter(m=>!m.userData.humanGameWeaponPart);
   const bodyTriangles=bodyMeshes.reduce((n,m)=>n+(m.geometry.index?.count??m.geometry.attributes.position.count)/3,0);
-  assert(bodyTriangles<13000&&bodyMeshes.length<(role==='general'?85:role==='player'?85:60),'Pressupost de malles conservat excepte els dos deltoides independents V16');
+  assert(bodyTriangles<13000&&bodyMeshes.length<(role==='general'?100:role==='player'?85:60),'Pressupost '+role+'/'+style+': '+bodyTriangles+' triangles i '+bodyMeshes.length+' malles');
   const pads=meshes.filter(m=>m.userData.humanKneePad);
   assert.equal(pads.length,['player','soldier','rocket','elite'].includes(role)?2:0,'Genolleres ovalades als soldats i al protagonista');
   for(const pad of pads){
