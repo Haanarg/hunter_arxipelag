@@ -4180,7 +4180,10 @@ if(!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive){
   // Ajustam la malla a la sola real de les botes i al triangle visible,
   // també en pendents. No canviam P.y ni la detecció física del terra.
   pl.updateMatrixWorld(true);
-  const soles=pl.userData.soleContacts||[],point=pl.userData.soleWorldScratch??=new THREE.Vector3();
+  const canonical=pl.userData.humanGameCanonicalSoles;
+  const soles=canonical?.length===2?canonical:pl.userData.soleContacts||[],
+        point=pl.userData.soleWorldScratch??=new THREE.Vector3(),
+        soleBounds=pl.userData.soleBoundsScratch??=new THREE.Box3();
   let clearance=Infinity;
   for(const sole of soles){
     sole.getWorldPosition(point);
@@ -4193,7 +4196,8 @@ if(!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive){
     // que efectivament es dibuixa (i que rep l'ombra).
     const natural=Math.abs(floor-Math.max(0,physical))<.18;
     const target=natural&&Number.isFinite(visible)?visible:floor;
-    clearance=Math.min(clearance,point.y-target);
+    const soleY=canonical?.length===2?soleBounds.setFromObject(sole).min.y:point.y;
+    clearance=Math.min(clearance,soleY-target);
   }
   // Sense espai artificial entre soles i sòl. En pendent el contacte
   // s'avalua per separat a cada peu abans de traslladar tot el rig.

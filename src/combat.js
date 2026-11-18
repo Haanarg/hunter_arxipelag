@@ -710,8 +710,21 @@ function secondaryWeapon(){if(playerEject||playerFall)return false;if(nativeCoop
 // l'abast màxim. La mateixa velocitat serveix per a la mira i el projectil.
 const GRENADE_CHARGE_SECONDS=1.4,GRENADE_MIN_SPEED=3.5,GRENADE_MAX_SPEED=33;
 let grenadeCharge=null,grenadeAimVisual=null;
+function grenadeHandOrigin(){
+  if(cv||!pl?.userData?.humanGameCanonicalJoints?.wristR)return null;
+  pl.position.x=P.x;pl.position.z=P.z;pl.rotation.y=P.hd;
+  pl.updateMatrixWorld(true);
+  return pl.userData.humanGameCanonicalJoints.wristR.getWorldPosition(new THREE.Vector3());
+}
 function grenadeLaunchParams(power=0,origin=P,hd=P.hd){
-  return window.HUNTER_SHARED_WEAPONS.grenadeLaunch(power,origin,hd);
+  const flight=window.HUNTER_SHARED_WEAPONS.grenadeLaunch(power,origin,hd);
+  const hand=origin===P?grenadeHandOrigin():null;
+  if(hand){
+    flight.x=hand.x-Math.sin(hd)*.12;
+    flight.y=hand.y+.04;
+    flight.z=hand.z-Math.cos(hd)*.12;
+  }
+  return flight;
 }
 function bunkerProjectileSurface(x,z,y,water=false){
   const floor=bunkerSubFloorAt(x,z,y);
@@ -847,7 +860,7 @@ function throwGrenade(power=0){if(playerEject||playerFall)return false;if(native
   fcd=.7;setDis(false);
   pl.userData.grenadeThrow=.55;pl.userData.grenadeReleased=false;
   pl.userData.grenadeThrowPower=Math.max(0,Math.min(1,power));
-  pl.userData.grenadePending={t:.23,flight};
+  pl.userData.grenadePending={t:.23,flight,fromPlayerHand:true};
   msg='Granades: '+(inv.granada||0);msgT=1.5;
   return true;
 }
@@ -858,8 +871,17 @@ function createGrenadeModel(){
   const cap=new THREE.Mesh(new THREE.BoxGeometry(.08,.13,.08),new THREE.MeshStandardMaterial({color:0x252b27,roughness:.7,metalness:.25}));cap.position.y=.18;o.add(cap);
 return o;}
 function launchGrenade(pending){
-  const flight=pending.flight||grenadeLaunchParams(),{x,y,z,vx,vy,vz,t}=flight,
-        o=createGrenadeModel();
+  const flight=pending.flight||grenadeLaunchParams();
+  if(pending.fromPlayerHand){
+    // Al fotograma d'alliberament el projectil surt de la mà animada.
+    const hand=grenadeHandOrigin();
+    if(hand){
+      flight.x=hand.x-Math.sin(P.hd)*.12;
+      flight.y=hand.y+.04;
+      flight.z=hand.z-Math.cos(P.hd)*.12;
+    }
+  }
+  const {x,y,z,vx,vy,vz,t}=flight,o=createGrenadeModel();
   o.position.set(x,y,z);world.add(o);
   grenades.push({x,y,z,vx,vy,vz,t,o,sx:x,sy:y,sz:z});
 }
