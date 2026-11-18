@@ -24,10 +24,6 @@ export function humanOBJ(T,root,metadata={}){
   const a=m.geometry.attributes.position,index=m.geometry.index,flip=m.matrixWorld.determinant()<0;
   lines.push('o mesh_'+i+'_'+(m.name||'part').replace(/[^a-zA-Z0-9_-]/g,'_'));
   for(let j=0;j<a.count;j++){p.fromBufferAttribute(a,j).applyMatrix4(m.matrixWorld);lines.push('v '+p.toArray().map(x=>Number(x.toFixed(7))).join(' '))}
-  if(index){for(let j=0;j<index.count;j++)if(index.getX(j)>=a.count){
-   console.error('HUMAN_OBJ_BAD_INDEX',m.name,'at',j,'index',index.getX(j),'max',a.count-1,'source',m.userData?.batchedParts?.slice(0,5));
-   break;
-  }}
  const at=j=>offset+(index?index.getX(j):j),count=index?.count??a.count;
   for(let j=0;j+2<count;j+=3)lines.push('f '+at(j)+' '+at(j+(flip?2:1))+' '+at(j+(flip?1:2)));
   offset+=a.count;

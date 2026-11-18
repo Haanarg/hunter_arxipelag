@@ -40,17 +40,6 @@ function assertHeadNeckParity(game,role,label){
  const skull=parts.find(p=>p.userData.humanGameV17Source==='Mandíbula i crani');
  assert(neck&&skull,'El joc carrega les malles anatòmiques originals '+label);
  const expected=referenceHeadNeckProfile(role),actual=headNeckProfile(neck,skull);
- const neckBox=new T.Box3().setFromObject(neck,true),headBox=new T.Box3().setFromObject(skull,true);
- console.log('DIAGNOSTIC neck/skull '+label,JSON.stringify({
-  nCenter:neckBox.getCenter(new T.Vector3()).toArray(),nSize:neckBox.getSize(new T.Vector3()).toArray(),
-  kCenter:headBox.getCenter(new T.Vector3()).toArray(),kSize:headBox.getSize(new T.Vector3()).toArray(),
-  gameHead:game.userData.head?.getWorldPosition(new T.Vector3()).toArray(),
-  neckParent:neck.parent.name,neckLocal:neck.parent.position.toArray(),
-  neckWorld:neck.parent.getWorldPosition(new T.Vector3()).toArray(),
-  parentWorld:neck.parent.parent?.getWorldPosition(new T.Vector3()).toArray(),
-  headParent:game.userData.head?.parent?.name,
-  expected,actual
- }));
  for(const channel of ['offset','skull'])for(let i=0;i<3;i++)
   assert(Math.abs(actual[channel][i]-expected[channel][i])<.018,
    label+' coll/cap no correspon al laboratori: '+channel+'['+i+'] '+actual[channel][i]+' vs '+expected[channel][i]);

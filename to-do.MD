@@ -11,6 +11,7 @@
 - [x] Diagnosi: el pont entre editor i joc escalava crani i coll per separat i ignorava el desplaçament anteroposterior real del pivot cranial, fent que el coll no correspongués a la geometria original.
 - [x] L'ancoratge del coll deriva ara del vector tridimensional coll→cap del laboratori. L'escala del crani compensa automàticament la variant compacta o normal del pivot del joc, sense moure'n les animacions.
 - [x] Proves geomètriques de mida, posició relativa i intersecció anatòmica amb les malles reals, en tots els rols i en els caps de mida normal i compacta; actualització de cache index→menu→bootstrap→pont del joc.
+- [x] Paritat de coll i mandíbula comprovada amb geometria real en 5 rols i 2 variants de cap; actualitzat el títol de l'editor de HUMANS V17 a V18, netejades les traces temporals.
 - [ ] Validació visual al navegador del joc en caminar, córrer i apuntar. Controls, col·lisions, armes i vehicles mantenen l'esquelet original.
 
 **2026-11-18 · HUMANS V18 · segona revisió de cassaca:**
