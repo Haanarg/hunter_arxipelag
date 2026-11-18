@@ -578,7 +578,8 @@ function boom(x,y,z,r,dmg,own,source=null,visualWeapon=null,directHit=null){
  }
  PL.forEach(t=>{if(!t.alive)return;const dealt=explosionDamage(dmg,Math.hypot(t.x-x,t.z-z),r);if(dealt&&!blastOccluded(x,y,z,t.x,t.y+2,t.z))dmgP(t,dealt)});
  for(const v of [...vehicleCandidatesAt(x,z,r+12,true)]){
-  if(v.destroyed||v===directHit?.target)continue;
+  if(v.destroyed||v===directHit?.target||
+     source?.weapon==='boatRocket'&&v===source.sourceVehicle)continue;
   const dealt=explosionDamage(dmg,explosionDistanceToVehicleHull(v,x,y,z),r);
   if(dealt&&!blastOccluded(x,y,z,v.x,(v.o?.position?.y??0)+1,v.z))damageVehicle(v,dealt,1,'heavy',source||{x,y,z,own});
  }
