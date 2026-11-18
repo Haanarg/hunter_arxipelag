@@ -71,6 +71,11 @@ window.HUNTER_RIDER=Object.freeze({
         // El remador només gira un poc les espatlles (uns 30°),
         // sense retorçar el tronc ni passar de cop al perfil.
         torso.rotation.y=Math.PI-.52*u.shotBlend;
+        // El cap mira cap a l'arma; els braços conserven els punts dels rems.
+        const direction=u.pistolAim||forward;
+        const yaw=Math.atan2(-direction.x,-direction.z);
+        rig.head.rotation.y=Math.max(-.65,Math.min(.65,yaw-torso.rotation.y))*.6*u.shotBlend;
+        rig.head.rotation.x=-.08*u.shotBlend;
       }else torso.rotation.y+=twist*u.shotBlend;
       const shoulder=shoulderAt(1),
             forearm=limbs[3],
@@ -142,7 +147,7 @@ window.HUNTER_RIDER=Object.freeze({
       const car=!!v&&(v.t==='cotxe_civil'||v.t==='cotxe');
       const open=!!v&&(car||['bici','moto','moto_aquatica','llanxa','llanxa_coets','barca_rems','windsurf','hover'].includes(v.t));g.visible=open;
       if(!open){g.userData.shotTime=0;g.userData.shotBlend=0;g.userData.pistolAim=null;pistol.visible=false;g.scale.setScalar(1);return}
-      const u=g.userData,sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=(v.t==='bici'||v.t==='barca_rems')?-(v.pedalPhase||0):(v.pedalPhase||0);
+      const u=g.userData,sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=v.t==='barca_rems'&&Math.abs(v.v)<.7&&Math.abs(v.yawRate||0)>.08?-(v.rowSpinPhase||0):(v.t==='bici'||v.t==='barca_rems')?-(v.pedalPhase||0):(v.pedalPhase||0);
       // En cotxes l'habitacle és més baix que el protagonista dret.
       // Escalam el mateix model de jugador i preservam l'orientació
       // tridimensional del xassís en girs i pendents.
@@ -150,7 +155,7 @@ window.HUNTER_RIDER=Object.freeze({
       // escala 1, desproporcionat respecte als manillars i als seients.
       const gazTigr=car&&v.o?.userData?.gazModel==='Tigr-M';
       const riderScale=gazTigr?.825:car?.82:v.t==='hover'?.63:
-        (v.t==='moto'||v.t==='bici')?.56:1;
+        v.t==='bici'?.80:v.t==='moto'?.56:1;
       g.scale.setScalar(riderScale);
       g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);
       const far=Number.isFinite(viewDistance)&&viewDistance>
@@ -176,7 +181,7 @@ window.HUNTER_RIDER=Object.freeze({
         pistol.visible=false;
         return;
       }
-      torso.rotation.set(0,0,0);boots.forEach(b=>b.rotation.set(0,0,0));
+      torso.rotation.set(0,0,0);rig.head.rotation.set(0,0,0);boots.forEach(b=>b.rotation.set(0,0,0));
 
       if(car){
         // Seient esquerre, darrere del volant (C1A i cotxe utilitari).
