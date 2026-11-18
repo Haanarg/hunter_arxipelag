@@ -783,11 +783,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
         tx(u.ar,chargePose.shoulderX);tz(u.ar,chargePose.shoulderZ);
         tx(u.aer,chargePose.elbowX);tz(u.aer,chargePose.elbowZ);
       }
-      // Contrapès de la fotografia: braç esquerre enrere i cap enfora,
-       // oposat a la meitat superior del braç dret que llança.
+      // Contrapès de la fotografia: si el braç dret es prepara
+       // cap enrere, l'esquerre s'estén ENDAVANT i cap amunt.
        const counter=throwing?Math.min(1,Math.max(0,p/.40)):Math.min(1,grenadeChargePower);
-       tx(u.al,-.68-.30*counter);tz(u.al,-.50-.17*counter);
-       tx(u.ael,.40+.24*counter);tz(u.ael,-.09);
+       tx(u.al,1.05+.28*counter);tz(u.al,-.42-.15*counter);
+       tx(u.ael,.18-.08*counter);tz(u.ael,-.09);
     }else if(bazooka){
       // No fixam els braços en una posició estàtica mentre gira
       // el llançacoets: el gallet i el suport es mouen amb el canó.

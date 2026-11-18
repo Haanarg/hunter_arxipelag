@@ -864,11 +864,11 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
     set('spine',-.045,-.12);set('head',0,0);set('shoulderR',upper,.20,-.10);set('elbowR',lower);set('wristR',Math.PI/2-upper-lower);
    }
   }else if(mode==='throw'){
-    // L'esquerra acompanya el llançament com a contrapès obert,
-    // darrere del cos i en direcció oposada al braç dret.
+    // Referència fotogràfica: la mà esquerra s'allarga endavant
+    // i amunt mentre la mà dreta porta la granada enrere.
     set('spine',-.10,-.10);set('head',0,0);
     set('shoulderR',-.30,0,1.06);set('elbowR',1.05,0,.14);
-    set('shoulderL',-.88,0,-.63);set('elbowL',.60,0,-.10);
+    set('shoulderL',1.32,0,-.50);set('elbowL',.12,0,-.10);
    }else if(mode==='work'){
    set('spine',-.32);set('neck',.10);set('hipL',.24);set('hipR',.24);set('kneeL',-.42);set('kneeR',-.42);
    set('ankleL',.18);set('ankleR',.18);set('shoulderL',1.10,0,.15);set('shoulderR',.90,0,-.12);

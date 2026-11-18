@@ -1,3 +1,6 @@
+**2026-11-18 · Contrast fotogràfic del llançament:**
+- [x] Braç dret que prepara la granada enrere; braç esquerre, no llançador, estès endavant i amunt, amb lleu obertura lateral i colze gairebé recte, tant al joc com al visor de proves.
+
 **2026-11-18 · Subversió 0.6.226 · rigs humans, armes, GAZ, càmera:**
 - [x] Obertura de braços dividida per dos en repòs, caminar i córrer (model i animació; només carrega especial quan apunta o llança).
 - [x] Pistola segueix el rumb actual del jugador quan no hi ha diana i no queda ancorada al vector d'autoapuntat antic; cap segueix el yaw de tors mentre aquest apunta.
