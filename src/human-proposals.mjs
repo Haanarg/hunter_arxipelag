@@ -436,7 +436,12 @@ export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
   for(const side of [-1,1]){
    const lapel=box(torso,'Solapa llarga de cassaca',[.075,.29,.025],[side*.084,.255,-.136],p.trim);
    lapel.rotation.z=side*.20;
-   for(const y of [.12,.22,.31])oval(torso,'Botó daurat cassaca',[.011,.012,.009],[side*.045,y,-.150],gold);
+   for(const y of [.12,.22,.31]){
+    // Tiny buttons use deliberately low-poly gems, not facial detail.
+    const button=mesh(torso,'Botó daurat cassaca',
+     new T.SphereGeometry(1,8,4),gold,[side*.045,y,-.150]);
+    button.scale.set(.011,.012,.009);
+   }
   }
   for(let i=0;i<(s.detail===2?6:3);i++){
    const x=.055+(i%3)*.035,y=.33-Math.floor(i/3)*.06;
@@ -452,7 +457,11 @@ export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
   ],p.uniform,bodySegments);
   waist.userData.humanGeneralCoatWaistV18=true;
   for(const side of [-1,1]){
-   for(const y of [.055,-.018])oval(pelvis,'Botó daurat cintura',[.010,.011,.009],[side*.044,y,-.155],gold);
+   for(const y of [.055,-.018]){
+    const button=mesh(pelvis,'Botó daurat cintura',
+     new T.SphereGeometry(1,8,4),gold,[side*.044,y,-.155]);
+    button.scale.set(.010,.011,.009);
+   }
   }
   const tails=[
    [.045,.105,.132,0],[-.083,.115,.141,.002],[-.195,.127,.149,.004],

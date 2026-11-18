@@ -1,3 +1,7 @@
+**2026-11-18 · HUMANS V18 · triangles de cassaca:**
+- [x] Botons daurats mil·limètrics convertits a geometria low-poly 8×4 segments, mantenint relleu/posició/color. El general B pot conservar bigoti i faldons detallats sense desbordar el pressupost de 13.000 triangles.
+- [ ] Verificar tests i Cloudflare. El pont del coll ha estat corregit separadament i es preserva.
+
 **2026-11-18 · HUMANS V18 · geometria dels faldons corregida:**
 - [x] El primer quadrilàter del faldó feia servir l'índex -1 (convertit a 65535 en Uint16). S'ha corregit la progressió de columnes: totes les cares apunten a vèrtexs vàlids i l'OBJ es pot exportar sense errors.
 - [x] Pressupost de malles compatible amb les peces noves de la cassaca llarga; límit de 13.000 triangles sense relaxar, prova explícita de cada índex vàlid i controls d'articulació preservats.
