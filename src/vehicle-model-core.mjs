@@ -1,4 +1,5 @@
 import {createMi24Runtime,MI24_RUNTIME_ID} from './mi24-proposals.mjs?rev=mi24-d-optimized-20261115-3';
+import {createHumanProposal} from './human-proposals.mjs?rev=humans-v18-neck-cutter-grenade-20261118-3';
 import {installFerryModel} from './ferry-proposals.mjs?rev=ferry-d-approved-1';
 import {turretSpecs,advanceTurret,stepManualTurret} from './vehicle-turret-core.mjs?rev=btr82-scale-80-1';
 import {installBtr82Model3B} from './btr82-3b-native.mjs?rev=btr82-scale-80-1';
@@ -723,6 +724,21 @@ export const vehicleModels=Object.freeze({
         const approvedModel=combat?createMi24Runtime(THREE):createKa60Runtime(THREE,{vehicleScale:VS[t]});
         resources?.retainModel(approvedModel);
         g.add(approvedModel);
+        // Dos pilots del mateix model anatòmic canònic que l'editor,
+        // dins els habitacles envidrats. Són figures visuals assegudes;
+        // no intervenen en la física ni reben impactes independents.
+        const seats=combat?[[0,1.98,-3.08],[0,1.32,-4.96]]:
+          [[-.49,1.34,-2.65],[.49,1.34,-2.65]];
+        const crew=seats.map(([x,y,z],i)=>{
+          const pilot=createHumanProposal(THREE,'soldier','a',{visualOnly:true});
+          pilot.name='Pilot de cabina '+(i+1);
+          pilot.scale.multiplyScalar(1.30/(pilot.userData.humanHeight||2));
+          pilot.position.set(x,y-.27,z);
+          pilot.rotation.x=-.08;
+          approvedModel.add(pilot);
+          return pilot;
+        });
+        g.userData.cockpitCrew=crew;
         g.userData.rotor=approvedModel.userData.rotor;
         g.userData.tailRotor=approvedModel.userData.tailRotor;
         g.userData.cockpitSeatCount=2;
