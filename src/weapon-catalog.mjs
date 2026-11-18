@@ -15,7 +15,7 @@ export const weaponCatalog=Object.freeze(Object.fromEntries(Object.entries({
  tankette:{name:'Canó de la tanqueta',speed:135,damage:combatBalance.weapons.tankette,range:150,cone:ARMORED_AIM.light.cone,vertical:ARMORED_AIM.light.vertical,cooldown:.16,life:2.2},
  attackCannon:{name:'Canó de l’helicòpter',speed:145,damage:combatBalance.weapons.attackCannon,range:150,cone:.73,vertical:.97,cooldown:.12,life:2.2},
  heliMissile:{name:'Míssil',ammo:'rockets',speed:72*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.heliMissile,splash:10,range:250,cone:.68,vertical:.9,cooldown:.75,life:3.3},
- boatRocket:{name:'Coet naval',speed:68*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.boatRocket,splash:11,range:250,cone:.68,vertical:.9,cooldown:.9,life:2.2}
+ boatRocket:{name:'Coet naval',speed:68*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.boatRocket,splash:11,range:250,cone:.68,vertical:.9,cooldown:1.55,life:4}
 }).map(([key,value])=>[key,Object.freeze(value)])));
 export const personalWeapons=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters','c4']);
 export const combatCommands=Object.freeze([...personalWeapons,'grenade','secondary']);
