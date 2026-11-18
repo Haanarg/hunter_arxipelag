@@ -29,9 +29,9 @@ function createHunterLongGunVisual(T,kind){
   box('Alça',.12,.12,.10,dark,0,.22,.03);
  }else if(kind==='sniper'){
   // Green continuous stock, long exposed barrel and prominent optic.
-  sideShape('Culata i guardamà SV',[[1.56,-.28],[1.56,.11],[.62,.10],[.42,-.04],[-.24,-.12],[-1.34,-.10],[-1.34,-.24],[-.10,-.29],[.34,-.34],[.58,-.21],[.86,-.27]],.30,green);
-  box('Cos rifle',.24,.19,1.40,steel,0,.025,-.42);
-  box('Taló culata',.30,.39,.08,dark,0,-.085,1.59);
+  sideShape('Culata i guardamà SV',[[1.56,-.28],[1.56,.11],[.62,.10],[.42,-.04],[-.24,-.12],[-1.34,-.10],[-1.34,-.24],[-.10,-.29],[.34,-.34],[.58,-.21],[.86,-.27]],.20,green);
+  box('Cos rifle',.16,.19,1.40,steel,0,.025,-.42);
+  box('Taló culata',.20,.39,.08,dark,0,-.085,1.59);
   tube('Canó llarg',.069,1.48,steel,.03,-1.93);
   tube('Punta visual',.084,.16,black,.03,-2.665);
   box('Carregador curt',.17,.20,.29,dark,0,-.28,-.28);
@@ -114,7 +114,7 @@ function createPlayerPistol(T,gun){
 const PLAYER_KNIFE_4B=Object.freeze({
   shoulder:Object.freeze({x:-.10,y:0,z:.55}),
   elbow:Object.freeze({x:.92,y:0,z:-.08}),
-  blade:Object.freeze({x:.25,y:0,z:.50})
+  blade:Object.freeze({x:Math.PI/2,y:0,z:.50})
 });
 // Escollida l'estocada lateral 3B: gir de canell +90° durant l'impacte.
 // Compartim aquests valors amb la pàgina de proves.
@@ -129,8 +129,9 @@ const PLAYER_KNIFE_ATTACK_SECONDS=.48;
 function grenadeChargeArmPose(power=0){
   const t=Math.max(0,Math.min(1,Number.isFinite(power)?power:0));
   return {
-    shoulderX:.28-.72*t,
-    shoulderZ:.78+.80*t,
+    shoulderX:.28-1.20*t,
+    shoulderY:-.10-.52*t,
+    shoulderZ:.78+.55*t,
     elbowX:.56+.32*t,
     elbowZ:.08+.08*t
   };
@@ -769,6 +770,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
       if(throwing&&p<.42){
         const q=p/.42;
         tx(u.ar,chargePose.shoulderX-.08*q);
+        u.ar.rotation.y=chargePose.shoulderY*(1-.15*q);
         tz(u.ar,chargePose.shoulderZ+.06*q);
         tx(u.aer,chargePose.elbowX);
         tz(u.aer,chargePose.elbowZ);
@@ -776,11 +778,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
         // Impuls cap endavant i amunt des de l'angle carregat real.
         const q=Math.min(1,(p-.42)/.58);
         tx(u.ar,chargePose.shoulderX-.08+(1.42-(chargePose.shoulderX-.08))*q);
+        u.ar.rotation.y=chargePose.shoulderY*(1-q);
         tz(u.ar,chargePose.shoulderZ+.06+(-.18-(chargePose.shoulderZ+.06))*q);
         tx(u.aer,chargePose.elbowX+(.27-chargePose.elbowX)*q);
         tz(u.aer,chargePose.elbowZ+(.04-chargePose.elbowZ)*q);
       }else{
-        tx(u.ar,chargePose.shoulderX);tz(u.ar,chargePose.shoulderZ);
+        tx(u.ar,chargePose.shoulderX);u.ar.rotation.y=chargePose.shoulderY;tz(u.ar,chargePose.shoulderZ);
         tx(u.aer,chargePose.elbowX);tz(u.aer,chargePose.elbowZ);
       }
       // Contrapès de la fotografia: si el braç dret es prepara
