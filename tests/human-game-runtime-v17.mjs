@@ -16,6 +16,39 @@ assert.equal(sourceWeapons,0,'La geometria del joc no inclou una còpia de les a
 function skinParts(model){
  const parts=[];model.traverse(n=>{if(n.userData?.humanGameV17Mesh)parts.push(n)});return parts;
 }
+
+function headNeckProfile(neck,skull){
+ const n=new T.Box3().setFromObject(neck,true),k=new T.Box3().setFromObject(skull,true);
+ assert(!n.isEmpty()&&!k.isEmpty(),'Coll i mandíbula amb malla visible');
+ const neckSize=n.getSize(new T.Vector3()),skullSize=k.getSize(new T.Vector3());
+ const delta=k.getCenter(new T.Vector3()).sub(n.getCenter(new T.Vector3()));
+ return {offset:delta.divideScalar(neckSize.y).toArray(),skull:skullSize.divideScalar(neckSize.y).toArray()};
+}
+function referenceHeadNeckProfile(role){
+ const original=createHumanProposal(T,role,'a',{visualOnly:true});
+ let n=null,k=null;
+ original.traverse(p=>{
+  if(p.isMesh&&p.name==='Coll anatòmic i clatell')n=p;
+  if(p.isMesh&&p.name==='Mandíbula i crani')k=p;
+ });
+ assert(n&&k,'El visor defineix coll anatòmic i crani per a '+role);
+ return headNeckProfile(n,k);
+}
+function assertHeadNeckParity(game,role,label){
+ const parts=skinParts(game);
+ const neck=parts.find(p=>p.userData.humanGameV17Source==='Coll anatòmic i clatell');
+ const skull=parts.find(p=>p.userData.humanGameV17Source==='Mandíbula i crani');
+ assert(neck&&skull,'El joc carrega les malles anatòmiques originals '+label);
+ const expected=referenceHeadNeckProfile(role),actual=headNeckProfile(neck,skull);
+ for(const channel of ['offset','skull'])for(let i=0;i<3;i++)
+  assert(Math.abs(actual[channel][i]-expected[channel][i])<.018,
+   label+' coll/cap no correspon al laboratori: '+channel+'['+i+'] '+actual[channel][i]+' vs '+expected[channel][i]);
+ const collar=new T.Box3().setFromObject(neck,true),face=new T.Box3().setFromObject(skull,true);
+ assert(face.min.y<collar.max.y,'El coll penetra l’interior de la mandíbula '+label);
+ assert(face.min.z<collar.max.z&&face.max.z>collar.min.z,'Coll i crani coincideixen en profunditat '+label);
+ assert(game.userData.humanGameV17NeckMatched===true,'Adaptador de coll correcte en ús '+label);
+ console.log('PASS anatomical neck/head '+label,JSON.stringify(actual));
+}
 for(const role of ['player','soldier','rocket','elite','general']){
  const g=runtime.suppress(()=>playerModel.create(T,{unitScale:role==='player'?1.2:1,headVariant:'compactD',articulated:role==='player'}));
  const u=g.userData,hips=[u.ll,u.lr],knees=[u.lkl,u.lkr],arms=[u.al,u.ar],elbows=[u.ael,u.aer],boots=[...u.boots];
@@ -41,6 +74,7 @@ for(const role of ['player','soldier','rocket','elite','general']){
  assert(pieces.some(m=>m.userData.humanGameV17Source==='Panxell'),'Panxells V12');
  assert(pieces.some(m=>m.userData.humanGameV17Source==='Bota'),'Botes V11');
  assert(pieces.some(m=>m.userData.humanGameV17Source==='Mandíbula i crani'),'Cap V17');
+ assertHeadNeckParity(g,role,role+' compactD');
  const box=new T.Box3().setFromObject(g);
  assert(box.max.y-box.min.y>2.8&&box.max.y-box.min.y<6.5,'Alçada comparable amb el model antic');
  if(role==='player'){
@@ -78,6 +112,13 @@ for(const role of ['player','soldier','rocket','elite','general']){
   assert(pieces.some(m=>m.userData.humanGameV17Source==='Cintura entallada de cassaca'));
  }
  console.log('PASS V18 role '+role+' '+pieces.length+' meshes; preserved weapons, poses and real joints');
+}
+// Test a normal head (scale 1), as well as the compactD (~.74) head.
+// They must retain the same anatomical neck-to-skull relation.
+for(const role of ['player','soldier']){
+ const standard=runtime.suppress(()=>playerModel.create(T,{headVariant:null}));
+ runtime.install(T,standard,{role});
+ assertHeadNeckParity(standard,role,role+' normal');
 }
 // Vehicle drivers and passengers must get V17 at the unmodified shared
 // HUNTER_PLAYER_MODEL factory: driver system calls that exact method.

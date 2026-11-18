@@ -1,3 +1,9 @@
+**2026-11-18 · Paritat coll/cap del protagonista al joc (HUMANS V18):**
+- [x] Diagnosi: el pont entre editor i joc escalava crani i coll per separat i ignorava el desplaçament anteroposterior real del pivot cranial, fent que el coll no correspongués a la geometria original.
+- [x] L'ancoratge del coll deriva ara del vector tridimensional coll→cap del laboratori. L'escala del crani compensa automàticament la variant compacta o normal del pivot del joc, sense moure'n les animacions.
+- [x] Proves geomètriques de mida, posició relativa i intersecció anatòmica amb les malles reals, en tots els rols i en els caps de mida normal i compacta; actualització de cache index→menu→bootstrap→pont del joc.
+- [ ] Validació visual al navegador del joc en caminar, córrer i apuntar. Controls, col·lisions, armes i vehicles mantenen l'esquelet original.
+
 **2026-11-18 · HUMANS V18 · segona revisió de cassaca:**
 - [x] Corregit el parent dels quatre faldons: es connecten als pivots de **moviment** hipL/hipR (no als grups de repòs). A partir d'ara giren amb el maluc al laboratori i en la pell de joc real; se'n preserven les postures.
 - [x] Adaptació del pressupost de malles excloent exclusivament les peces addicionals de la cassaca i bigoti; el límit de triangles es manté. Comprovacions d'articulació amb asserts sense volcament recursiu de l'escena.
