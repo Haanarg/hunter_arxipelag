@@ -92,11 +92,13 @@ for(const role of ['player','soldier','rocket','elite','general']){
    assert.deepEqual([...attrA.array],[...attrB.array],'Exact mesh vertices, without geometric deformation: '+a.name);
    assert.equal(a.material.color.getHex(),b.material.color.getHex(),'Editor material colour: '+a.name);
   }
+  g.updateMatrixWorld(true);
+  reference.updateMatrixWorld(true);
   const bound=new T.Box3();
-  for(const mesh of actual)bound.union(new T.Box3().setFromObject(mesh));
+  for(const mesh of actual)bound.union(new T.Box3().setFromObject(mesh,true));
   const expectedBound=new T.Box3().setFromObject(reference,true);
   const actualSize=bound.getSize(new T.Vector3()),expectedSize=expectedBound.getSize(new T.Vector3());
-  console.log('CANONICAL_BOUNDS',JSON.stringify({actual:actualSize.toArray(),expected:expectedSize.toArray(),center:bound.getCenter(new T.Vector3()).toArray()}));
+  console.log('CANONICAL_BOUNDS',JSON.stringify({actual:actualSize.toArray(),expected:expectedSize.toArray(),center:bound.getCenter(new T.Vector3()).toArray(),gameScale:g.scale.toArray(),visualScale:canonical.scale.toArray(),editorScale:reference.scale.toArray(),gameWorldScale:canonical.getWorldScale(new T.Vector3()).toArray()}));
   assert(Math.abs(actualSize.y-expectedSize.y)<.002,'Native game model height matches exact editor model');
   // The old gameplay shoulder is only a control. Animation must actually
   // rotate the editor's corresponding shoulder pivot and preserve the torso.
