@@ -13,7 +13,7 @@ export const HUMAN_SHOULDER_V16=Object.freeze({pivotWidth:.202,previousPivotWidt
 export const HUMAN_PLAYER_THIGH_FACTOR=.94;
 // Ampliam només el contorn del pit del protagonista, sense moure pivots.
 export const HUMAN_PLAYER_CHEST_FACTOR=1.045;
-export const HUMAN_PREVIEW_WEAPONS=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters']);
+export const HUMAN_PREVIEW_WEAPONS=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters','grenade']);
 // Anatomical adjustment for every A/B human candidate. -Z faces forward.
 export const HUMAN_HEAD_ADVANCE=.020;
 // The straight cervical column follows halfway, so the throat remains tucked
@@ -577,7 +577,7 @@ export function setHumanPreviewWeapon(T,root,kind){
  root.traverse(o=>{if(o.userData.humanPreviewWeapon)mount=o});
  if(!mount)return false;
  const visual=createGameWeaponPreview(T,kind);
- visual.scale.setScalar({pistol:.25,assault:.22,sniper:.24,bazooka:.375,knife:.28,cutters:.30}[kind]);
+ visual.scale.setScalar({pistol:.25,assault:.22,sniper:.24,bazooka:.375,knife:.28,cutters:.30,grenade:.27}[kind]);
  for(const child of [...mount.children]){
   child.traverse(obj=>{
    if(obj.isMesh){
@@ -768,6 +768,18 @@ function centerHumanPistolAim(model,j,rig){
   j.elbowR.quaternion.setFromUnitVectors(down,forearm);
   model.updateMatrixWorld(true);
 }
+function holdHumanCutters(model,weapon,j,rig){
+ if(weapon?.userData.humanWeapon!=='cutters')return;
+ let left=null,right=null;
+ weapon.traverse(node=>{
+  if(node.name==='hunter-cutter-handle-left-end')left=node;
+  if(node.name==='hunter-cutter-handle-right-end')right=node;
+ });
+ if(!left||!right)return;
+ model.updateMatrixWorld(true);
+ solveHumanBazookaGrip(model,j,left,'L',rig);
+ solveHumanBazookaGrip(model,j,right,'R',rig);
+}
 function solveHumanBazookaGrip(model,j,grip,side,rig){
  const shoulder=j['shoulder'+side],elbow=j['elbow'+side],wrist=j['wrist'+side];
  if(!shoulder||!elbow||!wrist)return;
@@ -799,18 +811,20 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
   const set=(id,x=0,y=0,z=0)=>{if(j[id])j[id].rotation.set(x,y,z)};
   if(weapon&&j.wristR&&j.spine){
    const shoulderAim=mode==='aim'&&['bazooka','rocket'].includes(weapon.userData.humanWeapon);
-   const parent=shoulderAim?j.spine:j.wristR;
+   const parent=shoulderAim||weapon.userData.humanWeapon==='cutters'?j.spine:j.wristR;
    if(weapon.parent!==parent)parent.add(weapon);
-   if(!shoulderAim)weapon.position.set(0,-.055,model.userData.humanProposal.role==='player'?-.09:-.015);
+   if(weapon.userData.humanWeapon==='cutters')weapon.position.set(0,.15,-.33);
+    else if(!shoulderAim)weapon.position.set(0,-.055,model.userData.humanProposal.role==='player'?-.09:-.015);
   }
   for(const n of Object.values(j)){n.rotation.set(0,0,0);n.position.set(0,0,0)}
   if(mode==='rest'){
     // Lleu flexió de les espatlles, abducció asimètrica i colzes tous.
-    j.shoulderL?.rotation.set(.045,0,-.28);
-    j.shoulderR?.rotation.set(.06,0,.26);
-    j.elbowL?.rotation.set(.12,0,.075);
-    j.elbowR?.rotation.set(.15,0,-.065);
-    model.updateMatrixWorld(true);orientHumanEquippedWeapon(model,weapon,mode,orientation,j);continue
+    j.shoulderL?.rotation.set(.045,0,-.14);
+    j.shoulderR?.rotation.set(.06,0,.13);
+    j.elbowL?.rotation.set(.12,0,.0375);
+    j.elbowR?.rotation.set(.15,0,-.0325);
+    model.updateMatrixWorld(true);orientHumanEquippedWeapon(model,weapon,mode,orientation,j);
+    holdHumanCutters(model,weapon,j,orientation);continue
    }
   const walk=mode==='walk'||mode==='run',blend=walk?clamp01(locomotion?.blend??(mode==='run'?1:0)):0;
   const cyclePhase=walk?(locomotion?.phase??time*gaitRate(blend)):0,phase=cyclePhase*Math.PI*2,breath=Math.sin(time*1.8);
@@ -820,8 +834,8 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
   for(const [i,side]of ['L','R'].entries()){
    const sign=i?-1:1,a=phase+i*Math.PI,gait=walk?sampleHumanGait(cyclePhase+i*.5,blend):{hip:0,knee:0,ankle:0};
    set('hip'+side,gait.hip);set('knee'+side,gait.knee);set('ankle'+side,gait.ankle);
-   set('shoulder'+side,walk?-gait.hip*mix(.72,.86,blend):(.045+(i?.015:0))+.025*breath,0,walk?-sign*.16:-sign*(i?.26:.28));
-   set('elbow'+side,walk?mix(.18+.16*Math.max(0,Math.sin(a)),1.15+.17*Math.sin(a),blend):(.12+(i?.03:0)),0,walk?0:(i?-.065:.075));
+   set('shoulder'+side,walk?-gait.hip*mix(.72,.86,blend):(.045+(i?.015:0))+.025*breath,0,walk?-sign*.08:-sign*(i?.13:.14));
+   set('elbow'+side,walk?mix(.18+.16*Math.max(0,Math.sin(a)),1.15+.17*Math.sin(a),blend):(.12+(i?.03:0)),0,walk?0:(i?-.0325:.0375));
    set('wrist'+side,0,0,sign*.035);
   }
   // A braced two-handed pose develops as the gait transitions to running.
@@ -832,24 +846,30 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
    const sr=j.shoulderR?.rotation.x??0,er=j.elbowR?.rotation.x??0;
    const sl=j.shoulderL?.rotation.x??0,el=j.elbowL?.rotation.x??0;
    // Fold both elbows toward the chest, preserving the moving gait.
-   set('shoulderR',mix(sr,.30,hold),0,-.14*hold);
+   set('shoulderR',mix(sr,.30,hold),0,-.07*hold);
    set('elbowR',mix(er,1.38,hold));
    set('wristR',0,0,-.09*hold);
-   set('shoulderL',mix(sl,.53,hold),0,.16*hold);
+   set('shoulderL',mix(sl,.53,hold),0,.08*hold);
    set('elbowL',mix(el,1.15,hold));
   }
   if(mode==='crouch'){
    set('spine',-.24);for(const side of ['L','R']){set('hip'+side,1.02);set('knee'+side,-1.78);set('ankle'+side,.76);set('shoulder'+side,.30);set('elbow'+side,.60)}
   }else if(mode==='aim'){
    if(weapon&&['bazooka','rocket'].includes(weapon.userData.humanWeapon)){
-    set('spine',-.035,-.045);set('head',0,.08);
+    set('spine',-.035,-.045);set('head',0,0);
     set('shoulderR',.50,.04,-.14);set('elbowR',1.18);set('wristR',0,0,-.05);
     set('shoulderL',.65,0,.15);set('elbowL',.90);
    }else{
     const pistol=weapon?.userData.humanWeapon==='pistol',upper=pistol?.90:.45,lower=pistol?.90:2.0;
-    set('spine',-.045,-.12);set('head',0,.12);set('shoulderR',upper,.20,-.10);set('elbowR',lower);set('wristR',Math.PI/2-upper-lower);
+    set('spine',-.045,-.12);set('head',0,0);set('shoulderR',upper,.20,-.10);set('elbowR',lower);set('wristR',Math.PI/2-upper-lower);
    }
-  }else if(mode==='work'){
+  }else if(mode==='throw'){
+    // L'esquerra acompanya el llançament com a contrapès obert,
+    // darrere del cos i en direcció oposada al braç dret.
+    set('spine',-.10,-.10);set('head',0,0);
+    set('shoulderR',-.30,0,1.06);set('elbowR',1.05,0,.14);
+    set('shoulderL',-.88,0,-.63);set('elbowL',.60,0,-.10);
+   }else if(mode==='work'){
    set('spine',-.32);set('neck',.10);set('hipL',.24);set('hipR',.24);set('kneeL',-.42);set('kneeR',-.42);
    set('ankleL',.18);set('ankleR',.18);set('shoulderL',1.10,0,.15);set('shoulderR',.90,0,-.12);
    set('elbowL',.32);set('elbowR',.50+Math.sin(time*5)*.23);set('wristR',Math.sin(time*5)*.12,0,.08);
@@ -881,6 +901,7 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
   if(mode==='aim'&&weapon?.userData.humanWeapon==='pistol')
    centerHumanPistolAim(model,j,orientation);
   orientHumanEquippedWeapon(model,weapon,mode,orientation,j);
+  holdHumanCutters(model,weapon,j,orientation);
   if(carrying&&blend>.8)supportHumanRunningLongGun(model,weapon,j,orientation);
   const shoulderBazooka=mode==='aim'&&weapon&&['bazooka','rocket'].includes(weapon.userData.humanWeapon);
   if(shoulderBazooka)placeHumanBazookaOnShoulder(model,weapon,j,orientation);
