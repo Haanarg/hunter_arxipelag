@@ -413,6 +413,8 @@ export function restoreRelayMission(record,geometry){
             bag.bullets>=capacities.bullets&&bag.sniperAmmo>=capacities.sniperAmmo&&bag.bazookaAmmo>=capacities.bazookaAmmo:
             supply.item==='bazooka'?
               bag.bazooka>=1&&bag.bazookaAmmo>=capacities.bazookaAmmo:
+            supply.item==='assault'?
+              bag.assault>=1&&bag.bullets>=capacities.bullets:
               supply.item==='sniper'?
                 bag.sniper>=1&&bag.sniperAmmo>=capacities.sniperAmmo:
                 (bag[supply.item]||0)+supply.amount>capacities[supply.item]))return [];
@@ -436,6 +438,10 @@ export function restoreRelayMission(record,geometry){
           }else if(supply.item==='sniper'){
             bag.sniper=1;
             if(meta.mode==='native')bag.sniperAmmo=Math.min(capacities.sniperAmmo,bag.sniperAmmo+6);
+          }else if(supply.item==='assault'){
+            if(bag.assault>=1)
+              bag.bullets=Math.min(capacities.bullets,bag.bullets+16);
+            else bag.assault=1;
           }else bag[supply.item]=(bag[supply.item]||0)+supply.amount;
         }
         if(loose.has(supply.id))loose.delete(supply.id);else claimed.add(supply.id);}

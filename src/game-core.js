@@ -4164,6 +4164,13 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-i
   }
   else if(it.t==='franctirador'){inv.franctirador=1;sniperAmmo+=6}
   else if(it.t==='bazooka'){inv.bazooka=1;bazookaAmmo+=3}
+  else if(it.t==='fusell_assalt'){
+    // La primera recollida dona el fusell; les següents +16 bales.
+    if((inv.fusell_assalt||0)>0){
+      ammo+=16;
+      mapMessage='Has trobat: '+IT[it.t].n+' · +16 bales';
+    }else inv.fusell_assalt=1;
+  }
   else inv[it.t]=(inv[it.t]||0)+(it.t==='granada'?5:1);
   world.remove(it.o);items.splice(k,1);requestOperationAutosave('equipment');recordOperationMetric('pickups');
   msg=mapMessage||'Has trobat: '+IT[it.t].n+(it.t==='arma'?' · +12 bales, +2 rifle, +1 coet':it.t==='granada'?' ×5':it.t==='bazooka'?' +3 coets':it.t==='franctirador'?' +6 cartutxos':'');

@@ -20,6 +20,7 @@ const suites={
     "bunker-finale-layout.mjs",
     "ferry-ramp-transitions.mjs",
     "ammo-pickup-hud.mjs",
+    "assault-repeat-pickup.mjs",
     "vehicle-health-and-blast.mjs",
     "bazooka-armored-lock.mjs",
     "tank-civic-runover.mjs",
