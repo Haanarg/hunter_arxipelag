@@ -112,6 +112,7 @@ function installCanonicalPlayer(T,model){
  ],proxies=new Map();
  const weaponWorld=new T.Quaternion(),handWorld=new T.Quaternion(),
   cutterGrip=new T.Vector3(),runAxis=new T.Vector3(1,0,0),runTarget=new T.Quaternion(),
+  cutterTarget=new T.Vector3(),cutterAxis=new T.Vector3(),cutterDown=new T.Vector3(0,-1,0),
   gunForward=new T.Vector3(0,0,-1),gunAxis=new T.Vector3(),
   gunElbow=new T.Vector3(),gunWrist=new T.Vector3(),gunAim=new T.Vector3(),
   gunCarryWorld=new T.Quaternion();
@@ -152,7 +153,7 @@ function installCanonicalPlayer(T,model){
     proxy.name='Arma canònica · '+kind;
     proxy.position.set(0,y,z);
     proxy.scale.setScalar(scale);
-    j.wristR.add(proxy);proxies.set(kind,proxy);
+    (kind==='cisalla'?j.spine:j.wristR).add(proxy);proxies.set(kind,proxy);
     // Keep the authoritative gameplay weapon's transforms and state, but
     // render its cloned visual in the native hand rather than old anatomy.
     source.traverse(o=>{if(o.isMesh)o.visible=false});
@@ -175,7 +176,7 @@ function installCanonicalPlayer(T,model){
      weaponWorld.copy(gunCarryWorld);
     }
    }
-   j.wristR.getWorldQuaternion(handWorld);
+   (kind==='cisalla'?j.spine:j.wristR).getWorldQuaternion(handWorld);
    proxy.quaternion.copy(handWorld).invert().multiply(weaponWorld);
    if(kind==='gun'){
     const blend=Math.max(0,Math.min(1,u.pistolBlend||0));
@@ -188,12 +189,31 @@ function installCanonicalPlayer(T,model){
      proxy.position.lerp(gunAim,blend);
     }
    }else if(kind==='cisalla'){
-    // Els mànecs tenen el punt de presa a y=-.82, no a les fulles.
-    cutterGrip.set(0,-.82*scale,0).applyQuaternion(proxy.quaternion);
-    proxy.position.copy(cutterGrip).negate();proxy.position.y-=.045;
+    // La cisalla viu en el tors: mai entre les dues mans.
+    proxy.scale.setScalar(.54);
+    proxy.position.set(0,.15,-.33);
     const arms=source.userData.bladeArms;
     if(arms)for(let i=0;i<2;i++)if(proxy.children[i]&&arms[i])
      proxy.children[i].rotation.copy(arms[i].rotation);
+    const grasp=(side)=>{
+     const grip=proxy.getObjectByName('hunter-cutter-handle-'+(side==='L'?'left':'right')+'-end');
+     const shoulder=j['shoulder'+side],elbow=j['elbow'+side],wrist=j['wrist'+side];
+     if(!grip||!shoulder||!elbow||!wrist)return;
+     const target=grip.getWorldPosition(cutterTarget);
+     shoulder.parent.worldToLocal(target);
+     const upper=elbow.parent.position.length(),lower=wrist.parent.position.length()+.068;
+     const d=Math.min(upper+lower-.001,Math.max(.001,target.length()));
+     cutterAxis.copy(target).normalize();
+     const along=(upper*upper+d*d-lower*lower)/(2*d);
+     const radius=Math.sqrt(Math.max(0,upper*upper-along*along));
+     const pole=new T.Vector3(side==='R'?.40:-.40,-.7,.12);
+     pole.addScaledVector(cutterAxis,-pole.dot(cutterAxis)).normalize();
+     const bend=cutterAxis.clone().multiplyScalar(along).addScaledVector(pole,radius);
+     shoulder.quaternion.setFromUnitVectors(cutterDown,bend.clone().normalize());
+     const forearm=target.clone().sub(bend).normalize().applyQuaternion(shoulder.quaternion.clone().invert());
+     elbow.quaternion.setFromUnitVectors(cutterDown,forearm);
+    };
+    grasp('L');grasp('R');
    }else proxy.position.set(0,y,z);
   }
  }
