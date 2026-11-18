@@ -122,7 +122,7 @@ else if(water){
   // El timó només gira el buc amb avanç real. Sense velocitat no
   // hi ha rotació sobre l'eix com si la llanxa fos un tanc.
   const speed=Math.abs(v.v);
-  steerScale=Math.min(1,Math.max(0,(speed-.45)/9));
+  steerScale=v.t==='barca_rems'?.72:Math.min(1,Math.max(0,(speed-.45)/9));
 }
 // Els tancs giren sobre les erugues fins i tot aturats. Una petita
 // velocitat residual negativa no ha d'invertir A/D ni el joystick.
@@ -130,7 +130,7 @@ const tracked=v.t==='tanc',
       reverse=tracked?v.v<-.45:v.v<0;
 const targetYaw=tr*c.tu*steerScale*(a?1:(reverse?-1:1));
 v.yawRate=vehicleDynamics.smooth(v.yawRate||0,targetYaw,c.yawResponse||4,dt);
-if((water||v.t==='tanqueta')&&Math.abs(v.v)<.5)v.yawRate=0;
+if(((water&&v.t!=='barca_rems')||v.t==='tanqueta')&&Math.abs(v.v)<.5)v.yawRate=0;
 v.hd+=v.yawRate*dt;
 
 let sideV=0;
