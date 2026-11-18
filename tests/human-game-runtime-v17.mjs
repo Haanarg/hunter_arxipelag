@@ -94,7 +94,10 @@ for(const role of ['player','soldier','rocket','elite','general']){
   }
   const bound=new T.Box3();
   for(const mesh of actual)bound.union(new T.Box3().setFromObject(mesh));
-  assert(Math.abs(bound.getSize(new T.Vector3()).y-2)<.002,'Native game model is 2.00m, not stretched old body');
+  const expectedBound=new T.Box3().setFromObject(reference,true);
+  const actualSize=bound.getSize(new T.Vector3()),expectedSize=expectedBound.getSize(new T.Vector3());
+  console.log('CANONICAL_BOUNDS',JSON.stringify({actual:actualSize.toArray(),expected:expectedSize.toArray(),center:bound.getCenter(new T.Vector3()).toArray()}));
+  assert(Math.abs(actualSize.y-expectedSize.y)<.002,'Native game model height matches exact editor model');
   // The old gameplay shoulder is only a control. Animation must actually
   // rotate the editor's corresponding shoulder pivot and preserve the torso.
   const oldR=u.ar.rotation.x;u.ar.rotation.x+=.4;g.updateMatrixWorld(true);
