@@ -113,9 +113,28 @@ function installCanonicalPlayer(T,model){
  const weaponWorld=new T.Quaternion(),handWorld=new T.Quaternion(),
   cutterGrip=new T.Vector3(),runAxis=new T.Vector3(1,0,0),runTarget=new T.Quaternion(),
   cutterTarget=new T.Vector3(),cutterAxis=new T.Vector3(),cutterDown=new T.Vector3(0,-1,0),
-  gunForward=new T.Vector3(0,0,-1),gunAxis=new T.Vector3(),
-  gunElbow=new T.Vector3(),gunWrist=new T.Vector3(),gunAim=new T.Vector3(),
-  gunCarryWorld=new T.Quaternion();
+  gunAim=new T.Vector3(),
+  // Orientació LOCAL al canell: evita que la pistola es quedi en un eix mundial
+  // fix (nord) quan el protagonista gira sense apuntar.
+  gunIdleLocal=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-Math.PI/2),
+  gunAimLocal=new T.Quaternion();
+ const pistolGrips=[];
+ for(const side of ['L','R']){
+  const hand=j['wrist'+side].children.find(o=>o.userData?.humanHand===side);
+  if(!hand)continue;
+  const original=[...hand.children],clasp=new T.Group();
+  clasp.name='Mà tancada al voltant de l’empunyadura';
+  const skin=new T.MeshStandardMaterial({color:0xc49d79,roughness:.90,flatShading:true});
+  const part=(geo,x,y,z,rx=0,rz=0)=>{
+   const mesh=new T.Mesh(geo,skin);mesh.position.set(x,y,z);
+   mesh.rotation.set(rx,0,rz);clasp.add(mesh);
+  };
+  part(new T.BoxGeometry(.067,.071,.056),0,-.034,0);
+  for(let n=0;n<4;n++)part(new T.CapsuleGeometry(.010,.032,3,5),
+   (n-1.5)*.016,-.095,-.014,-.9);
+  part(new T.CapsuleGeometry(.014,.030,3,5),side==='R'?.042:-.042,-.051,-.019,-.50,side==='R'?.66:-.66);
+  clasp.visible=false;hand.add(clasp);pistolGrips.push({original,clasp});
+ }
  function sync(){
   // Gameplay rescales its actor ROOT by 2/3; compensate it AND give the
   // unchanged native editor skin another third of size, uniformly. The
@@ -134,6 +153,11 @@ function installCanonicalPlayer(T,model){
   for(const [id,bone]of Object.entries(control))j[id].quaternion.copy(rest[id]).multiply(bone.quaternion);
   // Traslladam la passa de l'editor a les cames i turmells en córrer.
   // El rig del joc encara controla la física, els trets i les interaccions.
+  const gripping=!!u.gun?.visible&&(u.pistolBlend||0)>.14;
+  for(const {original,clasp}of pistolGrips){
+   clasp.visible=gripping;
+   for(const node of original)node.visible=!gripping;
+  }
   const run=Math.max(0,Math.min(1,u.runBlend||0));
   if(run>.001){
    const phase=(u.ph||0)/(Math.PI*2);
@@ -161,23 +185,14 @@ function installCanonicalPlayer(T,model){
    const proxy=proxies.get(kind);proxy.visible=true;
    // El canó visible segueix el quaternion de l'arma real i no un angle fix.
    source.getWorldQuaternion(weaponWorld);
-   if(kind==='gun'){
-    const blend=Math.max(0,Math.min(1,u.pistolBlend||0));
-    // La pistola sense apuntar segueix la línia de l'avantbraç
-    // canònic, també mentre camina i està ajupit.
-    j.elbowR.getWorldPosition(gunElbow);
-    j.wristR.getWorldPosition(gunWrist);
-    gunAxis.copy(gunWrist).sub(gunElbow);
-    if(gunAxis.lengthSq()>.00001){
-     gunCarryWorld.setFromUnitVectors(gunForward,gunAxis.normalize());
-     // Evitar slerpQuaternions amb el destí com a segon origen:
-     // acabava sobreescrivint el quaternion real en apuntar.
-     gunCarryWorld.slerp(weaponWorld,blend);
-     weaponWorld.copy(gunCarryWorld);
-    }
-   }
    (kind==='cisalla'?j.spine:j.wristR).getWorldQuaternion(handWorld);
-   proxy.quaternion.copy(handWorld).invert().multiply(weaponWorld);
+   gunAimLocal.copy(handWorld).invert().multiply(weaponWorld);
+   if(kind==='gun'){
+    // Repos local fix al canell i apuntat local de l'arma: cap referència
+    // a nord o a un quaternion mundial durant l'animació de repòs.
+    const blend=Math.max(0,Math.min(1,u.pistolBlend||0));
+    proxy.quaternion.copy(gunIdleLocal).slerp(gunAimLocal,blend);
+   }else proxy.quaternion.copy(gunAimLocal);
    if(kind==='gun'){
     const blend=Math.max(0,Math.min(1,u.pistolBlend||0));
     proxy.position.set(0,y,z);
