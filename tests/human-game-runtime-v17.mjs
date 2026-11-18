@@ -3,7 +3,7 @@ import {runInNewContext} from 'node:vm';
 import {readFileSync} from 'node:fs';
 import * as T from '../vendor/three-r186.module.mjs';
 import {playerModel} from '../src/player-model-core.mjs';
-import {createHumanProposal} from '../src/human-proposals.mjs';
+import {createHumanProposal,sampleHumanGait} from '../src/human-proposals.mjs';
 import {createHumanGameRuntimeV17,GAME_HUMAN_SKIN_VERSION,FOOT_PLAYER_VISUAL_FACTOR} from '../src/human-game-runtime-v17.mjs';
 
 globalThis.window=globalThis;
@@ -124,6 +124,24 @@ for(const role of ['player','soldier','rocket','elite','general']){
   g.scale.setScalar(1);g.updateMatrixWorld(true);
   const gunProxy=canonical.getObjectByName('Arma canònica · gun');
   assert(gunProxy&&gunProxy.parent===bones.wristR,'Visible pistol grip on editor wrist');
+   u.gun.quaternion.setFromAxisAngle(new T.Vector3(1,0,0),.42);
+   g.updateMatrixWorld(true);
+   const actualGun=new T.Vector3(0,0,-1).applyQuaternion(gunProxy.getWorldQuaternion(new T.Quaternion()));
+   const sourceGun=new T.Vector3(0,0,-1).applyQuaternion(u.gun.getWorldQuaternion(new T.Quaternion()));
+   assert(actualGun.dot(sourceGun)>.999,'Canó visible orientat com l’arma real');
+   u.gun.quaternion.identity();g.updateMatrixWorld(true);
+   for(const yaw of [0,Math.PI/2,Math.PI,3*Math.PI/2]){
+    g.rotation.y=yaw;g.updateMatrixWorld(true);
+    const direction=new T.Vector3(0,0,-1).applyQuaternion(g.getWorldQuaternion(new T.Quaternion()));
+    for(const id of ['spine','head']){
+     const facing=new T.Vector3(0,0,-1).applyQuaternion(bones[id].getWorldQuaternion(new T.Quaternion()));
+     assert(facing.dot(direction)>.995,'Orientació '+id+' per a rumb '+yaw);
+    }
+   }
+   g.rotation.y=0;g.updateMatrixWorld(true);
+   u.runBlend=1;u.ph=Math.PI*2*.39;g.updateMatrixWorld(true);
+   assert(Math.abs(bones.ankleL.rotation.x-sampleHumanGait(.39,1).ankle)<.001,'Cursa del joc = turmell de l’editor');
+   u.runBlend=0;g.updateMatrixWorld(true);
   assert(!part.visible&&part.parent===gun,'Old ghost gun is not visible or detached from gameplay controller');
   const oldLowerY=u.lowerBody.position.y,oldUpperY=u.upperBody.position.y;
   u.lowerBody.position.y-=.72;u.upperBody.position.y-=.72;

@@ -60,7 +60,7 @@ import * as sharedAiming from './aiming-core.mjs?v=0.6.225&rifleCone80=1';
 window.HUNTER_SHARED_AIMING=sharedAiming;
 import * as sharedModels from './player-model-core.mjs?rev=game-v17';
 window.HUNTER_SHARED_MODELS=sharedModels;
-import {createHumanGameRuntimeV17} from './human-game-runtime-v17.mjs?rev=game-v18-player-scale-20261118-1';
+import {createHumanGameRuntimeV17} from './human-game-runtime-v17.mjs?rev=game-v18-rig-weapon-direction-20261118-1';
 // Register BEFORE classic scripts (source or bundled) create any actors.
 // Interception preserves the existing game creation and pose methods.
 window.HUNTER_HUMAN_V17=createHumanGameRuntimeV17();

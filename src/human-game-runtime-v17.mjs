@@ -1,6 +1,6 @@
 // V17-compatible rigid-rig adapter for the latest V18 skin (general cassaca). No gameplay animation,
 // seat, IK, collision, physics, weapon anchor or AI state is replaced.
-import {createHumanProposal,HUMAN_VERSION} from './human-proposals.mjs';
+import {createHumanProposal,HUMAN_VERSION,sampleHumanGait} from './human-proposals.mjs';
 
 export const GAME_HUMAN_SKIN_VERSION='humans-v18';
 // Escala exclusivament visual a peu: rig i geometria intactes.
@@ -102,14 +102,16 @@ function installCanonicalPlayer(T,model){
  const canonicalPelvisY=j.pelvis.parent.position.y*visual.scale.y;
  const crouchRatio=Math.min(1,canonicalPelvisY/pelvisY);
  const weapons=[
-  ['gun',.40,-.095,-.085,-Math.PI/2],
-  ['assault',.27,-.11,-.12,-.35],
-  ['sniper',.26,-.11,-.12,-.35],
-  ['bazooka',.44,-.12,-.10,-.3],
-  ['knife',.40,-.09,-.05,0],
-  ['cisalla',.38,-.09,-.05,0],
-  ['grenade',.38,-.09,-.05,0]
+  ['gun',.40,-.095,-.085],
+  ['assault',.27,-.11,-.12],
+  ['sniper',.26,-.11,-.12],
+  ['bazooka',.44,-.12,-.10],
+  ['knife',.40,-.09,-.05],
+  ['cisalla',.38,-.09,-.05],
+  ['grenade',.38,-.09,-.05]
  ],proxies=new Map();
+ const weaponWorld=new T.Quaternion(),handWorld=new T.Quaternion(),
+  cutterGrip=new T.Vector3(),runAxis=new T.Vector3(1,0,0),runTarget=new T.Quaternion();
  function sync(){
   // Gameplay rescales its actor ROOT by 2/3; compensate it AND give the
   // unchanged native editor skin another third of size, uniformly. The
@@ -126,7 +128,18 @@ function installCanonicalPlayer(T,model){
    .multiply(upperRest).multiply(u.upperBody.quaternion);
   j.spine.position.y=actualSpineY+((u.upperBody.position.y-spineY)-dy)*crouchRatio;
   for(const [id,bone]of Object.entries(control))j[id].quaternion.copy(rest[id]).multiply(bone.quaternion);
-  for(const [kind,scale,y,z,pitch]of weapons){
+  // Traslladam la passa de l'editor a les cames i turmells en córrer.
+  // El rig del joc encara controla la física, els trets i les interaccions.
+  const run=Math.max(0,Math.min(1,u.runBlend||0));
+  if(run>.001){
+   const phase=(u.ph||0)/(Math.PI*2);
+   for(const [side,offset]of [['L',0],['R',.5]]){
+    const gait=sampleHumanGait(phase+offset,run);
+    for(const [joint,angle]of [['hip',gait.hip],['knee',gait.knee],['ankle',gait.ankle]])
+     j[joint+side].quaternion.slerp(runTarget.setFromAxisAngle(runAxis,angle),run);
+   }
+  }
+  for(const [kind,scale,y,z]of weapons){
    const source=u[kind];if(!source||!source.visible) {
     if(proxies.has(kind))proxies.get(kind).visible=false;
     continue;
@@ -134,7 +147,7 @@ function installCanonicalPlayer(T,model){
    if(!proxies.has(kind)){
     const proxy=source.clone(true);
     proxy.name='Arma canònica · '+kind;
-    proxy.position.set(0,y,z);proxy.rotation.set(pitch,0,0);
+    proxy.position.set(0,y,z);
     proxy.scale.setScalar(scale);
     j.wristR.add(proxy);proxies.set(kind,proxy);
     // Keep the authoritative gameplay weapon's transforms and state, but
@@ -142,7 +155,18 @@ function installCanonicalPlayer(T,model){
     source.traverse(o=>{if(o.isMesh)o.visible=false});
    }
    const proxy=proxies.get(kind);proxy.visible=true;
-   if(kind==='gun')proxy.rotation.x=-Math.PI/2*(1-(u.pistolBlend||0));
+   // El canó visible segueix el quaternion de l'arma real i no un angle fix.
+   source.getWorldQuaternion(weaponWorld);
+   j.wristR.getWorldQuaternion(handWorld);
+   proxy.quaternion.copy(handWorld).invert().multiply(weaponWorld);
+   if(kind==='cisalla'){
+    // Els mànecs tenen el punt de presa a y=-.82, no a les fulles.
+    cutterGrip.set(0,-.82*scale,0).applyQuaternion(proxy.quaternion);
+    proxy.position.copy(cutterGrip).negate();proxy.position.y-=.045;
+    const arms=source.userData.bladeArms;
+    if(arms)for(let i=0;i<2;i++)if(proxy.children[i]&&arms[i])
+     proxy.children[i].rotation.copy(arms[i].rotation);
+   }else proxy.position.set(0,y,z);
   }
  }
  model.add(visual);
@@ -151,6 +175,7 @@ function installCanonicalPlayer(T,model){
  sync();
  u.humanGameCanonicalRig=visual;
  u.humanGameCanonicalJoints=j;
+ u.humanGameCanonicalSoles=meshes.filter(m=>m.userData.humanLandmark==='sole');
  u.humanGameV17='player';
  u.humanGameV17NeckMatched=true;
  u.humanGameV17PreservedRig=true;
