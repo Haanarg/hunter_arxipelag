@@ -85,7 +85,7 @@ export function createHumanHandGeometry(T,side){
 }
 // Native articulated mesh assemblies, facing -Z. Motion pivots are separate
 // from editable rest pivots, so playing a clip never overwrites a body edit.
-export function createHumanProposal(T,role,style='a'){
+export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
  const p=HUMAN_PROFILES[role],s=HUMAN_STYLES[style];if(!p||!s)throw Error('Proposta humana desconeguda');
  const root=new T.Group();root.name=p.name+' · '+s.name;
  const materials=new Map(),dark=0x26302d,shoe=0x303631,hair=role==='general'?0x42352f:0x443b30,gold=0xd0b46b;
@@ -432,7 +432,7 @@ export function createHumanProposal(T,role,style='a'){
   }
  }
  // Decorative game props distinguish the existing roles; no functional parts.
- if(p.weapon){
+ if(p.weapon&&!visualOnly){
   let parent;root.traverse(n=>{if(n.userData.humanMotionJoint==='wristR')parent=n});
   const weapon=group(parent,role==='player'?'Arma del joc':p.weapon==='rocket'?'Bazuca':p.weapon==='rifle'?'Fusell':'Pistola');
   weapon.position.set(0,-.055,role==='player'?-.09:-.015);
@@ -478,7 +478,7 @@ export function createHumanProposal(T,role,style='a'){
  root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
  root.scale.setScalar(p.height/height);
  root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:17},humanHeight:p.height,labAssemblies:true};
- if(role==='player')setHumanPreviewWeapon(T,root,'pistol');
+ if(role==='player'&&!visualOnly)setHumanPreviewWeapon(T,root,'pistol');
  return root;
 }
 
