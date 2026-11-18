@@ -22,6 +22,7 @@ const suites={
     "ammo-pickup-hud.mjs",
     "assault-repeat-pickup.mjs",
     "vehicle-health-and-blast.mjs",
+    "gaz-tigr-collision.mjs",
     "bazooka-armored-lock.mjs",
     "tank-civic-runover.mjs",
     "armored-crew-controls.mjs",

@@ -14,3 +14,18 @@ export const vehicleSpecs=Object.freeze({
 
 // El mode cooperatiu i els mapes de proves comparteixen les places reals.
 export const vehicleSeatCount=type=>vehicleSpecs.seatCounts[type]??2;
+
+// Només el GAZ Tigr-M requereix l'escala física addicional de la
+// carrosseria ampliada. Els altres cotxes i l'utilitari no canvien.
+export function vehicleCollisionScale(v){
+  if(v?.t!=='cotxe'||v.o?.userData?.gazModel!=='Tigr-M')return 1;
+  const scale=v.o.userData.gazVisualScale;
+  return Number.isFinite(scale)&&scale>0?scale:1;
+}
+export function vehicleCollisionFootprint(v,hitbox,scale){
+  const factor=vehicleCollisionScale(v);
+  return {w:hitbox[0]*scale*factor,d:hitbox[1]*scale*factor};
+}
+export function vehicleCollisionRadius(v,radius,scale){
+  return radius*scale*vehicleCollisionScale(v);
+}

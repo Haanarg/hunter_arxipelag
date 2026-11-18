@@ -50,6 +50,8 @@ import * as sharedBatching from './player-batching-core.mjs';
 window.HUNTER_SHARED_BATCHING=sharedBatching;
 import * as vehicleModels from './vehicle-model-core.mjs?v=0.6.226&armoredCrew=1&t90m=1&ka60=1&bikeResize=20261118-1&gaz125=20261118-1';
 window.HUNTER_SHARED_VEHICLE_MODELS=vehicleModels;
+import * as vehicleCollisionProfile from './vehicle-specs.mjs?v=0.6.227';
+window.HUNTER_VEHICLE_COLLISION=vehicleCollisionProfile;
 import * as sharedAccuracy from './enemy-accuracy-core.mjs';
 window.HUNTER_SHARED_ACCURACY=sharedAccuracy;
 import * as projectileModel from './projectile-model.mjs';

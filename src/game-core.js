@@ -1001,7 +1001,7 @@ function vehiclePushPlayer(){
     if(v.destroyed)continue;
     const overlap=circleVehicleOverlap(P.x,P.z,.62,v),
           sweep=runoverSweepHit(v.impactFromX??v.x,v.impactFromZ??v.z,
-            v.x,v.z,P.x,P.z,vehicleRadius(v.t)*.68+.62*.45);
+            v.x,v.z,P.x,P.z,vehicleRadius(v)*.68+.62*.45);
     if(!overlap&&!sweep)continue;
     if(v.t==='ferry'&&(terminalRampHeight(P.x,P.z)!==null||pedestrianFerry(P.x,P.z,P.y,true)?.f===v))continue;
     // Només apartam el jugador si el buc l'ocupa ara; un pas ràpid
@@ -1781,10 +1781,19 @@ const VS=window.HUNTER_VEHICLES.scales;
 // geometria escalada ha de quedar només 10 cm per damunt del sòl/pista.
 // Durant el vol, v.alt continua representant l'origen del model.
 const helicopterLandedAltitude=(v,surfaceY)=>surfaceY-(v.o?.userData?.skidContactHeight||0)+.1;
-const vehicleRadius=t=>{const type=t==='patrulla_marina'?'llanxa':t==='jeep'?'cotxe':t;return window.HUNTER_VEHICLES.radii[type]*VS[type]};
+const vehicleRadius=vehicle=>{
+  const v=typeof vehicle==='object'?vehicle:null,t=v?v.t:vehicle,
+    type=t==='patrulla_marina'?'llanxa':t==='jeep'?'cotxe':t;
+  return window.HUNTER_VEHICLE_COLLISION.vehicleCollisionRadius(
+    v,window.HUNTER_VEHICLES.radii[type],VS[type]);
+};
 const VHB=window.HUNTER_VEHICLES.hitboxes;
 const vehicleHitType=t=>t==='jeep'?'cotxe':t==='patrulla_marina'?'llanxa':t;
-const vehicleBox=(v,x=v.x,z=v.z,hd=v.hd)=>{const t=vehicleHitType(v.t),hb=VHB[t]||[vehicleRadius(t)*1.25,vehicleRadius(t)*1.6],sc=VS[t]||1;return{x,z,hd,w:hb[0]*sc,d:hb[1]*sc,v}};
+const vehicleBox=(v,x=v.x,z=v.z,hd=v.hd)=>{
+  const t=vehicleHitType(v.t),hb=VHB[t]||[vehicleRadius(t)*1.25,vehicleRadius(t)*1.6],sc=VS[t]||1,
+    box=window.HUNTER_VEHICLE_COLLISION.vehicleCollisionFootprint(v,hb,sc);
+  return{x,z,hd,w:box.w,d:box.d,v};
+};
 // Contacte entre el segment real de filferrada i la planta rectangular del vehicle.
 // El radi de cerca només serveix per obtenir candidats, mai per confirmar l'impacte.
 function fenceVehicleContact(...args){return window.HUNTER_SHARED_COMBAT.fenceVehicleContact(...args)}
@@ -1793,7 +1802,7 @@ function fenceVehicleContact(...args){return window.HUNTER_SHARED_COMBAT.fenceVe
 const obbOverlap=(...args)=>window.HUNTER_SHARED_COMBAT.obbOverlap(...args);
 const circleVehicleOverlap=(x,z,r,v)=>{const b=vehicleBox(v),dx=x-b.x,dz=z-b.z,s=Math.sin(b.hd),c=Math.cos(b.hd),lx=dx*c-dz*s,lz=dx*s+dz*c,cx=Math.max(-b.w/2,Math.min(b.w/2,lx)),cz=Math.max(-b.d/2,Math.min(b.d/2,lz)),ex=lx-cx,ez=lz-cz;return ex*ex+ez*ez<r*r};
 const vehicleY=v=>v.alt!=null&&VT[vehicleHitType(v.t)]?.m==='a'?v.alt:(v.o?.position?.y??Math.max(0,hAt(v.x,v.z)));
-const vehicleHeightCompatible=(a,b)=>Math.abs(vehicleY(a)-vehicleY(b))<Math.max(2.2,Math.min(vehicleRadius(vehicleHitType(a.t)),vehicleRadius(vehicleHitType(b.t)))*.55);
+const vehicleHeightCompatible=(a,b)=>Math.abs(vehicleY(a)-vehicleY(b))<Math.max(2.2,Math.min(vehicleRadius(a),vehicleRadius(b))*.55);
 const VEHICLE_CELL=64,vehicleGrid=new Map(),playerVehicleGrid=new Map(),enemyGrid=new Map(),vehicleCellKey=(cx,cz)=>cx+','+cz;
 let vehicleGridVSource=null,vehicleGridESource=null,
   vehicleGridVLength=-1,vehicleGridELength=-1,vehicleGridRebuiltFrameId=-1;
@@ -2507,7 +2516,7 @@ const act=c=>{if(generationPromise)return;if(ui?.isBombTimerOpen?.()){
   if(!secondaryWeapon()&&inv.expl&&!cv&&
      !swimming&&!playerFall&&!playerEject)panel('bombtimer');
 }if(c==='KeyC'){if(inv.disf){if(nativeCoopSession)nativeCoopSession.channel.inventory('disguise',!disg);else setDis(!disg);}else{msg='Busca una disfressa dins dels edificis.';msgT=3}}if(c==='KeyL')mark()};
-const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.sunk&&v.t!=='bici'||(v.t!=='bici'&&v.waterIngress?.dead)||v.reentryLockUntil>elapsed||v.enemyCrew?.some(Boolean))continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v.t)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
+const nearV=()=>{if(playerFall||playerEject)return null;let b=null,bd2=Infinity;for(const v of vehicleCandidatesAt(P.x,P.z,24,true)){if(v.sunk&&v.t!=='bici'||(v.t!=='bici'&&v.waterIngress?.dead)||v.reentryLockUntil>elapsed||v.enemyCrew?.some(Boolean))continue;const dx=v.x-P.x,dz=v.z-P.z,d2=dx*dx+dz*dz,r=vehicleRadius(v)+5;if((circleVehicleOverlap(P.x,P.z,5,v)||d2<r*r)&&d2<bd2){bd2=d2;b=v}}return b};
 function updateActionButton(nearby){
   const button=document.getElementById('mainActionButton');
   if(!button)return;
@@ -2615,7 +2624,7 @@ function recoverArmoredControlFailure(v,error,phase){
   console.error('[Hunter] Recuperació del blindat després d’un error en '+phase,{
     type:v.t,id:v.saveId,position:[v.x,v.z],velocity:v.v,error
   });
-  const side=vehicleRadius(v.t)+2.5,hd=Number.isFinite(v.hd)?v.hd:0,
+  const side=vehicleRadius(v)+2.5,hd=Number.isFinite(v.hd)?v.hd:0,
         x=v.x+Math.cos(hd)*side,z=v.z-Math.sin(hd)*side;
   if(Number.isFinite(x)&&Number.isFinite(z)){
     P.x=Math.max(-H+3,Math.min(H-3,x));
@@ -2964,7 +2973,7 @@ function stealthFeedbackVisible(u,body,marker){
       }
       const box=cached.box;
       if(box.isEmpty()){
-        const radius=vehicleRadius(v.t)*.55;
+        const radius=vehicleRadius(v)*.55;
         if(segmentSphereT(from.x,from.y,from.z,to.x,to.y,to.z,v.x,vehicleY(v)+1.5,v.z,radius)!==null)return false;
       }else{
         const t=segmentAabbT(from.x,from.y,from.z,to.x,to.y,to.z,
@@ -3070,7 +3079,7 @@ function killShark(f){
   msg='Has envestit un tauró!';msgT=1.8;
 }
 function handleVehicleImpacts(v,dt,oldX=v.x,oldZ=v.z){
-  const c=VT[v.t],speed=Math.abs(v.v),radius=vehicleRadius(v.t);
+  const c=VT[v.t],speed=Math.abs(v.v),radius=vehicleRadius(v);
   v.impactFromX=oldX;v.impactFromZ=oldZ;
   v.ramCd=Math.max(0,(v.ramCd||0)-dt);v.envCd=Math.max(0,(v.envCd||0)-dt);v.bump=Math.max(0,(v.bump||0)-dt);
   // Els cascs i taules poden atropellar taurons. La trajectòria
@@ -3274,7 +3283,7 @@ function crashHelicopterStructure(v,contact){
   return false;
 }
 function stepV(v,f,tr,ud,dt,strafe=0){
-const c=VT[v.t],a=c.m==='a',water=c.m==='w'||c.m==='wl',land=c.m==='l',radius=vehicleRadius(v.t),
+const c=VT[v.t],a=c.m==='a',water=c.m==='w'||c.m==='wl',land=c.m==='l',radius=vehicleRadius(v),
   shore=window.HUNTER_VEHICLE_DYNAMICS.shore;
 if(v.sunk&&v.t!=='bici'){v.v=0;v.sideV=0;v.strafeV=0;if(cv===v)escapeSubmergedVehicle(v);return !v.destroyed}
 // El moll i la passarel·la del ferri són terra ferma per a les rodes:
@@ -3364,7 +3373,8 @@ if((!a||v.alt-g<16)&&!deckCarrier){const footprint=vehicleBox(v,nx,nz,v.hd);for(
   }))continue;
   // Les parets del pis superior no bloquegen vehicles a nivell de terra.
   if(land&&(w.y1<g-.8||w.y0>g+
-    (v.t==='tanc'||v.t==='camio'?5.6:4.2)*(VS[v.t]||1)))continue;
+    (v.t==='tanc'||v.t==='camio'?5.6:4.2)*(VS[v.t]||1)*
+      window.HUNTER_VEHICLE_COLLISION.vehicleCollisionScale(v)))continue;
   // El pou enderrocat deixa una pila baixa de pedres. El tanc passa
   // sobre les runes; per als altres vehicles continua havent-hi obstacle.
   if(w.civicRubble&&v.t==='tanc')continue;
