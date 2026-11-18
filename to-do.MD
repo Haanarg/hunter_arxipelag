@@ -1,3 +1,12 @@
+**2026-11-18 · Escales del protagonista i les dues rodes; recollida de fusell:**
+- [x] Protagonista a peu ×1,20 sobre el factor 4/3 anterior (factor total 1,60 de l'editor); només model visual, no física ni col·lisions.
+- [x] Pit del model d'editor +4,5% d'amplada; postures de repòs del cap, braços i colzes naturalment obertes, asimètriques i no robòtiques. Compensació del pivot antic al rig del joc.
+- [x] Conductors de moto i bici a escala visual 0,56, amb seients, mans, manillars i peus en posicions de món conservades; LOD llunyà ajustat.
+- [x] Moto Streetfighter escala visual 1,50→1,10 (−26,7%); bicicleta 0,75→0,70 (−6,7%). Sense modificar col·lisió, física, manillar ni control.
+- [x] Recollir un segon fusell d'assalt: +16 bales i no duplica arma, tant SOLO com COOP autoritatiu; topall de munició respectat al servidor.
+- [x] Actualitzades assercions de mides, escales, punts d'ancoratge i recollida duplicada.
+- [ ] Executar proves Node i revisió visual en navegador (protagonista, motors, bicicleta, passatgers COOP); confirmar desplegament Cloudflare.
+
 **2026-11-18 · Rig humà, armes, granades i cursa:**
 - [x] Braços en repòs i caminant lleugerament separats del cos (editor i animacions del joc).
 - [x] Armes canòniques amb el quaternion de l'arma real, sense pitch imposat (pistola, rifles, bazuca).
