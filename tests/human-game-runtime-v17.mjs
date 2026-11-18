@@ -74,7 +74,7 @@ for(const role of ['player','soldier','rocket','elite','general']){
   const bigoti=pieces.filter(m=>m.userData.humanGameV17Source?.toLowerCase().includes('bigoti'));
   assert.equal(tails.length,4,'Cassaca V18 del general al joc');
   assert.equal(bigoti.length,4,'Bigoti V18 del general al joc');
-  for(const tail of tails)assert([u.ll,u.lr].includes(tail.parent),'Faldons subjectes als malucs originals');
+  for(const tail of tails)assert([u.ll,u.lr].includes(tail.parent),'Faldons subjectes als pivots animats dels malucs originals');
   assert(pieces.some(m=>m.userData.humanGameV17Source==='Cintura entallada de cassaca'));
  }
  console.log('PASS V18 role '+role+' '+pieces.length+' meshes; preserved weapons, poses and real joints');

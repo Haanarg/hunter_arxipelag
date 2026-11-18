@@ -462,8 +462,9 @@ export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
   // sitting and combat use their original joint rotations; the coat splits
   // and follows each thigh rather than cutting through bent knees.
   for(const side of [-1,1]){
-   const hip=root.getObjectByName('Maluc '+(side<0?'esquerre':'dret'));
-   if(!hip)throw Error('Articulació de maluc absent per a cassaca');
+   const jointId=side<0?'hipL':'hipR';let hip=null;
+   root.traverse(node=>{if(node.userData?.humanMotionJoint===jointId)hip=node});
+   if(!hip)throw Error('Articulació animada de maluc absent per a cassaca');
    for(const front of [true,false]){
     const positions=[],indices=[],cols=HUMAN_GENERAL_V18.coatSegments+1;
     const hem=[];

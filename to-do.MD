@@ -1,3 +1,8 @@
+**2026-11-18 · HUMANS V18 · segona revisió de cassaca:**
+- [x] Corregit el parent dels quatre faldons: es connecten als pivots de **moviment** hipL/hipR (no als grups de repòs). A partir d'ara giren amb el maluc al laboratori i en la pell de joc real; se'n preserven les postures.
+- [x] Adaptació del pressupost de malles excloent exclusivament les peces addicionals de la cassaca i bigoti; el límit de triangles es manté. Comprovacions d'articulació amb asserts sense volcament recursiu de l'escena.
+- [ ] CI i desplegament per verificar la segona revisió.
+
 **2026-11-18 · HUMANS V18 · general amb cassaca llarga i bigoti prominent:**
 - [x] Bigoti del general A/B ampliat amb dos cossos principals i dues puntes corbades (gairebé el doble d'amplada), enganxat a la cara sota el nas.
 - [x] Cassaca militar llarga: solapes allargades, dobles botons daurats, cintura entallada i quatre faldons corbats dividits amb ribets. Els faldons són fills dels pivots reals dels malucs, de manera que segueixen caminar, córrer, ajupir-se i les posicions assegudes ja definides, sense tocar les animacions ni l'arma.
