@@ -400,8 +400,17 @@ window.HUNTER_CHARACTERS=Object.freeze({
     box(grenade,.08,.13,.08,0x252b27,0,.18,0);box(grenade,.05,.04,.18,0x747b73,.07,.24,0,'metal');grenade.visible=false;u.grenade=grenade;
 
     const cisalla=window.HUNTER_BOLT_CUTTERS.create(THREE);
-    cisalla.position.set(0,-.79,-.12);cisalla.rotation.x=-Math.PI/2;
-    cisalla.scale.setScalar(.7);u.aer.add(cisalla);cisalla.visible=false;
+    // Eix central al pit, amb les fulles avançades i amunt.
+    cisalla.position.set(0,.24,-.42);cisalla.rotation.x=-.48;
+    cisalla.scale.setScalar(.7);u.upperBody.add(cisalla);cisalla.visible=false;
+    // Les mans van a les puntes inferiors dels dos mànecs.
+    const leftCutGrip=new THREE.Object3D(),rightCutGrip=new THREE.Object3D();
+    leftCutGrip.name='hunter-cutter-handle-left-end';
+    rightCutGrip.name='hunter-cutter-handle-right-end';
+    leftCutGrip.position.set(-.29,-1.15,0);
+    rightCutGrip.position.set(.29,-1.15,0);
+    cisalla.add(leftCutGrip,rightCutGrip);
+    u.cisallaGripL=leftCutGrip;u.cisallaGripR=rightCutGrip;
     u.cisalla=cisalla;u.cisallaCut=0;
     const bazooka=createSharedBazooka(THREE,box);
     // L'extrem posterior descansa sobre l'espatlla dreta (x=.57*1.2,
@@ -743,10 +752,16 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.knife.visible=!bazooka&&!sniper&&!assault&&!grenade&&!cisalla&&(melee||knifeReady);
 
     if(cisalla){
-      const squeeze=u.cisallaCut>0?Math.sin(Math.PI*(1-u.cisallaCut/.46)):0;
-      tx(u.ar,1.1+.16*squeeze);tz(u.ar,-.18);
-      tx(u.aer,.48-.13*squeeze);tz(u.aer,.04);
-      tx(u.al,.52+.14*squeeze);tz(u.al,-.25);tx(u.ael,.32);
+      // Les dues mans segueixen exactament l'extrem exterior de cada
+      // mànec; la funció pose() ja anima les fulles en tallar.
+      player.updateMatrixWorld(true);
+      const gripRig=u.pistolRig,gripRate=1-Math.exp(-20*dt);
+      gripRig.right.set(0,0,0);u.cisallaGripR.localToWorld(gripRig.right);
+      u.upperBody.worldToLocal(gripRig.right);
+      gripRig.left.set(0,0,0);u.cisallaGripL.localToWorld(gripRig.left);
+      u.upperBody.worldToLocal(gripRig.left);
+      aimPlayerPistolArm(u.ar,u.aer,gripRig.right,1,gripRig,gripRate,true);
+      aimPlayerPistolArm(u.al,u.ael,gripRig.left,-1,gripRig,gripRate,true);
     }else if(grenade||throwing){
       // La càrrega i el llançament comparteixen la mateixa pose inicial.
       const chargePose=grenadeChargeArmPose(throwing?u.grenadeThrowPower:grenadeChargePower);
