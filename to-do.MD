@@ -1,3 +1,16 @@
+**2026-11-18 · Subversió 0.6.226 · rigs humans, armes, GAZ, càmera:**
+- [x] Obertura de braços dividida per dos en repòs, caminar i córrer (model i animació; només carrega especial quan apunta o llança).
+- [x] Pistola segueix el rumb actual del jugador quan no hi ha diana i no queda ancorada al vector d'autoapuntat antic; cap segueix el yaw de tors mentre aquest apunta.
+- [x] Bala de fusell d'assalt des del pivot real del canó de la malla canònica visible, no de l'arma antiga oculta.
+- [x] Coll/mandíbula amb zona de transició solapada, sense alterar els pivots anatòmics.
+- [x] GAZ Tigr-M visual ×1,25: equipament, passatgers i proxy llunyà escalats; col·lisió física del tipus cotxe no escalada (pendent revisar visualment).
+- [x] Granades: contramoviment del braç esquerre oposat al braç dret; pose "throw" de l'editor i granada real disponible al visor.
+- [x] Peus fan passes de recol·locació quan el jugador gira sobre el lloc.
+- [x] Cisalla centrada al tors, cada mà a l'extrem d'un mànec; postures IK al joc i a l'editor.
+- [x] Botó dret del ratolí: òrbita lliure temporal i retorn amortit de la càmera a la vista original.
+- [x] Subversió 0.6.225 → 0.6.226; segells i revision de laboratori sincronitzats.
+- [ ] Proves Node, controls WebGL/Android, COOP i desplegament Cloudflare.
+
 **2026-11-18 · Animacions de repòs i pistola; SV-98 del protagonista:**
 - [x] Relaxació suau dels braços en aturar-se després de caminar o córrer (velocitat 5,5 s⁻¹), colzes que baixen de manera natural. Editor: repòs una mica menys elevat.
 - [x] Pistola en caminar i ajupit amb canó paral·lel a l'avantbraç canònic; postura ajupida amb braç dret una mica més endavant.
