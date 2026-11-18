@@ -209,6 +209,14 @@ export const vehicleModels=Object.freeze({
           merged.name='truck-static-batch-'+batches++;
           truck.add(merged);
         }
+        // Conductor visible per la lluna del camió A4.3, que fins ara
+        // mostrava dos seients buits. Mides del mateix model humà de l'editor.
+        const driver=createHumanProposal(THREE,'soldier','a',{visualOnly:true});
+        driver.name='Conductor del camió';
+        driver.scale.multiplyScalar(1.30/(driver.userData.humanHeight||2));
+        driver.position.set(-.77,1.77,-1.93);
+        truck.add(driver);
+        g.userData.cockpitCrew=[driver];
         truck.scale.setScalar(fit);
         g.add(truck);
         g.userData.wheels=truck.userData.wheels||[];
