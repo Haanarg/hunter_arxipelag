@@ -1,3 +1,9 @@
+**2026-11-18 · HUMANS V18 · general amb cassaca llarga i bigoti prominent:**
+- [x] Bigoti del general A/B ampliat amb dos cossos principals i dues puntes corbades (gairebé el doble d'amplada), enganxat a la cara sota el nas.
+- [x] Cassaca militar llarga: solapes allargades, dobles botons daurats, cintura entallada i quatre faldons corbats dividits amb ribets. Els faldons són fills dels pivots reals dels malucs, de manera que segueixen caminar, córrer, ajupir-se i les posicions assegudes ja definides, sense tocar les animacions ni l'arma.
+- [x] El pont de geometria del joc usa HUMANS V18; els altres 6 rols mantenen les malles V17. Proves de longitud, simetria, articulació, presència de bigoti i publicació al joc.
+- [ ] Confirmació completa CI i inspecció visual del general al joc.
+
 **2026-11-18 · Integració HUMANS V17 al joc:**
 - [x] Pont de geometria real V17 a l'esquelet de joc existent: jugador, conductor i passatger locals/COOP, soldats enemics, tripulacions de vehicles terrestres i llanxes, general i presoners (pagès/mecànic).
 - [x] No es toca cap animació, posició de seient, mà al volant/manillar/rem, moviment de botes, ancoratge d'armes, col·lisions o estat de simulació. Es conserven els mateixos pivots i contractes de userData.

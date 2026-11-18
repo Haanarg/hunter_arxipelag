@@ -8,7 +8,7 @@ import {createHumanGameRuntimeV17,GAME_HUMAN_SKIN_VERSION} from '../src/human-ga
 globalThis.window=globalThis;
 const runtime=createHumanGameRuntimeV17();
 globalThis.HUNTER_HUMAN_V17=runtime;
-assert.equal(GAME_HUMAN_SKIN_VERSION,'humans-v17');
+assert.equal(GAME_HUMAN_SKIN_VERSION,'humans-v18');
 const preview=createHumanProposal(T,'player','a',{visualOnly:true});
 let sourceWeapons=0;preview.traverse(n=>{if(n.userData?.humanWeapon)sourceWeapons++});
 assert.equal(sourceWeapons,0,'La geometria del joc no inclou una còpia de les armes del visor');
@@ -69,7 +69,15 @@ for(const role of ['player','soldier','rocket','elite','general']){
   assert(skinParts(outer).length>15,'Rider conserva la pell V17 amb rig reparentat');
   assert(hips.every(hip=>hip.parent===outer)&&arms.every(arm=>arm.parent===outer));
  }
- console.log('PASS V17 role '+role+' '+pieces.length+' meshes; preserved weapons, poses and real joints');
+ if(role==='general'){
+  const tails=pieces.filter(m=>m.userData.humanGameV17Source?.startsWith('Faldó cassaca'));
+  const bigoti=pieces.filter(m=>m.userData.humanGameV17Source?.startsWith('Bigoti'));
+  assert.equal(tails.length,4,'Cassaca V18 del general al joc');
+  assert.equal(bigoti.length,4,'Bigoti V18 del general al joc');
+  for(const tail of tails)assert([u.ll,u.lr].includes(tail.parent),'Faldons subjectes als malucs originals');
+  assert(pieces.some(m=>m.userData.humanGameV17Source==='Cintura entallada de cassaca'));
+ }
+ console.log('PASS V18 role '+role+' '+pieces.length+' meshes; preserved weapons, poses and real joints');
 }
 // Vehicle drivers and passengers must get V17 at the unmodified shared
 // HUNTER_PLAYER_MODEL factory: driver system calls that exact method.

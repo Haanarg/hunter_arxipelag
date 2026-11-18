@@ -1,8 +1,8 @@
-// V17 visual skin for the EXISTING game skeleton. No gameplay animation,
+// V17-compatible rigid-rig adapter for the latest V18 skin (general cassaca). No gameplay animation,
 // seat, IK, collision, physics, weapon anchor or AI state is replaced.
 import {createHumanProposal,HUMAN_VERSION} from './human-proposals.mjs';
 
-export const GAME_HUMAN_SKIN_VERSION='humans-v17';
+export const GAME_HUMAN_SKIN_VERSION='humans-v18';
 const SOURCE_THIGH=.49,SOURCE_SHIN=.49,SOURCE_ARM=.385,SOURCE_FOREARM=.310;
 const cache=new Map();
 function sourceFor(T,role){
@@ -72,7 +72,7 @@ export function createHumanGameRuntimeV17(){
   install(T,model,{role='player'}={}){
    if(suppressed)return model;
    if(model.userData.humanGameV17===role)return model;
-   if(HUMAN_VERSION!==GAME_HUMAN_SKIN_VERSION)throw Error('La pell V17 i el laboratori no coincideixen');
+   if(HUMAN_VERSION!==GAME_HUMAN_SKIN_VERSION)throw Error('La pell humana i el laboratori no coincideixen');
    const u=model.userData,required=['ll','lr','lkl','lkr','al','ar','ael','aer','head','boots'];
    if(required.some(key=>!u[key])||u.boots.length!==2)throw Error('Rig de joc incompatible amb HUMANS V17');
    model.updateWorldMatrix(true,true);

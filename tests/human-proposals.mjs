@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import * as T from '../vendor/three-r186.module.mjs';
 import {HUMAN_PROFILES,HUMAN_CATALOG,HUMAN_STYLES,HUMAN_PLAYER_GREEN} from '../src/human-model-catalog.mjs';
 import {palette} from '../src/palette-core.mjs';
-import {createHumanProposal,setHumanPreviewWeapon,HUMAN_PREVIEW_WEAPONS,poseHumanProposal,HUMAN_VERSION,HUMAN_HEAD_ADVANCE,HUMAN_NECK_FOLLOW,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait,HUMAN_BOOT_SPEC,HUMAN_PLAYER_THIGH_FACTOR,HUMAN_SHOULDER_V16,HUMAN_PLAYER_TROUSERS_GREEN,HUMAN_GROIN_V17} from '../src/human-proposals.mjs';
+import {createHumanProposal,setHumanPreviewWeapon,HUMAN_PREVIEW_WEAPONS,poseHumanProposal,HUMAN_VERSION,HUMAN_HEAD_ADVANCE,HUMAN_NECK_FOLLOW,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait,HUMAN_BOOT_SPEC,HUMAN_PLAYER_THIGH_FACTOR,HUMAN_SHOULDER_V16,HUMAN_PLAYER_TROUSERS_GREEN,HUMAN_GROIN_V17,HUMAN_GENERAL_V18} from '../src/human-proposals.mjs';
 import {createCurrentHuman} from '../src/human-current-models.mjs';
 globalThis.window=globalThis;
 assert.equal(HUMAN_CATALOG.length,7);assert(HUMAN_CATALOG.every(c=>!c.validated&&c.kind==='huma'&&c.options.length===2));
@@ -65,6 +65,39 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
    assert(Math.abs(maxX-expectedWidth)<.00001,'Amplada real de cuixa '+role+style);
    const target=role==='player'?HUMAN_PLAYER_TROUSERS_GREEN:HUMAN_PROFILES[role].uniform;
    assert.equal(thigh.material.color.getHex(),role==='farmer'?0x746c59:target,'Color de cuixa '+role+style);
+  }
+  // V18: classical general coat and curled moustache must remain distinct
+  // pieces and attach to the ORIGINAL hip pivots to follow all old poses.
+  const tails=meshes.filter(m=>m.userData.humanGeneralCoatV18);
+  const moustache=meshes.filter(m=>m.userData.humanGeneralMoustacheV18);
+  if(role==='general'){
+   assert.equal(tails.length,4,'Quatre faldons de cassaca');
+   assert.equal(moustache.length,4,'Bigoti gros amb dues puntes enroscades');
+   assert.equal(meshes.filter(m=>m.userData.humanGeneralCoatWaistV18).length,1,'Cintura de cassaca');
+   const trimmings=meshes.filter(m=>m.userData.humanGeneralCoatTrimV18);
+   assert.equal(trimmings.length,4,'Quatre ribets al baix de la cassaca');
+   const width=moustache.filter(m=>m.userData.humanGeneralMoustacheV18.part==='curl')
+    .map(m=>Math.abs(m.position.x)+m.scale.x);
+   assert(width.every(w>HUMAN_GENERAL_V18.oldMoustacheHalfWidth*1.5),'Bigoti molt més ample que V17');
+   for(const t of tails){
+    const {side,front,hem,rows}=t.userData.humanGeneralCoatV18;
+    assert.equal(rows,HUMAN_GENERAL_V18.coatRings);
+    assert.equal(hem,HUMAN_GENERAL_V18.coatHem);
+    assert.equal(t.parent,joints[side<0?'hipL':'hipR'],'Faldó segueix el maluc');
+    const v=t.geometry.attributes.position,yn=[];
+    for(let i=0;i<v.count;i++)yn.push(v.getY(i));
+    assert(Math.min(...yn)<-.42&&Math.max(...yn)>.04,'Cassaca llarga sota els malucs');
+    assert(t.geometry.index?.count>=150,'Malla corba i segmentada');
+   }
+   poseHumanProposal(model,0,'run',{phase:.25,blend:1});model.updateMatrixWorld(true);
+   const coat=tails[0],p0=coat.getWorldPosition(new T.Vector3()).clone();
+   poseHumanProposal(model,0,'crouch');model.updateMatrixWorld(true);
+   const p1=coat.getWorldPosition(new T.Vector3()).clone();
+   assert(p0.distanceTo(p1)>.01,'Faldons segueixen les articulacions a les animacions');
+   poseHumanProposal(model,0,'rest');
+  }else{
+   assert.equal(tails.length,0,'Sense cassaca llarga en altres rols');
+   assert.equal(moustache.length,0,'Sense bigoti de general en altres rols');
   }
   // V17: the geometry (not just the skeleton) must bridge waist and
   // both upper legs, while preserving the original groin guide height.
@@ -489,7 +522,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,14);assert.equal(choices.size,14);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V17'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V18'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));

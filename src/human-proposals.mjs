@@ -1,7 +1,10 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs?rev=humans-v5';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {createGameWeaponPreview} from './human-weapon-preview.mjs';
-export const HUMAN_VERSION='humans-v17';
+export const HUMAN_VERSION='humans-v18';
+// V18 general only: elaborate classical officer moustache and a split,
+// knee-length dress coat. The joints, weapon mounts and gait are unchanged.
+export const HUMAN_GENERAL_V18=Object.freeze({moustacheHalfWidth:.111,oldMoustacheHalfWidth:.062,coatHem:-.425,coatRings:5,coatSegments:8});
 // Pants are a desaturated counterpart of the V15 protagonist jacket.
 export const HUMAN_PLAYER_TROUSERS_GREEN=0x50aa49;
 export const HUMAN_GROIN_V17=Object.freeze({low:-.13,frontRaise:.022,thighTop:.033});
@@ -251,7 +254,14 @@ export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
   for(const side of [-1,1]){oval(head,'Ulleres',[.035,.022,.008],[side*.044,.143,-.108],dark);box(head,'Patilla ulleres',[.008,.010,.085],[side*.085,.148,-.062],dark)}
   box(head,'Pont ulleres',[.025,.008,.009],[0,.15,-.111],gold);
  }
- if(role==='general')for(const side of [-1,1])oval(head,'Bigoti',[.035,.014,.014],[side*.027,.068,-.095],hair);
+ if(role==='general')for(const side of [-1,1]){
+  // The curled outer tips extend almost twice as far as the V17 moustache.
+  // Keep the centre close to the philtrum rather than floating off the lip.
+  const body=oval(head,'Bigoti principal',[.055,.022,.024],[side*.040,.066,-.113],hair);
+  body.rotation.z=side*.10;body.userData.humanGeneralMoustacheV18={side,part:'body'};
+  const curl=oval(head,'Punta corbada del bigoti',[.026,.017,.019],[side*.085,.086,-.111],hair);
+  curl.rotation.z=side*.40;curl.userData.humanGeneralMoustacheV18={side,part:'curl'};
+}
  // Move the complete face, skull and headwear as one assembly in
  // relation to the atlanto-occipital pivot. The chin now hangs below
  // and well in front of the pivot; the rear cranium envelops the neck.
@@ -421,8 +431,68 @@ export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
   for(const side of [-1,1])shoulderHarness(side);
   if(p.armor)for(const side of [-1,1])box(torso,'Placa blindatge',[.14,.18,.028],[side*.08,.30,-.16],0x34443e);
  }else if(role==='general'){
-  for(const side of [-1,1]){const lapel=box(torso,'Solapa',[.065,.19,.023],[side*.07,.34,-.119],p.trim);lapel.rotation.z=side*.28;for(const y of [.12,.18,.24])oval(torso,'Botó',[.009,.009,.006],[side*.045,y,-.126],gold)}
-  for(let i=0;i<(s.detail===2?6:3);i++){const x=.055+(i%3)*.035,y=.33-Math.floor(i/3)*.06;box(torso,'Cinta medalla',[.025,.028,.012],[x,y,-.125],[0xb64b41,0x4b7b8a,0xc8c5a4][i%3]);oval(torso,'Medalla',[.012,.015,.007],[x,y-.024,-.128],gold)}
+  // A military frock coat: long contrasting lapels, double-breasted buttons
+  // and a tailored waist flowing into four independent, split coat tails.
+  for(const side of [-1,1]){
+   const lapel=box(torso,'Solapa llarga de cassaca',[.075,.29,.025],[side*.084,.255,-.136],p.trim);
+   lapel.rotation.z=side*.20;
+   for(const y of [.12,.22,.31])oval(torso,'Botó daurat cassaca',[.011,.012,.009],[side*.045,y,-.150],gold);
+  }
+  for(let i=0;i<(s.detail===2?6:3);i++){
+   const x=.055+(i%3)*.035,y=.33-Math.floor(i/3)*.06;
+   box(torso,'Cinta medalla',[.025,.028,.012],[x,y,-.159],[0xb64b41,0x4b7b8a,0xc8c5a4][i%3]);
+   oval(torso,'Medalla',[.012,.015,.007],[x,y-.024,-.176],gold);
+  }
+  const waist=loft(pelvis,'Cintura entallada de cassaca',[
+   [.109,.153*W,.117,.003],
+   [.069,.174*W,.133,.007],
+   [.015,.188*W,.148,.010],
+   [-.066,.175*W,.150,.011],
+   [-.123,.151*W,.135,.010]
+  ],p.uniform,bodySegments);
+  waist.userData.humanGeneralCoatWaistV18=true;
+  for(const side of [-1,1]){
+   for(const y of [.055,-.018])oval(pelvis,'Botó daurat cintura',[.010,.011,.009],[side*.044,y,-.155],gold);
+  }
+  const tails=[
+   [.045,.105,.132,0],[-.083,.115,.141,.002],[-.195,.127,.149,.004],
+   [-.322,.139,.158,.008],[HUMAN_GENERAL_V18.coatHem,.151,.169,.012]
+  ];
+  // The tails are attached to the EXISTING hip pivots. Walking, running,
+  // sitting and combat use their original joint rotations; the coat splits
+  // and follows each thigh rather than cutting through bent knees.
+  for(const side of [-1,1]){
+   const hip=root.getObjectByName('Maluc '+(side<0?'esquerre':'dret'));
+   if(!hip)throw Error('Articulació de maluc absent per a cassaca');
+   for(const front of [true,false]){
+    const positions=[],indices=[],cols=HUMAN_GENERAL_V18.coatSegments+1;
+    const hem=[];
+    for(let row=0;row<tails.length;row++){
+     const [y,rX,rZ,shift]=tails[row];
+     for(let k=0;k<cols;k++){
+      const theta=-Math.PI*.43+(k/(cols-1))*Math.PI*.86;
+      const inner=Math.sign(Math.sin(theta))===-side;
+      const x=Math.sin(theta)*(inner?Math.min(rX,.080*W):rX);
+      const z=(front?-1:1)*Math.cos(theta)*rZ+shift;
+      positions.push(x,y,z);
+      if(row===tails.length-1)hem.push(new T.Vector3(x,y,z));
+      if(row===0||k===cols-1)continue;
+      const a=(row-1)*cols+k,b=row*cols+k;
+      if(front)indices.push(a-1,a,b-1,a,b,b-1);
+      else indices.push(a-1,b-1,a,a,b-1,b);
+     }
+    }
+    const geo=new T.BufferGeometry();
+    geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));
+    geo.setIndex(indices);geo.computeVertexNormals();
+    const name='Faldó cassaca '+(front?'frontal ':'posterior ')+(side<0?'esquerre':'dret');
+    const tail=mesh(hip,name,geo,p.uniform);
+    tail.userData.humanGeneralCoatV18={side,front,hem:HUMAN_GENERAL_V18.coatHem,rows:tails.length};
+    const piping=mesh(hip,'Vora de cassaca '+name,
+     new T.TubeGeometry(new T.CatmullRomCurve3(hem),12,.0035,4,false),p.trim);
+    piping.userData.humanGeneralCoatTrimV18={side,front};
+   }
+  }
  }else{
   box(torso,'Butxaca camisa',[.085,.09,.016],[-.096,.29,-.123],p.trim);
   for(const y of [.12,.19,.26,.34])oval(torso,'Botó camisa',[.005,.005,.004],[0,y,-.126],0xc6c0aa);
@@ -468,7 +538,7 @@ export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
  // remain addressable in the editor and in JSON drafts.
  const merge=g=>{
   for(const child of [...g.children])if(child.isGroup)merge(child);
-  const batches=new Map();for(const m of g.children)if(m.isMesh&&!m.userData.humanLandmark&&!m.userData.humanChestFit&&!m.userData.humanChestSurface&&!m.userData.humanHarnessStrap&&!m.userData.humanChestAntenna&&!m.userData.humanHandSurface&&!m.userData.humanThumb&&!m.userData.humanKneePad&&!m.userData.humanCalfProfile&&!m.userData.humanThighFactor&&!m.userData.humanShoulderV16&&!m.userData.humanPantsFly){if(!batches.has(m.material))batches.set(m.material,[]);batches.get(m.material).push(m)}
+  const batches=new Map();for(const m of g.children)if(m.isMesh&&!m.userData.humanLandmark&&!m.userData.humanChestFit&&!m.userData.humanChestSurface&&!m.userData.humanHarnessStrap&&!m.userData.humanChestAntenna&&!m.userData.humanHandSurface&&!m.userData.humanThumb&&!m.userData.humanKneePad&&!m.userData.humanCalfProfile&&!m.userData.humanThighFactor&&!m.userData.humanShoulderV16&&!m.userData.humanPantsFly&&!m.userData.humanGeneralMoustacheV18&&!m.userData.humanGeneralCoatV18&&!m.userData.humanGeneralCoatWaistV18&&!m.userData.humanGeneralCoatTrimV18){if(!batches.has(m.material))batches.set(m.material,[]);batches.get(m.material).push(m)}
   for(const [material,items]of batches){if(items.length<2)continue;const positions=[],normals=[],names=[];
    for(const m of items){m.updateMatrix();const geo=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();geo.applyMatrix4(m.matrix);positions.push(...geo.attributes.position.array);normals.push(...geo.attributes.normal.array);names.push(m.name);g.remove(m);geo.dispose();m.geometry.dispose()}
    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));geo.userData.labOwned=true;
@@ -477,7 +547,7 @@ export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
  };merge(root);
  root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
  root.scale.setScalar(p.height/height);
- root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:17},humanHeight:p.height,labAssemblies:true};
+ root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:18},humanHeight:p.height,labAssemblies:true};
  if(role==='player'&&!visualOnly)setHumanPreviewWeapon(T,root,'pistol');
  return root;
 }
