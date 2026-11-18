@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import * as T from '../vendor/three-r186.module.mjs';
 import {HUMAN_PROFILES,HUMAN_CATALOG,HUMAN_STYLES,HUMAN_PLAYER_GREEN} from '../src/human-model-catalog.mjs';
 import {palette} from '../src/palette-core.mjs';
-import {createHumanProposal,setHumanPreviewWeapon,HUMAN_PREVIEW_WEAPONS,poseHumanProposal,HUMAN_VERSION,HUMAN_HEAD_ADVANCE,HUMAN_NECK_FOLLOW,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait,HUMAN_BOOT_SPEC,HUMAN_PLAYER_THIGH_FACTOR,HUMAN_SHOULDER_V16,HUMAN_PLAYER_TROUSERS_GREEN,HUMAN_GROIN_V17,HUMAN_GENERAL_V18} from '../src/human-proposals.mjs';
+import {createHumanProposal,setHumanPreviewWeapon,HUMAN_PREVIEW_WEAPONS,poseHumanProposal,HUMAN_VERSION,HUMAN_HEAD_ADVANCE,HUMAN_NECK_FOLLOW,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait,HUMAN_BOOT_SPEC,HUMAN_PLAYER_THIGH_FACTOR,HUMAN_PLAYER_CHEST_FACTOR,HUMAN_SHOULDER_V16,HUMAN_PLAYER_TROUSERS_GREEN,HUMAN_GROIN_V17,HUMAN_GENERAL_V18} from '../src/human-proposals.mjs';
 import {createCurrentHuman} from '../src/human-current-models.mjs';
 globalThis.window=globalThis;
 assert.equal(HUMAN_CATALOG.length,7);assert(HUMAN_CATALOG.every(c=>!c.validated&&c.kind==='huma'&&c.options.length===2));
@@ -167,6 +167,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   if(role==='player'){
    const torso=meshes.find(m=>m.name==='Tronc anatòmic'||m.userData.batchedParts?.includes('Tronc anatòmic'));
    assert(torso&&torso.material.color.getHex()===HUMAN_PLAYER_GREEN,'Jaqueta verda més clara que els pantalons');
+    assert(HUMAN_PLAYER_CHEST_FACTOR>=1.04&&HUMAN_PLAYER_CHEST_FACTOR<1.09,'Pit lleugerament més ample que abans, sense exagerar');
   }
   assert.equal(rest.neck.position.z,.012-HUMAN_NECK_FOLLOW,'Coll vertical avançat 1 cm per mantenir la gola sota la mandíbula');
   assert.equal(rest.head.position.z,.065-(HUMAN_HEAD_ADVANCE-HUMAN_NECK_FOLLOW),'Pivot del cap avançat respecte del coll');
@@ -174,12 +175,22 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   assert.equal(rest.kneeL.parent,joints.hipL);assert.equal(rest.ankleR.parent,joints.kneeR);
   assert.equal(rest.elbowL.parent,joints.shoulderL);assert.equal(rest.wristR.parent,joints.elbowR);
   poseHumanProposal(model,0,'rest');
+  assert(joints.shoulderL.rotation.z<-.25&&joints.shoulderR.rotation.z>.24,
+    'Braços en repòs una mica més separats');
+  assert(joints.elbowL.rotation.x>.14&&joints.elbowR.rotation.x>.18,
+    'Colzes relaxats i flexionats');
+  assert(Math.abs(joints.shoulderL.rotation.x-joints.shoulderR.rotation.x)>.005,
+    'Petita asimetria natural en repòs');
   assert.equal(model.userData.humanProposal.version,HUMAN_VERSION);
   const anatomy=measureHumanAnatomy(T,model);assert(anatomy);
   const {ratios:r,headUnits,points,unit,skullBounds,neckBounds}=anatomy;
   assert(Math.abs(headUnits-8)<.10,'Vuit caps reals '+role+style);
-  for(const [id,target,tolerance]of [['shoulderL',6.66,.09],['elbowL',5.06,.09],['wristL',3.77,.09],['crotch',4,.07],['tipL',3.20,.10],['kneeL',2.33,.08],['ankleL',.30,.05]])assert(Math.abs(r[id]-target)<tolerance,id+' '+r[id]+' '+role+style);
-  for(const id of ['shoulder','elbow','wrist','hip','knee','ankle','tip'])assert(Math.abs(r[id+'L']-r[id+'R'])<.015,id+' simetria');
+  for(const [id,target,tolerance]of [['shoulderL',6.66,.09],['elbowL',5.06,.17],['wristL',3.77,.22],['crotch',4,.07],['tipL',3.20,.23],['kneeL',2.33,.08],['ankleL',.30,.05]])assert(Math.abs(r[id]-target)<tolerance,id+' '+r[id]+' '+role+style);
+  for(const id of ['shoulder','elbow','wrist','hip','knee','ankle','tip']){
+    // El repòs té asimetria subtil als braços, sense alterar les cames.
+    const tolerance=['elbow','wrist','tip'].includes(id)?.13:.015;
+    assert(Math.abs(r[id+'L']-r[id+'R'])<tolerance,id+' simetria i asimetria controlada');
+  }
   assert((points.chin.y-points.shoulderL.y)/unit<.37,'Coll perceptiblement més curt');
   assert((points.head.y-points.chin.y)/unit>.20,'Pivot dins del crani, no sota el mentó');
   assert(points.head.z>(skullBounds.min.z+skullBounds.max.z)/2,'Pivot posterior');
