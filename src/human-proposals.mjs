@@ -207,8 +207,8 @@ export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
  // Teixit de transició curt entre clatell i mandíbula: dissimula
  // la costura sense alterar el coll vertical, el cap ni els pivots.
  const neckBlend=loft(neck,'Transició coll-crani',
-   [[.016,.061,.059,-.003],[.040,.070,.068,-.005],[.071,.073,.069,-.006],
-    [.102,.065,.063,-.005],[.126,.050,.049,-.003]],p.skin,Math.max(10,s.segments));
+   [[.005,.064,.074,.012],[.035,.082,.086,.014],[.070,.084,.092,.018],
+    [.104,.073,.084,.022],[.136,.056,.069,.020]],p.skin,Math.max(10,s.segments));
  neckBlend.userData.humanNeckBlend=true;
  // Move the pivot forward, bringing the entire head, face and headwear with it.
  // Preserve the vertical cervical column and its connection beneath the jaw.
@@ -692,8 +692,8 @@ function orientHumanEquippedWeapon(model,weapon,mode,rig,j){
   target.copy(j.wristR.getWorldPosition(rig.wrist)).sub(j.elbowR.getWorldPosition(rig.elbow)).normalize();
  }else{
   target.set(mode==='run'&&long?-.28:0,
-   blade?1:mode==='aim'&&!tool?0:mode==='run'&&long?-.72:lowered?-.20:bazookaCarry?-.64:-1,
-   blade||tool?0:mode==='aim'?-1:mode==='run'&&long?-.64:lowered?-.9797958971:bazookaCarry?-.7683749085:0)
+   blade||tool?0:mode==='aim'?0:mode==='run'&&long?-.72:lowered?-.20:bazookaCarry?-.64:-1,
+   blade||tool?-1:mode==='aim'?-1:mode==='run'&&long?-.64:lowered?-.9797958971:bazookaCarry?-.7683749085:0)
    .normalize().applyQuaternion(model.getWorldQuaternion(rig.modelQ));
  }
  weapon.parent.getWorldQuaternion(rig.parentQ);
@@ -867,7 +867,8 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
     // Referència fotogràfica: la mà esquerra s'allarga endavant
     // i amunt mentre la mà dreta porta la granada enrere.
     set('spine',-.10,-.10);set('head',0,0);
-    set('shoulderR',-.30,0,1.06);set('elbowR',1.05,0,.14);
+    const wind=clamp01(locomotion?.power??1);
+    set('shoulderR',-.30-.62*wind,-.52*wind,1.06+.36*wind);set('elbowR',1.05,0,.14);
     set('shoulderL',1.32,0,-.50);set('elbowL',.12,0,-.10);
    }else if(mode==='work'){
    set('spine',-.32);set('neck',.10);set('hipL',.24);set('hipR',.24);set('kneeL',-.42);set('kneeR',-.42);
