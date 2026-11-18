@@ -3,6 +3,8 @@
 import {createHumanProposal,HUMAN_VERSION} from './human-proposals.mjs';
 
 export const GAME_HUMAN_SKIN_VERSION='humans-v18';
+// Escala exclusivament visual a peu: rig i geometria intactes.
+export const FOOT_PLAYER_VISUAL_FACTOR=4/3;
 const SOURCE_THIGH=.49,SOURCE_SHIN=.49,SOURCE_ARM=.385,SOURCE_FOREARM=.310;
 const cache=new Map();
 function sourceFor(T,role){
@@ -109,12 +111,14 @@ function installCanonicalPlayer(T,model){
   ['grenade',.38,-.09,-.05,0]
  ],proxies=new Map();
  function sync(){
-  // Gameplay resizes its actor ROOT to 2/3 after creation. Cancel only that
-  // outer scale on the unmodified, uniformly scaled lab visual: its world
-  // silhouette and height remain exactly the editor's 2.00 m.
+  // Gameplay rescales its actor ROOT by 2/3; compensate it AND give the
+  // unchanged native editor skin another third of size, uniformly. The
+  // collision, controls and animations remain exactly the same.
   if(Math.min(Math.abs(model.scale.x),Math.abs(model.scale.y),Math.abs(model.scale.z))<1e-6)
    throw Error('Escala visual del protagonista no vàlida');
-  visual.scale.set(editorScale.x/model.scale.x,editorScale.y/model.scale.y,editorScale.z/model.scale.z);
+  visual.scale.set(FOOT_PLAYER_VISUAL_FACTOR*editorScale.x/model.scale.x,
+    FOOT_PLAYER_VISUAL_FACTOR*editorScale.y/model.scale.y,
+    FOOT_PLAYER_VISUAL_FACTOR*editorScale.z/model.scale.z);
   const dy=u.lowerBody.position.y-pelvisY;
   visual.position.y=dy*crouchRatio;
   j.pelvis.quaternion.copy(lowerRest).multiply(u.lowerBody.quaternion);

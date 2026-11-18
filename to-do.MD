@@ -1,3 +1,9 @@
+**2026-11-18 · Escales visuals contextuals del protagonista i del GAZ:**
+- [x] Avatar a peu un terç més gran (factor 4/3) amb rig i geometria de l'editor, sense canviar física, col·lisions ni animacions.
+- [x] Ocupants del GAZ Tigr-M a escala 0,66 en lloc de 0,82, sense canviar la postura o els seients; altres cotxes conserven l'escala.
+- [x] Proves de regressió de factors de mida i diferenciació GAZ/cotxe civil.
+- [ ] Comprovació visual en dispositiu: cap i colzes dins la carrosseria del GAZ, conductor i passatger.
+
 **2026-11-18 · Protagonista del joc = model natiu de l'editor HUMANS V18:**
 - [x] Substitució del cos visible del protagonista a peu per l'arbre original complet de l'editor, amb les 16 articulacions i cada malla/material sense deformacions, còpies a pivots antics ni escales no uniformes.
 - [x] El rig antic es conserva únicament com a controlador invisible de moviment, combat i estat; les rotacions de les seves articulacions es transfereixen als pivots reals del nou rig abans de renderitzar, eliminant les desviacions anatòmiques del coll/cap.
