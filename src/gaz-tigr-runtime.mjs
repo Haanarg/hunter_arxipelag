@@ -1,5 +1,5 @@
 // Model definitiu GAZ Tigr-M: reutilitza la geometria nativa aprovada al laboratori.
-// El vehicle manté el tipus 'cotxe', la física, la hitbox i els seients existents.
+// Manté el tipus 'cotxe' i els seients; la caixa física del GAZ segueix ara l'escala visual ×1,25.
 import {createReferenceVehicle} from './vehicle-reference-candidates.mjs';
 
 export function prepareGazTigrRuntime(THREE,{vehicleScale=1.3}={}){

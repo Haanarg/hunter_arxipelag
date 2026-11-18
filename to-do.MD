@@ -1,3 +1,12 @@
+**2026-11-18 · Subversió 0.6.227 · Col·lisió del GAZ Tigr-M:**
+- [x] Caixa física d'amplada i longitud ×1,25 només per al GAZ (5,33 × 8,385 → 6,6625 × 10,48125 unitats).
+- [x] Radi de detecció i de proximitat també ×1,25 (4,94 → 6,175), incloent les proves de murs, filferrades, vehicles, vianants, sortides i límits de mapa.
+- [x] Alçada de col·lisió contra parets adaptada a l'augment visual.
+- [x] COOP: perfil de carrosseria assignat al servidor natiu, OBB d'obstacles, col·lisions i sortides de vehicles actualitzats.
+- [x] Mides de l'utilitari civil i la resta de vehicles intactes.
+- [x] Prova de regressió del GAZ real i de les dimensions del servidor incorporada abans del desplegament.
+- [ ] Confirmar proves automàtiques, desplegament i verificació visual amb obstacles estretament separats.
+
 **2026-11-18 · Contrast fotogràfic del llançament:**
 - [x] Braç dret que prepara la granada enrere; braç esquerre, no llançador, estès endavant i amunt, amb lleu obertura lateral i colze gairebé recte, tant al joc com al visor de proves.
 
