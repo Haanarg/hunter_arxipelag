@@ -496,7 +496,8 @@ assert(lab.includes('(config.human?humanList:list).append(button)'));
 assert(lab.includes('config.human?await createCurrentHuman(THREE,config.human)'));
 assert(lab.includes('!original&&!currentType.human&&'),'Les proporcions humanes no s’ajusten a l’amplada antiga');
 for(const mode of ['walk','run','crouch','aim','work','wave'])assert(html.includes('value="'+mode+'"'));
-assert(!readFileSync(new URL('../src/bootstrap.mjs',import.meta.url),'utf8').includes('human-proposals'),'Candidats fora del joc');
+assert(readFileSync(new URL('../src/bootstrap.mjs',import.meta.url),'utf8').includes('human-game-runtime-v17'),
+ 'Els candidats V17 validats estan integrats al joc via esquelet existent');
 const evidenceUI=readFileSync(new URL('../src/human-lab-evidence-ui.mjs',import.meta.url),'utf8');
 assert(html.includes('id="humanWeapon"')&&html.includes('id="humanWeaponControl"'));
 assert(html.includes('id="humanGuides" type="checkbox">'),'Guies desmarcades');

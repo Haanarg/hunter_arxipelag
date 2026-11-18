@@ -1,3 +1,9 @@
+**2026-11-18 · Integració HUMANS V17 al joc:**
+- [x] Pont de geometria real V17 a l'esquelet de joc existent: jugador, conductor i passatger locals/COOP, soldats enemics, tripulacions de vehicles terrestres i llanxes, general i presoners (pagès/mecànic).
+- [x] No es toca cap animació, posició de seient, mà al volant/manillar/rem, moviment de botes, ancoratge d'armes, col·lisions o estat de simulació. Es conserven els mateixos pivots i contractes de userData.
+- [x] Càrrega de geometria V17 només en mode visual (armes reals del joc, no còpies del laboratori), mapatge d'articulacions del canell al colze i de la pelvis/cama al rig actual. Recaptura dels constructors clàssics abans del runtime bundle per incloure soldats i civils sense alterar-ne el codi.
+- [ ] Comprovar les proves CI i el desplegament de fitxers exactes a Cloudflare. Validació visual d'escales, seients, armes i postures pendent.
+
 **2026-11-18 · HUMANS V17 · engonals i pantalons:**
 - [x] En els 14 candidats A/B: pelvis reformada en sis seccions i lleu arc als dos laterals de l'engonal, amb la part inferior a la mateixa alçada anatòmica que V16; arrencada de les cuixes integrada dins el volum de la pelvis amb perfils progressius, sense moure pivots ni genolls.
 - [x] Protagonista A/B: pantalons verds lleugerament més foscos (#50aa49) que la jaqueta (#60c754), amb continuïtat cromàtica de la pelvis fins al panxell; costura frontal prima adherida a la malla real, butxaques i cinturó conservats.

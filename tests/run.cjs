@@ -58,6 +58,7 @@ const suites={
     "vehicle-live-editor.mjs",
     "vehicle-lab-player-reference.mjs",
     "human-proposals.mjs",
+    "human-game-runtime-v17.mjs",
     "human-lab-evidence.mjs"
   ]
 };

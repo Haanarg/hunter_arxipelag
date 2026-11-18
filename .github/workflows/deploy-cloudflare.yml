@@ -10,6 +10,12 @@ on:
       - 'assets/vehicle-candidates/lab-revision.json'
       - 'src/hovercraft-concepts.mjs'
       - 'src/human-proposals.mjs'
+      - 'src/human-game-runtime-v17.mjs'
+      - 'src/player-model-core.mjs'
+      - 'src/bootstrap.mjs'
+      - 'src/menu-boot.mjs'
+      - 'index.html'
+      - 'tests/human-game-runtime-v17.mjs'
       - 'src/human-weapon-preview.mjs'
       - 'src/human-current-models.mjs'
       - 'src/human-model-catalog.mjs'
@@ -45,6 +51,8 @@ jobs:
         run: npm run test:deploy
       - name: Validar models humans i editor en temps real
         run: npm run test:lab
+      - name: Validar HUMANS V17 al joc i als conductors
+        run: node tests/human-game-runtime-v17.mjs
       - name: Comprovar versió i bundle publicable
         run: npm run check:build
       - name: Comprovar la compilació del Worker
@@ -74,7 +82,7 @@ jobs:
           version="$(sed -n "s/.*GAME_VERSION = '\([^']*\)'.*/\1/p" src/version.mjs)"
           if [ -z "$version" ]; then echo "::error::No s'ha pogut llegir la versió"; exit 1; fi
           # Compare the final HTTP body, not Cloudflare's canonical HTML redirect.
-          files=(src/version.mjs src/human-weapon-preview.mjs src/compound-preview.mjs src/compound-concepts.mjs compounds-preview.html src/hovercraft-concepts.mjs src/vehicle-model-core.mjs src/vehicle-specs.mjs src/ka60-runtime.mjs assets/vehicle-candidates/lab-revision.json src/human-model-catalog.mjs src/human-current-models.mjs src/human-proposals.mjs src/human-lab-evidence.mjs src/human-lab-evidence-ui.mjs src/vehicle-live-editor.mjs src/vehicles-externs-proves.mjs src/proves-hub.mjs proves.html vehicles-externs-proves.html)
+          files=(index.html src/bootstrap.mjs src/menu-boot.mjs src/player-model-core.mjs src/human-game-runtime-v17.mjs src/version.mjs src/human-weapon-preview.mjs src/compound-preview.mjs src/compound-concepts.mjs compounds-preview.html src/hovercraft-concepts.mjs src/vehicle-model-core.mjs src/vehicle-specs.mjs src/ka60-runtime.mjs assets/vehicle-candidates/lab-revision.json src/human-model-catalog.mjs src/human-current-models.mjs src/human-proposals.mjs src/human-lab-evidence.mjs src/human-lab-evidence-ui.mjs src/vehicle-live-editor.mjs src/vehicles-externs-proves.mjs src/proves-hub.mjs proves.html vehicles-externs-proves.html)
           for delay in 0 3 6 12 24 30; do
             if [ "$delay" -gt 0 ]; then sleep "$delay"; fi
             failed=0

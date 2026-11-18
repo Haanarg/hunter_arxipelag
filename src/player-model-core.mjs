@@ -167,6 +167,9 @@ export const playerModel=Object.freeze({
   u.lowerBody=lowerBody;u.upperBody=upperBody;
   u.upperBodyPivotHeight=upperBody.position.y;
  }
+ // Same real V17 skin as the lab, fitted onto this existing animation rig.
+ // The vehicle rider factory uses this method too, without any seat or IK changes.
+ globalThis.HUNTER_HUMAN_V17?.install(T,g,{role:'player'});
  return g;
  }
 });
