@@ -175,8 +175,8 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   assert.equal(rest.kneeL.parent,joints.hipL);assert.equal(rest.ankleR.parent,joints.kneeR);
   assert.equal(rest.elbowL.parent,joints.shoulderL);assert.equal(rest.wristR.parent,joints.elbowR);
   poseHumanProposal(model,0,'rest');
-  assert(joints.shoulderL.rotation.z<-.25&&joints.shoulderR.rotation.z>.24,
-    'Braços en repòs una mica més separats');
+  assert(joints.shoulderL.rotation.z<-.12&&joints.shoulderR.rotation.z>.11,
+    'Braços en repòs amb abducció reduïda a la meitat');
   assert(joints.elbowL.rotation.x>.10&&joints.elbowR.rotation.x>.13,
     'Colzes relaxats i flexionats');
   assert(Math.abs(joints.shoulderL.rotation.x-joints.shoulderR.rotation.x)>.005,
@@ -359,7 +359,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
       assert(forward.dot(target)>.999,'Orientació '+type+'/'+mode+'; dir='+forward.toArray());
      }
     };
-    for(const mode of ['rest','idle','walk','run','crouch','work','wave','aim']){
+    for(const mode of ['rest','idle','walk','run','crouch','work','wave','aim','throw']){
      const gait=['walk','run'].includes(mode)?{phase:.25,blend:mode==='run'?1:0}:null;
      assert.doesNotThrow(()=>poseHumanProposal(model,.33,mode,gait),mode+' amb '+type);
      checkDirection(mode);

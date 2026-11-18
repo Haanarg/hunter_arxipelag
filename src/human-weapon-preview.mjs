@@ -5,7 +5,7 @@ import {playerModel} from './player-model-core.mjs';
 import {palette} from './palette-core.mjs';
 
 let source=null;
-export const GAME_WEAPON_TYPES=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters']);
+export const GAME_WEAPON_TYPES=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters','grenade']);
 
 export function createGameWeaponPreview(T,kind){
  if(!GAME_WEAPON_TYPES.includes(kind))throw Error('Arma del joc no reconeguda: '+kind);
