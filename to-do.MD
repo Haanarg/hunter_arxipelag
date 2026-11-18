@@ -1,3 +1,10 @@
+**2026-11-18 · Animacions de repòs i pistola; SV-98 del protagonista:**
+- [x] Relaxació suau dels braços en aturar-se després de caminar o córrer (velocitat 5,5 s⁻¹), colzes que baixen de manera natural. Editor: repòs una mica menys elevat.
+- [x] Pistola en caminar i ajupit amb canó paral·lel a l'avantbraç canònic; postura ajupida amb braç dret una mica més endavant.
+- [x] Apuntat amb pistola centrat davant del pit: animació de les dues mans, origen visual de l'arma nativa i IK del laboratori; es conserva la física autoritativa.
+- [x] SV-98 del protagonista +33% a la malla visual del joc i al visor de proves; boca del canó ajustada a la nova punta visible.
+- [ ] Proves geomètriques i revisió WebGL real, COOP i desplegament Cloudflare.
+
 **2026-11-18 · Escales del protagonista i les dues rodes; recollida de fusell:**
 - [x] Protagonista a peu ×1,20 sobre el factor 4/3 anterior (factor total 1,60 de l'editor); només model visual, no física ni col·lisions.
 - [x] Pit del model d'editor +4,5% d'amplada; postures de repòs del cap, braços i colzes naturalment obertes, asimètriques i no robòtiques. Compensació del pivot antic al rig del joc.

@@ -571,7 +571,7 @@ export function setHumanPreviewWeapon(T,root,kind){
  root.traverse(o=>{if(o.userData.humanPreviewWeapon)mount=o});
  if(!mount)return false;
  const visual=createGameWeaponPreview(T,kind);
- visual.scale.setScalar({pistol:.25,assault:.22,sniper:.18,bazooka:.375,knife:.28,cutters:.30}[kind]);
+ visual.scale.setScalar({pistol:.25,assault:.22,sniper:.24,bazooka:.375,knife:.28,cutters:.30}[kind]);
  for(const child of [...mount.children]){
   child.traverse(obj=>{
    if(obj.isMesh){
