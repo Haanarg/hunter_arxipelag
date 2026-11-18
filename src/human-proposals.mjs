@@ -681,7 +681,7 @@ function orientHumanEquippedWeapon(model,weapon,mode,rig,j){
  // Oversized bazookas must not drag their muzzles on the ground in idle.
  const bazookaCarry=['bazooka','rocket'].includes(type)&&['rest','idle','walk','wave'].includes(mode);
  const target=rig.direction;
- if(mode==='run'&&type==='pistol'&&j?.elbowR&&j.wristR){
+ if(['walk','run','crouch'].includes(mode)&&type==='pistol'&&j?.elbowR&&j.wristR){
   // Right-arm swing drives the pistol. No frozen model-space barrel axis.
   target.copy(j.wristR.getWorldPosition(rig.wrist)).sub(j.elbowR.getWorldPosition(rig.elbow)).normalize();
  }else{
@@ -741,6 +741,27 @@ function placeHumanBazookaOnShoulder(model,weapon,j,rig){
  solveHumanBazookaGrip(model,j,right,'R',rig);
  solveHumanBazookaGrip(model,j,left,'L',rig);
 }
+function centerHumanPistolAim(model,j,rig){
+  if(!j.shoulderR||!j.elbowR||!j.wristR||!j.spine)return;
+  // El canell passa davant del centre del pit, el colze queda al costat.
+  const target=j.spine.localToWorld(rig.aimCenter.set(0,.29,-.35));
+  j.shoulderR.parent.worldToLocal(target);
+  const upper=j.elbowR.parent.position.length();
+  const lower=j.wristR.parent.position.length()+BODY.handGrip;
+  const d=Math.min(upper+lower-.001,Math.max(.001,target.length()));
+  const axis=target.clone().normalize();
+  const along=(upper*upper+d*d-lower*lower)/(2*d);
+  const radius=Math.sqrt(Math.max(0,upper*upper-along*along));
+  const pole=new THREE.Vector3(.48,-.75,.18);
+  pole.addScaledVector(axis,-pole.dot(axis)).normalize();
+  const bend=axis.clone().multiplyScalar(along).addScaledVector(pole,radius);
+  const down=rig.down.set(0,-1,0);
+  j.shoulderR.quaternion.setFromUnitVectors(down,bend.clone().normalize());
+  const forearm=target.clone().sub(bend).normalize()
+    .applyQuaternion(j.shoulderR.quaternion.clone().invert());
+  j.elbowR.quaternion.setFromUnitVectors(down,forearm);
+  model.updateMatrixWorld(true);
+}
 function solveHumanBazookaGrip(model,j,grip,side,rig){
  const shoulder=j['shoulder'+side],elbow=j['elbow'+side],wrist=j['wrist'+side];
  if(!shoulder||!elbow||!wrist)return;
@@ -766,7 +787,7 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
  if(!rigs){rigs=[];root.traverse(n=>{if(!n.userData.humanProposal)return;const joints={},soles=[];let weapon;n.traverse(j=>{const id=j.userData.humanMotionJoint;if(id)joints[id]=j;if(j.userData.humanWeapon)weapon=j;if(j.userData.humanLandmark==='sole')soles.push(j)});rigs.push({model:n,joints,soles,weapon,orientation:{
  source:new THREE.Vector3(),direction:new THREE.Vector3(),
  modelQ:new THREE.Quaternion(),parentQ:new THREE.Quaternion(),
- wrist:new THREE.Vector3(),elbow:new THREE.Vector3(),gripWorld:new THREE.Vector3(),down:new THREE.Vector3(),footPoint:new THREE.Vector3(),shoulderGoal:new THREE.Vector3(),shoulderOffset:new THREE.Vector3(),seatWorld:new THREE.Vector3()
+ wrist:new THREE.Vector3(),elbow:new THREE.Vector3(),gripWorld:new THREE.Vector3(),down:new THREE.Vector3(),footPoint:new THREE.Vector3(),shoulderGoal:new THREE.Vector3(),shoulderOffset:new THREE.Vector3(),seatWorld:new THREE.Vector3(),aimCenter:new THREE.Vector3()
  }})});rigCache.set(root,rigs)}
  for(const {model,joints:j,soles,weapon,orientation}of rigs){
   const set=(id,x=0,y=0,z=0)=>{if(j[id])j[id].rotation.set(x,y,z)};
@@ -779,10 +800,10 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
   for(const n of Object.values(j)){n.rotation.set(0,0,0);n.position.set(0,0,0)}
   if(mode==='rest'){
     // Lleu flexió de les espatlles, abducció asimètrica i colzes tous.
-    j.shoulderL?.rotation.set(.09,0,-.28);
-    j.shoulderR?.rotation.set(.11,0,.26);
-    j.elbowL?.rotation.set(.18,0,.075);
-    j.elbowR?.rotation.set(.22,0,-.065);
+    j.shoulderL?.rotation.set(.045,0,-.28);
+    j.shoulderR?.rotation.set(.06,0,.26);
+    j.elbowL?.rotation.set(.12,0,.075);
+    j.elbowR?.rotation.set(.15,0,-.065);
     model.updateMatrixWorld(true);orientHumanEquippedWeapon(model,weapon,mode,orientation,j);continue
    }
   const walk=mode==='walk'||mode==='run',blend=walk?clamp01(locomotion?.blend??(mode==='run'?1:0)):0;
@@ -793,8 +814,8 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
   for(const [i,side]of ['L','R'].entries()){
    const sign=i?-1:1,a=phase+i*Math.PI,gait=walk?sampleHumanGait(cyclePhase+i*.5,blend):{hip:0,knee:0,ankle:0};
    set('hip'+side,gait.hip);set('knee'+side,gait.knee);set('ankle'+side,gait.ankle);
-   set('shoulder'+side,walk?-gait.hip*mix(.72,.86,blend):(.09+(i?.02:0))+.025*breath,0,walk?-sign*.16:-sign*(i?.26:.28));
-   set('elbow'+side,walk?mix(.18+.16*Math.max(0,Math.sin(a)),1.15+.17*Math.sin(a),blend):(.18+(i?.04:0)),0,walk?0:(i?-.065:.075));
+   set('shoulder'+side,walk?-gait.hip*mix(.72,.86,blend):(.045+(i?.015:0))+.025*breath,0,walk?-sign*.16:-sign*(i?.26:.28));
+   set('elbow'+side,walk?mix(.18+.16*Math.max(0,Math.sin(a)),1.15+.17*Math.sin(a),blend):(.12+(i?.03:0)),0,walk?0:(i?-.065:.075));
    set('wrist'+side,0,0,sign*.035);
   }
   // A braced two-handed pose develops as the gait transitions to running.
@@ -851,6 +872,8 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
    j.pelvis.position.y=walk?mix(planted,stableRun,blend)+flightLift(cyclePhase,blend):planted;
   }
   model.updateMatrixWorld(true);
+  if(mode==='aim'&&weapon?.userData.humanWeapon==='pistol')
+   centerHumanPistolAim(model,j,orientation);
   orientHumanEquippedWeapon(model,weapon,mode,orientation,j);
   if(carrying&&blend>.8)supportHumanRunningLongGun(model,weapon,j,orientation);
   const shoulderBazooka=mode==='aim'&&weapon&&['bazooka','rocket'].includes(weapon.userData.humanWeapon);
