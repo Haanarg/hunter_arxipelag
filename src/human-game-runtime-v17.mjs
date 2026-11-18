@@ -70,6 +70,80 @@ function belongsTo(node,ancestor){
  for(let p=node;p;p=p.parent)if(p===ancestor)return true;
  return false;
 }
+
+/** Render the exact editor rig; old bones remain invisible control inputs. */
+function installCanonicalPlayer(T,model){
+ const u=model.userData,visual=createHumanProposal(T,'player','a',{visualOnly:true}),j={};
+ visual.name='Protagonista · rig exacte de l’editor';
+ visual.traverse(o=>{if(o.userData?.humanMotionJoint)j[o.userData.humanMotionJoint]=o});
+ for(const id of ['pelvis','spine','neck','head','hipL','hipR','kneeL','kneeR','ankleL','ankleR','shoulderL','shoulderR','elbowL','elbowR','wristL','wristR'])
+  if(!j[id])throw Error('Rig de l’editor incomplet: '+id);
+ const old=removeOldMeshes(model,node=>u.gun&&belongsTo(node,u.gun));
+ const meshes=[];visual.traverse(o=>{
+  if(!o.isMesh)return;
+  o.userData.humanGameV17Mesh=true;
+  o.userData.humanGameV17Source=o.name;
+  o.userData.humanCanonicalOriginalGeometry=true;
+  meshes.push(o);
+ });
+ const control={
+  hipL:u.ll,hipR:u.lr,kneeL:u.lkl,kneeR:u.lkr,
+  shoulderL:u.al,shoulderR:u.ar,elbowL:u.ael,elbowR:u.aer,
+  ankleL:u.boots[0],ankleR:u.boots[1],head:u.head
+ };
+ const rest=Object.fromEntries(Object.entries(control).map(([id,bone])=>[id,bone.quaternion.clone().invert()]));
+ const lowerRest=u.lowerBody.quaternion.clone().invert(),upperRest=u.upperBody.quaternion.clone().invert();
+ const pelvisY=u.hipHeight,spineY=u.upperBodyPivotHeight,actualSpineY=j.spine.position.y;
+ const weapons=[
+  ['gun',.40,-.095,-.085,-Math.PI/2],
+  ['assault',.27,-.11,-.12,-.35],
+  ['sniper',.26,-.11,-.12,-.35],
+  ['bazooka',.44,-.12,-.10,-.3],
+  ['knife',.40,-.09,-.05,0],
+  ['cisalla',.38,-.09,-.05,0],
+  ['grenade',.38,-.09,-.05,0]
+ ],proxies=new Map();
+ function sync(){
+  // No per-piece stretch, transform baking or alternative game anatomy.
+  const dy=u.lowerBody.position.y-pelvisY;
+  visual.position.y=dy;
+  j.pelvis.quaternion.copy(lowerRest).multiply(u.lowerBody.quaternion);
+  j.spine.quaternion.copy(j.pelvis.quaternion).invert()
+   .multiply(upperRest).multiply(u.upperBody.quaternion);
+  j.spine.position.y=actualSpineY+(u.upperBody.position.y-spineY)-dy;
+  for(const [id,bone]of Object.entries(control))j[id].quaternion.copy(rest[id]).multiply(bone.quaternion);
+  for(const [kind,scale,y,z,pitch]of weapons){
+   const source=u[kind];if(!source||!source.visible) {
+    if(proxies.has(kind))proxies.get(kind).visible=false;
+    continue;
+   }
+   if(!proxies.has(kind)){
+    const proxy=source.clone(true);
+    proxy.name='Arma canònica · '+kind;
+    proxy.position.set(0,y,z);proxy.rotation.set(pitch,0,0);
+    proxy.scale.setScalar(scale);
+    j.wristR.add(proxy);proxies.set(kind,proxy);
+    // Keep the authoritative gameplay weapon's transforms and state, but
+    // render its cloned visual in the native hand rather than old anatomy.
+    source.traverse(o=>{if(o.isMesh)o.visible=false});
+   }
+   const proxy=proxies.get(kind);proxy.visible=true;
+   if(kind==='gun')proxy.rotation.x=-Math.PI/2*(1-(u.pistolBlend||0));
+  }
+ }
+ model.add(visual);
+ const update=visual.updateMatrixWorld;
+ visual.updateMatrixWorld=function(force){sync();return update.call(this,force)};
+ sync();
+ u.humanGameCanonicalRig=visual;
+ u.humanGameCanonicalJoints=j;
+ u.humanGameV17='player';
+ u.humanGameV17NeckMatched=true;
+ u.humanGameV17PreservedRig=true;
+ u.humanGameV17Counts={removed:old.length,added:meshes.length};
+ return model;
+}
+
 export function createHumanGameRuntimeV17(){
  let suppressed=0;
  const runtime={
@@ -81,6 +155,7 @@ export function createHumanGameRuntimeV17(){
    if(HUMAN_VERSION!==GAME_HUMAN_SKIN_VERSION)throw Error('La pell humana i el laboratori no coincideixen');
    const u=model.userData,required=['ll','lr','lkl','lkr','al','ar','ael','aer','head','boots'];
    if(required.some(key=>!u[key])||u.boots.length!==2)throw Error('Rig de joc incompatible amb HUMANS V17');
+   if(role==='player'&&u.upperBody&&u.lowerBody)return installCanonicalPlayer(T,model);
    model.updateWorldMatrix(true,true);
    const v=p=>model.worldToLocal(p.getWorldPosition(new T.Vector3()));
    const hipY=(v(u.ll).y+v(u.lr).y)/2;
