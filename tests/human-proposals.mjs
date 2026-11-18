@@ -519,7 +519,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
    const dorsal=hand.localToWorld(new T.Vector3(0,-.039,-.02));assert(sign*(dorsal.x-origin.x)>.015*wscale,'Dors cap enfora');
    // La forma de la mà és constant encara que el braç caigui en diagonal.
    const bounds=new T.Box3().setFromBufferAttribute(skin.geometry.attributes.position),size=bounds.getSize(new T.Vector3());
-   assert(size.z>size.x*1.45&&size.y>size.z,'Geometria anatòmica de la mà en eixos locals');
+   assert(size.x>size.z*1.45&&size.y>size.x,'Palmell ample i dits allargats en els eixos locals de la mà');
    // Closed, connected skin: every indexed edge belongs to exactly two
    // triangles. Four fingertip contours share the same skin as the dorsum.
    const idx=skin.geometry.index,edges=new Map(),used=new Set();
