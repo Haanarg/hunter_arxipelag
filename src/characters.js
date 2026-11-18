@@ -362,6 +362,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     const P=palette.player,player=window.HUNTER_PLAYER_MODEL.create(THREE,{unitScale:1.2,palette,headVariant:'compactD',articulated:true}),u=player.userData;
     u.ph=0;u.breath=0;u.firePose=0;u.meleePose=0;u.knifeAttackDuration=PLAYER_KNIFE_ATTACK_SECONDS;
     u.pistolAimTime=0;u.pistolShotAge=10;u.pistolBlend=0;
+     u.previousFootHeading=null;u.turnFootMotion=0;u.turnFootPhase=0;
     // La direcció del tret i la pose visual comparteixen l'autoaim.
     u.visualAimDirection=null; // Els jugadors remots mantenen el rumb propi.
     u.visualAimTargetLocked=false; // L'arma apunta també abans del primer tret.
@@ -545,6 +546,14 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // Un blend propi preserva una transició suau entre braça i crol.
     u.crawlBlend=(u.crawlBlend||0)+((swimming&&running&&forward>.08&&move>.08&&!inVehicle?1:0)-(u.crawlBlend||0))*(1-Math.exp(-9*dt));
     const run=u.runBlend,crawl=u.crawlBlend,crouch=u.crouchBlend;
+     // Reajust dels peus quan el jugador gira sense caminar.
+     const yaw=player.rotation.y,previous=u.previousFootHeading;
+     const delta=previous===null?0:Math.atan2(Math.sin(yaw-previous),Math.cos(yaw-previous));
+     u.previousFootHeading=yaw;
+     const turnGoal=move<.08&&!inVehicle&&!swimming&&!airborne&&!parachuting?
+       Math.min(1,Math.abs(delta)/Math.max(dt,.001)/2.0):0;
+     u.turnFootMotion+=(turnGoal-u.turnFootMotion)*(1-Math.exp(-12*dt));
+     u.turnFootPhase+=Math.abs(delta)*5.5;
     // Els malucs i el tronc baixen junts. La flexió de genolls manté
     // les botes prop del terra i evita reduir l'escala de tot el model.
     u.lowerBody.position.y+=(u.hipHeight-.72*crouch-u.lowerBody.position.y)*k;
@@ -664,7 +673,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // El cap compensa la inclinació del tronc i continua mirant de
     // front, també durant les transicions d'entrada i sortida de cursa.
     tx(u.head,-u.upperBody.rotation.x,k);
-    u.head.rotation.y+=(-u.upperBody.rotation.y-u.head.rotation.y)*k;
+    // El cap acompanya l'apuntat del tors, no el rumb dels peus.
+     u.head.rotation.y+=(0-u.head.rotation.y)*k;
     // Quan s'espatlla el fusell d'assalt a la dreta, el cap s'hi acosta
     // amb una inclinació lateral de 10°. Tornada gradual a neutre.
     const assaultHeadTilt=assaultRifleEquipped&&!inVehicle?-Math.PI/18:0;
@@ -674,8 +684,10 @@ window.HUNTER_CHARACTERS=Object.freeze({
     const hip=(.62+.50*run)*(1-.6*crouch)*walk,
           kneeL=-(.08+Math.max(0,-Math.sin(ph)*dir)*(.92+.38*run)*move),
           kneeR=-(.08+Math.max(0,Math.sin(ph)*dir)*(.92+.38*run)*move);
-    tx(u.ll,hip+1.0*crouch);tx(u.lr,-hip+1.0*crouch);
-    tx(u.lkl,kneeL-1.5*crouch);tx(u.lkr,kneeR-1.5*crouch);
+    const turnStep=Math.sin(u.turnFootPhase)*u.turnFootMotion;
+     tx(u.ll,hip+1.0*crouch+.20*turnStep);tx(u.lr,-hip+1.0*crouch-.20*turnStep);
+    tx(u.lkl,kneeL-1.5*crouch-.22*Math.max(0,turnStep));
+     tx(u.lkr,kneeR-1.5*crouch-.22*Math.max(0,-turnStep));
     tz(u.ll,-(.025+.02*run)*walk2);tz(u.lr,(.025+.02*run)*walk2);
     // En strafe pur el tors roman vertical: giren només cintura i cames.
     player.rotation.z+=(-(.035+.015*run)*walk*(Math.abs(forward)>.04?1:0)-player.rotation.z)*k;
@@ -756,7 +768,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
         tx(u.ar,chargePose.shoulderX);tz(u.ar,chargePose.shoulderZ);
         tx(u.aer,chargePose.elbowX);tz(u.aer,chargePose.elbowZ);
       }
-      tx(u.al,-.08);tz(u.al,-.12);tx(u.ael,.18);tz(u.ael,-.04);
+      // Contrapès de la fotografia: braç esquerre enrere i cap enfora,
+       // oposat a la meitat superior del braç dret que llança.
+       const counter=throwing?Math.min(1,Math.max(0,p/.40)):Math.min(1,grenadeChargePower);
+       tx(u.al,-.68-.30*counter);tz(u.al,-.50-.17*counter);
+       tx(u.ael,.40+.24*counter);tz(u.ael,-.09);
     }else if(bazooka){
       // No fixam els braços en una posició estàtica mentre gira
       // el llançacoets: el gallet i el suport es mouen amb el canó.
@@ -811,11 +827,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
       const armSwing=(.46+.46*run)*walk;
       // L'adaptador V18 compensa l'obertura basal de 0,12 rad de
       // l'espatlla antiga: hi sumam l'obertura anatòmica real.
-      const idleSpread=.28-.12*move;
+      const idleSpread=.14-.06*move;
       tx(u.al,-armSwing+.018*breath+.045*(1-move),restArmRate);
       // Ajupit, la pistola segueix l'avantbraç orientat endavant.
       tx(u.ar,armSwing-.018*breath+.06*(1-move)+.40*crouch,restArmRate);
-      tz(u.al,-.12-idleSpread-.035*run,restArmRate);tz(u.ar,.12+idleSpread+.035*run,restArmRate);
+      tz(u.al,-.06-idleSpread-.018*run,restArmRate);tz(u.ar,.06+idleSpread+.018*run,restArmRate);
       tz(u.ael,-.04+.075*(1-move),restArmRate);tz(u.aer,.04-.065*(1-move),restArmRate);
       const bendL=.12+.60*run+Math.max(0,Math.cos(ph))*.2*move,
             bendR=.15+.60*run+.11*crouch+Math.max(0,-Math.cos(ph))*.2*move;
