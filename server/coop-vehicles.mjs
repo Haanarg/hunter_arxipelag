@@ -1,4 +1,4 @@
-import {vehicleSpecs,vehicleSeatCount} from '../src/vehicle-specs.mjs';
+import {vehicleSpecs,vehicleSeatCount,vehicleCollisionScale,vehicleCollisionFootprint,vehicleCollisionRadius} from '../src/vehicle-specs.mjs';
 import {turretControllerId} from '../src/vehicle-turret-core.mjs';
 import {palmImpact,rockImpact} from '../src/vehicle-environment-core.mjs';
 import {firstVehicleContact,vehicleContactDamage} from './coop-vehicle-contacts.mjs';
@@ -19,7 +19,14 @@ export function vehicleClear(position,world,bounds,previous=position){
 }
 export function createRelayVehicles({meta,record={},world,water,players,active,onBoard=()=>{},geometry=()=>({walls:[]}),onImpact=()=>{},onTravel=()=>{},onBarrier=()=>false,onPalm=()=>false,hasParachute=()=>false}){
  const vehicles=structuredClone(record.vehicles||meta.vehicles||[]),results=structuredClone(record.results||[]),inputs=new Map(),enemyInputs=new Map();
- for(const v of vehicles)v.life??=combatBalance.vehicles[v.t]??1;
+ for(const v of vehicles){
+  v.life??=combatBalance.vehicles[v.t]??1;
+  // El GAZ actual és l'únic model del tipus cotxe en mode natiu.
+  // Conservam el marcador a l'estat del servidor (sense Object3D).
+  if(meta.mode==='native'&&v.t==='cotxe'){
+    v.gazModel='Tigr-M';v.gazVisualScale=1.25;
+  }
+ }
  const mounted=id=>vehicles.find(v=>!v.destroyed&&v.seats.includes(id));
  // Ocupació enemiga separada dels ID i inputs dels jugadors.
  function enemyReserve(vehicleId,unitId,seat){
@@ -96,7 +103,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
      // de consultar el fons de la mar com si fos un moll estàtic.
      const f=vehicles.find(a=>a.id===v.carrierId&&!a.destroyed),
        scale=vehicleSpecs.scales[v.t]||1,
-       half=(vehicleSpecs.hitboxes[v.t]?.[0]||2)*scale/2;
+       half=vehicleCollisionFootprint(v,vehicleSpecs.hitboxes[v.t]||[2,4],scale).w/2;
      if(f)for(const side of [1,-1])for(const back of [0,-2,2]){
        const lateral=half+1.35,
          x=v.x+Math.cos(v.hd)*side*lateral-Math.sin(v.hd)*back,
@@ -135,7 +142,8 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
    // Sortida segura: comprovar el lloc exterior al casc, no un recorregut
    // artificial des del CENTRE del vehicle, que travessa el seu propi volum.
    const scale=vehicleSpecs.scales[v.t]||1,box=vehicleSpecs.hitboxes[v.t]||[2,4],
-     halfWidth=box[0]*scale/2,halfLength=box[1]*scale/2,
+     footprint=vehicleCollisionFootprint(v,box,scale),
+      halfWidth=footprint.w/2,halfLength=footprint.d/2,
      native=meta.mode==='native',waterType=['w','wl'].includes(vehicleDynamics.types[v.t].m);
    for(const side of [1,-1])for(const back of [0,-1.7,1.7,-3.4,3.4]){
      const offset=(native?halfWidth+1.65:Math.max(2.6,halfWidth+1)),
@@ -167,7 +175,8 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
     if(!walkClear(door,target))continue;
     if(vehicles.some(other=>other!==v&&!other.destroyed&&
          Math.abs(other.y-target.y)<3&&
-         distance(other,target)<Math.max(1.6,(vehicleSpecs.hitboxes[other.t]?.[0]||2)*(vehicleSpecs.scales[other.t]||1)/2+.75)))continue;
+         distance(other,target)<Math.max(1.6,vehicleCollisionFootprint(other,
+            vehicleSpecs.hitboxes[other.t]||[2,4],vehicleSpecs.scales[other.t]||1).w/2+.75)))continue;
      return target;
    }
    return null;
@@ -186,7 +195,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
       if(exit.fall&&driver)v.crashing=true;
       ok=true;code='EXITED';}
    }else if(mounted(actorId))code='ALREADY_SEATED';
-   else if(distance(p,v)>(meta.mode==='native'?(vehicleSpecs.radii[v.t]||0)*(vehicleSpecs.scales[v.t]||1)+5:3.5)||Math.abs(p.y-v.y)>(['proving','world','native'].includes(meta.mode)?5:1.2))code='TOO_FAR';
+   else if(distance(p,v)>(meta.mode==='native'?vehicleCollisionRadius(v,vehicleSpecs.radii[v.t]||0,vehicleSpecs.scales[v.t]||1)+5:3.5)||Math.abs(p.y-v.y)>(['proving','world','native'].includes(meta.mode)?5:1.2))code='TOO_FAR';
    else if(!walkClear(p,v))code='BLOCKED';
    else if(Math.abs(v.v)>.2)code='MOVING';else if(v.seats.every(Boolean))code='FULL';
    else{v.seats[v.seats.indexOf(null)]=actorId;inputs.delete(actorId);onBoard(actorId);ok=true;code='ENTERED';}
@@ -332,7 +341,8 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
  }
  const live=()=>vehicles.filter(v=>!v.destroyed);
  // Existing individual sphere contact/hull falloff, adapted to the 3.2 m relay model.
- const hullRadius=v=>v.hullRadius??Math.max(1.6,(vehicleSpecs.radii[v.t]||1.6)*(vehicleSpecs.scales[v.t]||1)*.7);
+ const hullRadius=v=>v.hullRadius??Math.max(1.6,
+   vehicleCollisionRadius(v,vehicleSpecs.radii[v.t]||1.6,vehicleSpecs.scales[v.t]||1)*.7);
  return {mounted,position,command,step,damage,live,enemyReserve,enemyRelease,enemyPromote,enemyAccept,contact:(from,to,v)=>vehicleHullSegmentT(from,to,v,v.y,hullRadius(v)),blastDistance:(v,at)=>vehicleHullDistance(v,v.y,hullRadius(v),at.x,at.y,at.z),accept(id,input,tick){if(mounted(id))inputs.set(id,{input:{...input},tick});},
   turretInput(actorId,tick){
    const v=mounted(actorId);

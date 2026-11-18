@@ -18,8 +18,11 @@ export const vehicleSeatCount=type=>vehicleSpecs.seatCounts[type]??2;
 // Només el GAZ Tigr-M requereix l'escala física addicional de la
 // carrosseria ampliada. Els altres cotxes i l'utilitari no canvien.
 export function vehicleCollisionScale(v){
-  if(v?.t!=='cotxe'||v.o?.userData?.gazModel!=='Tigr-M')return 1;
-  const scale=v.o.userData.gazVisualScale;
+  if(v?.t!=='cotxe')return 1;
+  const meta=v.o?.userData?.gazModel==='Tigr-M'?v.o.userData:
+    v.gazModel==='Tigr-M'?v:null;
+  if(!meta)return 1;
+  const scale=meta.gazVisualScale;
   return Number.isFinite(scale)&&scale>0?scale:1;
 }
 export function vehicleCollisionFootprint(v,hitbox,scale){

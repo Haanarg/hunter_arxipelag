@@ -1,10 +1,14 @@
 import {palmCrushRadius,rockVerticalBand} from './vehicle-environment-core.mjs';
 import {fenceVehicleContact,obbOverlap,relativeVehicleImpactSpeed,impactDamage} from './combat-rules.mjs';
-import {vehicleSpecs} from './vehicle-specs.mjs';
+import {vehicleSpecs,vehicleCollisionScale,vehicleCollisionFootprint,vehicleCollisionRadius} from './vehicle-specs.mjs';
 import {vehicleDynamics} from './vehicle-dynamics-core.mjs';
 import {ferryPedestrianAt,ferryForVehicle,ferryCabinBox,ferrySurfaceY,ferryLocal,ferryCabinPush} from './ferry-deck-core.mjs';
-export function contactBox(v,proving=true){const size=vehicleSpecs.hitboxes[v.t],scale=vehicleSpecs.scales[v.t];return {x:v.x,z:v.z,hd:v.hd,w:proving?size[0]*scale:1.8,d:proving?size[1]*scale:3.2};}
-function top(v,proving){return v.y+(proving?(vehicleDynamics.types[v.t].m==='a'?7:['tanc','camio'].includes(v.t)?5.6:4.2)*(vehicleSpecs.scales[v.t]||1):3);}
+export function contactBox(v,proving=true){
+ const size=vehicleSpecs.hitboxes[v.t],scale=vehicleSpecs.scales[v.t];
+ const fp=proving?vehicleCollisionFootprint(v,size,scale):{w:1.8,d:3.2};
+ return {x:v.x,z:v.z,hd:v.hd,w:fp.w,d:fp.d};
+}
+function top(v,proving){return v.y+(proving?(vehicleDynamics.types[v.t].m==='a'?7:['tanc','camio'].includes(v.t)?5.6:4.2)*(vehicleSpecs.scales[v.t]||1)*vehicleCollisionScale(v):3);}
 // Sweep translation and rotation, so fast vehicles cannot jump a thin wall.
 export function firstVehicleContact(v,from,others,geometry,proving=true,world=null){
  const box=contactBox(v,proving),angle=Math.atan2(Math.sin(v.hd-from.hd),Math.cos(v.hd-from.hd)),travel=Math.hypot(v.x-from.x,v.z-from.z)+Math.abs(angle)*Math.hypot(box.w,box.d)/2;
@@ -21,7 +25,8 @@ export function firstVehicleContact(v,from,others,geometry,proving=true,world=nu
   for(const other of others)if(other.id!==v.id&&!other.destroyed&&
     !(other.t==='ferry'&&ferry?.id===other.id)&&
     !(v.t==='ferry'&&other.carrierId===v.id)&&
-    Math.abs(p.y-other.y)<Math.max(2.2,Math.min(vehicleSpecs.radii[v.t],vehicleSpecs.radii[other.t]))*.55&&
+    Math.abs(p.y-other.y)<Math.max(2.2,Math.min(vehicleCollisionRadius(v,vehicleSpecs.radii[v.t],1),
+      vehicleCollisionRadius(other,vehicleSpecs.radii[other.t],1))) *.55&&
     obbOverlap(footprint,contactBox(other,proving)))
       return {kind:'vehicle',target:other,safe};
   if(world?.vegetationNear&&!ferry){
@@ -49,8 +54,8 @@ export function resolveCoopPlayerVehicleContact(previous,candidate,vehicles,acto
      ({x,z}=ferryCabinPush(v,x,z,radius));continue;
    }
   const scale=vehicleSpecs.scales[v.t]||1,box=vehicleSpecs.hitboxes[v.t];
-  if(!box||Math.abs((previous.y??0)-v.y)>Math.max(2.8,scale*2.2))continue;
-  const hw=box[0]*scale/2,hd=box[1]*scale/2;
+  if(!box||Math.abs((previous.y??0)-v.y)>Math.max(2.8,scale*2.2*vehicleCollisionScale(v)))continue;
+  const size=vehicleCollisionFootprint(v,box,scale),hw=size.w/2,hd=size.d/2;
   if(Math.abs(x-v.x)>hw+hd+radius||Math.abs(z-v.z)>hw+hd+radius)continue;
   const c=Math.cos(v.hd),sn=Math.sin(v.hd),dx=x-v.x,dz=z-v.z;
   let lx=dx*c-dz*sn,lz=dx*sn+dz*c;

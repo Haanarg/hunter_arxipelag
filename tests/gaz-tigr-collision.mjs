@@ -13,12 +13,14 @@ const factory=vehicleModels.createFactory(THREE,{
 });
 const runtimeCar=factory('cotxe');
 const gaz={t:'cotxe',o:runtimeCar},generic={t:'cotxe',o:{userData:{}}};
+const relayGaz={t:'cotxe',gazModel:'Tigr-M',gazVisualScale:1.25};
 assert.equal(runtimeCar.userData.gazModel,'Tigr-M');
 assert.equal(runtimeCar.userData.gazVisualScale,1.25,'L’objecte vehicle del joc rep l’escala visual');
 const dims=v=>vehicleCollisionFootprint(v,vehicleSpecs.hitboxes.cotxe,vehicleSpecs.scales.cotxe);
 const before=dims(generic),after=dims(gaz),factor=1.25;
 assert.equal(gazRoot.userData.gazVisualScale,factor);
 assert.equal(vehicleCollisionScale(gaz),factor);
+assert.equal(vehicleCollisionScale(relayGaz),factor,'GAZ COOP sense malla Object3D');
 assert.equal(vehicleCollisionScale(generic),1);
 assert.equal(vehicleCollisionScale({t:'cotxe_civil',o:gazRoot}),1);
 assert(Math.abs(after.w/before.w-factor)<1e-9);
@@ -29,6 +31,9 @@ const radius=v=>vehicleCollisionRadius(v,vehicleSpecs.radii.cotxe,vehicleSpecs.s
 assert.equal(radius(gaz),3.8*1.3*1.25);
 assert.equal(radius(generic),3.8*1.3);
 assert.equal(vehicleCollisionScale({t:'cotxe',o:{userData:{gazModel:'Tigr-M',gazVisualScale:NaN}}}),1);
+const {contactBox}=await import('../src/coop-vehicle-contacts-core.mjs');
+const coopBox=contactBox({x:0,z:0,hd:0,...relayGaz});
+assert.equal(coopBox.w,after.w);assert.equal(coopBox.d,after.d);
 const game=readFileSync(new URL('../src/game-core.js',import.meta.url),'utf8');
 assert(game.includes('vehicleCollisionFootprint(v,hb,sc)'), 'La caixa OBB ha d’emprar la nova escala');
 assert(game.includes('vehicleCollisionRadius('),'El radi de cerca també ha de créixer');
