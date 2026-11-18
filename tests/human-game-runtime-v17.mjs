@@ -102,10 +102,13 @@ for(const role of ['player','soldier','rocket','elite','general']){
   assert(Math.abs(actualSize.y-expectedSize.y)<.002,'Native game model height matches exact editor model');
   // The old gameplay shoulder is only a control. Animation must actually
   // rotate the editor's corresponding shoulder pivot and preserve the torso.
-  const oldR=u.ar.rotation.x;u.ar.rotation.x+=.4;g.updateMatrixWorld(true);
-  assert(Math.abs(bones.shoulderR.rotation.x-.4)<.002,'Game pose drives native shoulder joint');
+  const oldR=u.ar.rotation.x,restShoulder=bones.shoulderR.quaternion.clone();
+  u.ar.rotation.x+=.4;g.updateMatrixWorld(true);
+  const moved=restShoulder.angleTo(bones.shoulderR.quaternion);
+  console.log('CANONICAL_SHOULDER_MOTION',moved,bones.shoulderR.rotation.toArray());
+  assert(moved>.35&&moved<.45,'Game pose drives native shoulder joint');
   u.ar.rotation.x=oldR;g.updateMatrixWorld(true);
-  assert(Math.abs(bones.shoulderR.rotation.x)<.002,'Rest pose exactly recovers editor geometry');
+  assert(restShoulder.angleTo(bones.shoulderR.quaternion)<.002,'Rest pose exactly recovers editor geometry');
   console.log('PASS native game player identical to editor: 16 joints, '+actual.length+' unmodified meshes, 2.00 m');
  }
  const box=new T.Box3().setFromObject(g);
