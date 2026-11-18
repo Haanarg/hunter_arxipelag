@@ -2939,7 +2939,9 @@ window.HUNTER_RIDER=Object.freeze({
       // Escalam el mateix model de jugador i preservam l'orientació
       // tridimensional del xassís en girs i pendents.
       // Pilot de la moto a escala original, com a la versió 0.6.187.
-      const riderScale=car?.82:v.t==='hover'?.63:1;
+      const gazTigr=car&&v.o?.userData?.gazModel==='Tigr-M';
+       // GAZ més petit: sense modificar la postura, els seients ni el rig.
+       const riderScale=gazTigr?0.66:car?0.82:v.t==='hover'?0.63:1;
       g.scale.setScalar(riderScale);
       g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);
       const far=Number.isFinite(viewDistance)&&viewDistance>
