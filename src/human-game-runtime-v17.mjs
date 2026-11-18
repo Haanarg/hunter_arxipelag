@@ -111,7 +111,10 @@ function installCanonicalPlayer(T,model){
   ['grenade',.38,-.09,-.05]
  ],proxies=new Map();
  const weaponWorld=new T.Quaternion(),handWorld=new T.Quaternion(),
-  cutterGrip=new T.Vector3(),runAxis=new T.Vector3(1,0,0),runTarget=new T.Quaternion();
+  cutterGrip=new T.Vector3(),runAxis=new T.Vector3(1,0,0),runTarget=new T.Quaternion(),
+  gunForward=new T.Vector3(0,0,-1),gunAxis=new T.Vector3(),
+  gunElbow=new T.Vector3(),gunWrist=new T.Vector3(),gunAim=new T.Vector3(),
+  gunCarryWorld=new T.Quaternion();
  function sync(){
   // Gameplay rescales its actor ROOT by 2/3; compensate it AND give the
   // unchanged native editor skin another third of size, uniformly. The
@@ -157,9 +160,31 @@ function installCanonicalPlayer(T,model){
    const proxy=proxies.get(kind);proxy.visible=true;
    // El canó visible segueix el quaternion de l'arma real i no un angle fix.
    source.getWorldQuaternion(weaponWorld);
+   if(kind==='gun'){
+    const blend=Math.max(0,Math.min(1,u.pistolBlend||0));
+    // La pistola sense apuntar segueix la línia de l'avantbraç
+    // canònic, també mentre camina i està ajupit.
+    j.elbowR.getWorldPosition(gunElbow);
+    j.wristR.getWorldPosition(gunWrist);
+    gunAxis.copy(gunWrist).sub(gunElbow);
+    if(gunAxis.lengthSq()>.00001){
+     gunCarryWorld.setFromUnitVectors(gunForward,gunAxis.normalize());
+     weaponWorld.slerpQuaternions(gunCarryWorld,weaponWorld,blend);
+    }
+   }
    j.wristR.getWorldQuaternion(handWorld);
    proxy.quaternion.copy(handWorld).invert().multiply(weaponWorld);
-   if(kind==='cisalla'){
+   if(kind==='gun'){
+    const blend=Math.max(0,Math.min(1,u.pistolBlend||0));
+    proxy.position.set(0,y,z);
+    if(blend>.001){
+     // Centram el model al davant del pit sense moure els projectils
+     // ni la física, tot suavitzant-ne la transició des del canell.
+     j.spine.localToWorld(gunAim.set(0,.29,-.35));
+     j.wristR.worldToLocal(gunAim);
+     proxy.position.lerp(gunAim,blend);
+    }
+   }else if(kind==='cisalla'){
     // Els mànecs tenen el punt de presa a y=-.82, no a les fulles.
     cutterGrip.set(0,-.82*scale,0).applyQuaternion(proxy.quaternion);
     proxy.position.copy(cutterGrip).negate();proxy.position.y-=.045;
