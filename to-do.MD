@@ -1,3 +1,11 @@
+**2026-11-18 · Rig humà, armes, granades i cursa:**
+- [x] Braços en repòs i caminant lleugerament separats del cos (editor i animacions del joc).
+- [x] Armes canòniques amb el quaternion de l'arma real, sense pitch imposat (pistola, rifles, bazuca).
+- [x] Cisalla traslladada al palmell pels mànecs; la granada neix de la mà dreta, també en la trajectòria prevista.
+- [x] La direcció d'autoapuntat obsoleta deixa d'orientar el tors quan no hi ha arma apuntant.
+- [x] Carrera: angles de malucs/genolls/turmells de l'editor, eliminat rebot vertical artificial i ajust de contacte a les soles visibles.
+- [ ] Executar proves del rig i revisar visualment armes, corredors, sol i càrrega cooperativa en dispositius.
+
 **2026-11-18 · Escales visuals contextuals del protagonista i del GAZ:**
 - [x] Avatar a peu un terç més gran (factor 4/3) amb rig i geometria de l'editor, sense canviar física, col·lisions ni animacions.
 - [x] Ocupants del GAZ Tigr-M a escala 0,66 en lloc de 0,82, sense canviar la postura o els seients; altres cotxes conserven l'escala.

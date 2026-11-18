@@ -775,7 +775,12 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
    if(!shoulderAim)weapon.position.set(0,-.055,model.userData.humanProposal.role==='player'?-.09:-.015);
   }
   for(const n of Object.values(j)){n.rotation.set(0,0,0);n.position.set(0,0,0)}
-  if(mode==='rest'){model.updateMatrixWorld(true);orientHumanEquippedWeapon(model,weapon,mode,orientation,j);continue}
+  if(mode==='rest'){
+    // Braços relaxats però una mica separats del tronc, sense canviar la malla.
+    if(j.shoulderL)j.shoulderL.rotation.z=-.12;
+    if(j.shoulderR)j.shoulderR.rotation.z=.12;
+    model.updateMatrixWorld(true);orientHumanEquippedWeapon(model,weapon,mode,orientation,j);continue
+   }
   const walk=mode==='walk'||mode==='run',blend=walk?clamp01(locomotion?.blend??(mode==='run'?1:0)):0;
   const cyclePhase=walk?(locomotion?.phase??time*gaitRate(blend)):0,phase=cyclePhase*Math.PI*2,breath=Math.sin(time*1.8);
   // Facing -Z, negative spine X bends the shoulders FORWARD.
@@ -784,7 +789,7 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
   for(const [i,side]of ['L','R'].entries()){
    const sign=i?-1:1,a=phase+i*Math.PI,gait=walk?sampleHumanGait(cyclePhase+i*.5,blend):{hip:0,knee:0,ankle:0};
    set('hip'+side,gait.hip);set('knee'+side,gait.knee);set('ankle'+side,gait.ankle);
-   set('shoulder'+side,walk?-gait.hip*mix(.72,.86,blend):.025*breath,0,-sign*.06);
+   set('shoulder'+side,walk?-gait.hip*mix(.72,.86,blend):.025*breath,0,-sign*.12);
    set('elbow'+side,walk?mix(.18+.16*Math.max(0,Math.sin(a)),1.15+.17*Math.sin(a),blend):.10);
    set('wrist'+side,0,0,sign*.035);
   }
