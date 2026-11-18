@@ -250,6 +250,7 @@ export function createHumanGameRuntimeV17(){
  let suppressed=0;
  const runtime={
   version:GAME_HUMAN_SKIN_VERSION,
+  footVisualHeight:2*FOOT_PLAYER_VISUAL_FACTOR,
   suppress(callback){suppressed++;try{return callback()}finally{suppressed--}},
   install(T,model,{role='player'}={}){
    if(suppressed)return model;
