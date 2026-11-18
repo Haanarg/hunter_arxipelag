@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import * as T from '../vendor/three-r186.module.mjs';
 import {HUMAN_PROFILES,HUMAN_CATALOG,HUMAN_STYLES,HUMAN_PLAYER_GREEN} from '../src/human-model-catalog.mjs';
 import {palette} from '../src/palette-core.mjs';
-import {createHumanProposal,setHumanPreviewWeapon,HUMAN_PREVIEW_WEAPONS,poseHumanProposal,HUMAN_VERSION,HUMAN_HEAD_ADVANCE,HUMAN_NECK_FOLLOW,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait,HUMAN_BOOT_SPEC,HUMAN_PLAYER_THIGH_FACTOR,HUMAN_SHOULDER_V16} from '../src/human-proposals.mjs';
+import {createHumanProposal,setHumanPreviewWeapon,HUMAN_PREVIEW_WEAPONS,poseHumanProposal,HUMAN_VERSION,HUMAN_HEAD_ADVANCE,HUMAN_NECK_FOLLOW,measureHumanAnatomy,humanChestSurfaceZ,sampleHumanGait,createHumanGaitClock,advanceHumanGait,HUMAN_BOOT_SPEC,HUMAN_PLAYER_THIGH_FACTOR,HUMAN_SHOULDER_V16,HUMAN_PLAYER_TROUSERS_GREEN,HUMAN_GROIN_V17} from '../src/human-proposals.mjs';
 import {createCurrentHuman} from '../src/human-current-models.mjs';
 globalThis.window=globalThis;
 assert.equal(HUMAN_CATALOG.length,7);assert(HUMAN_CATALOG.every(c=>!c.validated&&c.kind==='huma'&&c.options.length===2));
@@ -63,8 +63,37 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
    const pos=thigh.geometry.attributes.position;
    let maxX=0;for(let k=0;k<pos.count;k++)maxX=Math.max(maxX,Math.abs(pos.getX(k)));
    assert(Math.abs(maxX-expectedWidth)<.00001,'Amplada real de cuixa '+role+style);
-   const target=role==='player'?HUMAN_PLAYER_GREEN:HUMAN_PROFILES[role].uniform;
+   const target=role==='player'?HUMAN_PLAYER_TROUSERS_GREEN:HUMAN_PROFILES[role].uniform;
    assert.equal(thigh.material.color.getHex(),role==='farmer'?0x746c59:target,'Color de cuixa '+role+style);
+  }
+  // V17: the geometry (not just the skeleton) must bridge waist and
+  // both upper legs, while preserving the original groin guide height.
+  const hipShell=meshes.find(m=>m.userData.humanGroinV17);
+  assert(hipShell&&hipShell.userData.humanLandmark==='pelvis','Pelvis esculpida V17');
+  const hPos=hipShell.geometry.attributes.position,segments=HUMAN_STYLES[style].segments;
+  assert.equal(hPos.count,segments*6,'Sis seccions de maluc suaus');
+  assert(Math.abs(hPos.getY(0)-HUMAN_GROIN_V17.low)<1e-6,'Cota del cavall intacta');
+  assert(hPos.getY(Math.round(segments/4))>HUMAN_GROIN_V17.low+.019,'Doble arc de l’engonal');
+  assert(Math.abs(hPos.getX(3*segments)-HUMAN_STYLES[style].width*(role==='player'?1.18:1)*.176)<1e-5,'Perfil de cintura ampli');
+  const hipBox=new T.Box3().setFromObject(hipShell,true);
+  for(const side of ['L','R']){
+   const thigh=thighs.find(m=>m.parent===joints['hip'+side]);
+   assert(thigh,'Cuixa '+side+' connectada a la pelvis');
+   const pos=thigh.geometry.attributes.position;
+   assert(Math.abs(pos.getY(0)-HUMAN_GROIN_V17.thighTop)<1e-6,'Cuixa enfonsada al maluc');
+   assert(hipBox.intersectsBox(new T.Box3().setFromObject(thigh,true)),'Teixit de maluc i camal en contacte '+side);
+  }
+  assert(hipShell.material.color.getHex()===(role==='player'?HUMAN_PLAYER_TROUSERS_GREEN:role==='farmer'?0x746c59:HUMAN_PROFILES[role].uniform),'Color de pelvis coherent');
+  const fly=meshes.filter(m=>m.userData.humanPantsFly);
+  assert.equal(fly.length,role==='player'?1:0,'Bragueta només del protagonista');
+  if(role==='player'){
+   assert(HUMAN_PLAYER_TROUSERS_GREEN!==HUMAN_PLAYER_GREEN,'Jaqueta i pantalons diferenciats');
+   assert(thighs.every(m=>m.userData.humanTrouserLeg&&m.material.color.getHex()===HUMAN_PLAYER_TROUSERS_GREEN));
+   assert(calves.every(m=>m.material.color.getHex()===HUMAN_PLAYER_TROUSERS_GREEN),'Pantalons fins a la bota');
+   for(const [x,y,z]of fly[0].userData.humanPantsFly.anchors){
+    const front=humanChestSurfaceZ([hipShell],x,y,-1);
+    assert(front!==null&&Math.abs(front-z-.005)<.00002,'Costura sobre la tela, sense flotar');
+   }
   }
   // V16: verify both deltoids from the actual vertices. The outermost
   // contour must be notably closer to the body, while the medial surface
@@ -237,7 +266,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   let triangles=0;for(const m of meshes){assert([...m.geometry.attributes.position.array].every(Number.isFinite));assert(m.geometry.userData.labOwned);triangles+=(m.geometry.index?.count??m.geometry.attributes.position.count)/3}
   const bodyMeshes=meshes.filter(m=>!m.userData.humanGameWeaponPart);
   const bodyTriangles=bodyMeshes.reduce((n,m)=>n+(m.geometry.index?.count??m.geometry.attributes.position.count)/3,0);
-  assert(bodyTriangles<13000&&bodyMeshes.length-shoulderMeshes.length<(role==='player'?65:55),'Pressupost de malles conservat excepte els dos deltoides independents V16');
+  assert(bodyTriangles<13000&&bodyMeshes.length-shoulderMeshes.length-fly.length<(role==='player'?65:55),'Pressupost de malles conservat excepte els dos deltoides independents V16');
   const pads=meshes.filter(m=>m.userData.humanKneePad);
   assert.equal(pads.length,['player','soldier','rocket','elite'].includes(role)?2:0,'Genolleres ovalades als soldats i al protagonista');
   for(const pad of pads){
@@ -457,7 +486,7 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
 }
 assert.equal(count,14);assert.equal(choices.size,14);
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8'),html=readFileSync(new URL('../proves.html',import.meta.url),'utf8');
-assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V16'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
+assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V17'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.human?humanList:list).append(button)'));

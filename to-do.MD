@@ -1,3 +1,9 @@
+**2026-11-18 · HUMANS V17 · engonals i pantalons:**
+- [x] En els 14 candidats A/B: pelvis reformada en sis seccions i lleu arc als dos laterals de l'engonal, amb la part inferior a la mateixa alçada anatòmica que V16; arrencada de les cuixes integrada dins el volum de la pelvis amb perfils progressius, sense moure pivots ni genolls.
+- [x] Protagonista A/B: pantalons verds lleugerament més foscos (#50aa49) que la jaqueta (#60c754), amb continuïtat cromàtica de la pelvis fins al panxell; costura frontal prima adherida a la malla real, butxaques i cinturó conservats.
+- [x] Proves de geometria sobre les malles reals: contacte entre pelvis i cuixes, sis seccions, línia del cavall, absència de costura flotant, color del teixit, simetria i preservació de les animacions.
+- [ ] Validació visual a WebGL en postura neutra, caminar, córrer i ajupir-se. Models originals del joc intactes.
+
 **HUMANS V16 · segona verificació:**
 - [x] Ajustada la prova anterior d'amplada que requeria el pivot antic; ara comprova exactament la nova posició V16 i la robustesa del protagonista.
 - [ ] Confirmar pipeline, geometria i publicació.

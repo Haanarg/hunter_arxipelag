@@ -1,7 +1,10 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs?rev=humans-v5';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {createGameWeaponPreview} from './human-weapon-preview.mjs';
-export const HUMAN_VERSION='humans-v16';
+export const HUMAN_VERSION='humans-v17';
+// Pants are a desaturated counterpart of the V15 protagonist jacket.
+export const HUMAN_PLAYER_TROUSERS_GREEN=0x50aa49;
+export const HUMAN_GROIN_V17=Object.freeze({low:-.13,frontRaise:.022,thighTop:.033});
 export const HUMAN_SHOULDER_V16=Object.freeze({pivotWidth:.202,previousPivotWidth:.211,previousDeltoidRadius:.078,medialOffsets:Object.freeze([.034,.025,.016,.008,0])});;
 // Reduce only the protagonist's thigh cross-section; preserve length, hip and knee pivots.
 export const HUMAN_PLAYER_THIGH_FACTOR=.94;
@@ -127,12 +130,57 @@ export function createHumanProposal(T,role,style='a'){
    calfMesh.userData.humanCalfProfile={version:12,length,top,middle,bottom};
    return calfMesh;
   }
+  if(thigh){
+   // The cloth at the groin starts inside the pelvis, then eases from
+   // the trouser seat into the thigh before following the normal leg shape.
+   return loft(g,name,[
+    [HUMAN_GROIN_V17.thighTop,top*.72,top*.78,.003],
+    [-length*.045,top*.92,top*.93,.005],
+    [-length*.17,top,top*.98,.007],
+    [-length*.34,(top+middle)*.54,Math.max(top,middle)*.97,back],
+    [-length*.65,middle,middle*.91,back*.7],
+    [-length-.008,bottom,bottom*.94,0]
+   ],c);
+  }
   return loft(g,name,[[.018,top*.81,top*.84],[-length*.13,top,top*.96],[-length*.34,(top+middle)*.54,Math.max(top,middle)*.97,back],[-length*.65,middle,middle*.91,back*.7],[-length-.008,bottom,bottom*.94,forearm ? -.003 : 0]],c);
  };
  // Broader shoulders and fuller limbs for the protagonist; joint heights stay anatomical.
  const W=s.width*(role==='player'?1.18:1),L=s.limbs*(role==='player'?1.22:1),D=role==='player'?1.16:1,bodySegments=role==='player'?Math.ceil(s.segments/4)*4:s.segments;
  const pelvis=joint(root,'pelvis','Pelvis',[0,BODY.pelvis,0]);
- loft(pelvis,'Malucs i cintura',[[-.13,.132*W,.10],[-.08,.165*W,.13,.014],[-.01,.174*W,.137,.014],[.08,.146*W,.111]],role==='farmer'?0x746c59:p.uniform).userData.humanLandmark='pelvis';
+ const trouserColor=role==='player'?HUMAN_PLAYER_TROUSERS_GREEN:p.uniform;
+ const hipFabric=role==='farmer'?0x746c59:trouserColor;
+ // Six smoothly expanding sections replace the hard-edged hip cylinder.
+ // Preserve its lowest height: the 8-head guides and groin landmark stay fixed.
+ const hipShell=loft(pelvis,'Malucs i cintura',[
+  [HUMAN_GROIN_V17.low,.114*W,.091,.002],
+  [-.108,.138*W,.111,.006],
+  [-.072,.163*W,.127,.010],
+  [-.028,.176*W,.139,.013],
+  [.027,.166*W,.125,.012],
+  [.080,.146*W,.111]
+ ],hipFabric);
+ // A very shallow inverted arch follows each leg opening: higher at the
+ // middle of the crotch, lower at the outer hips. No separate rigid diaper.
+ const hipPositions=hipShell.geometry.attributes.position;
+ for(let i=0;i<s.segments;i++){
+  const theta=i*Math.PI*2/s.segments;
+  hipPositions.setY(i,HUMAN_GROIN_V17.low+HUMAN_GROIN_V17.frontRaise*(1-Math.abs(Math.cos(theta))));
+ }
+ hipPositions.needsUpdate=true;hipShell.geometry.computeVertexNormals();
+ hipShell.userData.humanLandmark='pelvis';
+ hipShell.userData.humanGroinV17={role,segments:s.segments};
+ // The player reads as wearing trousers, not another bare torso:
+ // a distinct fabric shade, real tucked leg tops, and a fitted fly seam.
+ if(role==='player'){
+  const anchors=[[0,.030],[-.003,.008],[-.004,-.028],[.002,-.064],[.011,-.091]].map(([x,y])=>{
+   const z=humanChestSurfaceZ([hipShell],x,y,-1);
+   if(z===null)throw Error('Costura dels pantalons fora de la pelvis');
+   return new T.Vector3(x,y,z-.005);
+  });
+  const fly=mesh(pelvis,'Costura central dels pantalons',
+   new T.TubeGeometry(new T.CatmullRomCurve3(anchors),16,.0025,5,false),0x397c37);
+  fly.userData.humanPantsFly={anchors:anchors.map(v=>v.toArray())};
+ }
  const torso=joint(pelvis,'spine','Tors',[0,BODY.spine,0]);
  const torsoShell=loft(torso,'Tronc anatòmic',[[0,.145*W,.105],[.08,.143*W,.108],[.17,.164*W,.116],[.28,.193*W,.132,.006],[.36,.207*W,.128,.009],[.425,.196*W,.117,.012],[.468,.145*W,.092,.012],[.490,.084*W,.073,.012]].map(([y,x,z,offset=0])=>[y,x,z*D,offset]),p.uniform,bodySegments,role==='player');
  const belt=loft(pelvis,'Cinturó',[[.048,.158*W,.122],[.085,.158*W,.122]],dark);
@@ -215,11 +263,12 @@ export function createHumanProposal(T,role,style='a'){
   // V15: slightly slimmer protagonist thighs (~6% in width and depth).
   // Other roles and the hip/knee positions retain their previous proportions.
   const thighFactor=role==='player'?HUMAN_PLAYER_THIGH_FACTOR:1;
-  const thigh=limb(hip,'Cuixa',BODY.thigh,.104*L*thighFactor,.083*L*thighFactor,.064*L*thighFactor,role==='farmer'?0x746c59:p.uniform);
+  const thigh=limb(hip,'Cuixa',BODY.thigh,.104*L*thighFactor,.083*L*thighFactor,.064*L*thighFactor,role==='farmer'?0x746c59:trouserColor);
   thigh.userData.humanThighFactor=thighFactor;
+  if(role==='player')thigh.userData.humanTrouserLeg=true;
   const knee=joint(hip,'knee'+suffix,'Genoll '+label,[0,-BODY.thigh,0]);
-  oval(knee,'Ròtula',[.067*L,.063,.065*L],[0,0,-.005],p.uniform);
-  limb(knee,'Panxell',BODY.shin,.064*L,.076*L,.029*L,role==='farmer'?0x746c59:p.uniform);
+  oval(knee,'Ròtula',[.067*L,.063,.065*L],[0,0,-.005],trouserColor);
+  limb(knee,'Panxell',BODY.shin,.064*L,.076*L,.029*L,role==='farmer'?0x746c59:trouserColor);
   const ankle=joint(knee,'ankle'+suffix,'Turmell '+label,[0,-BODY.shin,0]);feet.push(ankle);
   // The boot follows the lower shin. The pivot sits at the real instep
   // junction; the heel no longer protrudes far behind the Achilles tendon.
@@ -419,7 +468,7 @@ export function createHumanProposal(T,role,style='a'){
  // remain addressable in the editor and in JSON drafts.
  const merge=g=>{
   for(const child of [...g.children])if(child.isGroup)merge(child);
-  const batches=new Map();for(const m of g.children)if(m.isMesh&&!m.userData.humanLandmark&&!m.userData.humanChestFit&&!m.userData.humanChestSurface&&!m.userData.humanHarnessStrap&&!m.userData.humanChestAntenna&&!m.userData.humanHandSurface&&!m.userData.humanThumb&&!m.userData.humanKneePad&&!m.userData.humanCalfProfile&&!m.userData.humanThighFactor&&!m.userData.humanShoulderV16){if(!batches.has(m.material))batches.set(m.material,[]);batches.get(m.material).push(m)}
+  const batches=new Map();for(const m of g.children)if(m.isMesh&&!m.userData.humanLandmark&&!m.userData.humanChestFit&&!m.userData.humanChestSurface&&!m.userData.humanHarnessStrap&&!m.userData.humanChestAntenna&&!m.userData.humanHandSurface&&!m.userData.humanThumb&&!m.userData.humanKneePad&&!m.userData.humanCalfProfile&&!m.userData.humanThighFactor&&!m.userData.humanShoulderV16&&!m.userData.humanPantsFly){if(!batches.has(m.material))batches.set(m.material,[]);batches.get(m.material).push(m)}
   for(const [material,items]of batches){if(items.length<2)continue;const positions=[],normals=[],names=[];
    for(const m of items){m.updateMatrix();const geo=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();geo.applyMatrix4(m.matrix);positions.push(...geo.attributes.position.array);normals.push(...geo.attributes.normal.array);names.push(m.name);g.remove(m);geo.dispose();m.geometry.dispose()}
    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));geo.userData.labOwned=true;
@@ -428,7 +477,7 @@ export function createHumanProposal(T,role,style='a'){
  };merge(root);
  root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
  root.scale.setScalar(p.height/height);
- root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:16},humanHeight:p.height,labAssemblies:true};
+ root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:17},humanHeight:p.height,labAssemblies:true};
  if(role==='player')setHumanPreviewWeapon(T,root,'pistol');
  return root;
 }
