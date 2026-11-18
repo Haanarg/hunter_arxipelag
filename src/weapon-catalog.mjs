@@ -10,7 +10,7 @@ export const weaponCatalog=Object.freeze(Object.fromEntries(Object.entries({
  knife:{name:'Ganivet',damage:combatBalance.weapons.knife,cooldown:.52},
  cutters:{name:'Cisalla',item:'cutters',cooldown:.52},
  grenade:{name:'Granada',ammo:'grenades',damage:combatBalance.weapons.grenade,splash:16,cooldown:.7},
- c4:{name:'C4',ammo:'c4',damage:combatBalance.weapons.c4,splash:48,cooldown:1},
+ c4:{name:'C4',ammo:'c4',damage:combatBalance.weapons.c4,splash:72,cooldown:1},
  tank:{name:'Canó del tanc',speed:85*HEAVY_SPEED_FACTOR,damage:combatBalance.weapons.tank,splash:8,range:250,cone:ARMORED_AIM.heavy.cone,vertical:ARMORED_AIM.heavy.vertical,cooldown:.9,life:4.4},
  tankette:{name:'Canó de la tanqueta',speed:135,damage:combatBalance.weapons.tankette,range:150,cone:ARMORED_AIM.light.cone,vertical:ARMORED_AIM.light.vertical,cooldown:.16,life:2.2},
  attackCannon:{name:'Canó de l’helicòpter',speed:145,damage:combatBalance.weapons.attackCannon,range:150,cone:.73,vertical:.97,cooldown:.12,life:2.2},
@@ -26,9 +26,10 @@ export function grenadeLaunch(power=0,origin,heading){
  const ratio=Math.max(0,Math.min(1,power)),speed=3.5+(33-3.5)*ratio,fx=-Math.sin(heading),fz=-Math.cos(heading);
  return {x:origin.x+fx*.85,y:origin.y+2.05,z:origin.z+fz*.85,vx:fx*speed,vy:12,vz:fz*speed,t:2.4};
 }
-// Closed armored vehicles and the ferry do not allow throwing grenades.
+// Només des d'habitacles oberts i l'helicòpter utilitari: cap llançament
+// des de cotxes, camions, blindats, ferri o helicòpter de combat.
 export const canThrowGrenadeFromVehicle=vehicle=>
-  !!vehicle&&!['tanc','tanqueta','ferry','heli_combat'].includes(vehicle.t);
+  !!vehicle&&['heli','bici','moto','moto_aquatica','barca_rems','windsurf','llanxa','llanxa_coets','hover'].includes(vehicle.t);
 // Shared vehicle grenade muzzle: outside the hull, above the roof/deck,
 // with the vehicle's current forward and lateral velocity carried into flight.
 // The attack helicopter never carries throwable grenades.
@@ -36,13 +37,14 @@ export function vehicleGrenadeLaunch(vehicle,baseY=vehicle?.y){
  if(!canThrowGrenadeFromVehicle(vehicle))return null;
  const heading=vehicle.hd,forwardX=-Math.sin(heading),forwardZ=-Math.cos(heading),
   rightX=Math.cos(heading),rightZ=-Math.sin(heading),utility=vehicle.t==='heli';
- const radius=vehicle.hullRadius??({ferry:15.5,tanc:5.6,tanqueta:4.5,camio:4.8,heli:2.5}[vehicle.t]??({llanxa:8.25,llanxa_coets:8.6,barca_rems:3.25,hover:4.8,cotxe:3.8,cotxe_civil:3.35}[vehicle.t]??1.6));
- const boat=vehicle.t==='llanxa'||vehicle.t==='llanxa_coets';
- const side=boat?0:utility?2.5:vehicle.t==='ferry'?16:Math.min(9.5,Math.max(1.35,radius+.7)),
-  front=boat?5.1:utility?1.5:1.1,
-  lift=boat?3:utility?2.4:vehicle.t==='ferry'?3.6:['tanc','tanqueta','camio'].includes(vehicle.t)?3.6:2.55,
-  forward=(vehicle.v||0)*.9+(utility?7:9),
-  lateral=(vehicle.strafeV||0)+(boat?0:utility?4.5:6);
+ // El punt de sortida és el marc de finestra / obertura del pilot,
+ // mai el radi exterior de col·lisió (que pot estar molts metres lluny).
+ const boat=vehicle.t==='llanxa'||vehicle.t==='llanxa_coets',rowing=vehicle.t==='barca_rems';
+ const side=utility?1.96:boat?1.3:rowing?.65:vehicle.t==='hover'?1.1:.45,
+  front=utility?.52:boat?1.0:rowing?.3:vehicle.t==='moto_aquatica'?.2:.1,
+  lift=utility?2.02:boat?2.45:rowing?1.1:vehicle.t==='hover'?1.6:1.4,
+  forward=(vehicle.v||0)*.9+(utility?5:7),
+  lateral=(vehicle.strafeV||0)+(utility?2.5:boat?1.5:1.8);
  return {x:vehicle.x+forwardX*front+rightX*side,y:baseY+lift,
   z:vehicle.z+forwardZ*front+rightZ*side,
   vx:forwardX*forward+rightX*lateral,vy:utility?5:10,
