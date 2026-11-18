@@ -109,7 +109,15 @@ export function createHumanGameRuntimeV17(){
    const hs=u.head.scale;
    if(Math.min(Math.abs(hs.x),Math.abs(hs.y),Math.abs(hs.z))<.01)
     throw Error('Escala de pivot de cap no vàlida');
-   const skinHeadScales=[neckScale/hs.x,neckScale/hs.y,neckScale/hs.z];
+   // Source head pivot itself has non-uniform anatomical scaling (notably
+   // 0.95 along Y). Its matrix is canceled when copying joint-local mesh
+   // geometry; restore that scale before compensating the game head pivot.
+   const sourceHeadScale=template.joints.get('head').scale;
+   const skinHeadScales=[
+    neckScale*sourceHeadScale.x/hs.x,
+    neckScale*sourceHeadScale.y/hs.y,
+    neckScale*sourceHeadScale.z/hs.z
+   ];
    const targets={
     pelvis:{parent:pelvis,scales:[base*1.35,base*1.18,base*1.35]},
     spine:{parent:spine,scales:torsoScale},
@@ -132,6 +140,10 @@ export function createHumanGameRuntimeV17(){
    // The originals' pivots, contact markers, and combat weapon groups stay.
    const old=removeOldMeshes(model,keep);
    const added=copySkin(T,template,joint=>targets[joint]);
+   // This changes newly added parent transforms: force the entire hierarchy
+   // up to date immediately. Bounding boxes, renderers and photo-mode
+   // captures must see the same pose from the first frame onwards.
+   model.updateWorldMatrix(true,true);
    model.userData.humanGameV17NeckMatched=true;
    model.userData.humanGameV17=role;
    model.userData.humanGameV17Counts={removed:old.length,added:added.length};
