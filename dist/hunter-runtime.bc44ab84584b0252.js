@@ -4899,7 +4899,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // les botes prop del terra i evita reduir l'escala de tot el model.
     u.lowerBody.position.y+=(u.hipHeight-.72*crouch-u.lowerBody.position.y)*k;
     u.upperBody.position.y+=(u.upperBodyPivotHeight-.72*crouch-u.upperBody.position.y)*k;
-    u.ph+=dt*(swimming?(move?(4.2+3.5*crawl)*move:2.1):(8.4+4.4*run)*(1-.48*crouch)*move);
+    u.ph+=dt*(swimming?(move?(4.2+3.5*crawl)*move:2.1):(8.4+.6*run)*(1-.48*crouch)*move);
     const ph=u.ph,breath=Math.sin(u.breath);
 
     const tx=(joint,target,rate=limbK)=>joint.rotation.x+=(target-joint.rotation.x)*rate;
