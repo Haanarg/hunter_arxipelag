@@ -11,6 +11,8 @@ export const HUMAN_GROIN_V17=Object.freeze({low:-.13,frontRaise:.022,thighTop:.0
 export const HUMAN_SHOULDER_V16=Object.freeze({pivotWidth:.202,previousPivotWidth:.211,previousDeltoidRadius:.078,medialOffsets:Object.freeze([.034,.025,.016,.008,0])});;
 // Reduce only the protagonist's thigh cross-section; preserve length, hip and knee pivots.
 export const HUMAN_PLAYER_THIGH_FACTOR=.94;
+// Ampliam només el contorn del pit del protagonista, sense moure pivots.
+export const HUMAN_PLAYER_CHEST_FACTOR=1.045;
 export const HUMAN_PREVIEW_WEAPONS=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters']);
 // Anatomical adjustment for every A/B human candidate. -Z faces forward.
 export const HUMAN_HEAD_ADVANCE=.020;
@@ -185,7 +187,7 @@ export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
   fly.userData.humanPantsFly={anchors:anchors.map(v=>v.toArray())};
  }
  const torso=joint(pelvis,'spine','Tors',[0,BODY.spine,0]);
- const torsoShell=loft(torso,'Tronc anatòmic',[[0,.145*W,.105],[.08,.143*W,.108],[.17,.164*W,.116],[.28,.193*W,.132,.006],[.36,.207*W,.128,.009],[.425,.196*W,.117,.012],[.468,.145*W,.092,.012],[.490,.084*W,.073,.012]].map(([y,x,z,offset=0])=>[y,x,z*D,offset]),p.uniform,bodySegments,role==='player');
+ const torsoShell=loft(torso,'Tronc anatòmic',[[0,.145*W,.105],[.08,.143*W,.108],[.17,.164*W,.116],[.28,.193*W,.132,.006],[.36,.207*W,.128,.009],[.425,.196*W,.117,.012],[.468,.145*W,.092,.012],[.490,.084*W,.073,.012]].map(([y,x,z,offset=0])=>[y,x*(role==='player'&&y>=.17?HUMAN_PLAYER_CHEST_FACTOR:1),z*D,offset]),p.uniform,bodySegments,role==='player');
  const belt=loft(pelvis,'Cinturó',[[.048,.158*W,.122],[.085,.158*W,.122]],dark);
  box(pelvis,'Sivella',[.052,.04,.015],[0,.066,-.127],role==='general'?gold:0x9a9c85);
  for(const side of [-1,1]){
@@ -334,7 +336,7 @@ export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
   if(role==='mechanic'){box(torso,'Tirant granota',[.034,.32,.016],[side*.10,.27,-.123],p.trim);box(hip,'Butxaca pantaló',[.074,.10,.018],[side*.04,-.12,-.092],p.trim)}
  }
  if(!p.civilian&&role!=='general'){
-  const vest=loft(torso,'Armilla',[[.06,.158*W,.128],[.13,.183*W,.145],[.32,.207*W,.145],[.38,.166*W,.116]].map(([y,x,z])=>[y,x,z*D]),p.trim,bodySegments,role==='player');
+  const vest=loft(torso,'Armilla',[[.06,.158*W,.128],[.13,.183*W,.145],[.32,.207*W,.145],[.38,.166*W,.116]].map(([y,x,z])=>[y,x*(role==='player'?HUMAN_PLAYER_CHEST_FACTOR:1),z*D]),p.trim,bodySegments,role==='player');
   vest.userData.humanChestSurface=true;
   if(role==='player'){
    const shells=[torsoShell,vest];for(const shell of shells)shell.userData.humanChestSurface=true;
@@ -776,9 +778,11 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
   }
   for(const n of Object.values(j)){n.rotation.set(0,0,0);n.position.set(0,0,0)}
   if(mode==='rest'){
-    // Braços relaxats però una mica separats del tronc, sense canviar la malla.
-    if(j.shoulderL)j.shoulderL.rotation.z=-.12;
-    if(j.shoulderR)j.shoulderR.rotation.z=.12;
+    // Lleu flexió de les espatlles, abducció asimètrica i colzes tous.
+    j.shoulderL?.rotation.set(.09,0,-.28);
+    j.shoulderR?.rotation.set(.11,0,.26);
+    j.elbowL?.rotation.set(.18,0,.075);
+    j.elbowR?.rotation.set(.22,0,-.065);
     model.updateMatrixWorld(true);orientHumanEquippedWeapon(model,weapon,mode,orientation,j);continue
    }
   const walk=mode==='walk'||mode==='run',blend=walk?clamp01(locomotion?.blend??(mode==='run'?1:0)):0;
@@ -789,8 +793,8 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
   for(const [i,side]of ['L','R'].entries()){
    const sign=i?-1:1,a=phase+i*Math.PI,gait=walk?sampleHumanGait(cyclePhase+i*.5,blend):{hip:0,knee:0,ankle:0};
    set('hip'+side,gait.hip);set('knee'+side,gait.knee);set('ankle'+side,gait.ankle);
-   set('shoulder'+side,walk?-gait.hip*mix(.72,.86,blend):.025*breath,0,-sign*.12);
-   set('elbow'+side,walk?mix(.18+.16*Math.max(0,Math.sin(a)),1.15+.17*Math.sin(a),blend):.10);
+   set('shoulder'+side,walk?-gait.hip*mix(.72,.86,blend):(.09+(i?.02:0))+.025*breath,0,walk?-sign*.16:-sign*(i?.26:.28));
+   set('elbow'+side,walk?mix(.18+.16*Math.max(0,Math.sin(a)),1.15+.17*Math.sin(a),blend):(.18+(i?.04:0)),0,walk?0:(i?-.065:.075));
    set('wrist'+side,0,0,sign*.035);
   }
   // A braced two-handed pose develops as the gait transitions to running.

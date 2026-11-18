@@ -10,7 +10,7 @@ globalThis.window=globalThis;
 const runtime=createHumanGameRuntimeV17();
 globalThis.HUNTER_HUMAN_V17=runtime;
 assert.equal(GAME_HUMAN_SKIN_VERSION,'humans-v18');
-assert.equal(FOOT_PLAYER_VISUAL_FACTOR,4/3,'Jugador a peu +33,3%');
+assert.equal(FOOT_PLAYER_VISUAL_FACTOR,8/5,'Jugador a peu +20% respecte del factor anterior (factor 1,6)');
 const preview=createHumanProposal(T,'player','a',{visualOnly:true});
 let sourceWeapons=0;preview.traverse(n=>{if(n.userData?.humanWeapon)sourceWeapons++});
 assert.equal(sourceWeapons,0,'La geometria del joc no inclou una còpia de les armes del visor');
@@ -101,7 +101,7 @@ for(const role of ['player','soldier','rocket','elite','general']){
   const expectedBound=new T.Box3().setFromObject(reference,true);
   const actualSize=bound.getSize(new T.Vector3()),expectedSize=expectedBound.getSize(new T.Vector3());
   console.log('CANONICAL_BOUNDS',JSON.stringify({actual:actualSize.toArray(),expected:expectedSize.toArray(),center:bound.getCenter(new T.Vector3()).toArray(),gameScale:g.scale.toArray(),visualScale:canonical.scale.toArray(),editorScale:reference.scale.toArray(),gameWorldScale:canonical.getWorldScale(new T.Vector3()).toArray()}));
-  assert(Math.abs(actualSize.y-expectedSize.y*FOOT_PLAYER_VISUAL_FACTOR)<.002,'Player 4/3 larger, exact editor geometry');
+  assert(Math.abs(actualSize.y-expectedSize.y*FOOT_PLAYER_VISUAL_FACTOR)<.002,'Player 1.6 times larger, exact editor geometry');
   // The old gameplay shoulder is only a control. Animation must actually
   // rotate the editor's corresponding shoulder pivot and preserve the torso.
   const oldR=u.ar.rotation.x,restShoulder=bones.shoulderR.quaternion.clone();
@@ -118,9 +118,9 @@ for(const role of ['player','soldier','rocket','elite','general']){
   for(const mesh of actual)scaledView.union(new T.Box3().setFromObject(mesh,true));
   const inGameSize=scaledView.getSize(new T.Vector3());
   assert(Math.abs(inGameSize.y-2*FOOT_PLAYER_VISUAL_FACTOR)<.002,
-   'Player retains 4/3-size editor body after gameplay 2/3 root scale: '+inGameSize.y);
+   'Player retains 1.6-size editor body after gameplay 2/3 root scale: '+inGameSize.y);
   const sampleRatio=canonical.getWorldScale(new T.Vector3());
-  assert(Math.abs(sampleRatio.x-reference.scale.x*FOOT_PLAYER_VISUAL_FACTOR)<.002,'World visual uniformly 4/3 of editor');
+  assert(Math.abs(sampleRatio.x-reference.scale.x*FOOT_PLAYER_VISUAL_FACTOR)<.002,'World visual uniformly 1.6 times the editor');
   g.scale.setScalar(1);g.updateMatrixWorld(true);
   const gunProxy=canonical.getObjectByName('Arma canònica · gun');
   assert(gunProxy&&gunProxy.parent===bones.wristR,'Visible pistol grip on editor wrist');
@@ -150,7 +150,7 @@ for(const role of ['player','soldier','rocket','elite','general']){
    'Old 4m crouch is translated to native 2m joints, not -0.72m full drop');
   u.lowerBody.position.y=oldLowerY;u.upperBody.position.y=oldUpperY;
   g.updateMatrixWorld(true);
-  console.log('PASS editor avatar exact rig and meshes, visual height 2.67m, 16 joints');
+  console.log('PASS editor avatar exact rig and meshes, visual height 3.20m, 16 joints');
  }
  const box=new T.Box3().setFromObject(g);
  assert(box.max.y-box.min.y>2.8&&box.max.y-box.min.y<6.5,'Alçada comparable amb el model antic');

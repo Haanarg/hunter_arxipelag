@@ -4,7 +4,7 @@ import {createHumanProposal,HUMAN_VERSION,sampleHumanGait} from './human-proposa
 
 export const GAME_HUMAN_SKIN_VERSION='humans-v18';
 // Escala exclusivament visual a peu: rig i geometria intactes.
-export const FOOT_PLAYER_VISUAL_FACTOR=4/3;
+export const FOOT_PLAYER_VISUAL_FACTOR=8/5; // +20% respecte del factor anterior 4/3
 const SOURCE_THIGH=.49,SOURCE_SHIN=.49,SOURCE_ARM=.385,SOURCE_FOREARM=.310;
 const cache=new Map();
 function sourceFor(T,role){

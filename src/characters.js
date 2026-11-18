@@ -804,9 +804,13 @@ window.HUNTER_CHARACTERS=Object.freeze({
     }else{
       // A la cursa, els braços bombegen més i els colzes van flexionats.
       const armSwing=(.46+.46*run)*walk;
-      tx(u.al,-armSwing+.018*breath);tx(u.ar,armSwing-.018*breath);
-      tz(u.al,-.12-.035*run);tz(u.ar,.12+.035*run);
-      tz(u.ael,-.04);tz(u.aer,.04);
+      // L'adaptador V18 compensa l'obertura basal de 0,12 rad de
+      // l'espatlla antiga: hi sumam l'obertura anatòmica real.
+      const idleSpread=.28-.12*move;
+      tx(u.al,-armSwing+.018*breath+.09*(1-move));
+      tx(u.ar,armSwing-.018*breath+.11*(1-move));
+      tz(u.al,-.12-idleSpread-.035*run);tz(u.ar,.12+idleSpread+.035*run);
+      tz(u.ael,-.04+.075*(1-move));tz(u.aer,.04-.065*(1-move));
       const bendL=.16+.60*run+Math.max(0,Math.cos(ph))*.2*move,
             bendR=.16+.60*run+Math.max(0,-Math.cos(ph))*.2*move;
       tx(u.ael,bendL);tx(u.aer,bendR);
