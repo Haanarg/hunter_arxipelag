@@ -462,12 +462,15 @@ window.HUNTER_CHARACTERS=Object.freeze({
     sniper.userData.stockAnchor=new THREE.Vector3(.73,3.48-u.upperBodyPivotHeight,-.17);
     sniper.userData.stockToReceiver=new THREE.Vector3(-.05,.12,-1.20);
     sniper.position.copy(sniper.userData.stockAnchor).add(sniper.userData.stockToReceiver);
-    sniper.add(createHunterLongGunVisual(THREE,'sniper'));
+    // La SV-98 del protagonista guanya un 33% de mida visual.
+     const sniperSkin=createHunterLongGunVisual(THREE,'sniper');
+     sniperSkin.scale.setScalar(4/3);
+     sniper.add(sniperSkin);
     // Boca real a l'extrem del canó (centre z=-1.95, longitud 1.55).
     // El pivot hereta la rotació i l'escala del model del jugador.
     const sniperMuzzle=new THREE.Object3D();
     sniperMuzzle.name='hunter-sniper-muzzle';
-    sniperMuzzle.position.set(0,.03,-2.75);
+    sniperMuzzle.position.set(0,.03*4/3,-2.75*4/3);
     sniper.add(sniperMuzzle);
     // Dos punts de presa REALS del rifle: mà dreta al gallet i esquerra
     // a sota del receptor/guardamà. Les mans segueixen aquests punts
@@ -535,6 +538,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // Transició suau de caminar a córrer: cadència i posicions diferents,
     // no només la velocitat de desplaçament.
     u.runBlend=(u.runBlend||0)+((running&&move>.08&&!swimming&&!inVehicle&&!crouching?1:0)-(u.runBlend||0))*(1-Math.exp(-10*dt));
+     // Els braços es relaxen progressivament després d'una passa o carrera.
+     const restArmRate=move<.08&&!swimming&&!inVehicle?1-Math.exp(-5.5*dt):limbK;
     u.crouchBlend=(u.crouchBlend||0)+((crouching&&!swimming&&!inVehicle&&!airborne&&!parachuting?1:0)-(u.crouchBlend||0))*(1-Math.exp(-10*dt));
     // La mateixa acció de velocitat passa a ser crol quan som a l'aigua.
     // Un blend propi preserva una transició suau entre braça i crol.
@@ -807,13 +812,14 @@ window.HUNTER_CHARACTERS=Object.freeze({
       // L'adaptador V18 compensa l'obertura basal de 0,12 rad de
       // l'espatlla antiga: hi sumam l'obertura anatòmica real.
       const idleSpread=.28-.12*move;
-      tx(u.al,-armSwing+.018*breath+.09*(1-move));
-      tx(u.ar,armSwing-.018*breath+.11*(1-move));
-      tz(u.al,-.12-idleSpread-.035*run);tz(u.ar,.12+idleSpread+.035*run);
-      tz(u.ael,-.04+.075*(1-move));tz(u.aer,.04-.065*(1-move));
-      const bendL=.16+.60*run+Math.max(0,Math.cos(ph))*.2*move,
-            bendR=.16+.60*run+Math.max(0,-Math.cos(ph))*.2*move;
-      tx(u.ael,bendL);tx(u.aer,bendR);
+      tx(u.al,-armSwing+.018*breath+.045*(1-move),restArmRate);
+      // Ajupit, la pistola segueix l'avantbraç orientat endavant.
+      tx(u.ar,armSwing-.018*breath+.06*(1-move)+.40*crouch,restArmRate);
+      tz(u.al,-.12-idleSpread-.035*run,restArmRate);tz(u.ar,.12+idleSpread+.035*run,restArmRate);
+      tz(u.ael,-.04+.075*(1-move),restArmRate);tz(u.aer,.04-.065*(1-move),restArmRate);
+      const bendL=.12+.60*run+Math.max(0,Math.cos(ph))*.2*move,
+            bendR=.15+.60*run+.11*crouch+Math.max(0,-Math.cos(ph))*.2*move;
+      tx(u.ael,bendL,restArmRate);tx(u.aer,bendR,restArmRate);
     }
 
     // L'animació es llança només amb un tret real de pistola (combat.js).
@@ -840,11 +846,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
       player.updateMatrixWorld(true);
       // Les dues mans orbiten suaument amb el canó; no romanen fixes
       // al davant quan l'autoaim segueix una diana lateral o elevada.
-      rig.aim.set(.045,3.10+up,-1.13+back);
+      rig.aim.set(0,3.10+up,-1.13+back);
       player.localToWorld(rig.aim);u.upperBody.worldToLocal(rig.aim);
       rig.q3.copy(u.visualAimQuaternion);
-      rig.right.set(.075,-.15,.06).applyQuaternion(rig.q3).add(rig.aim);
-      rig.left.set(-.12,-.14,.015).applyQuaternion(rig.q3).add(rig.aim);
+      rig.right.set(.045,-.15,.06).applyQuaternion(rig.q3).add(rig.aim);
+      rig.left.set(-.095,-.14,.015).applyQuaternion(rig.q3).add(rig.aim);
       aimPlayerPistolArm(u.ar,u.aer,rig.right,1,rig,blend);
       aimPlayerPistolArm(u.al,u.ael,rig.left,-1,rig,blend);
     }
@@ -852,7 +858,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     rig.idle.copy(u.pistolIdleMount.position).applyQuaternion(u.aer.quaternion)
       .add(u.aer.position).applyQuaternion(u.ar.quaternion).add(u.ar.position);
     rig.idleQ.copy(u.ar.quaternion).multiply(u.aer.quaternion).multiply(u.pistolIdleMount.quaternion);
-    rig.aim.set(.045,3.10+up,-1.13+back);
+    rig.aim.set(0,3.10+up,-1.13+back);
     player.updateMatrixWorld(true);
     player.localToWorld(rig.aim);u.upperBody.worldToLocal(rig.aim);
     // El quaternion local ja converteix el vector real de l'autoaim
