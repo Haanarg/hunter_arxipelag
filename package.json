@@ -21,7 +21,7 @@
     "test:performance": "node tests/run.cjs performance",
     "test:models": "node tests/run.cjs models",
     "test:lab": "node tests/run.cjs lab",
-    "test:deploy": "node tests/vehicle-candidate-studio.cjs",
+    "test:deploy": "node tests/vehicle-candidate-studio.cjs && node tests/gaz-tigr-collision.mjs",
     "test:all": "node tests/run.cjs all"
   },
   "dependencies": {

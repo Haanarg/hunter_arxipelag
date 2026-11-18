@@ -9,7 +9,7 @@ const gazRoot=prepareGazTigrRuntime(THREE,{vehicleScale:1.3}).create();
 const factory=vehicleModels.createFactory(THREE,{
   box(){throw new Error('El model GAZ ha desaparegut')},
   material:c=>new THREE.MeshStandardMaterial({color:c}),
-  shadows:false,gaz:{create:()=>gazRoot.clone(true)},batching:playerBatching
+  shadows:false,gaz:{create:()=>prepareGazTigrRuntime(THREE,{vehicleScale:1.3}).create()},batching:playerBatching
 });
 const runtimeCar=factory('cotxe');
 const gaz={t:'cotxe',o:runtimeCar},generic={t:'cotxe',o:{userData:{}}};
