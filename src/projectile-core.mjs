@@ -6,7 +6,9 @@ export function launchProjectile(origin,direction,speed,extra={}){
  return {...extra,x,y,z,sx:x,sy:y,sz:z,vx:dx*speed,vy:dy*speed,vz:dz*speed,life:PROJECTILE_LIFETIME};
 }
 export function projectileStep(p,dt){
- const from={x:p.x,y:p.y,z:p.z},to={x:p.x+p.vx*dt,y:p.y+p.vy*dt,z:p.z+p.vz*dt},delta={x:to.x-from.x,y:to.y-from.y,z:to.z-from.z},life=p.life-dt;
+ const g=p.weapon==='boatRocket'?9.81:0;
+ const from={x:p.x,y:p.y,z:p.z},to={x:p.x+p.vx*dt,y:p.y+p.vy*dt-.5*g*dt*dt,z:p.z+p.vz*dt},delta={x:to.x-from.x,y:to.y-from.y,z:to.z-from.z},life=p.life-dt;
+ if(g)p.vy-=g*dt;
  let bestT=life<=0?1:Infinity,kind=life<=0?'expire':null,target=null;
  const consider=(t,k,o)=>{if(t!=null&&t>=0&&t<=1&&t<bestT){bestT=t;kind=k;target=o;}};
  return Object.freeze({from,to,delta,life,consider,get fraction(){return bestT;},finish(){const hit=bestT!==Infinity,t=hit?bestT:1;return {hit,t,kind,target,point:{x:from.x+delta.x*t,y:from.y+delta.y*t,z:from.z+delta.z*t}};}});
