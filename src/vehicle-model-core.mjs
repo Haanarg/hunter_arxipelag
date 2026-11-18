@@ -222,9 +222,9 @@ export const vehicleModels=Object.freeze({
         // Malla precompilada; sense GLB ni meshoptimizer en temps de joc.
         const color=appearance.color??0x228fef;
         const bike=createStreetfighter25(THREE,{color,material});
-        // Retorn a la mida de la v0.6.187: 50% més gran que el model inicial.
-        // Conservam la connexió del manillar, la geometria i l'escala general.
-        const visualScale=1.5;
+        // Reducció del 26,7%: la streetfighter era desproporcionada
+        // respecte al nou conductor de 2 m i al radi de les rodes.
+        const visualScale=1.1;
         bike.scale.setScalar(visualScale);
         g.add(bike);
         g.userData.wheels=bike.userData.wheels;
@@ -741,15 +741,15 @@ export const vehicleModels=Object.freeze({
         g.add(crank);g.userData.crank=crank;
       }
       if(t==='bici'){
-        // Escala visual al 75% de l'original (+50% sobre el model anterior).
+        // Bicicleta només un 6,7% menor; mantenim geometria i mecànica.
         // El grup inclou rodes, manillar i pedalier; la col.lisio i
         // la conduccio continuen regides per les dimensions existents.
         const visual=new THREE.Group();
         for(const child of [...g.children])visual.add(child);
-        visual.scale.setScalar(.75);
+        visual.scale.setScalar(.70);
         g.add(visual);
-        for(const w of g.userData.wheels||[])w.userData.radius*=.75*VS.bici;
-        g.userData.bicycleVisualScale=.75;
+        for(const w of g.userData.wheels||[])w.userData.radius*=.70*VS.bici;
+        g.userData.bicycleVisualScale=.70;
       }
       // La coordenada Y de l'origen no és l'altura dels patins.
       // Les dues barres inferiors estan centrades a y=.48 i tenen radi .075.

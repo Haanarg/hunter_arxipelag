@@ -146,10 +146,11 @@ window.HUNTER_RIDER=Object.freeze({
       // En cotxes l'habitacle és més baix que el protagonista dret.
       // Escalam el mateix model de jugador i preservam l'orientació
       // tridimensional del xassís en girs i pendents.
-      // Pilot de la moto a escala original, com a la versió 0.6.187.
+      // Les motos i bicicletes feien servir un rider de gairebé 4 m a
+      // escala 1, desproporcionat respecte als manillars i als seients.
       const gazTigr=car&&v.o?.userData?.gazModel==='Tigr-M';
-       // GAZ més petit: sense modificar la postura, els seients ni el rig.
-       const riderScale=gazTigr?0.66:car?0.82:v.t==='hover'?0.63:1;
+      const riderScale=gazTigr?.66:car?.82:v.t==='hover'?.63:
+        (v.t==='moto'||v.t==='bici')?.56:1;
       g.scale.setScalar(riderScale);
       g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);
       const far=Number.isFinite(viewDistance)&&viewDistance>
@@ -165,7 +166,13 @@ window.HUNTER_RIDER=Object.freeze({
         const seatX=coopSeat?(passenger?1:-1)*(car?.65:.58)*sc:0,
           deckY=car?1.20*sc:v.t==='hover'?1.25*sc:
             v.t==='windsurf'?1.05*sc:1.35*sc;
-        riderFar.position.set(seatX,v.t==='moto'?.98*sc*(v.o?.userData?.motorcycleVisualScale??1):deckY,(v.t==='bici'||v.t==='moto')?0.12*sc*(v.t==='moto'?(v.o?.userData?.motorcycleVisualScale??1):1):0);
+        const twoWheel=v.t==='moto'||v.t==='bici';
+        const visualScale=v.t==='moto'?(v.o?.userData?.motorcycleVisualScale??1):
+          (v.o?.userData?.bicycleVisualScale??.70);
+        const fit=sc*visualScale;
+        riderFar.position.set(seatX,
+          twoWheel?(v.t==='moto'?.99:1.65)*fit/riderScale:deckY,
+          twoWheel?(v.t==='moto'?.26:.4)*fit/riderScale:0);
         pistol.visible=false;
         return;
       }
@@ -265,26 +272,28 @@ window.HUNTER_RIDER=Object.freeze({
         // Seient, mans i peus mantenen el seu encaix amb el xassís i la direcció.
         const steering=v.o?.userData?.steeringPivots?.[0],
               size=v.o?.userData?.motorcycleVisualScale??1,
-              fit=sc*size,
+              fit=sc*size,invScale=1/riderScale,
               turn=steering?.rotation?.y||0,
               pivotZ=(steering?.position?.z??-.28)*fit,
               pivotY=(steering?.position?.y??1.07)*fit,
               seat=.99*fit,seatZ=.26*fit;
-        torso.position.set(0,seat,seatZ);
+        // Escalam el cos, però no les coordenades del seient, manillar i pedals
+        // en el món: tots els punts de contacte passen a l'espai del rider.
+        torso.position.set(0,seat*invScale,seatZ*invScale);
         torso.rotation.x=.12*motion;
         for(let i=0;i<2;i++){
-          const side=i?1:-1,hip=vec(side*.25*size,seat,seatZ),
+          const side=i?1:-1,hip=vec(side*.25*size*invScale,seat*invScale,seatZ*invScale),
                 shoulder=shoulderAt(side),
                 x=side*.34*fit,
-                hand=vec(x*Math.cos(turn),pivotY-.015*fit,
-                  pivotZ-x*Math.sin(turn)),
+                hand=vec(x*Math.cos(turn)*invScale,(pivotY-.015*fit)*invScale,
+                  (pivotZ-x*Math.sin(turn))*invScale),
                 elbow=shoulder.clone().lerp(hand,.54);
-          elbow.x+=side*.08;elbow.y-=.12;
+          elbow.x+=side*.08*invScale;elbow.y-=.12*invScale;
           limbBetween(limbs[i*2],shoulder,elbow);
           limbBetween(limbs[i*2+1],elbow,hand);
-          const foot=vec(side*.34*fit,.42*fit,.16*fit),
+          const foot=vec(side*.34*fit*invScale,.42*fit*invScale,.16*fit*invScale),
                 knee=hip.clone().lerp(foot,.54);
-          knee.z-=.12*motion;knee.x+=side*.07;
+          knee.z-=.12*motion*invScale;knee.x+=side*.07*invScale;
           limbBetween(limbs[4+i*2],hip,knee);
           limbBetween(limbs[5+i*2],knee,foot);
           boots[i].position.copy(foot);boots[i].rotation.x=0;
@@ -292,9 +301,35 @@ window.HUNTER_RIDER=Object.freeze({
         aimOneHand(v,dt);return;
       }
       if(v.t==='bici'){
-        const seat=1.65*sc;torso.position.set(0,seat,.4*sc);torso.rotation.x=.15*motion;
-        for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.28,seat,.4*sc),shoulder=shoulderAt(side),hand=vec(side*.5*sc,1.96*sc,-sc),elbow=shoulder.clone().lerp(hand,.52);elbow.x+=side*.1;elbow.y-=.2;limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
-          const foot=vec(side*.55,0,.45*sc),worldFoot=foot.clone().applyQuaternion(g.quaternion).add(g.position);worldFoot.y=heightAt(worldFoot.x,worldFoot.z)+.14;const groundFoot=worldFoot.sub(g.position).applyQuaternion(g.quaternion.clone().invert());const pedal=v.t==='bici'?vec(side*.4*sc,(.75-side*Math.sin(phase)*.28)*sc,side*Math.cos(phase)*.28*sc):vec(side*.5*sc,.72*sc,.1*sc);foot.copy(groundFoot).lerp(pedal,motion);const knee=hip.clone().lerp(foot,.5);knee.z-=.5*motion;knee.x+=side*.12*(1-motion);limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot);boots[i].rotation.x=0}
+        const visualScale=v.o?.userData?.bicycleVisualScale??.70,
+              fit=sc*visualScale,invScale=1/riderScale,
+              seat=1.65*fit,seatZ=.4*fit;
+        torso.position.set(0,seat*invScale,seatZ*invScale);
+        torso.rotation.x=.15*motion;
+        g.updateWorldMatrix(true,false);
+        for(let i=0;i<2;i++){
+          const side=i?1:-1,
+                hip=vec(side*.28*invScale,seat*invScale,seatZ*invScale),
+                shoulder=shoulderAt(side),
+                hand=vec(side*.5*fit*invScale,1.96*fit*invScale,-fit*invScale),
+                elbow=shoulder.clone().lerp(hand,.52);
+          elbow.x+=side*.1*invScale;elbow.y-=.2*invScale;
+          limbBetween(limbs[i*2],shoulder,elbow);
+          limbBetween(limbs[i*2+1],elbow,hand);
+          const foot=vec(side*.55*invScale,0,.45*fit*invScale);
+          const worldFoot=g.localToWorld(foot.clone());
+          worldFoot.y=heightAt(worldFoot.x,worldFoot.z)+.14;
+          const groundFoot=g.worldToLocal(worldFoot);
+          const pedal=vec(side*.4*fit*invScale,
+            (.75-side*Math.sin(phase)*.28)*fit*invScale,
+            side*Math.cos(phase)*.28*fit*invScale);
+          foot.copy(groundFoot).lerp(pedal,motion);
+          const knee=hip.clone().lerp(foot,.5);
+          knee.z-=.5*motion*invScale;knee.x+=side*.12*(1-motion)*invScale;
+          limbBetween(limbs[4+i*2],hip,knee);
+          limbBetween(limbs[5+i*2],knee,foot);
+          boots[i].position.copy(foot);boots[i].rotation.x=0;
+        }
         aimOneHand(v,dt);return;
       }
 

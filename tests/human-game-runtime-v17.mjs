@@ -212,7 +212,7 @@ assert.equal(rider.userData.boots.length,2);
  runInNewContext(readFileSync(new URL('../src/rider.js',import.meta.url),'utf8'),riderSandbox);
  const driver=riderSandbox.window.HUNTER_RIDER.create(T,{
   scene:new T.Scene(),box(){},material:c=>new T.MeshStandardMaterial({color:c}),
-  scales:{cotxe:1.3,cotxe_civil:1.2,hover:1.3},heightAt:()=>0,shadows:false
+  scales:{cotxe:1.3,cotxe_civil:1.2,hover:1.3,moto:1.2,bici:1.2},heightAt:()=>0,shadows:false
  });
  const gaz=new T.Group();gaz.userData.gazModel='Tigr-M';
  driver.update({t:'cotxe',o:gaz,v:0,pedalPhase:0},1/60);
@@ -224,6 +224,17 @@ assert.equal(rider.userData.boots.length,2);
  assert(Math.abs(driver.object.scale.x-.82)<1e-9,'Escala del cotxe civil intacta');
  driver.update({t:'cotxe',o:new T.Group(),v:0,pedalPhase:0},1/60);
  assert(Math.abs(driver.object.scale.x-.82)<1e-9,'Altres cotxes mantenen l’escala');
+  const moto=new T.Group();moto.userData.motorcycleVisualScale=1.1;
+  driver.update({t:'moto',o:moto,v:0,pedalPhase:0},1/60);
+  assert(Math.abs(driver.object.scale.x-.56)<1e-9,'Conductor de moto a mida humana');
+  assert(Math.abs(driver.object.userData.torso.position.y*driver.object.scale.y-.99*1.2*1.1)<1e-9,
+   'Seient moto conservat en coordenades del vehicle');
+  const bici=new T.Group();bici.userData.bicycleVisualScale=.70;
+  driver.update({t:'bici',o:bici,v:0,pedalPhase:0},1/60);
+  assert(Math.abs(driver.object.scale.x-.56)<1e-9,'Ciclista a mida humana');
+  assert(Math.abs(driver.object.userData.torso.position.y*driver.object.scale.y-1.65*1.2*.70)<1e-9,
+   'Seient bici encaixat amb el quadre redimensionat');
+  assert(driver.object.userData.limbs.every(l=>l.quaternion.lengthSq()>.99),'Articulacions de bicicleta normalitzades');
 
 for(const path of ['src/rider.js','src/marine-patrol.js','src/enemy-ai.js','src/coop-world-runtime.js']){
  const source=readFileSync(new URL('../'+path,import.meta.url),'utf8');
