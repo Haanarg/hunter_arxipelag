@@ -3,8 +3,18 @@ import {readFileSync} from 'node:fs';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {vehicleSpecs,vehicleCollisionScale,vehicleCollisionFootprint,vehicleCollisionRadius} from '../src/vehicle-specs.mjs';
 import {prepareGazTigrRuntime} from '../src/gaz-tigr-runtime.mjs';
+import {vehicleModels} from '../src/vehicle-model-core.mjs';
+import {playerBatching} from '../src/player-batching-core.mjs';
 const gazRoot=prepareGazTigrRuntime(THREE,{vehicleScale:1.3}).create();
-const gaz={t:'cotxe',o:gazRoot},generic={t:'cotxe',o:{userData:{}}};
+const factory=vehicleModels.createFactory(THREE,{
+  box(){throw new Error('El model GAZ ha desaparegut')},
+  material:c=>new THREE.MeshStandardMaterial({color:c}),
+  shadows:false,gaz:{create:()=>gazRoot.clone(true)},batching:playerBatching
+});
+const runtimeCar=factory('cotxe');
+const gaz={t:'cotxe',o:runtimeCar},generic={t:'cotxe',o:{userData:{}}};
+assert.equal(runtimeCar.userData.gazModel,'Tigr-M');
+assert.equal(runtimeCar.userData.gazVisualScale,1.25,'L’objecte vehicle del joc rep l’escala visual');
 const dims=v=>vehicleCollisionFootprint(v,vehicleSpecs.hitboxes.cotxe,vehicleSpecs.scales.cotxe);
 const before=dims(generic),after=dims(gaz),factor=1.25;
 assert.equal(gazRoot.userData.gazVisualScale,factor);
