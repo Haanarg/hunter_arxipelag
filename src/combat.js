@@ -671,7 +671,7 @@ function executePlayerPlant(seconds=3){
  o.position.set(x,y,z);world.add(o);
  if(seconds===0){
   // 00 és una detonació immediata, fins i tot en ple vol.
-  boom(x,y,z,48,COMBAT_BALANCE.weapons.c4,'b',null,'c4');
+  boom(x,y,z,72,COMBAT_BALANCE.weapons.c4,'b',null,'c4');
   world.remove(o);
  }else bombs.push({x,y,z,t:seconds,o,falling:airborne,vy:0,landed:!airborne});
  msg=seconds===0?'Bomba detonada!':airborne?
@@ -1887,7 +1887,7 @@ for(let i=bombs.length-1;i>=0;i--){
  if(b.t>0)window.HUNTER_EXPLOSIVE_VISUALS.update(b.o,b.t);
  if(b.t<=0){
    // S'usa la posició actual, mai la de sortida de l'helicòpter.
-   boom(b.x,b.y,b.z,48,COMBAT_BALANCE.weapons.c4,'b',null,'c4');
+   boom(b.x,b.y,b.z,72,COMBAT_BALANCE.weapons.c4,'b',null,'c4');
    world.remove(b.o);bombs.splice(i,1);
  }
 }
