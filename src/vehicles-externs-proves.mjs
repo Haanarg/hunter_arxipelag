@@ -461,6 +461,62 @@ async function choose(config){
    slot.sub.textContent=config.human?'Preparant model HUMANS V18…':slots.indexOf(slot)?'Preparant candidat…':'Model real del joc';
    slot.source.hidden=true;
  }
+ // HUMANS V18: renderitza cada variant directament. Cap visor ocult
+ // no ha de condicionar la càrrega dels models que veu l'usuari.
+ if(config.human){
+   const visible=slots.slice(1,config.options.length+1);
+   const mode=config.swimming?'swim-'+config.swimming:'rest';
+   for(let i=0;i<visible.length;i++){
+     if(token!==generation)return;
+     const slot=visible[i],entry=config.options[i];
+     try{
+       let model;
+       try{model=createHumanProposal(THREE,entry.role,entry.style)}
+       catch(error){
+         console.warn('HUMANS V18: provant geometria sense accessoris',entry.title,error);
+         model=createHumanProposal(THREE,entry.role,entry.style,{visualOnly:true});
+       }
+       // Un accessori problemàtic no pot impedir veure la geometria V18.
+       let accessoryError=null;
+       if(entry.role==='player'){
+         try{setHumanPreviewWeapon(THREE,model,document.querySelector('#humanWeapon').value)}
+         catch(error){accessoryError=error;console.warn('Arma de previsualització no disponible',error)}
+       }
+       setModel(slot,model,false,[],true);
+       slot.swimVariant=entry.swimVariant||null;
+       slot.swimWater.visible=!!slot.swimVariant;
+       let animationError=null;
+       try{poseHumanProposal(slot.model,0,previewHumanPose(slot,mode))}
+       catch(error){animationError=error;console.warn('Postura HUMANS V18 no disponible',entry.title,error)}
+       slot.bold.textContent=entry.title;
+       slot.sub.textContent='HUMANS V18 · '+entry.note;
+       slot.source.hidden=true;
+       slot.status.textContent=metrics(slot.model)+
+         (accessoryError?' · Accessori: '+accessoryError.message:'')+
+         (animationError?' · Animació: '+animationError.message:'');
+     }catch(error){
+       console.error('Error carregant HUMANS V18 · '+entry.title,error);
+       slot.status.textContent='ERROR HUMANS V18: '+(error?.message||String(error));
+       slot.sub.textContent='No s’ha pogut generar la variant. Pots tornar a seleccionar aquest personatge.';
+     }
+   }
+   if(token!==generation)return;
+   const first=visible.find(slot=>slot.model);
+   if(first){
+     originalDims=dimsOf(first.model);
+     comparisonDims.copy(originalDims);
+     for(const slot of visible)if(slot.model)comparisonDims.max(dimsOf(slot.model));
+     yaw=Math.PI;elev=0;zoom=1;panScreenX=0;
+     lookY=comparisonDims.y*.43;defaultLookY=lookY;
+     if(resumedView?.type===config.id){
+       ({yaw,elev,zoom,lookY,panScreenX}=resumedView);resumedView=null;
+     }
+     updateCamera();
+   }else{
+     warning.textContent='ERROR: no s’ha pogut generar cap variant HUMANS V18. Mira els errors de les targetes.';
+   }
+   return;
+ }
  if(config.twoWheelAudit){
    try{
      const lab=await createTwoWheelLabComparison(THREE,{
@@ -496,10 +552,8 @@ async function choose(config){
    }
    return;
  }
- // El visor 0 és un model nou HUMANS V18 emprat només per mesurar
- // l'escala; no es renderitza. Les variants aprovades ocupen 1..N.
  try{
-   const model=config.human?createHumanProposal(THREE,config.human,'a',{visualOnly:true}):config.base?createProceduralModel(config.base.variant):await createCurrentVehicle(config.id);
+   const model=config.base?createProceduralModel(config.base.variant):await createCurrentVehicle(config.id);
    // No reintroduir models antics quan es canvia de pestanya durant la càrrega.
    if(token!==generation)return;
    setModel(slots[0],model,true,[],soloStudy);
@@ -508,7 +562,7 @@ async function choose(config){
    originalDims=dimsOf(slots[0].model);
    slots[0].status.textContent=metrics(slots[0].model);
    slots[0].person.position.x=originalDims.x*.62+1.0;
-   slots[0].sub.textContent=config.human?'Base HUMANS V18 · només dimensions':btrStudy?
+   slots[0].sub.textContent=btrStudy?
      'Casc i torreta 3B, defenses i visors · SIpriv · CC BY 4.0':
      t90Study?'Model real del joc · torreta, canó i erugues animables':
      config.id==='heli_combat'?'Mil Mi-24 · D definitiu · cinc pales principals':
