@@ -102,6 +102,10 @@ assert(catchB.elbow.y>catchB.armR.y+.12,'Braça: el colze es manté per sobre de
 assert(catchB.armR.z<catchB.shoulder.z,'Braça: la mà no retrocedeix de l’espatlla');
 assert(loadB.kneeL.distanceTo(loadB.kneeR)<loadB.hipL.distanceTo(loadB.hipR)*1.5,'Braça: genolls prop de l’amplada dels malucs');
 assert(loadB.anklePitch>.2,'Braça: dorsiflexió del peu durant la càrrega');
+inspectB(1.52);rootB.updateWorldMatrix(true,true);
+const outwardR=new THREE.Vector3(0,0,-1).transformDirection(b.ankleR.matrixWorld);
+const outwardL=new THREE.Vector3(0,0,-1).transformDirection(b.ankleL.matrixWorld);
+assert(outwardR.x>.10&&outwardL.x<-.10,'Braça: els dits dels peus giren cap enfora als dos costats');
 inspectB(2.2);
 assert(b.ankleR.rotation.x<-.85,'Braça: flexió plantar durant el lliscament');
 for(const t of [2.2,2.45,2.8,3.05,3.1999]){
