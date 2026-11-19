@@ -20,5 +20,6 @@ const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.
 assert(lab.includes('const playerReferenceTemplate=createLabPlayerReference(THREE)'));
 assert(lab.includes('const person=playerReferenceTemplate.clone(true)'), 'Els visors comparteixen la malla V18 de referència sense duplicar-la');
 assert(!lab.includes('await createCurrentHuman(THREE,config.human)'));
-assert(lab.includes('config.options.map((entry,i)=>loadExternal(slots[i+1],entry,used,token))'));
+assert(lab.includes('const visible=slots.slice(1,config.options.length+1)'), 'Les variants V18 es generen directament en visors visibles');
+assert(lab.includes("slot.status.textContent='ERROR HUMANS V18:"), 'Els errors humans queden visibles a la targeta');
 console.log('PASS comparador HUMANS V18, sense visor antic; alçada='+reference.userData.height.toFixed(3));
