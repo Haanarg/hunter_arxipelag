@@ -21,6 +21,7 @@ const suites={
     "ferry-ramp-transitions.mjs",
     "ammo-pickup-hud.mjs",
     "assault-repeat-pickup.mjs",
+    "account-submenus.mjs",
     "vehicle-health-and-blast.mjs",
     "gaz-tigr-collision.mjs",
     "bazooka-armored-lock.mjs",
