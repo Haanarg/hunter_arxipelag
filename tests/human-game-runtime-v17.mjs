@@ -302,6 +302,9 @@ assert.equal(rider.userData.boots.length,2);
    'En aturar-se, els malucs del pilot de moto baixen lleugerament cap a terra');
   const motoMeasures=boneMeasures();
   assert(motoMeasures.every(n=>n>.4&&n<1),'Longituds anatòmiques del pilot');
+  assert(driver.object.userData.riderDetailNodes.every(node=>
+   node===driver.object.userData.pistol||node.visible===false),
+   'Cap pilot antic ni cames extensibles poden aparèixer damunt de la moto');
   const avatarBodyBounds=()=>new T.Box3().setFromObject(anatomicalBody,true);
   const inspectPose=label=>{
    const hipL=point('hipL'),hipR=point('hipR'),kneeL=point('kneeL'),
@@ -348,6 +351,9 @@ assert.equal(rider.userData.boots.length,2);
   assert(Math.abs(point('ankleL').y-.14)<.04&&Math.abs(point('ankleR').y-.14)<.04,
    'Tots dos peus del ciclista arriben a terra');
   inspectPose('bike-stopped');
+  assert(driver.object.userData.riderDetailNodes.every(node=>
+   node===driver.object.userData.pistol||node.visible===false),
+   'Cap pilot antic ni cames extensibles poden aparèixer damunt de la bicicleta');
   const stopped=boneMeasures();
   stopped.forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
    'Ni les cuixes ni els panxells no canvien de llargada entre moto i bici'));
@@ -361,6 +367,9 @@ assert.equal(rider.userData.boots.length,2);
    driver.update({t:'bici',o:bici,v:7,pedalPhase:phase},1/60);
    boneMeasures().forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
     'Les cames i els braços han de conservar la longitud mentre pedala'));
+   for(const side of ['L','R'])
+    assert(bentKnee(side)>42&&bentKnee(side)<158,
+     'El genoll durant el pedaleig conserva una flexió anatòmica real');
   }
   inspectPose('bike-pedaling');
   driver.update({...motorcycle,v:8},1/60);
