@@ -178,6 +178,17 @@ for(const role of ['player','soldier','rocket','elite','general']){
    u.runBlend=1;u.ph=Math.PI*2*.39;updateHuman(g);
    assert(Math.abs(bones.ankleL.rotation.x-sampleHumanGait(.39,1).ankle)<.001,'Cursa del joc = turmell de l’editor');
    u.runBlend=0;updateHuman(g);
+  // La passa de caminar ha de moure el V18, també sense runBlend.
+  u.gameLandMove=1;u.ph=Math.PI*.5;updateHuman(g);
+  const walkHipL=bones.hipL.rotation.x,walkHipR=bones.hipR.rotation.x;
+  u.ph=Math.PI*1.5;updateHuman(g);
+  assert(Math.abs(bones.hipL.rotation.x-walkHipL)>.08||
+   Math.abs(bones.hipR.rotation.x-walkHipR)>.08,
+   'Caminar canvia les articulacions reals del V18 entre passes');
+  u.gameLandMove=0;updateHuman(g);
+  assert.equal(u.humanGameCanonicalSoles.length,2,'Soles V18 i no antigues');
+  assert(u.humanGameCanonicalSoles.every(m=>m.userData.humanLandmark==='sole'&&m.castShadow),
+   'Les soles originals projecten ombra si el perfil ho permet');
   assert(!part.visible&&part.parent===gun,'Old ghost gun is not visible or detached from gameplay controller');
   const oldLowerY=u.lowerBody.position.y,oldUpperY=u.upperBody.position.y;
   u.lowerBody.position.y-=.72;u.upperBody.position.y-=.72;

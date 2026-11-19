@@ -181,16 +181,16 @@ function installCanonicalPlayer(T,model){
    .multiply(upperRest).multiply(u.upperBody.quaternion);
   j.spine.position.y=actualSpineY+((u.upperBody.position.y-spineY)-dy)*crouchRatio;
   for(const [id,bone]of Object.entries(control))j[id].quaternion.copy(rest[id]).multiply(bone.quaternion);
-  // Traslladam la passa de l'editor a les cames i turmells en córrer.
-  // El rig del joc encara controla la física, els trets i les interaccions.
-
+  // Caminar i córrer pertanyen al mateix motor visible que l'editor.
+  // Els pivots antics resten com a controls de física, armes i vehicles.
   const run=Math.max(0,Math.min(1,u.runBlend||0));
-  if(run>.001){
+  const landMove=Math.max(run,Math.max(0,Math.min(1,u.gameLandMove||0)));
+  if(landMove>.001&&!u.gameSwimActive){
    const phase=(u.ph||0)/(Math.PI*2);
    for(const [side,offset]of [['L',0],['R',.5]]){
     const gait=sampleHumanGait(phase+offset,run);
     for(const [joint,angle]of [['hip',gait.hip],['knee',gait.knee],['ankle',gait.ankle]])
-     j[joint+side].quaternion.slerp(runTarget.setFromAxisAngle(runAxis,angle),run);
+     j[joint+side].quaternion.slerp(runTarget.setFromAxisAngle(runAxis,angle),landMove);
    }
   }
   for(const [kind,scale,y,z]of weapons){
@@ -294,7 +294,10 @@ function installCanonicalPlayer(T,model){
  u.humanGamePose();
  u.humanGameCanonicalRig=visual;
  u.humanGameCanonicalJoints=j;
+ // La cota dels peus depèn només de les dues soles V18 reals.
  u.humanGameCanonicalSoles=meshes.filter(m=>m.userData.humanLandmark==='sole');
+ if(u.humanGameCanonicalSoles.length!==2)
+  throw Error('HUMANS V18: falten les dues soles canòniques');
  u.humanGameV17='player';
  u.humanGameV17NeckMatched=true;
  u.humanGameV17PreservedRig=true;

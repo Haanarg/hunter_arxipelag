@@ -354,12 +354,15 @@ function* prepareShadowCastersSteps(){
       candidates.sort((a,b)=>b.radius-a.radius);
       for(const c of candidates.slice(0,n))chosen.add(c.mesh);
     };
-    // Després d'articular el rig, les malles del tors són dins upperBody.
-    // Seleccionant només fills directes de pl se'n perdia tota l'ombra.
-    largest(u.upperBody,3,true);
-    largest(u.ll,2);largest(u.lr,2);
-    largest(u.al,1);largest(u.ar,1);
-    largest(u.head,2);
+    // El V18 és germà del rig de control antic: upperBody/ll/al
+    // ja no contenen les malles visibles. Seleccionam només el V18.
+    const joints=u.humanGameCanonicalJoints;
+    if(joints){
+      largest(joints.pelvis,2);largest(joints.spine,3);
+      largest(joints.head,2);
+      largest(joints.hipL,2);largest(joints.hipR,2);
+      largest(joints.shoulderL,1);largest(joints.shoulderR,1);
+    }
     const already=new Set(shadowCandidates.map(e=>e.mesh));
     for(const mesh of chosen)if(!already.has(mesh))
       shadowCandidates.push({mesh,owner:pl,point:null});
@@ -4417,6 +4420,8 @@ if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
  // updateMatrixWorld ni hi ha interpolacions del motor anterior.
  if(started&&!paused&&!over){
   if(pl.visible){
+   // El lift visual no es pot acumular en RAF sense subpas de física.
+   if(!cv&&!scopeActive&&!playerFall&&!playerEject)pl.position.y=P.y;
    pl.userData.humanGamePose?.();
    if(!cv&&!scopeActive&&!playerFall&&!playerEject){
     if(swimming){
@@ -4458,6 +4463,8 @@ if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
   for(const view of nativeCoopSession?.nativeRemoteViews?.values()||[]){
    const {model,target,actor,vehicle}=view;
    if(!model.visible||vehicle||!actor||actor.hp<=0)continue;
+   // Mateixa base física per al convidat abans de cada animació visual.
+   model.position.y=target.y;
    model.userData.humanGamePose?.();
    if(actor.swimming)
     model.position.y+=window.HUNTER_CHARACTERS.swimVisualLift(

@@ -1,3 +1,13 @@
+**2026-11-19 · v0.6.245 · Auditoria de referències a l'esquelet antic del protagonista:**
+- [x] Revisats model, rig, natació, locomoció, ombres, alçada i COOP. L'esquelet antic continua només com a controlador ocult de física, armes, seients i compatibilitat; el V18 és l'única pell visible.
+- [x] Caminar utilitza la passa canònica del V18, sense dependre només de moviments dels membres antics; córrer manté el mostreig natiu.
+- [x] Ombres: la selecció sobre upperBody/ll/al/head antics s'ha substituït per les articulacions visibles V18 de cap, tors, pelvis, braços i cames.
+- [x] Natació: eliminat l'ajust vertical amb el cap/torso antic; B3, C4 i manteniment calculen el nivell del cap i les espatlles V18.
+- [x] Contacte de terra: dues soles canòniques obligatòries. Ajust de posició visual restablert des de la física a cada RAF (també en COOP), sense acumulacions.
+- [x] Prova preexistent de model humà ampliada per caminar, soles i ombra, sense afegir proves noves.
+- [ ] Confirmar caminada/cursa, B3/C4, ombra i entrada/sortida de l'aigua visualment en WebGL real i dues pantalles COOP.
+- [ ] Verificar la compilació i el desplegament exacte de v0.6.245 a Cloudflare.
+
 **2026-11-19 · v0.6.244 · Recuperació de les postures visibles i del nivell d'aigua:**
 - [x] Diagnòstic del regressiu de 0.6.243: l'adaptador canònic es recalculava en cada subpas de la simulació (en lloc d'un cop per fotograma) i el nivell visual de l'aigua s'ajustava abans de la postura final.
 - [x] El motor únic manté B3/C4/manteniment/caminar/córrer i les escales consolidades, però aplica la pell V18 només un cop, abans del dibuix i les ombres. L'ajust de soles i l'elevació en natació es fan immediatament després de la postura visible.

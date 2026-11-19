@@ -517,34 +517,16 @@ window.HUNTER_CHARACTERS=Object.freeze({
   // just sobre l'onada, el pit queda parcialment submergit i els peus
   // més profunds. No hem de situar tot el tors per damunt de l'aigua.
   swimVisualLift(player,surface,physicalY){
-    const u=player.userData,crawl=Math.max(0,Math.min(1,u.crawlBlend||0));
-    const canonical=u.humanGameCanonicalJoints;
-    // Both B3 breaststroke and C4 crawl now use a horizontal visual rig.
-    // Anchor the exact editor head/shoulders at the waterline, without
-    // changing the authoritative physical position or ground collisions.
-    if(canonical&&(u.gameSwimBlend||0)>.001&&physicalY<surface-.6){
-      player.updateMatrixWorld(true);
-      canonical.head.getWorldPosition(u.swimHead);
-      canonical.shoulderR.getWorldPosition(u.swimChest);
-      const lift=Math.max(0,surface+.16-u.swimHead.y,
-       surface+.04-u.swimChest.y);
-      return Math.max(0,Math.min(1,u.gameSwimBlend))*lift;
-    }
-    // Older player skins retain the previous visual-only crawl offset.
-    if(crawl<.001||physicalY>=surface-.6)return 0;
-    // Mesuram l'altura real del cap i pit transformats: el punt físic
-    // P.y queda intacte i només desplaçam el model durant el crol.
+    const u=player.userData,canonical=u.humanGameCanonicalJoints;
+    // L'única superfície visual a peu és HUMANS V18. No es mesura
+    // mai el cap o el tors del rig de compatibilitat antic.
+    if(!canonical||(u.gameSwimBlend||0)<=.001||physicalY>=surface-.6)return 0;
     player.updateMatrixWorld(true);
-    u.swimChest.set(0,2.31*1.2-u.upperBodyPivotHeight,0);
-    u.upperBody.localToWorld(u.swimChest);
-    u.head.getWorldPosition(u.swimHead);
-    const chestRel=u.swimChest.y-player.position.y,
-          headRel=u.swimHead.y-player.position.y;
-    // El pit i les espatlles han de ser visibles damunt l'aigua,
-    // i no únicament la motxilla. Conservam la posició física.
-    // El més restrictiu dels dos límits evita submergir el cap.
-    return crawl*Math.max(0,surface+.22-physicalY-chestRel,
-                            surface+.38-physicalY-headRel);
+    canonical.head.getWorldPosition(u.swimHead);
+    canonical.shoulderR.getWorldPosition(u.swimChest);
+    const lift=Math.max(0,surface+.16-u.swimHead.y,
+      surface+.04-u.swimChest.y);
+    return Math.min(1,u.gameSwimBlend)*lift;
   },
   animatePlayer(player,options){
     // El tick actualitza només els controls i l'estat d'animació.
@@ -573,6 +555,9 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // Transició suau de caminar a córrer: cadència i posicions diferents,
     // no només la velocitat de desplaçament.
     u.runBlend=(u.runBlend||0)+((running&&move>.08&&!swimming&&!inVehicle&&!crouching?1:0)-(u.runBlend||0))*(1-Math.exp(-10*dt));
+    // La marxa real alimenta directament el rig V18 visible.
+    // El motor canònic no ha d'inferir-la dels ossos antics ocults.
+    u.gameLandMove=!swimming&&!inVehicle&&!airborne&&!parachuting?move:0;
      // Els braços es relaxen progressivament després d'una passa o carrera.
      const restArmRate=move<.08&&!swimming&&!inVehicle?1-Math.exp(-5.5*dt):limbK;
     u.crouchBlend=(u.crouchBlend||0)+((crouching&&!swimming&&!inVehicle&&!airborne&&!parachuting?1:0)-(u.crouchBlend||0))*(1-Math.exp(-10*dt));
