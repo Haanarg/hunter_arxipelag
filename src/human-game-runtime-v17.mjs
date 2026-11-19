@@ -100,8 +100,8 @@ function installCanonicalPlayer(T,model){
  const swimBridge=createGameSwimBridge(T,visual,j);
  let updatingCanonical=false;
  const pelvisY=u.hipHeight,spineY=u.upperBodyPivotHeight,actualSpineY=j.spine.position.y;
- // A .72m crouch offset belonged to the old ~4m controller. Scale only
- // that movement distance to the native 2m pelvis; NEVER scale the meshes.
+ // El desplaçament d'ajupir-se prové del controlador antic.
+ // Adaptam el moviment al maluc real de la geometria nativa, mai a 2 m.
  const canonicalPelvisY=j.pelvis.parent.position.y*visual.scale.y;
  const crouchRatio=Math.min(1,canonicalPelvisY/pelvisY);
  const weapons=[
@@ -298,7 +298,9 @@ export function createHumanGameRuntimeV17(){
  let suppressed=0;
  const runtime={
   version:GAME_HUMAN_SKIN_VERSION,
-  footVisualHeight:2*FOOT_PLAYER_VISUAL_FACTOR,
+  // Es mesura la geometria humana original; no hi ha un sostre de 2 m.
+  // Queda determinat en construir el primer pilot o el model a peu.
+  footVisualHeight:null,
   // La malla del pilot de dues rodes és literalment la del jugador a peu.
   // Cap os s'estira per encaixar mans o peus a manillars i pedals.
   createTwoWheelRider(T){
@@ -313,13 +315,13 @@ export function createHumanGameRuntimeV17(){
    // Fer explícites les dimensions del jugador a peu a totes les
    // articulacions i malles. El rider ja no té un scale heretat ocult
    // que es pugui combinar amb el del vehicle o l'animació.
-   const referenceHeight=2*FOOT_PLAYER_VISUAL_FACTOR;
    const bareHeight=new T.Box3().setFromObject(root).getSize(new T.Vector3()).y;
    if(!(bareHeight>0))throw Error('Malla canònica del pilot buida');
-   const factor=referenceHeight/bareHeight;
-   // root.scale encapsula l'ajust original de 2 m de l'editor.
-   // Se substitueix per geometria i pivots escalats físicament.
-   const bakedScale=root.scale.x*factor;
+   // L'única escala visual aprovada s'aplica a la geometria nativa.
+   // No es fa servir cap alçada final ni el límit històric de 2 m.
+   const bakedScale=FOOT_PLAYER_VISUAL_FACTOR*root.scale.x;
+   const referenceHeight=bareHeight*FOOT_PLAYER_VISUAL_FACTOR;
+   runtime.footVisualHeight=referenceHeight;
    root.traverse(node=>{
     if(node===root)return;
     node.position.multiplyScalar(bakedScale);
@@ -331,8 +333,8 @@ export function createHumanGameRuntimeV17(){
    root.scale.set(1,1,1);
    root.updateWorldMatrix(true,true);
    const standingHeight=new T.Box3().setFromObject(root).getSize(new T.Vector3()).y;
-   if(Math.abs(standingHeight-runtime.footVisualHeight)>.025)
-    throw Error('El rig i la malla del pilot no tenen l’alçada del jugador a peu');
+   if(Math.abs(standingHeight-referenceHeight)>.025)
+    throw Error('El rig i la malla del pilot no coincideixen amb la geometria natural del protagonista');
    root.userData.twoWheelStandingHeight=standingHeight;
    root.userData.twoWheelCanonical=true;
    root.userData.twoWheelBakedScale=bakedScale;
