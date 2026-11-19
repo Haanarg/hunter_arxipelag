@@ -1,3 +1,9 @@
+**2026-11-19 · Natació B3/C4 a producció v0.6.240:**
+- [x] Identificat bloqueig de compilació: les darreres versions no arribaven a Cloudflare per una prova de normalització de vehicles i després canvis simultanis del comparador V18. Corregides les matrius de referència de la prova existent; sense afegir proves noves.
+- [x] Versió 0.6.240 amb cache-busting dels punts d'entrada i dels mòduls de natació: selector B3 en avançar, C4 en avançar ràpid i animació anterior quan s'està quiet/lateral. Confirmació de compatibilitat amb SOLO/COOP segons el codi actual.
+- [x] CI i Cloudflare superats: GitHub Actions 44595363655. Paquet clàssic regenerat `dist/hunter-runtime.c1f614a9965f20f6.js` (70 scripts), manifest i fitxers B3/C4 verificats per HTTP a Paradoxa amb `GAME_VERSION=0.6.240`.
+- [ ] Comprovació visual manual de la braça B3 en el joc per l'usuari.
+
 **2026-11-19 · v0.6.239 · Implementació B3 i C4 al joc (SOLO i COOP):**
 - [x] Les dues cinemàtiques aprovades del laboratori es renderitzen ara directament al rig natiu de 16 articulacions del protagonista, amb braços i cames d'IK B3 i C4, ±40° de roll al C4, i pausa de lliscament d'1 s a la braça.
 - [x] **Control actualitzat**: braça B3 quan es neda endavant; crol C4 si es neda endavant prement córrer; animació anterior quan s'està quiet, es neda lateralment o enrere. Transicions suaus i mateix criteri per al COOP.
