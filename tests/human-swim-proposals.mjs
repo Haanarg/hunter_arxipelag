@@ -40,6 +40,14 @@ for(const [kind,variants] of Object.entries(HUMAN_SWIM_PROPOSALS)){
   }
   const first=samples[0],last=samples.at(-1);
   assert(Math.abs(first.bodyPitch-last.bodyPitch)<1e-8,'Cicle de tronc sense salt');
+  // El nadador és horitzontal: braços allargats vers el cap (+Y del rig),
+  // no pas en la direcció d'apuntar quan el personatge està dret (-Z).
+  assert((kind==='breast'?first.arm[0]:first.arms.R[0])>2.8,'Extensió de braços cap al cap');
+  if(kind==='crawl'){
+   const recovery=sampleHumanSwimming(mode,variant.period*.76);
+   assert(recovery.arms.R[0]<-.9,'Recuperació aèria del crol');
+   assert(Math.max(...samples.map(s=>s.bodyRoll))>.30,'Rotació axial de crol visible');
+  }
   if(kind==='breast'){
    assert(Math.abs(first.arm[0]-last.arm[0])<1e-8,'Braços de braça continus');
    assert(Math.abs(first.leg[1]-last.leg[1])<1e-8,'Puntada de braça contínua');
