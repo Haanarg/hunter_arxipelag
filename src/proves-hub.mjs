@@ -15,6 +15,8 @@ export const SECTION_TOOLS=Object.freeze({
  ],
  animations:[
   {id:'gait',title:'Caminar, córrer i postures',editor:'characters'},
+  {id:'breast',title:'Nedar a braça · 4 propostes',editor:'characters'},
+  {id:'crawl',title:'Nedar a crol · 4 propostes',editor:'characters'},
   {id:'shoot',title:'Dispar',url:'dispar-proves.html'},
   {id:'finale',title:'Seqüència final',url:'final-proves.html'}
  ],
@@ -71,6 +73,7 @@ if(typeof document!=='undefined'){
    if(frame.getAttribute('src'))frame.removeAttribute('src');
    frame.hidden=true;open.hidden=true;
    dispatchEvent(new CustomEvent('hunter:proves-section',{detail:editorKind}));
+   if(section==='animations')dispatchEvent(new CustomEvent('hunter:proves-swim',{detail:tool?.id||'gait'}));
   }else{
    frame.hidden=false;open.hidden=false;
    const href='./'+tool.url;
