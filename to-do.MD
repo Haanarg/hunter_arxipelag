@@ -3,9 +3,10 @@
 - [x] GitHub Actions exigeix la paritat després del build i abans del deploy: PASS a l'execució 44632276188.
 - [x] El desplegament també ha verificat el paquet de 70 mòduls, el manifest, el bootstrap, el menú i la versió 0.6.250.
 - [x] Segona ronda de protecció afegida: verifica el selector source, el fitxer `src/runtime-mode.mjs` públic i torna a comparar els assets crítics 20 segons després d'un desplegament aparentment correcte.
+- [x] Detectat risc de doble via de publicació: el `src/runtime-bundle.mjs` versionat a GitHub encara assenyala `dist/hunter-runtime.7530875609a433d3.js`; GitHub Actions genera i publica a Cloudflare `dist/hunter-runtime.28d97038173d7ab3.js` però NO commit els fitxers generats al repositori. Un desplegament directe des del checkout antic podria revertir el manifest i causar un 404.
 - [ ] Distingir si els manifests desincronitzats són causats per caché CDN o per un segon desplegament automàtic: revisar les entrades cronològiques de Cloudflare Workers > Deployments.
 - [ ] Comparació visual WebGL source/bundle en navegador abans de tornar a activar bundle per defecte.
-- [ ] Verificar CI del control d'estabilitat.
+- [x] GitHub Actions 44632685889: PASS source per defecte, paritat V18 source/bundle, fitxer `src/runtime-mode.mjs`, tots els assets i comprovació estable als 20 segons; Cloudflare v0.6.250 confirmat.
 
 **2026-11-19 · Auditoria executable de paritat source/bundle (0.6.250):**
 - [x] `tests/runtime-parity-snapshot.cjs`: genera snapshots de partida amb el mateix jugador i llavor en mode source i bundle, amb V18 instal·lat i animació de caminar, braça B3, crol C4 i ombres.
