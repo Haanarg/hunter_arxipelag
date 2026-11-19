@@ -1774,31 +1774,14 @@ const buildingVisual=window.HUNTER_BUILDINGS.create(THREE,{material:M,materialPr
 const pl=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});scene.add(pl);
 // Opt-in de diagnòstic del protagonista real del joc. No canvia la partida
 // normal i evita confondre proves del laboratori amb el render WebGL.
-const avatarAuditEnabled=new URLSearchParams(location.search).get('avatarAudit')==='1';
-let avatarAuditForced=false,avatarAuditPoseCalls=0,avatarAuditReadout=null;
-if(avatarAuditEnabled){
- const panel=document.createElement('section');
- panel.id='hunterAvatarAudit';
- panel.style.cssText='position:fixed;right:8px;top:8px;z-index:10002;'+
-  'width:min(345px,calc(100vw - 16px));box-sizing:border-box;'+
-  'padding:10px;background:#071620ee;color:#d5f6e5;'+
-  'border:1px solid #92bbad;border-radius:8px;'+
-  'font:11px/1.36 ui-monospace,monospace;'+
-  'white-space:pre-wrap;pointer-events:auto';
- avatarAuditReadout=document.createElement('div');
- avatarAuditReadout.textContent='AUDITORIA V18 · Inicialitzant…';
- const test=document.createElement('button');
- test.type='button';
- test.style.cssText='margin-top:7px;padding:7px;font:600 12px system-ui;'+
-  'background:#ddd;color:#122;border:0;border-radius:5px';
- test.textContent='PROVA FORÇADA V18: DESACTIVADA';
- test.onclick=()=>{
-  avatarAuditForced=!avatarAuditForced;
-  test.textContent='PROVA FORÇADA V18: '+(avatarAuditForced?'ACTIVADA':'DESACTIVADA');
- };
- panel.append(avatarAuditReadout,test);
- document.body.append(panel);
-}
+// El panell neix a la portada, ABANS de carregar Three.js ni game-core.
+ // Així també informa dels errors de càrrega i no queda ocult mentre
+ // l'usuari selecciona la dificultat o el motor triga a arrencar.
+const avatarAuditState=window.HUNTER_AVATAR_AUDIT||null;
+const avatarAuditEnabled=!!avatarAuditState;
+const avatarAuditReadout=avatarAuditState?.readout||null;
+let avatarAuditPoseCalls=0,avatarAuditFrame=0;
+if(avatarAuditState)avatarAuditState.paint('V18 · Motor de partida carregat.\nInicia la missió per veure els valors reals.');
 const animPl=(f,dt,running=false,strafe=0)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{
   forward:f,strafe,dt,running,crouching:playerCrouched&&!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive,
   swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,assaultRifleEquipped,
@@ -4457,7 +4440,7 @@ if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
    // Prova visual separada del controlador antic i de la física:
    // si aquestes articulacions no es mouen en pantalla, el problema és
    // a la jerarquia o al render, no al selector de caminar/B3/C4.
-   if(avatarAuditEnabled&&avatarAuditForced){
+   if(avatarAuditEnabled&&avatarAuditState.forced){
     const joints=pl.userData.humanGameCanonicalJoints;
     if(joints){
      const stroke=Math.sin(now*.007);
@@ -4541,7 +4524,7 @@ for(const proxy of shadowBoatNodes){
 }
 const shadowRedrawn=shadowCache.schedule({now:performance.now(),x:sun.target.position.x,z:sun.target.position.z,
   nodes:shadowPoseNodes,enabled:!!ren.shadowMap.enabled});
-if(avatarAuditReadout&&renderLoopFrameId%12===0){
+if(avatarAuditReadout&&++avatarAuditFrame%12===0){
  const u=pl.userData,j=u.humanGameCanonicalJoints,body=u.humanGameCanonicalRig;
  let meshes=0,casters=0;
  body?.traverse(o=>{if(o.isMesh){meshes++;if(o.castShadow)casters++}});
@@ -4567,8 +4550,8 @@ if(avatarAuditReadout&&renderLoopFrameId%12===0){
   'Candidats V18: '+casters+'/'+meshes+
    ' · assignats: '+shadowStats.playerCasters+
    ' · totals propers: '+shadowStats.active,
-  'Prova forçada: '+(avatarAuditForced?'ACTIVA':'apagada')
- ].join('\n');
+  'Prova forçada: '+(avatarAuditState.forced?'ACTIVA':'apagada')
+ ].concat(avatarAuditState.error?['ERROR: '+avatarAuditState.error]:[]).join('\n');
 }
 const renderStarted=performance.now();
 const measuringRenderMatrix=performanceAudit?.status==='running'&&gameplayActive;

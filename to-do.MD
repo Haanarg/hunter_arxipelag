@@ -1,3 +1,11 @@
+**2026-11-19 · v0.6.248 · Reparació del panell d'auditoria invisible i del ReferenceError de la v0.6.247:**
+- [x] Localitzat `renderLoopFrameId` inexistent en l'actualització del panell. Ara usa `avatarAuditFrame` local, incrementat per RAF; no trenca el render.
+- [x] El HUD de diagnòstic s'inicialitza en un script independent `src/avatar-audit-boot.js` des del menú, sense esperar el motor, Three.js ni WebGL. Només en `?avatarAudit=1`.
+- [x] Panell sempre visible per damunt del menú amb `z-index:2147483647`, estat d'arrencada, errors JS i proves forçades activables. El motor reutilitza el mateix panell, mai no el duplica.
+- [x] Pantalla de càrrega informa d'errors, amb el detall visible dins del HUD. No altera partides normals ni escala, col·lisions o control de l'avatar.
+- [ ] Verificar visualment a partida real que el V18 respon a `PROVA FORÇADA` i llegir dades de shadow casters.
+- [ ] Compilar i verificar desplegament CI a Cloudflare.
+
 **2026-11-19 · v0.6.247 · Diagnòstic integrat del V18, sense més ajusts especulatius:**
 - [x] Mode optatiu `?avatarAudit=1&quality=desktop`: panell sobre el joc WebGL real que informa de presència del rig V18, crides `humanGamePose` per RAF, inputs de locomoció, fases, estil i pes de natació, articulacions visibles, casters, i configuració real d'ombres.
 - [x] Botó de prova forçada del V18: quatre articulacions canvien directament en cada RAF sense consultar l'esquelet antic ni el selector de natació. Permet separar una avaria de selecció d'estat d'una avaria de dibuix/escena. Només existeix amb el paràmetre de diagnòstic; no altera física ni savegames.

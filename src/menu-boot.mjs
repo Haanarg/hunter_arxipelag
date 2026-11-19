@@ -1,6 +1,6 @@
 import './menu-main-integration.mjs?menu=direct-html-v1';
-import {GAME_VERSION} from './version.mjs?v=0.6.247';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.247&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1';
+import {GAME_VERSION} from './version.mjs?v=0.6.248';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.248&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1';
 
 // La portada reutilitza els controls reals i un renderitzat Three.js independent.
 // El canvas del fons s'allibera abans d'arrencar el motor de la partida.
@@ -28,6 +28,8 @@ const badge = document.getElementById('versionBadge');
 if(badge)badge.textContent='v'+GAME_VERSION;
 
 const params = new URLSearchParams(location.search);
+if(window.HUNTER_AVATAR_AUDIT)
+ window.HUNTER_AVATAR_AUDIT.paint('HUNTER V18 · Portada carregada.\nEl panell ja funciona sense el motor 3D.\nEntra en una partida per diagnosticar el personatge.');
 const stressAuditRequested=params.get('perfAudit')==='1'&&params.get('stress')==='1';
 if(stressAuditRequested){
   // La prova no depèn de la llavor aleatòria ni d'una elecció del menú.
@@ -97,6 +99,7 @@ function loadGame(){
   if(window.HUNTER_READY)return Promise.resolve();
   if(!bootPromise){
     window.HUNTER_MENU_BACKGROUND_STOPPED=true;
+    window.HUNTER_AVATAR_AUDIT?.paint('HUNTER V18 · Carregant el motor 3D…');
     // Alliberam completament l'iframe i el seu context WebGL abans
     // d'importar el runtime. També impedeix feina de fons durant el coop.
     const background=document.getElementById('menuWorldVista');
@@ -105,7 +108,7 @@ function loadGame(){
       background.hidden=true;
     }
     window.dispatchEvent(new Event('hunter:menu-background-stop'));
-    bootPromise=import('./bootstrap.mjs?v=0.6.247&humansV17=3&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1&bunkerParapet=1&civilNose=1&ka60=1').then(()=>{
+    bootPromise=import('./bootstrap.mjs?v=0.6.248&humansV17=3&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1&bunkerParapet=1&civilNose=1&ka60=1').then(()=>{
     if(!window.HUNTER_READY)throw new Error('El motor 3D no ha acabat de carregar');
   }).catch(error=>{bootPromise=null;throw error});
   }
@@ -162,6 +165,8 @@ function intercept(button,message){
     }catch(error){
       if(error.name!=='AbortError'){
         console.error('No es pot carregar el motor Hunter',error);
+        window.HUNTER_AVATAR_AUDIT?.paint('ERROR CARREGANT MOTOR 3D:\n'+
+          (error?.stack||error?.message||String(error)));
         showLoading('Error de càrrega. Torna a prémer per reintentar-ho.');
       }
     }finally{requestPending=false}
