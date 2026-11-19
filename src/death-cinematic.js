@@ -54,11 +54,16 @@ function deathPoseProne(player,centre,heading){
  for(const weapon of [u.gun,u.knife,u.bazooka,u.grenade,u.sniper,u.assault,u.cisalla])
   if(weapon)weapon.visible=false;
  if(u.pistolFlash)u.pistolFlash.visible=false;
+ // La Parca no passa pel render-tick de gameplay (over=true).
+ // Aplicam ara la postura a la pell V18, o romandria rígida mentre
+ // només es mourien els ossos invisibles de compatibilitat.
+ u.gameSwimBlend=0;u.gameSwimActive=false;u.gameLandMove=0;u.runBlend=0;
+ u.humanGamePose?.();
  player.visible=true;
  player.updateMatrixWorld(true);
 }
 function deathFaceCamera(player,cameraPosition){
- const head=player.userData?.head;
+ const head=player.userData?.humanGameCanonicalJoints?.head||player.userData?.head;
  if(!head)return;
  // El gir Y local, amb el cos ajagut, fa rodar la cara cap al costat
  // des d'on mira la càmera. Limitam el gir per respectar el coll.

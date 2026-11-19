@@ -4433,7 +4433,7 @@ if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
        // també en pendents. No canviam P.y ni la detecció física del terra.
        pl.updateMatrixWorld(true);
        const canonical=pl.userData.humanGameCanonicalSoles;
-       const soles=canonical?.length===2?canonical:pl.userData.soleContacts||[],
+       const soles=canonical?.length===2?canonical:[],
              point=pl.userData.soleWorldScratch??=new THREE.Vector3(),
              soleBounds=pl.userData.soleBoundsScratch??=new THREE.Box3();
        let clearance=Infinity;

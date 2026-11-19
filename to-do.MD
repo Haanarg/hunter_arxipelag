@@ -1,3 +1,10 @@
+**2026-11-19 · v0.6.246 · Tancament d'auditoria del rig anterior i caché:**
+- [x] La cinemàtica de mort mantenia postures sobre ossos antics sense cridar el motor V18 perquè s'executa fora del tick del joc. Ara força la pose V18 i el cap visible mira la càmera; es mantenen els controls antics de compatibilitat.
+- [x] L'ajust de les soles ja no fa fallback a punts de contacte del rig antic si manca el model canònic; la instal·lació V18 exigeix exactament dues soles.
+- [x] Revisades referències a game-core, characters, coop, combat, càmera, rider, death-cinematic, ragdoll i adaptador V18. Els accessos restants als membres antics són controls d'armes/cinemàtica/rider/mode de compatibilitat, no fonts de geometria visible.
+- [x] Bump de revisió de l'import ESM de l'adaptador V18 perquè la memòria cau del navegador no serveixi una implementació antiga amb la nova versió.
+- [ ] Verificar GitHub Actions, compilació i Cloudflare. Les proves automatitzades no substitueixen comprovació visual a WebGL, Android i COOP.
+
 **2026-11-19 · v0.6.245 · Auditoria de referències a l'esquelet antic del protagonista:**
 - [x] Revisats model, rig, natació, locomoció, ombres, alçada i COOP. L'esquelet antic continua només com a controlador ocult de física, armes, seients i compatibilitat; el V18 és l'única pell visible.
 - [x] Caminar utilitza la passa canònica del V18, sense dependre només de moviments dels membres antics; córrer manté el mostreig natiu.
