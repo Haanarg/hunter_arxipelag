@@ -1,3 +1,13 @@
+**2026-11-19 · Revisió biomecànica de natació (B3 i C4):**
+- [x] **B3 braça seleccionada:** moviment simultani i simètric, sense cap roll axial; els colzes no superen els 90° de flexió. Mans convergents sota el pit i sempre davant de la línia de les espatlles; colzes més alts que els canells en agafada i estrebada.
+- [x] Ondulació sagital moderada i respiració amb elevació del tòrax i descens lleu dels malucs; coll sense hiperextensió. Puntada estreta, genolls prop de l'amplada dels malucs, peus en martell i amb dits cap enfora durant la càrrega, flexió plantar al final.
+- [x] B3 cicle de 3,2 s amb fase de fletxa **exactament 1,0 s** (de 2,2 a 3,2 s), extremitats rectes i horitzontalitat estable.
+- [x] **C4 crol seleccionat:** roll longitudinal del cos complet de ±37°, sense torsió lumbar independent; braços en contrafase, agafada i recobrament amb colze alt, lleu rotació humeral i pronació del canell; genolls <=40° de flexió, peus estirats i sis batuts alterns per cicle complet.
+- [x] Respiració cervical lateral de la C4 durant la sortida del braç dret, amb retorn a la mirada al fons abans de l'entrada, sense aixecar la barbeta.
+- [x] Substitució de transicions smoothstep a cada fotograma per interpolació cúbica Hermite C1 periòdica i keyframes de fases; control de fotograma manual al laboratori per inspeccionar les quatre variants de braça i crol.
+- [x] Comprovació geomètrica del rig real Three.js i execució de **36.471 assercions** (inclou 120 fps, simetria, orientació dels peus, posició de canells, límits de colze/genoll, respiració i continuïtat de quaternions) en aïllament JavaScript amb les fonts vigents.
+- [ ] Executar la suite sencera Node del laboratori a la carpeta de treball real, validar la representació a WebGL/mòbil i confirmar que Cloudflare ha publicat aquesta revisió. No s'han substituït encara les animacions de natació del joc.
+
 **2026-11-19 · Propostes de natació a l’editor (braça i crol):**
 - [x] Quatre seqüències de braça (equilibrada, esportiva, oberta i lliscament) i quatre de crol (sis batudes, fons, tècnic i ràpid), amb diferències reals de temps, braços, puntada, tronc i respiració.
 - [x] Mateixa malla A i mateix rig de 16 articulacions als quatre candidats; inclinació horitzontal, cap orientat a l’aigua, braçades en direcció anatòmica correcta i recuperació aèria en crol.
