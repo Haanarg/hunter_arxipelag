@@ -91,7 +91,7 @@ const inspectB=time=>{poseHumanProposal(rootB,time,'swim-breast-3');rootB.update
   elbow:point(THREE,b,'elbowR'),shoulder:point(THREE,b,'shoulderR'),
   head:point(THREE,b,'head'),pelvis:point(THREE,b,'pelvis'),
   kneeL:point(THREE,b,'kneeL'),kneeR:point(THREE,b,'kneeR'),
-  hipL:point(THREE,b,'hipL'),hipR:point(THREE,b,'hipR')
+  hipL:point(THREE,b,'hipL'),hipR:point(THREE,b,'hipR'),anklePitch:b.ankleR.rotation.x
 }};
 const straight=inspectB(0),catchB=inspectB(.94),loadB=inspectB(1.52),glideB=inspectB(2.2);
 assert.equal(HUMAN_SWIM_PROPOSALS.breast[2].glideSeconds,1);
@@ -101,7 +101,7 @@ assert(catchB.armL.distanceTo(catchB.armR)<.20,'Braça: les mans s’ajunten sot
 assert(catchB.elbow.y>catchB.armR.y+.12,'Braça: el colze es manté per sobre de la mà');
 assert(catchB.armR.z<catchB.shoulder.z,'Braça: la mà no retrocedeix de l’espatlla');
 assert(loadB.kneeL.distanceTo(loadB.kneeR)<loadB.hipL.distanceTo(loadB.hipR)*1.5,'Braça: genolls prop de l’amplada dels malucs');
-assert(b.ankleR.rotation.x>.2,'Braça: dorsiflexió del peu durant la càrrega');
+assert(loadB.anklePitch>.2,'Braça: dorsiflexió del peu durant la càrrega');
 inspectB(2.2);
 assert(b.ankleR.rotation.x<-.85,'Braça: flexió plantar durant el lliscament');
 for(const t of [2.2,2.45,2.8,3.05,3.1999]){
