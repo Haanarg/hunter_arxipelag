@@ -21,6 +21,8 @@ on:
       - 'src/characters.js'
       - 'src/water.js'
       - 'src/game-core.js'
+      - 'src/avatar-audit-boot.js'
+      - 'tests/avatar-audit-boot.mjs'
       - 'src/account-menu.js'
       - 'src/rider.js'
       - 'tests/account-submenus.mjs'
