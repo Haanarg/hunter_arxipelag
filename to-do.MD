@@ -1,3 +1,11 @@
+**2026-11-19 · Propostes de natació a l’editor (braça i crol):**
+- [x] Quatre seqüències de braça (equilibrada, esportiva, oberta i lliscament) i quatre de crol (sis batudes, fons, tècnic i ràpid), amb diferències reals de temps, braços, puntada, tronc i respiració.
+- [x] Mateixa malla A i mateix rig de 16 articulacions als quatre candidats; inclinació horitzontal, cap orientat a l’aigua, braçades en direcció anatòmica correcta i recuperació aèria en crol.
+- [x] Comparativa simultània al laboratori de cinc visors: model actual + B1–B4 o C1–C4, superfície de l’aigua translúcida i controls de velocitat.
+- [x] Entrades a Personatges i Animacions; enllaços a imatges i guies de biomecànica; animació anterior del joc intacta.
+- [x] Validació sintàctica i mostreig dels vuit cicles en V8; prova automàtica específica registrada dins la suite `test:lab`.
+- [ ] Executar `npm run test:lab` en un entorn Node del repositori, inspeccionar tots els cicles en WebGL i confirmar el desplegament de `proves.html` a Cloudflare. No traslladar-los al joc fins a seleccionar-los.
+
 **2026-11-18 · Subversió 0.6.227 · Col·lisió del GAZ Tigr-M:**
 - [x] Caixa física d'amplada i longitud ×1,25 només per al GAZ (5,33 × 8,385 → 6,6625 × 10,48125 unitats).
 - [x] Radi de detecció i de proximitat també ×1,25 (4,94 → 6,175), incloent les proves de murs, filferrades, vehicles, vianants, sortides i límits de mapa.
