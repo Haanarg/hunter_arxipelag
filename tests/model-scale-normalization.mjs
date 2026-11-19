@@ -3,6 +3,8 @@ import * as T from '../vendor/three-r186.module.mjs';
 import {bakeFixedModelScales} from '../src/model-scale-normalization.mjs';
 import {vehicleModels} from '../src/vehicle-model-core.mjs';
 import {playerBatching} from '../src/player-batching-core.mjs';
+import {createTruckModel} from '../src/truck-model.mjs';
+import {createCivilianCarModel} from '../src/civilian-car-model.mjs';
 
 // La conversió és conservativa, no una heurística de dimensions:
  // la forma dibuixada, les unions i la seva animació han de quedar igual.
@@ -73,7 +75,8 @@ const make=vehicleModels.createFactory(T,{
     new T.MeshStandardMaterial({color}));mesh.position.set(x,y,z);parent.add(mesh);return mesh;
  },
  material:color=>new T.MeshStandardMaterial({color}),
- shadows:false,batching:playerBatching
+ shadows:false,batching:playerBatching,
+ truck:createTruckModel,civilianCar:createCivilianCarModel
 });
 const types=['bici','moto','cotxe','camio','hover','barca_rems','ferry','windsurf','tanc','tanqueta','heli','heli_combat'];
 for(const type of types){
