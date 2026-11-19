@@ -46,7 +46,15 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
  // aprovat del laboratori. El mòdul conserva i comprova LAB_REVISION.
  assert(html.includes('src/vehicles-externs-proves.mjs?rev='));
  for(const module of ['vehicle-live-editor.mjs','vehicle-candidate-catalog.mjs'])assert(entry.includes(module+'?rev='+revision));
- for(const id of ['liveEditor','vehicleList','humanList','humanMotion','liveClearResolved','sectionTabs','sectionPreview','sectionFrame'])assert(html.includes('id="'+id+'"'),'Missing lab control '+id);
+ for(const id of ['liveEditor','vehicleList','vehicleComparatorSection',
+   'vehicleComparatorList','twoWheelAudit','twoWheelAuditState',
+   'twoWheelAuditGuides','humanList','humanMotion','liveClearResolved',
+   'sectionTabs','sectionPreview','sectionFrame'])
+  assert(html.includes('id="'+id+'"'),'Missing lab control '+id);
+ assert(html.includes('<summary>COMPARADOR</summary>'),
+  'COMPARADOR: categoria pròpia dins de Vehicles');
+ assert(html.includes('body[data-editor-kind="characters"] :is(#vehicleList,#vehicleComparatorSection)'),
+  'El comparador de vehicles no es mostra a Personatges');
  // Parse the active lab entry and helpers, not tests of retired vehicles.
  for(const file of ['proves-hub.mjs','vehicles-externs-proves.mjs','vehicle-candidate-catalog.mjs','vehicle-live-editor.mjs','vehicle-live-geometry.mjs','vehicle-annotation-editor.mjs','vehicle-hole-brush.mjs','human-proposals.mjs','human-model-catalog.mjs','human-current-models.mjs','human-lab-evidence.mjs','human-lab-evidence-ui.mjs','compound-preview.mjs','compound-concepts.mjs'])execFileSync(process.execPath,['--check',path.join(root,'src',file)],{stdio:'inherit'});
  // Parse the inline startup module as well; broken dynamic imports must block deploy.
@@ -71,6 +79,16 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
  assert(/compound-preview\.mjs\?rev=[\w-]+/.test(compoundHtml));
  assert(/compound-concepts\.mjs\?rev=[\w-]+/.test(compoundEntry));
  const modelEditor=read('src/vehicles-externs-proves.mjs');
+ assert(modelEditor.includes('CATALOG,TWO_WHEEL_AUDIT,...HUMAN_CATALOG'),
+  'El comparador ha d’estar al catàleg de Vehicles');
+ assert(modelEditor.includes('config.twoWheelAudit?comparatorList'),
+  'Botó de COMPARADOR independent de la llista de personatges');
+ assert(modelEditor.includes('(config.human||config.twoWheelAudit)?slot.ortho'),
+  'Mateixa càmera ortogràfica per als tres pilots');
+ assert(/if\(!currentType\.twoWheelAudit\)\s*normalize\(/.test(modelEditor),
+  'Sense normalització visual individual als tres models');
+ assert(modelEditor.includes('createTwoWheelLabComparison(THREE,'),
+  'Comparador utilitza els models i rigs reals del joc');
  assert(/renderer\.setScissorTest\(false\);\s*renderer\.clear\(true,true,true\);\s*renderer\.setScissorTest\(true\);/.test(modelEditor),'The full WebGL canvas must be cleared before each clipped frame');
  assert(html.includes('body[data-editor-kind=""] #draw{display:none!important}'));
  const {runCompoundPreviewSmoke}=await import('./compound-preview-smoke.mjs');
