@@ -1,11 +1,11 @@
 **2026-11-19 · v0.6.239 · Implementació B3 i C4 al joc (SOLO i COOP):**
 - [x] Les dues cinemàtiques aprovades del laboratori es renderitzen ara directament al rig natiu de 16 articulacions del protagonista, amb braços i cames d'IK B3 i C4, ±40° de roll al C4, i pausa de lliscament d'1 s a la braça.
-- [x] Crol quan el jugador neda avançant i corre; braça a la resta de natació. Transició de quaternions entre B3/C4 i en entrar/sortir de l'aigua; rellotge animat per jugador i mai pel render.
+- [x] **Control actualitzat**: braça B3 quan es neda endavant; crol C4 si es neda endavant prement córrer; animació anterior quan s'està quiet, es neda lateralment o enrere. Transicions suaus i mateix criteri per al COOP.
 - [x] Física, natació per inputs, HP, col·lisions i autoritat del COOP intactes. No canvien els riders, soldats ni armes; model visual i línia d'aigua calculats des del cap i les espatlles reals.
 - [x] Corregida la variable `knifeEquipped` no definida que podia fer fallar l'animació en sortir de l'aigua.
-- [x] Prova d'integració del `characters.js` original i dos jugadors amb estils independents afegida a `test:lab`.
+- [x] S'ha retirat la prova nova `human-game-swimming.mjs` del projecte i de `test:lab` a petició de l'usuari. Es mantenen només les proves preexistents; comprovació visual manual dins el joc.
 - [x] Suite Node/GitHub Actions (inclou test:lab), build del runtime, desplegament Cloudflare i comprovació d'assets exactes a Paradoxa de la v0.6.239: workflow 44568852833 superat.
-- [ ] Inspecció visual real de B3/C4 al navegador, Android i COOP; comprovar braços, cap, nivell de l'aigua i fluïdesa de l'entrada/sortida.
+- [ ] L'usuari comprovarà directament al joc que B3 apareix en avançar, C4 quan es neda ràpid i l'animació anterior quan s'està quiet o es va de costat. Sense afegir proves noves.
 
 **2026-11-19 · B3/C4: cinemàtica revisada per a proves (versió posterior a la de 37°):**
 - [x] B3: trajectòria de mans en espai 3D mitjançant IK de dues barres, simetria perfecta, colzes dirigits cap enfora al llarg de l'obertura, tracció subaquàtica i recobrament cap endavant sense dur les mans darrere de les espatlles. Colzes amb 20°–89° de flexió sense inversions.
