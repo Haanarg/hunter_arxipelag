@@ -302,6 +302,22 @@ assert.equal(rider.userData.boots.length,2);
    'Els malucs del pilot queden sobre el seient de la moto');
   const motoMeasures=boneMeasures();
   assert(motoMeasures.every(n=>n>.4&&n<1),'Longituds anatòmiques del pilot');
+  const avatarBodyBounds=()=>new T.Box3().setFromObject(anatomicalBody,true);
+  const inspectPose=label=>{
+   const hipL=point('hipL'),hipR=point('hipR'),kneeL=point('kneeL'),
+     ankleL=point('ankleL'),neck=point('neck'),head=point('head');
+   const box=avatarBodyBounds(),limbUpper=hipL.distanceTo(kneeL),
+     limbLower=kneeL.distanceTo(ankleL),reach=hipL.distanceTo(ankleL);
+   console.log('TWO_WHEEL_POSE_DIAGNOSTIC',JSON.stringify({
+    label,body:{min:box.min.toArray(),max:box.max.toArray()},
+    hip:hipL.toArray(),knee:kneeL.toArray(),ankle:ankleL.toArray(),
+    neck:neck.toArray(),head:head.toArray(),
+    limbs:{upper:limbUpper,lower:limbLower,reach,bend:Math.acos(Math.min(1,Math.max(-1,
+      (limbUpper*limbUpper+limbLower*limbLower-reach*reach)/(2*limbUpper*limbLower))))*180/Math.PI}
+   }));
+  };
+  inspectPose('moto-stopped-initial');
+
   const footJoint=footAvatar.userData.humanGameCanonicalJoints;
   const footLength=(a,b)=>footJoint[a].getWorldPosition(new T.Vector3())
     .distanceTo(footJoint[b].getWorldPosition(new T.Vector3()));
@@ -324,6 +340,7 @@ assert.equal(rider.userData.boots.length,2);
   assert(Math.abs(point('pelvis').y-
    (topOfSaddle+driver.object.userData.twoWheelButtBelowHip+.018))<.005,
    'Els malucs i el tors s’alcen junts sense modificar l’anatomia');
+  inspectPose('bike-stopped');
   const stopped=boneMeasures();
   stopped.forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
    'Ni les cuixes ni els panxells no canvien de llargada entre moto i bici'));
@@ -333,6 +350,7 @@ assert.equal(rider.userData.boots.length,2);
     'Les cames i els braços han de conservar la longitud mentre pedala'));
   }
   driver.update({...motorcycle,v:8},1/60);
+  inspectPose('moto-moving-early');
   boneMeasures().forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
    'La transició de bicicleta a moto no pot estirar cap segment'));
   // Igual que a la bicicleta: peus al reposapeus en marxa,
@@ -342,6 +360,7 @@ assert.equal(rider.userData.boots.length,2);
   const ridingSpread=point('ankleR').x-point('ankleL').x;
   assert(ridingFootY>.55,'A la moto en marxa els peus són als reposapeus');
   for(let n=0;n<45;n++)driver.update(motorcycle,1/60);
+  inspectPose('moto-stopped-final');
   const stoppedFootY=(point('ankleL').y+point('ankleR').y)/2,
     stoppedSpread=point('ankleR').x-point('ankleL').x;
   assert(stoppedSpread>ridingSpread+.025,
