@@ -252,7 +252,8 @@ assert.equal(rider.userData.boots.length,2);
     point('elbow'+side).distanceTo(point('wrist'+side))
   ]);
   const moto=new T.Group();moto.userData.motorcycleVisualScale=1.375;
-  driver.update({t:'moto',o:moto,v:0,pedalPhase:0},1/60);
+  const motorcycle={t:'moto',o:moto,v:0,pedalPhase:0};
+  driver.update(motorcycle,1/60);
   assert.equal(driver.object.scale.x,1,'Escala global neutra per al pilot anatòmic');
   assert(anatomicalBody.visible,'La malla de la moto ha de ser visible');
   assert(Math.abs(point('pelvis').y-.99*1.2*1.375)<.005,
@@ -260,10 +261,18 @@ assert.equal(rider.userData.boots.length,2);
   const motoMeasures=boneMeasures();
   assert(motoMeasures.every(n=>n>.4&&n<1),'Longituds anatòmiques del pilot');
   const bici=new T.Group();bici.userData.bicycleVisualScale=.70;
+  bici.userData.bicycleSaddleTop=1.905;
   driver.update({t:'bici',o:bici,v:0,pedalPhase:0},1/60);
   assert.equal(driver.object.scale.x,1,'Ciclista amb escala visual canònica');
-  assert(Math.abs(point('pelvis').y-1.65*1.2*.70)<.005,
-   'Malucs del ciclista encaixats amb el selló');
+  const topOfSaddle=bici.userData.bicycleSaddleTop*1.2*.70;
+  const pelvisBottom=new T.Box3();
+  for(const piece of riderJoints.pelvis.children)
+   if(piece.isMesh)pelvisBottom.expandByObject(piece);
+  assert(Math.abs(pelvisBottom.min.y-topOfSaddle-.018)<.005,
+   'El cul real del ciclista ha de quedar 1,8 cm per damunt del selló');
+  assert(Math.abs(point('pelvis').y-
+   (topOfSaddle+driver.object.userData.twoWheelButtBelowHip+.018))<.005,
+   'Els malucs i el tors s’alcen junts sense modificar l’anatomia');
   const stopped=boneMeasures();
   stopped.forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
    'Ni les cuixes ni els panxells no canvien de llargada entre moto i bici'));
@@ -272,9 +281,21 @@ assert.equal(rider.userData.boots.length,2);
    boneMeasures().forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
     'Les cames i els braços han de conservar la longitud mentre pedala'));
   }
-  driver.update({t:'moto',o:moto,v:8,pedalPhase:0},1/60);
+  driver.update({...motorcycle,v:8},1/60);
   boneMeasures().forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
    'La transició de bicicleta a moto no pot estirar cap segment'));
+  // Igual que a la bicicleta: peus al reposapeus en marxa,
+  // peus al terreny després de frenar, sense canviar de longitud.
+  for(let n=0;n<45;n++)driver.update({...motorcycle,v:8},1/60);
+  const ridingFootY=(point('ankleL').y+point('ankleR').y)/2;
+  assert(ridingFootY>.55,'A la moto en marxa els peus són als reposapeus');
+  for(let n=0;n<45;n++)driver.update(motorcycle,1/60);
+  const stoppedFootY=(point('ankleL').y+point('ankleR').y)/2;
+  assert(stoppedFootY<.25,'La moto aturada baixa tots dos peus fins al terra');
+  assert(stoppedFootY<ridingFootY-.25,
+   'Cal veure la transició de baixada dels peus quan la moto frena');
+  boneMeasures().forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
+   'Frenar i posar els peus a terra no estira les cames de la moto'));
 
 for(const path of ['src/rider.js','src/marine-patrol.js','src/enemy-ai.js','src/coop-world-runtime.js']){
  const source=readFileSync(new URL('../'+path,import.meta.url),'utf8');
