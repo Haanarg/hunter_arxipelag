@@ -127,11 +127,11 @@ window.HUNTER_RIDER=Object.freeze({
     };
     const poseCanonicalTwoWheel=(v,sc,motion,phase)=>{
       const bike=v.t==='bici',user=v.o.userData||{},
-            visual=bike?(user.bicycleVisualScale??.88):
-              (user.motorcycleVisualScale??1.70),
+            visual=bike?(user.bicycleVisualScale??.74):
+              (user.motorcycleVisualScale??1.24),
             fit=sc*visual,anchors=user.twoWheelAnchors||{},
             seat=riderAnchor(v,anchors.seat,
-              vec(0,(bike?1.905:.99)*fit,(bike?.33:.26)*fit)),
+              vec(0,(bike?1.905:.88)*fit,(bike?.33:.54)*fit)),
             // La mateixa cama de l'avatar a peu: no s'escalen ni se
             // substitueixen el fèmur, la tíbia o les malles.
             upperLeg=upperLegLength,
@@ -141,10 +141,10 @@ window.HUNTER_RIDER=Object.freeze({
             floorWorld=vec(footReference.x,
               heightAt(footReference.x,footReference.z)+.14,footReference.z),
             floorY=g.worldToLocal(floorWorld).y,
-            // 86% de la longitud total permet un genoll flexionat.
-            // Quan atura la bici/moto, surt del selló per arribar a
-            // terra sense obligar a allargar les cames.
-            stopHipY=floorY+(upperLeg+lowerLeg)*.86,
+            // Quan el vehicle s'atura, l'abast és el 82% de la cama:
+            // genoll FLEXIONAT, sense enfonsar el tors ni mantenir
+            // els malucs al selló a qualsevol preu.
+            stopHipY=floorY+(upperLeg+lowerLeg)*.82,
             stopped=Math.max(0,1-motion),
             drop=Math.max(0,seatHipY-stopHipY)*stopped,
             forward=(bike?.23:.07)*fit*stopped;
@@ -159,7 +159,7 @@ window.HUNTER_RIDER=Object.freeze({
       cycleBody.position.y+=seatHipY-drop-realHipY;
       cycleJoints.pelvis.rotation.set(0,0,0);
       cycleJoints.spine.rotation.set(
-        bike?-.62+.46*stopped:-.55+.36*stopped,0,0);
+        bike?-.48+.32*stopped:-.48+.32*stopped,0,0);
       cycleJoints.head.rotation.set(bike?.13:.07,0,0);
       g.updateWorldMatrix(true,true);
       for(let i=0;i<2;i++){
@@ -172,17 +172,20 @@ window.HUNTER_RIDER=Object.freeze({
         const hand=riderAnchor(v,anchors['grip'+letter],
           bike?vec(side*.42*fit,1.97*fit,-.78*fit):
             vec(side*.36*fit,1.10*fit,-.34*fit));
-        const footAtRest=vec(side*(bike?.32:.29)*fit,0,
+        const footAtRest=vec(side*(bike?.28:.23)*fit,0,
           seat.z-(bike?.18:.035)*fit);
         const ground=g.localToWorld(footAtRest);
         ground.y=heightAt(ground.x,ground.z)+.14;
         const footOnGround=g.worldToLocal(ground),
               footOnPedal=riderAnchor(v,anchors['pedal'+letter],
-                bike?vec(side*.40*fit,
-                  (.90-side*Math.sin(phase)*.22)*fit,
-                  side*Math.cos(phase)*.22*fit):
-                  vec(side*.34*fit,.42*fit,.16*fit)),
-              foot=footOnGround.lerp(footOnPedal,motion);
+                bike?vec(side*.24*fit,
+                  (.62-side*Math.sin(phase)*.30)*fit,
+                  side*Math.cos(phase)*.30*fit):
+                  vec(side*.24*fit,.42*fit,.16*fit)),
+              // El turmell va per DAMUNT del pedal/reposepeus;
+              // el peu i la sola queden al punt físic de contacte.
+              foot=footOnGround.lerp(footOnPedal.add(
+                vec(0,bike?.09:.07,0)),motion);
         placeCanonicalLimb(hip,knee,ankle,foot,side,true);
         placeCanonicalLimb(shoulder,elbow,wrist,hand,side,false);
       }
