@@ -138,7 +138,15 @@ window.HUNTER_RIDER=Object.freeze({
             stopped=Math.max(0,1-motion),
             drop=Math.max(0,seatHipY-stopHipY)*stopped,
             forward=(bike?.23:.07)*fit*stopped;
-      cycleBody.position.set(0,seatHipY-standingHipY-drop,seat.z-forward);
+      // Posar el maluc a la cota REAL mesurada DESPRÉS de muntar
+      // el rig sota el rider. El càlcul antic restava una alçada
+      // mostrejada abans del reparenting i podia enviar la pelvis
+      // gairebé al nivell del terra, amb tors i cames desencaixats.
+      cycleBody.position.set(0,0,seat.z-forward);
+      g.updateWorldMatrix(true,true);
+      const realHipY=g.worldToLocal(
+        cycleJoints.pelvis.getWorldPosition(new THREE.Vector3())).y;
+      cycleBody.position.y+=seatHipY-drop-realHipY;
       cycleJoints.pelvis.rotation.set(0,0,0);
       cycleJoints.spine.rotation.set(
         bike?-.62+.46*stopped:-.38+.25*stopped,0,0);
