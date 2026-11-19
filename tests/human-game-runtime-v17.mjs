@@ -179,11 +179,11 @@ for(const role of ['player','soldier','rocket','elite','general']){
    assert(Math.abs(bones.ankleL.rotation.x-sampleHumanGait(.39,1).ankle)<.001,'Cursa del joc = turmell de l’editor');
    u.runBlend=0;updateHuman(g);
   // La passa de caminar ha de moure el V18, també sense runBlend.
-  u.gameLandMove=1;u.ph=Math.PI*.5;updateHuman(g);
+  u.gameLandMove=1;u.ph=0;updateHuman(g);
   const walkHipL=bones.hipL.rotation.x,walkHipR=bones.hipR.rotation.x;
-  u.ph=Math.PI*1.5;updateHuman(g);
-  assert(Math.abs(bones.hipL.rotation.x-walkHipL)>.08||
-   Math.abs(bones.hipR.rotation.x-walkHipR)>.08,
+  u.ph=Math.PI;updateHuman(g);
+  assert(Math.abs(bones.hipL.rotation.x-walkHipL)>.40||
+   Math.abs(bones.hipR.rotation.x-walkHipR)>.40,
    'Caminar canvia les articulacions reals del V18 entre passes');
   u.gameLandMove=0;updateHuman(g);
   assert.equal(u.humanGameCanonicalSoles.length,2,'Soles V18 i no antigues');
