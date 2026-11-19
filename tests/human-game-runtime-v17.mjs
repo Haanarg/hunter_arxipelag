@@ -298,8 +298,8 @@ assert.equal(rider.userData.boots.length,2);
   driver.update(motorcycle,1/60);
   assert.equal(driver.object.scale.x,1,'Escala global neutra per al pilot anatòmic');
   assert(anatomicalBody.visible,'La malla de la moto ha de ser visible');
-  assert(Math.abs(point('pelvis').y-.99*1.2*1.375)<.005,
-   'Els malucs del pilot queden sobre el seient de la moto');
+  assert(Math.abs(point('pelvis').y-(.99*1.2*1.375-.04))<.005,
+   'En aturar-se, els malucs del pilot de moto baixen lleugerament cap a terra');
   const motoMeasures=boneMeasures();
   assert(motoMeasures.every(n=>n>.4&&n<1),'Longituds anatòmiques del pilot');
   const avatarBodyBounds=()=>new T.Box3().setFromObject(anatomicalBody,true);
