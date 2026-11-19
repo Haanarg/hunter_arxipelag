@@ -91,12 +91,11 @@ export async function createTwoWheelLabComparison(T,{makeVehicle,box,material,
  const foot=new T.Group(),avatar=playerModel.create(T,{
   unitScale:1.2,headVariant:'compactD',articulated:true
  });
- avatar.scale.setScalar(2/3);
+ // Cap escala afegida: el model natiu a peu ja és 1.6 de l'editor,
+ // la seva arrel és 1 i els pivots antics viuen en un grup separat.
  avatar.rotation.order='YZX';
  foot.add(avatar);
- // El V18 enganxa la compensació visual a updateMatrixWorld(), no
- // a updateWorldMatrix(). Sense aquest pas, la vista a peu quedava
- // exactament 2/3 de la mida del pilot, tot i compartir geometria.
+ avatar.userData.humanGamePose?.();
  avatar.updateMatrixWorld(true);
  const footJoints=avatar.userData.humanGameCanonicalJoints;
  if(!footJoints?.hipL)throw Error('Jugador a peu sense rig anatòmic real');
