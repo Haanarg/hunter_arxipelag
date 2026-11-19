@@ -68,6 +68,22 @@ module.exports=async function createGame(root=path.resolve(__dirname,'..'),optio
   c.HUNTER_ROCK_FIELDS=await import(require('url').pathToFileURL(path.join(root,'src/rock-fields.mjs')));
   class Renderer{constructor(){this.domElement=el('canvas');this.shadowMap={}}setPixelRatio(){}setSize(){}render(scene,cam){scene.updateMatrixWorld();cam.updateMatrixWorld()}}
   c.THREE={...await import(require('url').pathToFileURL(path.join(root,'vendor/three-r186.module.mjs'))),WebGLRenderer:Renderer};
+  // El harness de paritat ha d'inicialitzar TOTS els ponts ESM que
+  // bootstrap.mjs proporciona en producció abans dels clàssics.
+  const module=async p=>import(require('url').pathToFileURL(path.join(root,'src',p)));
+  c.HUNTER_CREATE_ARCADE_BLAST_FX=(await module('arcade-blast-fx.mjs')).createArcadeBlastFX;
+  c.HUNTER_CREATE_NATIVE_COOP_PROJECTILE_VISUAL=(await module('native-coop-projectile-visual.mjs')).createNativeCoopProjectileVisual;
+  c.HUNTER_CREATE_NATIVE_COOP_GRENADE_VISUAL=(await module('native-coop-grenade-visual.mjs')).createNativeCoopGrenadeVisual;
+  c.HUNTER_SHARED_SHARKS=(await module('shark-motion-core.mjs')).SHARED_SHARKS;
+  c.HUNTER_ENEMY_REQUISITION=await module('enemy-vehicle-requisition.mjs');
+  c.HUNTER_NATIVE_COOP_TRANSPORT=(await module('native-coop-connection.mjs')).createNativeCoopConnection;
+  c.HUNTER_VEHICLE_COLLISION=await module('vehicle-specs.mjs');
+  c.HUNTER_FERRY_DECK=await module('ferry-deck-core.mjs');
+  c.HUNTER_COOP_CONNECTION=(await module('coop-connection.mjs')).createCoopConnection;
+  c.HUNTER_GRAPHICS_QUALITY='desktop';
+  c.HUNTER_FORCE_LOW_QUALITY=false;
+  // Els candidats GAZ ja són natius Three.js i no depenen del canvas.
+  c.HUNTER_GAZ_TIGR=(await module('gaz-tigr-runtime.mjs')).prepareGazTigrRuntime(c.THREE,{vehicleScale:1.3});
   c.buildingSrc=fs.readFileSync(path.join(root,'src/buildings.js'),'utf8');
   c.worldGenSrc=fs.readFileSync(path.join(root,'src/world-generation.js'),'utf8');
   c.vehSrc=fs.readFileSync(path.join(root,'src/vehicles.js'),'utf8');
