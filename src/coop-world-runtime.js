@@ -473,11 +473,8 @@ function updateNativeCoopFrame(dt){
  updateArmoredTurretButton();
  poseRider(cv,dt,mySeat>=0?mySeat:null);
  pl.rotation.z=hp<=0&&!cv?-Math.PI/2:0;if(hp<=0&&!cv)pl.position.y+=.5;
- // El crol inclina el model i enfonsa el pit si només es pren P.y.
- // La mateixa elevació VISUAL del mode individual preserva la física.
- if(swimming&&!cv&&hp>0)
-   pl.position.y+=window.HUNTER_CHARACTERS.swimVisualLift(
-     pl,wy(P.x,P.z,elapsed),P.y);
+ // El nivell VISUAL del nedador local es resol al render RAF un cop
+ // calculada la postura definitiva (no entre subpassos de física).
  if(projecting){
    // Les referències als seients i als actors remots només es resolen
    // en rebre un snapshot; la interpolació continua a cada fotograma.
@@ -558,9 +555,8 @@ function updateNativeCoopFrame(dt){
      bazookaEquipped:weapon==='bazooka',sniperEquipped:weapon==='sniper',
      assaultRifleEquipped:weapon==='assault',grenadeEquipped:weapon==='grenade'
    });
-   if(other.swimming&&other.hp>0&&!remoteVehicle)
-     model.position.y+=window.HUNTER_CHARACTERS.swimVisualLift(
-       model,wy(target.x,target.z,elapsed),target.y);
+   // La posició del nedador remot es corregeix visualment una vegada
+   // al render, després de posar B3/C4 o manteniment al rig V18.
  }
 
  if(projecting){

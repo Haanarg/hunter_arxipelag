@@ -1,3 +1,10 @@
+**2026-11-19 · v0.6.244 · Recuperació de les postures visibles i del nivell d'aigua:**
+- [x] Diagnòstic del regressiu de 0.6.243: l'adaptador canònic es recalculava en cada subpas de la simulació (en lloc d'un cop per fotograma) i el nivell visual de l'aigua s'ajustava abans de la postura final.
+- [x] El motor únic manté B3/C4/manteniment/caminar/córrer i les escales consolidades, però aplica la pell V18 només un cop, abans del dibuix i les ombres. L'ajust de soles i l'elevació en natació es fan immediatament després de la postura visible.
+- [x] Els jugadors remots COOP comparteixen exactament aquest pas d'animació; els models de vehicle/rig de controls antics no es modifiquen. Sense proves noves.
+- [ ] Comprovació dins del navegador/Android: caminar, córrer, B3, C4, manteniment, sortida de vehicles i línia d'aigua.
+- [ ] Desplegament Cloudflare de v0.6.244: comprovar paquet dist immutable HTTP 200, no només codi font.
+
 **2026-11-19 · Incidència de publicació independent del visor V18:**
 - [ ] L'Action 44614968917 valida tots els fitxers de l'editor a Paradoxa, però la verificació global falla perquè `dist/hunter-runtime.109409efa9e49c11.js` retorna HTTP 404 i el manifest `src/runtime-bundle.mjs` deixa de coincidir. Cal sincronitzar el paquet generat amb el sistema de publicació que serveix `hunter.paradoxa.cat`.
 - [ ] Revisar possibles desplegaments concurrents o divergència entre GitHub Pages/Cloudflare Pages i Wrangler Workers abans de marcar la publicació del runtime del joc com a correcta.

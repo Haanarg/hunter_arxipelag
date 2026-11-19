@@ -4213,38 +4213,10 @@ if(!cv)for(let k=items.length-1;k>=0;k--){const it=items[k],dx=P.x-it.x,dz=P.z-i
 msgT-=dt;if(parachuteVisual)parachuteVisual.position.set(P.x,P.y,P.z);pl.position.set(P.x,P.y,P.z);pl.rotation.y=P.hd;pl.visible=!cv&&!scopeActive;
 // Strafe independent: gir visual de la cintura i les cames, no de P.hd.
 animPl(cv||scopeActive?0:f,dt,running&&f>.1,cv||scopeActive?0:strafe);
-// La física conserva P.y, sota l'aigua. Aixecam només el model per
-// deixar el pit vora la superfície quan s'ajau per nedar a crol.
-// La compensació desapareix en aigües somes i al sortir de l'aigua.
-if(!cv&&!scopeActive&&!playerFall&&!playerEject)
-  pl.position.y+=window.HUNTER_CHARACTERS.swimVisualLift(pl,surface,P.y);
-if(!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive){
-  // Ajustam la malla a la sola real de les botes i al triangle visible,
-  // també en pendents. No canviam P.y ni la detecció física del terra.
-  pl.updateMatrixWorld(true);
-  const canonical=pl.userData.humanGameCanonicalSoles;
-  const soles=canonical?.length===2?canonical:pl.userData.soleContacts||[],
-        point=pl.userData.soleWorldScratch??=new THREE.Vector3(),
-        soleBounds=pl.userData.soleBoundsScratch??=new THREE.Box3();
-  let clearance=Infinity;
-  for(const sole of soles){
-    sole.getWorldPosition(point);
-    const physical=hAt(point.x,point.z),visible=terrainStream?.visibleHeightAt(point.x,point.z);
-    const floor=groundAt(point.x,point.z,P.y);
-    // Sobre terreny natural, ajustam al triangle real del LOD renderitzat.
-    // A rampes, molls, escales i plantes es conserva el suport construït.
-    // El terreny visual pot tenir un triangle de LOD diferent del punt
-    // físic. Si no hi ha cap plataforma a sota, preval el triangle
-    // que efectivament es dibuixa (i que rep l'ombra).
-    const natural=Math.abs(floor-Math.max(0,physical))<.18;
-    const target=natural&&Number.isFinite(visible)?visible:floor;
-    const soleY=canonical?.length===2?soleBounds.setFromObject(sole).min.y:point.y;
-    clearance=Math.min(clearance,soleY-target);
-  }
-  // Sense espai artificial entre soles i sòl. En pendent el contacte
-  // s'avalua per separat a cada peu abans de traslladar tot el rig.
-  if(Number.isFinite(clearance))pl.position.y-=Math.max(-.18,Math.min(1.8,clearance-.006));
-}
+// La pell es posiciona al nivell de l'aigua després de l'ÚNICA
+// aplicació del rig visible, just abans del renderitzat del fotograma.
+// L'ajust dels peus es fa després de la postura final, al render.
+
  // L'animació de caminar va a 8.4 rad/s: un esquitx a cada suport de
  // peu (creuament de fase PI). Sense esquitxos nedant ni en vehicles.
  movementFx.playerStep({
@@ -4438,6 +4410,61 @@ if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
  // El món no queda congelat durant la repetició: les onades avancen
  // lentament mentre la càmera i el cos es mouen a velocitat cinematogràfica.
  waves(t+(deathCinematic?.active?deathCinematic.t*.18:0));
+ // Cada RAF consumeix l'últim estat de la simulació (que pot haver fet
+ // diversos ticks). Un ÚNIC motor aplica caminar, córrer, braça B3,
+ // crol C4, manteniment lateral i postures d'armes sobre el rig V18.
+ // No és un segon animador: no es modifica cap articulació des de
+ // updateMatrixWorld ni hi ha interpolacions del motor anterior.
+ if(started&&!paused&&!over){
+  if(pl.visible){
+   pl.userData.humanGamePose?.();
+   if(!cv&&!scopeActive&&!playerFall&&!playerEject){
+    if(swimming){
+     pl.position.y+=window.HUNTER_CHARACTERS.swimVisualLift(
+       pl,wy(P.x,P.z,elapsed),P.y);
+    }else{
+     if(!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive){
+       // Ajustam la malla a la sola real de les botes i al triangle visible,
+       // també en pendents. No canviam P.y ni la detecció física del terra.
+       pl.updateMatrixWorld(true);
+       const canonical=pl.userData.humanGameCanonicalSoles;
+       const soles=canonical?.length===2?canonical:pl.userData.soleContacts||[],
+             point=pl.userData.soleWorldScratch??=new THREE.Vector3(),
+             soleBounds=pl.userData.soleBoundsScratch??=new THREE.Box3();
+       let clearance=Infinity;
+       for(const sole of soles){
+         sole.getWorldPosition(point);
+         const physical=hAt(point.x,point.z),visible=terrainStream?.visibleHeightAt(point.x,point.z);
+         const floor=groundAt(point.x,point.z,P.y);
+         // Sobre terreny natural, ajustam al triangle real del LOD renderitzat.
+         // A rampes, molls, escales i plantes es conserva el suport construït.
+         // El terreny visual pot tenir un triangle de LOD diferent del punt
+         // físic. Si no hi ha cap plataforma a sota, preval el triangle
+         // que efectivament es dibuixa (i que rep l'ombra).
+         const natural=Math.abs(floor-Math.max(0,physical))<.18;
+         const target=natural&&Number.isFinite(visible)?visible:floor;
+         const soleY=canonical?.length===2?soleBounds.setFromObject(sole).min.y:point.y;
+         clearance=Math.min(clearance,soleY-target);
+       }
+       // Sense espai artificial entre soles i sòl. En pendent el contacte
+       // s'avalua per separat a cada peu abans de traslladar tot el rig.
+       if(Number.isFinite(clearance))pl.position.y-=Math.max(-.18,Math.min(1.8,clearance-.006));
+     }
+    }
+   }
+  }
+  // Els dos jugadors COOP utilitzen EXACTAMENT el mateix render-tick.
+  // Mai no llegim les postures de les rèpliques durant la simulació.
+  for(const view of nativeCoopSession?.nativeRemoteViews?.values()||[]){
+   const {model,target,actor,vehicle}=view;
+   if(!model.visible||vehicle||!actor||actor.hp<=0)continue;
+   model.userData.humanGamePose?.();
+   if(actor.swimming)
+    model.position.y+=window.HUNTER_CHARACTERS.swimVisualLift(
+      model,wy(target.x,target.z,elapsed),target.y);
+  }
+ }
+
  // La B3 ja s'anima sobre el model de l'editor, però l'oceà opac
  // ocultava gairebé tota la tracció (mans 25-50 cm sota superfície).
  // Un petit disc de transparència suau mostra les braçades reals.

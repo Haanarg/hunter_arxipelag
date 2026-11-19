@@ -547,11 +547,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
                             surface+.38-physicalY-headRel);
   },
   animatePlayer(player,options){
-    // L'única aplicació del rig visible passa per aquesta frontera.
-    // Les sortides anticipades (aigua, paracaigudes) també hi passen;
-    // mai no delegam l'animació al render ni a updateMatrixWorld().
-    try{return this.animatePlayerControls(player,options)}
-    finally{player?.userData?.humanGamePose?.()}
+    // El tick actualitza només els controls i l'estat d'animació.
+    // El model visible s'anima UN cop, al final del RAF, a game-core.js.
+    // Això evita repetir la IK B3/C4 2-15 cops per fotograma i que
+    // l'ajust a l'aigua mesuri una postura de subpas ja obsoleta.
+    return this.animatePlayerControls(player,options);
   },
   animatePlayerControls(player,{forward,strafe=0,dt,swimming,inVehicle,ammo,knifeEquipped=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,assaultRifleEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false,crouching=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),
