@@ -121,19 +121,36 @@ function installCanonicalPlayer(T,model){
  const pistolGrips=[];
  for(const side of ['L','R']){
   const hand=j['wrist'+side].children.find(o=>o.userData?.humanHand===side);
-  if(!hand)continue;
-  const original=[...hand.children],clasp=new T.Group();
-  clasp.name='Mà tancada al voltant de l’empunyadura';
-  const skin=new T.MeshStandardMaterial({color:0xc49d79,roughness:.90,flatShading:true});
+  if(!hand)throw Error('Mà anatòmica '+side+' absent del model canònic');
+  const original=[...hand.children],skin=new T.MeshStandardMaterial({
+   color:0xc49d79,roughness:.90,flatShading:true});
+  const hold=new T.Group();hold.name=side==='R'?'Puny dret sobre la culata':
+   'Palmell esquerre pla sota la pistola';
   const part=(geo,x,y,z,rx=0,rz=0)=>{
-   const mesh=new T.Mesh(geo,skin);mesh.position.set(x,y,z);
-   mesh.rotation.set(rx,0,rz);clasp.add(mesh);
+   const mesh=new T.Mesh(geo,skin);
+   mesh.position.set(x,y,z);mesh.rotation.set(rx,0,rz);
+   mesh.userData.humanPistolGripPart=side;hold.add(mesh);return mesh;
   };
-  part(new T.BoxGeometry(.067,.071,.056),0,-.034,0);
-  for(let n=0;n<4;n++)part(new T.CapsuleGeometry(.010,.032,3,5),
-   (n-1.5)*.016,-.095,-.014,-.9);
-  part(new T.CapsuleGeometry(.014,.030,3,5),side==='R'?.042:-.042,-.051,-.019,-.50,side==='R'?.66:-.66);
-  clasp.visible=false;hand.add(clasp);pistolGrips.push({original,clasp});
+  if(side==='R'){
+   // Puny amb dits doblegats al voltant de l'empunyadura, no un
+   // paral·lelepípede posat sota tota la pistola.
+   part(new T.BoxGeometry(.093,.086,.045),0,-.032,.035);
+   for(let n=0;n<4;n++){
+    part(new T.CapsuleGeometry(.014,.051,4,6),
+     (n-1.5)*.024,-.073,-.038,-.98);
+   }
+   part(new T.CapsuleGeometry(.019,.060,4,6),.057,-.036,-.009,-.70,-.43);
+  }else{
+   // Palmell pla mirant amunt; els dits són estirats i sostenen el
+   // costat inferior de la corredora. No es converteix en un segon puny.
+   part(new T.BoxGeometry(.12,.024,.105),0,-.018,-.025);
+   for(let n=0;n<4;n++)
+    part(new T.CapsuleGeometry(.010,.082,3,6),
+     (n-1.5)*.025,-.015,-.104,Math.PI/2);
+   part(new T.CapsuleGeometry(.012,.044,3,6),-.067,-.027,-.016,.75,.40);
+  }
+  hold.visible=false;hand.add(hold);
+  pistolGrips.push({side,original,hold,hand});
  }
  function sync(){
   // Gameplay rescales its actor ROOT by 2/3; compensate it AND give the
@@ -153,10 +170,18 @@ function installCanonicalPlayer(T,model){
   for(const [id,bone]of Object.entries(control))j[id].quaternion.copy(rest[id]).multiply(bone.quaternion);
   // Traslladam la passa de l'editor a les cames i turmells en córrer.
   // El rig del joc encara controla la física, els trets i les interaccions.
-  const gripping=!!u.gun?.visible&&(u.pistolBlend||0)>.14;
-  for(const {original,clasp}of pistolGrips){
-   clasp.visible=gripping;
-   for(const node of original)node.visible=!gripping;
+  const pistolVisible=!!u.gun?.visible;
+  const pistolAiming=pistolVisible&&(u.pistolBlend||0)>.10;
+  for(const {side,original,hold,hand}of pistolGrips){
+   const posed=side==='R'?pistolVisible:pistolAiming;
+   hold.visible=posed;
+   for(const node of original)node.visible=!posed;
+   if(side==='L'&&pistolAiming){
+    // Rotar el palmell pla cap al canó, no cap al terra quan gira el tors.
+    hand.getWorldQuaternion(handWorld);
+    hold.quaternion.copy(handWorld).invert()
+      .multiply(u.gun.getWorldQuaternion(weaponWorld));
+   }else hold.quaternion.identity();
   }
   const run=Math.max(0,Math.min(1,u.runBlend||0));
   if(run>.001){
@@ -194,15 +219,11 @@ function installCanonicalPlayer(T,model){
     proxy.quaternion.copy(gunIdleLocal).slerp(gunAimLocal,blend);
    }else proxy.quaternion.copy(gunAimLocal);
    if(kind==='gun'){
-    const blend=Math.max(0,Math.min(1,u.pistolBlend||0));
+    // Mai separar la malla visible de la mà que la sosté:
+    // l'arma és sempre filla del canell dret i la culata queda
+    // centrada dins del puny, tant en repòs com en apuntar.
     proxy.position.set(0,y,z);
-    if(blend>.001){
-     // Centram el model al davant del pit sense moure els projectils
-     // ni la física, tot suavitzant-ne la transició des del canell.
-     j.spine.localToWorld(gunAim.set(0,.29,-.35));
-     j.wristR.worldToLocal(gunAim);
-     proxy.position.lerp(gunAim,blend);
-    }
+    proxy.userData.humanPistolHeldInFist=true;
    }else if(kind==='cisalla'){
     // La cisalla viu en el tors: mai entre les dues mans.
     proxy.scale.setScalar(.54);
