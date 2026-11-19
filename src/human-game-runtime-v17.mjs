@@ -1,6 +1,6 @@
 // V17-compatible rigid-rig adapter for the latest V18 skin (general cassaca). No gameplay animation,
 // seat, IK, collision, physics, weapon anchor or AI state is replaced.
-import {createHumanProposal,HUMAN_VERSION,sampleHumanGait} from './human-proposals.mjs?rev=humans-v18-canonical-rider-20261119-1';
+import {createHumanProposal,HUMAN_VERSION,sampleHumanGait} from './human-proposals.mjs?rev=humans-v18-thin-neck-nape-20261119-1';
 
 export const GAME_HUMAN_SKIN_VERSION='humans-v18';
 // Escala exclusivament visual a peu: rig i geometria intactes.
