@@ -1,3 +1,7 @@
+**2026-11-19 · Incidència de publicació independent del visor V18:**
+- [ ] L'Action 44614968917 valida tots els fitxers de l'editor a Paradoxa, però la verificació global falla perquè `dist/hunter-runtime.109409efa9e49c11.js` retorna HTTP 404 i el manifest `src/runtime-bundle.mjs` deixa de coincidir. Cal sincronitzar el paquet generat amb el sistema de publicació que serveix `hunter.paradoxa.cat`.
+- [ ] Revisar possibles desplegaments concurrents o divergència entre GitHub Pages/Cloudflare Pages i Wrangler Workers abans de marcar la publicació del runtime del joc com a correcta.
+
 **2026-11-19 · Reparació de les targetes HUMANS V18 buides:**
 - [x] Càrrega directa de les variants V18 visibles, sense dependre d’un model ocult.
 - [x] Errors locals llegibles per targeta, amb degradació segura de previsualització d’armes i animacions.
