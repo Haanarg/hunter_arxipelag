@@ -106,69 +106,71 @@ window.HUNTER_RIDER=Object.freeze({
           g.getWorldQuaternion(new THREE.Quaternion())));
       }
     };
+    // Els ancoratges són objectes del model real. El punt dels punys
+    // segueix la direcció i els pedals giren amb el pedalier; tots els
+    // punts es converteixen al marc mundial del rider (escala = 1).
+    const riderAnchor=(v,node,fallback)=>{
+      if(!node)return fallback.clone();
+      v.o.updateWorldMatrix(true,true);
+      g.updateWorldMatrix(true,true);
+      return g.worldToLocal(node.getWorldPosition(new THREE.Vector3()));
+    };
     const poseCanonicalTwoWheel=(v,sc,motion,phase)=>{
-      const bike=v.t==='bici',
-            size=bike?(v.o.userData.bicycleVisualScale??.70):
-              (v.o.userData.motorcycleVisualScale??1),
-            fit=sc*size,
-            // El punt de referència és la superfície SUPERIOR del selló,
-            // no l'antic pivot situat a 1.65 (que queda per sota).
-            saddleTop=(v.o.userData.bicycleSaddleTop??1.905)*fit,
-            seat=bike?saddleTop+buttBelowHip+.018:.99*fit,
-            seatZ=bike?.4*fit:.26*fit,
-            // En aturar-se, el ciclista deixa de seure damunt del selló:
-            // avança una mica la pelvis sobre el quadre i recolza els
-            // peus a terra amb els genolls flexionats. A velocitat de
-            // marxa recupera EXACTAMENT l'alçada aprovada del selló.
+      const bike=v.t==='bici',user=v.o.userData||{},
+            visual=bike?(user.bicycleVisualScale??.88):
+              (user.motorcycleVisualScale??1.70),
+            fit=sc*visual,anchors=user.twoWheelAnchors||{},
+            seat=riderAnchor(v,anchors.seat,
+              vec(0,(bike?1.905:.99)*fit,(bike?.33:.26)*fit)),
+            // La mateixa cama de l'avatar a peu: no s'escalen ni se
+            // substitueixen el fèmur, la tíbia o les malles.
+            upperLeg=cycleJoints.kneeL.position.length(),
+            lowerLeg=cycleJoints.ankleL.position.length(),
+            seatHipY=seat.y+buttBelowHip+.018,
+            footReference=g.localToWorld(vec(0,0,seat.z)),
+            floorWorld=vec(footReference.x,
+              heightAt(footReference.x,footReference.z)+.14,footReference.z),
+            floorY=g.worldToLocal(floorWorld).y,
+            // 86% de la longitud total permet un genoll flexionat.
+            // Quan atura la bici/moto, surt del selló per arribar a
+            // terra sense obligar a allargar les cames.
+            stopHipY=floorY+(upperLeg+lowerLeg)*.86,
             stopped=Math.max(0,1-motion),
-            offSaddle=bike?stopped:0,
-            hipDrop=bike?.22*offSaddle:.04*stopped,
-            hipForward=bike?.28*offSaddle:.03*stopped;
-      cycleBody.position.set(0,seat-standingHipY-hipDrop,seatZ-hipForward);
+            drop=Math.max(0,seatHipY-stopHipY)*stopped,
+            forward=(bike?.23:.07)*fit*stopped;
+      cycleBody.position.set(0,seatHipY-standingHipY-drop,seat.z-forward);
       cycleJoints.pelvis.rotation.set(0,0,0);
-      cycleJoints.spine.rotation.set(bike?-.33+.19*offSaddle:-.20-.08*motion,0,0);
+      cycleJoints.spine.rotation.set(
+        bike?-.33+.19*stopped:-.28+.15*stopped,0,0);
       cycleJoints.head.rotation.set(bike?.13:.07,0,0);
       g.updateWorldMatrix(true,true);
       for(let i=0;i<2;i++){
-        const side=i?1:-1,letter=i?'R':'L',hip=cycleJoints['hip'+letter],
-              knee=cycleJoints['knee'+letter],ankle=cycleJoints['ankle'+letter],
+        const side=i?1:-1,letter=i?'R':'L',
+              hip=cycleJoints['hip'+letter],knee=cycleJoints['knee'+letter],
+              ankle=cycleJoints['ankle'+letter],
               shoulder=cycleJoints['shoulder'+letter],
-              elbow=cycleJoints['elbow'+letter],wrist=cycleJoints['wrist'+letter];
-        let hand,foot;
-        if(bike){
-          hand=vec(side*.5*fit,1.96*fit,-fit);
-          // Peus sota el cos quan deixa el selló. L'antic objectiu
-          // (.45*fit enrere) deixava tots dos genolls pràcticament a
-          // 180° i feia semblar les cames molt més llargues que el tors.
-          foot=vec(side*.50*fit,0,-.02*fit);
-          const ground=g.localToWorld(foot.clone());
-          ground.y=heightAt(ground.x,ground.z)+.14;
-          foot.copy(g.worldToLocal(ground));
-          const pedal=vec(side*.4*fit,
-            (.75-side*Math.sin(phase)*.28)*fit,
-            side*Math.cos(phase)*.28*fit);
-          foot.lerp(pedal,motion);
-        }else{
-          const steering=v.o.userData.steeringPivots?.[0],
-                turn=steering?.rotation?.y||0,
-                x=side*.34*fit,
-                pivotZ=(steering?.position?.z??-.28)*fit,
-                pivotY=(steering?.position?.y??1.07)*fit;
-          hand=vec(x*Math.cos(turn),pivotY-.015*fit,pivotZ-x*Math.sin(turn));
-          // Mateixa animació que a la bici: quan frena, el peu baixa
-          // del reposapeus al terreny; quan accelera, torna al reposapeus.
-          const footrest=vec(side*.34*fit,.42*fit,.16*fit);
-          // En aturar-se els peus baixen i s'obren cap als costats de
-          // la moto, tal com els del ciclista deixen els pedals.
-          // Posam els objectius dins l'abast del rig anatòmic a peu.
-          foot=vec(side*.38*fit,0,.20*fit);
-          const ground=g.localToWorld(foot.clone());
-          ground.y=heightAt(ground.x,ground.z)+.14;
-          foot.copy(g.worldToLocal(ground)).lerp(footrest,motion);
-        }
+              elbow=cycleJoints['elbow'+letter],
+              wrist=cycleJoints['wrist'+letter];
+        const hand=riderAnchor(v,anchors['grip'+letter],
+          bike?vec(side*.42*fit,1.97*fit,-.78*fit):
+            vec(side*.36*fit,1.10*fit,-.34*fit));
+        const footAtRest=vec(side*(bike?.32:.31)*fit,0,
+          seat.z-(bike?.18:.035)*fit);
+        const ground=g.localToWorld(footAtRest);
+        ground.y=heightAt(ground.x,ground.z)+.14;
+        const footOnGround=g.worldToLocal(ground),
+              footOnPedal=riderAnchor(v,anchors['pedal'+letter],
+                bike?vec(side*.40*fit,
+                  (.75-side*Math.sin(phase)*.28)*fit,
+                  side*Math.cos(phase)*.28*fit):
+                  vec(side*.34*fit,.42*fit,.16*fit)),
+              foot=footOnGround.lerp(footOnPedal,motion);
         placeCanonicalLimb(hip,knee,ankle,foot,side,true);
         placeCanonicalLimb(shoulder,elbow,wrist,hand,side,false);
       }
+      g.userData.twoWheelSeatHip=seatHipY;
+      g.userData.twoWheelFloorY=floorY;
+      g.userData.twoWheelStopped=stopped;
     };
     const aimCanonicalPistol=(v,dt)=>{
       const u=g.userData;
