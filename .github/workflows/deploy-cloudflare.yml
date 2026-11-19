@@ -10,6 +10,11 @@ on:
       - 'assets/vehicle-candidates/lab-revision.json'
       - 'src/hovercraft-concepts.mjs'
       - 'src/human-proposals.mjs'
+      - 'src/vehicle-model-core.mjs'
+      - 'src/model-scale-normalization.mjs'
+      - 'src/two-wheel-lab-comparison.mjs'
+      - 'tests/model-scale-normalization.mjs'
+      - 'tests/two-wheel-lab-comparison.mjs'
       - 'src/human-game-runtime-v17.mjs'
       - 'src/human-game-swim-bridge.mjs'
       - 'src/human-swim-proposals.mjs'
@@ -63,6 +68,8 @@ jobs:
         run: node tests/assault-repeat-pickup.mjs
       - name: Validar navegació del compte i submenús
         run: node tests/account-submenus.mjs
+      - name: Validar normalització de les escales estàtiques dels vehicles
+        run: node tests/model-scale-normalization.mjs
       - name: Validar HUMANS V17 al joc i als conductors
         run: node tests/human-game-runtime-v17.mjs
       - name: Regenerar el runtime a partir dels fitxers font validats
