@@ -113,14 +113,15 @@ for(const role of ['player','soldier','rocket','elite','general']){
   assert(moved>.35&&moved<.45,'Game pose drives native shoulder joint');
   u.ar.rotation.x=oldR;g.updateMatrixWorld(true);
   assert(restShoulder.angleTo(bones.shoulderR.quaternion)<.002,'Rest pose exactly recovers editor geometry');
-  // Actual characters.createPlayer applies 2/3 scale at the very end.
-  // This must not shrink the editor's 2.00m native model to 1.33m.
+  // El controlador antic aplica 2/3 a l’arrel del protagonista.
+  // La pell ha de conservar les seves dimensions naturals multiplicades
+  // només pel factor visual explícit, sense forçar 2 m.
   g.scale.setScalar(2/3);g.updateMatrixWorld(true);
   const scaledView=new T.Box3();
   for(const mesh of actual)scaledView.union(new T.Box3().setFromObject(mesh,true));
   const inGameSize=scaledView.getSize(new T.Vector3());
-  assert(Math.abs(inGameSize.y-2*FOOT_PLAYER_VISUAL_FACTOR)<.002,
-   'Player retains 1.6-size editor body after gameplay 2/3 root scale: '+inGameSize.y);
+  assert(Math.abs(inGameSize.y-expectedSize.y*FOOT_PLAYER_VISUAL_FACTOR)<.002,
+   'El protagonista conserva la geometria nativa (sense límit de 2 m): '+inGameSize.y);
   const sampleRatio=canonical.getWorldScale(new T.Vector3());
   assert(Math.abs(sampleRatio.x-reference.scale.x*FOOT_PLAYER_VISUAL_FACTOR)<.002,'World visual uniformly 1.6 times the editor');
   g.scale.setScalar(1);g.updateMatrixWorld(true);
@@ -285,7 +286,7 @@ assert.equal(rider.userData.boots.length,2);
    assert(Math.abs(footBounds[axis]-pilotBounds[axis])<.003,
     'Pilot de dues rodes i model a peu tenen la mateixa mida mundial ('+axis+')');
   assert(Math.abs(driver.object.userData.twoWheelCanonicalHeight-runtime.footVisualHeight)<.002,
-   'La mida inicial del pilot coincideix amb la del protagonista a peu (3,2 m)');
+   'La mida inicial del pilot deriva del model humà original sense cap límit imposat');
   const riderJoints={};
   anatomicalBody.traverse(o=>{if(o.userData.humanMotionJoint)riderJoints[o.userData.humanMotionJoint]=o});
   const point=id=>riderJoints[id].getWorldPosition(new T.Vector3());
@@ -309,10 +310,10 @@ assert.equal(rider.userData.boots.length,2);
     &&moto.userData.twoWheelAnchors?.pedalR,'Moto: ancoratges reals del xassís');
   assert(Math.abs(moto.userData.wheels[0].userData.radius-.34738122819654627*1.24*1.2)<.002,
    'Moto: roda física i visual de la mateixa mida');
-  // Proporcions de referència: el jugador és de 2 m anatòmics,
-  // representats amb 3,2 unitats visuals (factor 1,6).
-  // Honda CB650R: distància eixos 1,45 m; selló 0,81 m.
-  const meters=units=>units*(2/3.2);
+  // Una unitat mètrica equival a FOOT_PLAYER_VISUAL_FACTOR unitats
+  // visuals: cap alçada nominal de 2 m s'imposa al jugador.
+  // Honda CB650R: distància entre eixos 1,45 m; selló 0,81 m.
+  const meters=units=>units/FOOT_PLAYER_VISUAL_FACTOR;
   moto.updateWorldMatrix(true,true);
   const axles=moto.userData.wheels.map(w=>w.getWorldPosition(new T.Vector3()));
   const wheelbase=meters(axles[0].distanceTo(axles[1]));
