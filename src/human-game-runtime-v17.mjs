@@ -262,13 +262,32 @@ export function createHumanGameRuntimeV17(){
      'kneeL','kneeR','ankleL','ankleR','shoulderL','shoulderR',
      'elbowL','elbowR','wristL','wristR'])
     if(!joints[id])throw Error('Pilot de dues rodes: falta articulació '+id);
-   root.scale.multiplyScalar(FOOT_PLAYER_VISUAL_FACTOR);
+   // Fer explícites les dimensions del jugador a peu a totes les
+   // articulacions i malles. El rider ja no té un scale heretat ocult
+   // que es pugui combinar amb el del vehicle o l'animació.
+   const referenceHeight=2*FOOT_PLAYER_VISUAL_FACTOR;
+   const bareHeight=new T.Box3().setFromObject(root).getSize(new T.Vector3()).y;
+   if(!(bareHeight>0))throw Error('Malla canònica del pilot buida');
+   const factor=referenceHeight/bareHeight;
+   // root.scale encapsula l'ajust original de 2 m de l'editor.
+   // Se substitueix per geometria i pivots escalats físicament.
+   const bakedScale=root.scale.x*factor;
+   root.traverse(node=>{
+    if(node===root)return;
+    node.position.multiplyScalar(bakedScale);
+    if(node.isMesh&&node.geometry){
+     node.geometry=node.geometry.clone();
+     node.geometry.scale(bakedScale,bakedScale,bakedScale);
+    }
+   });
+   root.scale.set(1,1,1);
    root.updateWorldMatrix(true,true);
    const standingHeight=new T.Box3().setFromObject(root).getSize(new T.Vector3()).y;
    if(Math.abs(standingHeight-runtime.footVisualHeight)>.025)
-    throw Error('Pilot i protagonista a peu tenen alçades diferents');
+    throw Error('El rig i la malla del pilot no tenen l’alçada del jugador a peu');
    root.userData.twoWheelStandingHeight=standingHeight;
    root.userData.twoWheelCanonical=true;
+   root.userData.twoWheelBakedScale=bakedScale;
    return {root,joints,standingHeight};
   },
   suppress(callback){suppressed++;try{return callback()}finally{suppressed--}},
