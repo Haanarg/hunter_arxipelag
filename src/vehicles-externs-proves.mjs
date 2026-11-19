@@ -5,7 +5,7 @@ import {isHumanSwimmingMode,sampleHumanSwimming,HUMAN_SWIM_PROPOSALS} from './hu
 import {createTwoWheelLabComparison} from './two-wheel-lab-comparison.mjs?rev=rig-comparison-20261119-1';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-v18-20261119-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261119-humans-v18-comparator-1';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261119-humans-v18-comparator-2';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs?rev=mi24-d-approved-1&bikeResize=20261118-1';
@@ -20,7 +20,7 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261119-humans-v18-comparator-1';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261119-humans-v18-comparator-2';
 const list=document.querySelector('#vehicleList'),
       comparatorList=document.querySelector('#vehicleComparatorList'),
       grid=document.querySelector('#grid'),
@@ -53,7 +53,7 @@ function showSwimPhase(mode,secs){
  document.querySelector('#humanSwimPhase').value=String(percent);
  document.querySelector('#humanSwimPhaseName').textContent=percent.toFixed(0)+' % · '+(info.sample.phaseName||'Cicle');
 }
-import {mountHumanEvidence} from './human-lab-evidence-ui.mjs?rev=human-evidence-6';
+import {mountHumanEvidence} from './human-lab-evidence-ui.mjs?rev=human-evidence-7';
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
 renderer.setPixelRatio(Math.min(1.5,window.devicePixelRatio||1));
 renderer.outputColorSpace=THREE.SRGBColorSpace;

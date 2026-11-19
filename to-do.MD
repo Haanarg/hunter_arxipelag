@@ -1,3 +1,9 @@
+**2026-11-19 · Correcció urgent de visibilitat HUMANS V18:**
+- [x] Restaurada la càrrega de variants humanes al posicionament de visors provat (1..N); el visor 0 queda ocult i s'usa únicament per mesurar el model V18, sense recrear el model antic.
+- [x] Geometria HUMANS V18 compartida com a plantilla a la referència dels vehicles; clons independents amb geometria reutilitzada.
+- [x] Exportació de la fitxa humana adaptada als visors visibles, revisió de memòria cau i proves existents actualitzades.
+- [ ] Confirmar visualment al navegador després del desplegament.
+
 **2026-11-19 · Editor HUMANS V18 i comparador de vehicles:**
 - [x] Retirat el visor del model humà antic de Personatges: es mostren A/B o les quatre variants de natació. Fitxa OBJ/validació sense opció del model anterior.
 - [x] Referència del protagonista a Vehicles construïda amb HUMANS V18 i el factor visual compartit amb el joc; sense la fàbrica antiga.

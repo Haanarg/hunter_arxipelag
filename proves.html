@@ -238,7 +238,7 @@ function loadWorkshop(){
  if(workshopStarted)return;
  workshopStarted=true;
  // Report import failures instead of leaving a blank editor.
- import('./src/vehicles-externs-proves.mjs?rev=vehicle-comparador-20261119-2')
+ import('./src/vehicles-externs-proves.mjs?rev=vehicle-comparador-20261119-3')
   .catch(error=>{
    workshopStarted=false;
    console.error('Error en arrencar l’editor:',error);

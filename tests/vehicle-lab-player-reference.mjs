@@ -19,5 +19,5 @@ assert(new THREE.Box3().setFromObject(reference).getSize(new THREE.Vector3()).di
 const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.url),'utf8');
 assert(lab.includes('const person=createLabPlayerReference(THREE)'));
 assert(!lab.includes('await createCurrentHuman(THREE,config.human)'));
-assert(lab.includes('config.options.map((entry,i)=>loadExternal(slots[i],entry,used,token))'));
+assert(lab.includes('config.options.map((entry,i)=>loadExternal(slots[i+1],entry,used,token))'));
 console.log('PASS comparador HUMANS V18, sense visor antic; alçada='+reference.userData.height.toFixed(3));
