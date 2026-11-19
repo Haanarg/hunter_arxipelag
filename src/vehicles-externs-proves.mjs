@@ -2,9 +2,8 @@ import {createMi24Proposal,MI24_MODELS} from './mi24-proposals.mjs?rev=mi24-d-op
 import {HUMAN_CATALOG,HUMAN_SWIM_CATALOG} from './human-model-catalog.mjs?rev=swim-ik-20261119-4';
 import {createHumanProposal,setHumanPreviewWeapon,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,createHumanGaitClock,advanceHumanGait} from './human-proposals.mjs?rev=swim-ik-20261119-4';
 import {isHumanSwimmingMode,sampleHumanSwimming,HUMAN_SWIM_PROPOSALS} from './human-swim-proposals.mjs?rev=swim-ik-20261119-4';
-import {createCurrentHuman} from './human-current-models.mjs?rev=humans-v8';
 import {createTwoWheelLabComparison} from './two-wheel-lab-comparison.mjs?rev=rig-comparison-20261119-1';
-import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
+import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-v18-20261119-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
 import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261118-226-humans-gaz-cutter-camera-14';
 import * as THREE from '../vendor/three-r186.module.mjs';
@@ -54,7 +53,7 @@ function showSwimPhase(mode,secs){
  document.querySelector('#humanSwimPhase').value=String(percent);
  document.querySelector('#humanSwimPhaseName').textContent=percent.toFixed(0)+' % · '+(info.sample.phaseName||'Cicle');
 }
-import {mountHumanEvidence} from './human-lab-evidence-ui.mjs?rev=human-evidence-5';
+import {mountHumanEvidence} from './human-lab-evidence-ui.mjs?rev=human-evidence-6';
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
 renderer.setPixelRatio(Math.min(1.5,window.devicePixelRatio||1));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -430,7 +429,7 @@ async function choose(config){
  document.querySelector('#liveEditor').hidden=!!config.twoWheelAudit;
  document.querySelector('#btrPartTool').hidden=!!config.twoWheelAudit;
  document.querySelector('#humanWeaponControl').hidden=config.human!=='player';
- humanEvidence.show(config.twoWheelAudit?null:config.human||null);
+ humanEvidence.show(config.twoWheelAudit?null:config.human||null,config.options,config.id);
  humanTime=0;humanMode='rest';humanGait=createHumanGaitClock();
  if(config.human){
  const start=config.swimming?'swim-'+config.swimming:'rest';
@@ -444,7 +443,7 @@ async function choose(config){
  labTankKeys.clear();labTurretSwitch=false;labTurretYaw=0;labTurretPitch=0;
  syncLabTurretButton();
  for(const slot of slots){
-   slot.outer.hidden=slots.indexOf(slot)>(config.twoWheelAudit?2:soloStudy?0:config.options.length);
+   slot.outer.hidden=slots.indexOf(slot)>=(config.human?config.options.length:config.twoWheelAudit?3:soloStudy?1:config.options.length+1);
    dropPrevious(slot);
    slot.kind=config.kind;
    slot.camera=(config.human||config.twoWheelAudit)?slot.ortho:slot.perspective;
@@ -453,11 +452,11 @@ async function choose(config){
    slot.ground.material.color.setHex(marine?0x285f65:config.kind==='aire'?0x6a7b67:0x69735e);
    slot.ground.material.roughness=marine?.43:1;
    slot.ground.material.needsUpdate=true;
-   slot.status.textContent='Carregant…';slot.bold.textContent=slots.indexOf(slot)?'Alternativa '+slots.indexOf(slot):'Actual · '+config.name;
+   slot.status.textContent='Carregant…';slot.bold.textContent=config.human?'Model HUMANS V18':slots.indexOf(slot)?'Alternativa '+slots.indexOf(slot):'Actual · '+config.name;
    const isSource=slots.indexOf(slot)===0;
    const fileLabel=slot.upload.parentNode;
    if(fileLabel&&fileLabel.tagName==='LABEL')fileLabel.firstChild.textContent='Importa GLB';
-   slot.sub.textContent=slots.indexOf(slot)?'Preparant candidat…':'Model real del joc';
+   slot.sub.textContent=config.human?'Preparant model nou…':slots.indexOf(slot)?'Preparant candidat…':'Model real del joc';
    slot.source.hidden=true;
  }
  if(config.twoWheelAudit){
@@ -495,8 +494,30 @@ async function choose(config){
    }
    return;
  }
+ // Els personatges només mostren les variants noves, no el model antic.
+ if(config.human){
+  try{
+   const used=new Set();
+   await Promise.all(config.options.map((entry,i)=>loadExternal(slots[i],entry,used,token)));
+   if(token!==generation)return;
+   if(!slots[0].model)throw Error('No s’ha carregat el primer model HUMANS V18');
+   originalDims=dimsOf(slots[0].model);
+   comparisonDims.copy(originalDims);
+   for(const slot of slots)if(slot.model&&!slot.outer.hidden)comparisonDims.max(dimsOf(slot.model));
+   for(const slot of slots)slot.person.position.x=originalDims.x*.62+1;
+   defaultLookY=Math.max(.55,comparisonDims.y*.43);
+   lookY=defaultLookY;yaw=Math.PI;elev=0;zoom=1;panScreenX=0;
+   if(resumedView?.type===config.id){({yaw,elev,zoom,lookY,panScreenX}=resumedView);resumedView=null}
+   updateCamera();
+  }catch(error){
+   if(token!==generation)return;
+   console.error('Model HUMANS V18 no disponible',config.id,error);
+   slots[0].status.textContent='Error carregant el model nou: '+error.message;
+  }
+  return;
+ }
  try{
-   const model=config.human?await createCurrentHuman(THREE,config.human):config.base?createProceduralModel(config.base.variant):await createCurrentVehicle(config.id);
+   const model=config.base?createProceduralModel(config.base.variant):await createCurrentVehicle(config.id);
    // No reintroduir models antics quan es canvia de pestanya durant la càrrega.
    if(token!==generation)return;
    setModel(slots[0],model,true,[],soloStudy);
@@ -590,11 +611,10 @@ function drawHumanGuide(slot,w,h){
  slot.versionTag.hidden=!active;
  if(!active){slot.guide.hidden=true;return}
  let model=null;slot.model?.traverse(n=>{if(n.userData.humanProposal)model=n.userData.humanProposal});
- const original=slots.indexOf(slot)===0;
- slot.versionTag.textContent=original?'ORIGINAL DEL JOC':model?.version===HUMAN_VERSION?'HUMANS V18 · '+model.style.toUpperCase():model?'VERSIÓ ANTERIOR · '+model.version:'IMPORTAT / VERSIÓ DESCONEGUDA';
- slot.versionTag.classList.toggle('stale',!original&&model?.version!==HUMAN_VERSION);
+ slot.versionTag.textContent=model?.version===HUMAN_VERSION?'HUMANS V18 · '+model.style.toUpperCase():model?'VERSIÓ ANTERIOR · '+model.version:'IMPORTAT / VERSIÓ DESCONEGUDA';
+ slot.versionTag.classList.toggle('stale',model?.version!==HUMAN_VERSION);
  const axis=Math.abs(Math.sin(2*yaw))<.025&&Math.abs(elev)<.025;
- const measured=show&&axis&&slot.model&&!original?measureHumanAnatomy(THREE,slot.model):null;
+ const measured=show&&axis&&slot.model?measureHumanAnatomy(THREE,slot.model):null;
  slot.guide.hidden=!measured;if(!measured)return;
  const cv=slot.guide,dpr=Math.min(2,window.devicePixelRatio||1);
  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr)}
@@ -741,7 +761,7 @@ document.querySelector('#humanSwimPhase').addEventListener('input',e=>{
 });
 document.querySelector('#humanWeapon').addEventListener('change',e=>{
  if(currentType.human!=='player')return;
- for(const slot of slots.slice(1)){
+ for(const slot of slots){
   if(!slot.model)continue;
   if(setHumanPreviewWeapon(THREE,slot.model,e.target.value)){
    const mode=document.querySelector('#humanPose').value;
@@ -849,7 +869,7 @@ document.addEventListener('keyup',e=>{labTankKeys.delete(e.key.toLowerCase());sy
 window.addEventListener('blur',()=>{labTankKeys.clear();syncLabTurretButton()});
 syncLabTurretButton();
 const humanEvidence=mountHumanEvidence({T:THREE,slots,revision:LAB_REVISION,getPose:()=>document.querySelector('#humanPose').value,getAnimated:()=>document.querySelector('#animate').checked});
-const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri',huma:'3 propostes'};
+const kinds={terra:'Terrestre',mar:'Marítim',aire:'Aeri',huma:'2 variants V18'};
 for(const config of ALL_CATALOG){
  const button=document.createElement('button');button.dataset.type=config.id;
  button.dataset.validation=config.validated?'validated':'pending';

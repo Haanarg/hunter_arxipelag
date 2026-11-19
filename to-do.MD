@@ -1,3 +1,8 @@
+**2026-11-19 · Editor HUMANS V18 i comparador de vehicles:**
+- [x] Retirat el visor del model humà antic de Personatges: es mostren A/B o les quatre variants de natació. Fitxa OBJ/validació sense opció del model anterior.
+- [x] Referència del protagonista a Vehicles construïda amb HUMANS V18 i el factor visual compartit amb el joc; sense la fàbrica antiga.
+- [ ] Verificació manual en navegador i desplegament Cloudflare.
+
 **2026-11-19 · v0.6.242 · Braça B3 invisible sota l'aigua: correcció visual:**
 - [x] Diagnosticat sobre el model real de `characters.js`: en avançar, `gameSwimStyle='B3'`, el rig canònic de l'editor mou les mans entre ~25 i 50 cm sota la superfície i l'antic controlador és només font de física/postures, no geometria renderitzada (71 malles antigues retirades, 56 malles humanes reals afegides).
 - [x] La superfície oceànica era opaca (`depthWrite:true`, `gl_FragColor=vec4(c,1.)`) i tapava la tracció B3. Ara el shader és transparent només en un disc de difuminat de fins a 4,2 m entorn del jugador que neda endavant; el mar continua opac fora de la zona. Activació per `gameSwimBlend` al render tant SOLO com COOP, sense alterar el nivell físic.

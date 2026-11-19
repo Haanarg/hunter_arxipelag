@@ -170,13 +170,13 @@ body[data-editor-kind=""] #draw{display:none!important}
 </section>
 <details id="humanEvidence" class="annotation-tools" hidden><summary>Fitxa de validació humana · exportació de malles reals</summary>
  <section class="btr-part-tool"><div class="btr-part-controls">
- <label>Model <select id="humanEvidenceModel"><option value="0">Actual del joc</option><option value="1">A · Natural</option><option value="2">B · Detallat</option></select></label>
+ <label>Model <select id="humanEvidenceModel" aria-label="Variant HUMANS V18"></select></label>
  <label>Estat local <select id="humanEvidenceStatus"><option value="candidate">Candidat</option><option value="testing">En proves</option><option value="selected">Seleccionat (no integrat)</option><option value="regression">Amb regressió</option></select></label>
  <button id="humanObj" type="button">Exportar OBJ</button><button id="humanEvidenceExport" type="button">Exportar informe JSON</button>
  </div><p id="humanEvidenceInfo" role="status"></p>
  <div id="humanChecks" class="btr-part-controls"></div>
  <label>Observacions i evidència (enllaç de captura, commit o prova)<textarea id="humanEvidenceNotes" rows="3"></textarea></label>
- <p>Les marques són observacions locals, no acrediten integració. El model actual prové de la fàbrica del joc; A i B són només de laboratori. L'OBJ és una instantània geomètrica sense esquelet ni materials vinculats. L'editor JSON conserva els pivots.</p>
+ <p>Les marques són observacions locals, no acrediten integració. El model antic ja no es mostra: A és la base del model nou i B és l’alternativa detallada. L'OBJ és una instantània geomètrica sense esquelet ni materials vinculats. L'editor JSON conserva els pivots.</p>
  </section></details>
 <section id="t90Motion" class="t90-motion" hidden aria-label="Provar la torreta del T-90M">
  <button id="t90LabTurret" type="button" aria-pressed="false">TORRETA</button>
@@ -238,7 +238,7 @@ function loadWorkshop(){
  if(workshopStarted)return;
  workshopStarted=true;
  // Report import failures instead of leaving a blank editor.
- import('./src/vehicles-externs-proves.mjs?rev=vehicle-comparador-20261119-1')
+ import('./src/vehicles-externs-proves.mjs?rev=vehicle-comparador-20261119-2')
   .catch(error=>{
    workshopStarted=false;
    console.error('Error en arrencar l’editor:',error);

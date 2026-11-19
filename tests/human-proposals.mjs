@@ -583,7 +583,7 @@ assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.twoWheelAudit?comparatorList:config.human?humanList:list).append(button)'),
  'Els humans continuen a Personatges i els models comparatius s’obren a Vehicles → COMPARADOR');
-assert(lab.includes('config.human?await createCurrentHuman(THREE,config.human)'));
+assert(!lab.includes('await createCurrentHuman(THREE,config.human)')&&lab.includes('config.options.map((entry,i)=>loadExternal(slots[i],entry,used,token))'), 'L’editor només mostra variants HUMANS V18');
 assert(lab.includes('!original&&!currentType.human&&'),'Les proporcions humanes no s’ajusten a l’amplada antiga');
 for(const mode of ['walk','run','crouch','aim','work','wave'])assert(html.includes('value="'+mode+'"'));
 assert(readFileSync(new URL('../src/bootstrap.mjs',import.meta.url),'utf8').includes('human-game-runtime-v17'),
@@ -595,4 +595,4 @@ assert(!html.includes('C · Àgil')&&!html.includes('A/B/C')&&!evidenceUI.includ
 assert(html.includes('id="sectionTabs"')&&html.includes('data-section="characters"'),'Editor humà a la pàgina principal de proves');
 const liveDetails=html.match(/<details\s+id="liveEditor"[^>]*>/)?.[0];
 assert(liveDetails&&!/\sopen(?:\s|=|>)/.test(liveDetails),'Refinat plegat per defecte');
-console.log('PASS 7 originals, 14 candidats, 16 articulacions, moviment, edició i JSON');
+console.log('PASS 7 fàbriques de joc, 14 variants HUMANS V18, 16 articulacions, moviment, edició i JSON');
