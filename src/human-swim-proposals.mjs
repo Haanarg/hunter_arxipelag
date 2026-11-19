@@ -225,7 +225,7 @@ export function poseHumanSwimming(model,joints,weapon,time,mode){
    set('hip'+side,p.leg[0],0,sign*p.leg[2]);
    set('knee'+side,p.leg[1]);
    // Martell durant la càrrega / puntada; punta i cames juntes al lliscament.
-   set('ankle'+side,p.leg[3],sign*p.leg[4],sign*p.leg[5]);
+   set('ankle'+side,p.leg[3],-sign*p.leg[4],sign*p.leg[5]); // rotació externa: dits cap enfora
   }
  }else if(p.kind==='crawl'&&p.refined){
   // El roll és del cos sencer, no es força la zona lumbar a torsionar-se.
