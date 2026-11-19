@@ -5,7 +5,7 @@ import {isHumanSwimmingMode,sampleHumanSwimming,HUMAN_SWIM_PROPOSALS} from './hu
 import {createTwoWheelLabComparison} from './two-wheel-lab-comparison.mjs?rev=rig-comparison-20261119-1';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-v18-20261119-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
-import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261119-humans-v18-comparator-2';
+import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261119-humans-v18-comparator-3';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {vehicleModels} from './vehicle-model-core.mjs?rev=mi24-d-approved-1&bikeResize=20261118-1';
@@ -20,7 +20,7 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // Referències a models REALS publicats. Les cerques són exactes sobre
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
-import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261119-humans-v18-comparator-2';
+import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261119-humans-v18-comparator-3';
 const list=document.querySelector('#vehicleList'),
       comparatorList=document.querySelector('#vehicleComparatorList'),
       grid=document.querySelector('#grid'),
@@ -469,6 +469,7 @@ async function choose(config){
    for(let i=0;i<visible.length;i++){
      if(token!==generation)return;
      const slot=visible[i],entry=config.options[i];
+     slot.status.textContent='Generant geometria HUMANS V18…';
      try{
        let model;
        try{model=createHumanProposal(THREE,entry.role,entry.style)}
