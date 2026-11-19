@@ -107,7 +107,7 @@ const outwardR=new THREE.Vector3(0,0,-1).transformDirection(b.ankleR.matrixWorld
 const outwardL=new THREE.Vector3(0,0,-1).transformDirection(b.ankleL.matrixWorld);
 assert(outwardR.x>.10&&outwardL.x<-.10,'Braça: els dits dels peus giren cap enfora als dos costats');
 inspectB(2.2);
-assert(b.ankleR.rotation.x<-.85,'Braça: flexió plantar durant el lliscament');
+assert(b.ankleR.rotation.x<-1.15,'Braça: flexió plantar completa durant el lliscament');
 for(const t of [2.2,2.45,2.8,3.05,3.1999]){
  const pose=sampleHumanSwimming('swim-breast-3',t);
  assert(pose.glideActive&&pose.bodyRoll===0,'Braça: un segon sense rotació axial');
@@ -137,7 +137,7 @@ for(let i=0;i<=steps;i++){
  for(const side of ['L','R']){
   const leg=pose.legs[side];
   assert(leg.knee>=-.70&&leg.knee<=0,'Crol: flexió de genoll per sota dels 40 graus');
-  assert(leg.ankle<-.85,'Crol: peu en flexió plantar');
+  assert(leg.ankle<-1.15,'Crol: peu en flexió plantar gairebé completa');
   assert(Math.abs(c['knee'+side].rotation.x-leg.knee)<1e-9);
  }
  assert(Math.abs(c.neck.rotation.x)<1e-9&&Math.abs(c.head.rotation.x)<1e-9,
