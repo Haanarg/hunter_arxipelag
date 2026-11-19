@@ -1,5 +1,5 @@
 import {createMi24Runtime,MI24_RUNTIME_ID} from './mi24-proposals.mjs?rev=mi24-d-optimized-20261115-3';
-import {createHumanProposal} from './human-proposals.mjs?rev=humans-v18-neck-cutter-grenade-20261118-3';
+import {createHumanProposal} from './human-proposals.mjs?rev=humans-v18-canonical-rider-20261119-1';
 import {installFerryModel} from './ferry-proposals.mjs?rev=ferry-d-approved-1';
 import {turretSpecs,advanceTurret,stepManualTurret} from './vehicle-turret-core.mjs?rev=btr82-scale-80-1';
 import {installBtr82Model3B} from './btr82-3b-native.mjs?rev=btr82-scale-80-1';
