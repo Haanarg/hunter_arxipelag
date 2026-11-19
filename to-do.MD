@@ -1,3 +1,11 @@
+**2026-11-19 · v0.6.249 · Panell V18 que no avança malgrat que el joc funciona:**
+- [x] Causa funcional del diagnòstic antic: la seva informació depenia del RAF de game-core i podia quedar encallada a «Carregant el motor 3D»; la captura del 0.6.248 demostrava que el botó independent funcionava.
+- [x] El HUD ara té un RAF propi (cada 250 ms) independent del joc: distingeix `HUNTER_READY` de l'existència real de la sonda `game-core`, inclòs missatge clar quan el runtime en joc no l'ha connectada.
+- [x] `game-core` registra una sonda d'estat sense tocar física: model V18, pose(), RAF, accions, crol/braça, ombres, malles, angles de les articulacions i projecció efectiva d'ombres.
+- [x] Prova unitària del HUD sense WebGL: portada, motor llest sense sonda, dades del V18, ombres i interruptor forçat.
+- [ ] Revisar una captura del panell amb el model movent-se per localitzar la causa definitiva de la rigidesa/ombres.
+- [ ] CI i publicació Cloudflare pendents de verificació.
+
 **2026-11-19 · v0.6.248 · Reparació del panell d'auditoria invisible i del ReferenceError de la v0.6.247:**
 - [x] Localitzat `renderLoopFrameId` inexistent en l'actualització del panell. Ara usa `avatarAuditFrame` local, incrementat per RAF; no trenca el render.
 - [x] El HUD de diagnòstic s'inicialitza en un script independent `src/avatar-audit-boot.js` des del menú, sense esperar el motor, Three.js ni WebGL. Només en `?avatarAudit=1`.

@@ -1779,9 +1779,15 @@ const pl=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});scene.add(pl);
  // l'usuari selecciona la dificultat o el motor triga a arrencar.
 const avatarAuditState=window.HUNTER_AVATAR_AUDIT||null;
 const avatarAuditEnabled=!!avatarAuditState;
-const avatarAuditReadout=avatarAuditState?.readout||null;
-let avatarAuditPoseCalls=0,avatarAuditFrame=0;
-if(avatarAuditState)avatarAuditState.paint('V18 · Motor de partida carregat.\nInicia la missió per veure els valors reals.');
+let avatarAuditPoseCalls=0;
+if(avatarAuditState)avatarAuditState.attach({
+ player:pl,quality:qualityName,
+ state:()=>({started,paused,swimming,frames:renderLoopFrameId,
+   poseCalls:avatarAuditPoseCalls}),
+ shadow:()=>({enabled:ren.shadowMap.enabled,sun:sun.castShadow,
+   disabled:shadowsDisabled,playerCasters:shadowStats.playerCasters,
+   active:shadowStats.active})
+});
 const animPl=(f,dt,running=false,strafe=0)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{
   forward:f,strafe,dt,running,crouching:playerCrouched&&!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive,
   swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,assaultRifleEquipped,
@@ -4524,35 +4530,7 @@ for(const proxy of shadowBoatNodes){
 }
 const shadowRedrawn=shadowCache.schedule({now:performance.now(),x:sun.target.position.x,z:sun.target.position.z,
   nodes:shadowPoseNodes,enabled:!!ren.shadowMap.enabled});
-if(avatarAuditReadout&&++avatarAuditFrame%12===0){
- const u=pl.userData,j=u.humanGameCanonicalJoints,body=u.humanGameCanonicalRig;
- let meshes=0,casters=0;
- body?.traverse(o=>{if(o.isMesh){meshes++;if(o.castShadow)casters++}});
- const angle=id=>j?.[id]?j[id].rotation.x.toFixed(2):'ABSENT';
- avatarAuditReadout.textContent=[
-  'HUNTER · V18 · DIAGNÒSTIC REAL',
-  'Versió: '+(window.HUNTER_VERSION||'consulta badge')+
-   ' · runtime: '+(window.HUNTER_RUNTIME_MODE||'carregant'),
-  'Qualitat: '+qualityName+' · partida: '+started+' · pausa: '+paused,
-  'Instal·lat: '+String(!!body)+' · pose(): '+typeof u.humanGamePose+
-   ' · crides RAF: '+avatarAuditPoseCalls,
-  'Model visible: '+!!(pl.visible&&body?.visible)+
-   ' · malles V18: '+meshes,
-  'Caminar: '+Number(u.gameLandMove||0).toFixed(2)+
-   ' · fase: '+Number(u.ph||0).toFixed(2)+
-   ' · cursa: '+Number(u.runBlend||0).toFixed(2),
-  'Aigua física: '+swimming+' · mode: '+u.gameSwimMode+
-   ' · pes natació: '+Number(u.gameSwimBlend||0).toFixed(2),
-  'Malucs L/R: '+angle('hipL')+' / '+angle('hipR')+
-   ' · braç R: '+angle('shoulderR'),
-  'Ombres: mapa='+ren.shadowMap.enabled+
-   ' sol='+sun.castShadow+' desact.='+shadowsDisabled,
-  'Candidats V18: '+casters+'/'+meshes+
-   ' · assignats: '+shadowStats.playerCasters+
-   ' · totals propers: '+shadowStats.active,
-  'Prova forçada: '+(avatarAuditState.forced?'ACTIVA':'apagada')
- ].concat(avatarAuditState.error?['ERROR: '+avatarAuditState.error]:[]).join('\n');
-}
+// El panell disposa d'un RAF independent, també quan el motor 3D falla.
 const renderStarted=performance.now();
 const measuringRenderMatrix=performanceAudit?.status==='running'&&gameplayActive;
 let renderMatrixCpuMs=0;

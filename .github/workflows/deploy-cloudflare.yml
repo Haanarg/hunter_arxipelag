@@ -67,7 +67,9 @@ jobs:
       - name: Validar models humans i editor en temps real
         run: npm run test:lab
       - name: Validar sintaxi del panell V18 independent de Three.js
-        run: node --check src/avatar-audit-boot.js
+        run: |
+          node --check src/avatar-audit-boot.js
+          node tests/avatar-audit-boot.mjs
       - name: Validar recollida del fusell d'assalt i munició (individual i cooperatiu)
         run: node tests/assault-repeat-pickup.mjs
       - name: Validar navegació del compte i submenús
