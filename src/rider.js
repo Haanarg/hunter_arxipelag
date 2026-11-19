@@ -157,12 +157,6 @@ window.HUNTER_RIDER=Object.freeze({
       const realHipY=g.worldToLocal(
         cycleJoints.pelvis.getWorldPosition(new THREE.Vector3())).y;
       cycleBody.position.y+=seatHipY-drop-realHipY;
-      g.updateWorldMatrix(true,true);
-      g.userData.twoWheelHipTrace={
-        before:realHipY,requested:seatHipY-drop,correction:cycleBody.position.y,
-        after:g.worldToLocal(
-          cycleJoints.pelvis.getWorldPosition(new THREE.Vector3())).y
-      };
       cycleJoints.pelvis.rotation.set(0,0,0);
       cycleJoints.spine.rotation.set(
         bike?-.62+.46*stopped:-.55+.36*stopped,0,0);
@@ -195,9 +189,6 @@ window.HUNTER_RIDER=Object.freeze({
       g.userData.twoWheelSeatHip=seatHipY;
       g.userData.twoWheelFloorY=floorY;
       g.userData.twoWheelStopped=stopped;
-      g.updateWorldMatrix(true,true);
-      g.userData.twoWheelHipTrace.final=g.worldToLocal(
-        cycleJoints.pelvis.getWorldPosition(new THREE.Vector3())).y;
     };
     const aimCanonicalPistol=(v,dt)=>{
       const u=g.userData;
