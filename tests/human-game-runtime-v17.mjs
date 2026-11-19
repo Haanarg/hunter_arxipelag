@@ -146,8 +146,12 @@ for(const role of ['player','soldier','rocket','elite','general']){
    u.gun.quaternion.setFromAxisAngle(new T.Vector3(1,0,0),.42);
    g.updateMatrixWorld(true);
    const gripOffset=gunProxy.position.clone();
-   assert(Math.abs(gripOffset.y+.095)<.002&&Math.abs(gripOffset.z+.085)<.002,
+   assert(Math.abs(gripOffset.y-.015)<.002&&Math.abs(gripOffset.z+.040)<.002,
     'La culata visible roman dins del puny i segueix el canell, no orbita pel pit');
+   const gripCenter=gunProxy.localToWorld(new T.Vector3(0,-.20,.055)),
+     fistCenter=fist.localToWorld(new T.Vector3(0,-.065,0));
+   assert(gripCenter.distanceTo(fistCenter)<.15,
+    'El mànec ha de travessar físicament el puny dret, no quedar sobre la mà');
    const actualGun=new T.Vector3(0,0,-1).applyQuaternion(gunProxy.getWorldQuaternion(new T.Quaternion()));
    const sourceGun=new T.Vector3(0,0,-1).applyQuaternion(u.gun.getWorldQuaternion(new T.Quaternion()));
    assert(actualGun.dot(sourceGun)>.999,'Canó visible orientat com l’arma real');
