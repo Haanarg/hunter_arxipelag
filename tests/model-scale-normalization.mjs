@@ -34,6 +34,12 @@ for(const name of ['pin','steer'])
  assert(initial[name].distanceTo(actual[name])<1e-8,
   'La normalització no canvia el punt '+name);
 for(const name of ['body','wheel']){
+ console.log('STATIC_SCALE_BOUNDS',name,JSON.stringify({
+  before:{min:initial[name].min.toArray(),max:initial[name].max.toArray()},
+  after:{min:actual[name].min.toArray(),max:actual[name].max.toArray()},
+  minDelta:initial[name].min.distanceTo(actual[name].min),
+  maxDelta:initial[name].max.distanceTo(actual[name].max)
+ }));
  assert(initial[name].min.distanceTo(actual[name].min)<1e-8,
   'La normalització no mou el mínim de '+name);
  assert(initial[name].max.distanceTo(actual[name].max)<1e-8,
