@@ -147,7 +147,10 @@ window.HUNTER_RIDER=Object.freeze({
           // Mateixa animació que a la bici: quan frena, el peu baixa
           // del reposapeus al terreny; quan accelera, torna al reposapeus.
           const footrest=vec(side*.34*fit,.42*fit,.16*fit);
-          foot=vec(side*.34*fit,0,.16*fit);
+          // En aturar-se els peus baixen i s'obren cap als costats de
+          // la moto, tal com els del ciclista deixen els pedals.
+          // Posam els objectius dins l'abast del rig anatòmic a peu.
+          foot=vec(side*.38*fit,0,.20*fit);
           const ground=g.localToWorld(foot.clone());
           ground.y=heightAt(ground.x,ground.z)+.14;
           foot.copy(g.worldToLocal(ground)).lerp(footrest,motion);
