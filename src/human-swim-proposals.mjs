@@ -9,10 +9,10 @@ export const HUMAN_SWIM_PROPOSALS=Object.freeze({
   Object.freeze({title:'B4 · Braça de lliscament',note:'Tracció curta, puntada propulsiva i fase de fletxa clarament més llarga',period:2.85,glide:.38,armWidth:.77,legWidth:.93,breath:.17,undulation:.035})
  ]),
  crawl:Object.freeze([
-  Object.freeze({title:'C1 · Crol de sis batudes',note:'Braços alterns, colze alt, rotació axial i sis batudes per cicle',period:2.05,beats:6,roll:.19,reach:1,recovery:1.42,kick:.20}),
-  Object.freeze({title:'C2 · Crol de fons',note:'Dues batudes coordinades, més abast per braçada i rotació controlada',period:2.45,beats:2,roll:.25,reach:1.14,recovery:1.28,kick:.17}),
-  Object.freeze({title:'C3 · Crol tècnic',note:'Quatre batudes, colze alt a la recuperació i fase de tracció llarga',period:2.15,beats:4,roll:.22,reach:1.05,recovery:1.68,kick:.20}),
-  Object.freeze({title:'C4 · Crol ràpid',note:'Sis batudes enèrgiques, alta cadència i recuperació més recta',period:1.54,beats:6,roll:.15,reach:.94,recovery:.78,kick:.29})
+  Object.freeze({title:'C1 · Crol de sis batudes',note:'Braços alterns, colze alt, rotació axial i sis batudes per cicle',period:2.05,beats:6,roll:.44,reach:1,recovery:1.42,kick:.20}),
+  Object.freeze({title:'C2 · Crol de fons',note:'Dues batudes coordinades, més abast per braçada i rotació controlada',period:2.45,beats:2,roll:.57,reach:1.08,recovery:1.28,kick:.17}),
+  Object.freeze({title:'C3 · Crol tècnic',note:'Quatre batudes, colze alt a la recuperació i fase de tracció llarga',period:2.15,beats:4,roll:.52,reach:1.04,recovery:1.68,kick:.20}),
+  Object.freeze({title:'C4 · Crol ràpid',note:'Sis batudes enèrgiques, alta cadència i recuperació més recta',period:1.54,beats:6,roll:.36,reach:.94,recovery:.78,kick:.29})
  ])
 });
 export const isHumanSwimmingMode=mode=>/^swim-(breast|crawl)(?:-[1-4])?$/.test(mode||'');
@@ -51,9 +51,9 @@ export function sampleHumanSwimming(mode,time){
   const s=1-config.glide,a=config.armWidth,k=config.legWidth;
   // Braços: fletxa → escombrada → agarre → recollida → extensió.
   // Cames: talons als glutis → peus enfora → fuet → extensió i lliscament.
-  const arm=track([[0,1.53,.08,.02],[s*.16,1.35,.16,.35*a],
-   [s*.39,.86,1.12,.53*a],[s*.60,.63,1.45,.18*a],
-   [s*.82,1.35,.25,.06*a],[s,1.53,.08,.02],[1,1.53,.08,.02]],phase);
+  const arm=track([[0,3.06,.08,.02],[s*.16,2.77,.16,.35*a],
+   [s*.39,2.07,1.12,.53*a],[s*.60,1.25,1.45,.18*a],
+   [s*.82,2.66,.25,.06*a],[s,3.06,.08,.02],[1,3.06,.08,.02]],phase);
   const leg=track([[0,.035,-.08,.015,.02],[s*.32,.10,-.20,.05,.04],
    [s*.54,.49,-1.44,.23*k,.25],[s*.69,.29,-.86,.29*k,.48],
    [s*.84,-.10,-.17,.10*k,.30],[s,.035,-.08,.015,.02],[1,.035,-.08,.015,.02]],phase);
@@ -64,10 +64,13 @@ export function sampleHumanSwimming(mode,time){
  }
  // Braç dret a la fase p; esquerre mig cicle més tard. Fase d'entrada,
  // agarre amb colze flexionat, tracció, empenta i recuperació aèria.
- const armAt=p=>track([[0,1.53,.10,.02],[.16,1.34*config.reach,.85,.08],
-  [.38,.35,1.22,.08],[.55,-.80,.24,.08],
-  [.70,-.58,config.recovery,.62],[.86,.73,1.08,.55],
-  [1,1.53,.10,.02]],p);
+ // Les articulacions de l'espatlla tenen el braç caigut (-Y) en repòs:
+ // +PI l'estén cap al cap (+Y), +PI/2 el submergeix i -PI/2 l'alça
+ // fora de l'aigua. La recuperació crol passa pels angles negatius.
+ const armAt=p=>track([[0,3.03,.10,.02],[.16,2.74*config.reach,.85,.08],
+  [.38,1.57,1.22,.08],[.55,.12,.24,.08],
+  [.70,-.86,config.recovery,.62],[.86,-2.46,1.08,.55],
+  [1,3.03-TAU,.10,.02]],p);
  const legs={};
  for(const [i,side]of ['L','R'].entries()){
   // Sis/quatre/dues batudes són 3/2/1 oscil·lacions per cama,
