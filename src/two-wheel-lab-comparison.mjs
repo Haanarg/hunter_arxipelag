@@ -94,6 +94,10 @@ export async function createTwoWheelLabComparison(T,{makeVehicle,box,material,
  avatar.scale.setScalar(2/3);
  avatar.rotation.order='YZX';
  foot.add(avatar);
+ // El V18 enganxa la compensació visual a updateMatrixWorld(), no
+ // a updateWorldMatrix(). Sense aquest pas, la vista a peu quedava
+ // exactament 2/3 de la mida del pilot, tot i compartir geometria.
+ avatar.updateMatrixWorld(true);
  const footJoints=avatar.userData.humanGameCanonicalJoints;
  if(!footJoints?.hipL)throw Error('Jugador a peu sense rig anatòmic real');
  const footBounds=visibleBounds(T,avatar);
