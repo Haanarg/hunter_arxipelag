@@ -17,6 +17,12 @@ const preview=createHumanProposal(T,'player','a',{visualOnly:true});
 let sourceWeapons=0;preview.traverse(n=>{if(n.userData?.humanWeapon)sourceWeapons++});
 assert.equal(sourceWeapons,0,'La geometria del joc no inclou una còpia de les armes del visor');
 
+// Les comprovacions existents demanen explícitament la postura del tick.
+// L'actualització de matrius no ha de tornar a calcular animacions.
+function updateHuman(model){
+ model.userData.humanGamePose?.();
+ model.updateMatrixWorld(true);
+}
 function skinParts(model){
  const parts=[];model.traverse(n=>{if(n.userData?.humanGameV17Mesh)parts.push(n)});return parts;
 }
@@ -96,7 +102,7 @@ for(const role of ['player','soldier','rocket','elite','general']){
    assert.deepEqual([...attrA.array],[...attrB.array],'Exact mesh vertices, without geometric deformation: '+a.name);
    assert.equal(a.material.color.getHex(),b.material.color.getHex(),'Editor material colour: '+a.name);
   }
-  g.updateMatrixWorld(true);
+  updateHuman(g);
   reference.updateMatrixWorld(true);
   const bound=new T.Box3();
   for(const mesh of actual)bound.union(new T.Box3().setFromObject(mesh,true));
@@ -107,11 +113,11 @@ for(const role of ['player','soldier','rocket','elite','general']){
   // The old gameplay shoulder is only a control. Animation must actually
   // rotate the editor's corresponding shoulder pivot and preserve the torso.
   const oldR=u.ar.rotation.x,restShoulder=bones.shoulderR.quaternion.clone();
-  u.ar.rotation.x+=.4;g.updateMatrixWorld(true);
+  u.ar.rotation.x+=.4;updateHuman(g);
   const moved=restShoulder.angleTo(bones.shoulderR.quaternion);
   console.log('CANONICAL_SHOULDER_MOTION',moved,bones.shoulderR.rotation.toArray());
   assert(moved>.35&&moved<.45,'Game pose drives native shoulder joint');
-  u.ar.rotation.x=oldR;g.updateMatrixWorld(true);
+  u.ar.rotation.x=oldR;updateHuman(g);
   assert(restShoulder.angleTo(bones.shoulderR.quaternion)<.002,'Rest pose exactly recovers editor geometry');
   // Dimensions consolidades: model natiu 1.6, root del jugador 1,
   // el controlador antic i les armes conserven la mida física original.
@@ -136,19 +142,19 @@ for(const role of ['player','soldier','rocket','elite','general']){
   const palm=leftHand.children.find(o=>o.name==='Palmell esquerre pla sota la pistola');
   assert(fist&&palm&&fist.children.length>=5&&palm.children.length>=5,
    'El puny dret tanca els dits i el palmell esquerre es manté obert');
-  u.pistolBlend=0;g.updateMatrixWorld(true);
+  u.pistolBlend=0;updateHuman(g);
   assert(fist.visible&&!palm.visible,'Puny dret tancat també quan no apunta');
-  u.pistolBlend=1;g.updateMatrixWorld(true);
+  u.pistolBlend=1;updateHuman(g);
   assert(fist.visible&&palm.visible,'Dreta tancada i esquerra plana quan apunta');
    // En repòs i caminar, l'arma segueix l'avantbraç del rig natiu.
-   u.pistolBlend=0;g.updateMatrixWorld(true);
+   u.pistolBlend=0;updateHuman(g);
    const carried=new T.Vector3(0,0,-1).applyQuaternion(gunProxy.getWorldQuaternion(new T.Quaternion()));
    const forearm=bones.wristR.getWorldPosition(new T.Vector3())
      .sub(bones.elbowR.getWorldPosition(new T.Vector3())).normalize();
    assert(carried.dot(forearm)>.999,'Pistola seguint l’avantbraç de l’editor');
    u.pistolBlend=1;
    u.gun.quaternion.setFromAxisAngle(new T.Vector3(1,0,0),.42);
-   g.updateMatrixWorld(true);
+   updateHuman(g);
    const gripOffset=gunProxy.position.clone();
    assert(Math.abs(gripOffset.y-.015)<.002&&Math.abs(gripOffset.z+.040)<.002,
     'La culata visible roman dins del puny i segueix el canell, no orbita pel pit');
@@ -159,27 +165,27 @@ for(const role of ['player','soldier','rocket','elite','general']){
    const actualGun=new T.Vector3(0,0,-1).applyQuaternion(gunProxy.getWorldQuaternion(new T.Quaternion()));
    const sourceGun=new T.Vector3(0,0,-1).applyQuaternion(u.gun.getWorldQuaternion(new T.Quaternion()));
    assert(actualGun.dot(sourceGun)>.999,'Canó visible orientat com l’arma real');
-   u.pistolBlend=0;u.gun.quaternion.identity();g.updateMatrixWorld(true);
+   u.pistolBlend=0;u.gun.quaternion.identity();updateHuman(g);
    for(const yaw of [0,Math.PI/2,Math.PI,3*Math.PI/2]){
-    g.rotation.y=yaw;g.updateMatrixWorld(true);
+    g.rotation.y=yaw;updateHuman(g);
     const direction=new T.Vector3(0,0,-1).applyQuaternion(g.getWorldQuaternion(new T.Quaternion()));
     for(const id of ['spine','head']){
      const facing=new T.Vector3(0,0,-1).applyQuaternion(bones[id].getWorldQuaternion(new T.Quaternion()));
      assert(facing.dot(direction)>.995,'Orientació '+id+' per a rumb '+yaw);
     }
    }
-   g.rotation.y=0;g.updateMatrixWorld(true);
-   u.runBlend=1;u.ph=Math.PI*2*.39;g.updateMatrixWorld(true);
+   g.rotation.y=0;updateHuman(g);
+   u.runBlend=1;u.ph=Math.PI*2*.39;updateHuman(g);
    assert(Math.abs(bones.ankleL.rotation.x-sampleHumanGait(.39,1).ankle)<.001,'Cursa del joc = turmell de l’editor');
-   u.runBlend=0;g.updateMatrixWorld(true);
+   u.runBlend=0;updateHuman(g);
   assert(!part.visible&&part.parent===gun,'Old ghost gun is not visible or detached from gameplay controller');
   const oldLowerY=u.lowerBody.position.y,oldUpperY=u.upperBody.position.y;
   u.lowerBody.position.y-=.72;u.upperBody.position.y-=.72;
-  g.updateMatrixWorld(true);
+  updateHuman(g);
   assert(canonical.position.y<-.19&&canonical.position.y>-.35,
    'Old 4m crouch is translated to native 2m joints, not -0.72m full drop');
   u.lowerBody.position.y=oldLowerY;u.upperBody.position.y=oldUpperY;
-  g.updateMatrixWorld(true);
+  updateHuman(g);
   console.log('PASS editor avatar exact rig and meshes, visual height 3.20m, 16 joints');
  }
  const box=new T.Box3().setFromObject(g);
