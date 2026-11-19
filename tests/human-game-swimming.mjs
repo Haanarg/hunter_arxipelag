@@ -58,9 +58,31 @@ const crown=j.head.getWorldPosition(new T.Vector3());
 const lift=api.swimVisualLift(p,2.1,0);
 assert(lift>0&&Math.abs(crown.y+lift-2.26)<.03,'Braça: cap real alineat amb aigua sense moure física');
 assert.equal(p.position.y,0,'La simulació física no és desplaçada per l’animació');
+assert.equal(u.gameSwimStyle,'B3','Braça seleccionada per defecte amb avanç frontal');
 
-for(let i=0;i<190;i++)animate(p,{running:true});
+// No moviment frontal: recupera l'animació anterior del joc.
+for(let i=0;i<90;i++)animate(p,{forward:0,strafe:0});
+assert.equal(u.gameSwimStyle,'lateral-idle','Quiet a l’aigua: animació antiga');
+assert(!u.gameSwimActive&&u.gameSwimBlend<.0001,'La braça IK s’apaga en flotar quiet');
+assert(Math.abs(skin.rotation.x)<.002,'Animació anterior visible, no el cos horitzontal B3');
+assert.equal(p.position.y,0,'Quiet a l’aigua no canvia la posició física');
+
+for(let i=0;i<100;i++)animate(p,{forward:0,strafe:1});
+assert.equal(u.gameSwimStyle,'lateral-idle','Natació lateral: animació anterior');
+assert(u.gameSwimBlend<.0001,'Desplaçament lateral no activa B3');
+assert(Math.abs(skin.rotation.x)<.002,'Lateral: rig anterior sense inclinació B3');
+
+for(let i=0;i<135;i++)animate(p,{forward:1,strafe:0,running:false});
+assert.equal(u.gameSwimStyle,'B3','En avançar novament s’activa B3');
+assert(u.gameSwimBlend>.999&&u.crawlBlend<.001,'Moviment frontal normal mostra B3');
+assert(Math.abs(skin.rotation.x+Math.PI/2)<.02,'La braça visible està horitzontal');
+
+for(let i=0;i<135;i++)animate(p,{forward:1,strafe:1,running:false});
+assert.equal(u.gameSwimStyle,'B3','En diagonal amb component frontal domina braça');
+
+for(let i=0;i<190;i++)animate(p,{running:true,forward:1,strafe:0});
 assert(u.crawlBlend>.9999,'La tecla de córrer activa C4');
+assert.equal(u.gameSwimStyle,'C4','Crol només en avanç frontal ràpid');
 assert(Math.abs(skin.rotation.x+Math.PI/2)<.01);
 assert(Math.abs(skin.rotation.y)<=40*Math.PI/180+.00001,'Crol: roll longitudinal limitat');
 assert(Math.abs(j.elbowR.rotation.y)<.001&&Math.abs(j.elbowR.rotation.z)<.001,'Crol: colze com a frontissa única, tolerància de barreja de postures');
@@ -77,6 +99,10 @@ assert.equal(p.position.y,0,'Crol no canvia Y del jugador físic');
 for(let i=0;i<140;i++)animate(p,{running:false});
 assert(u.crawlBlend<.0001,'Retorn a B3 sense reiniciar el món');
 assert(Math.abs(skin.rotation.y)<.005,'Braça sense roll després de crol');
+
+for(let i=0;i<110;i++)animate(p,{forward:0,strafe:-1,running:true});
+assert.equal(u.gameSwimStyle,'lateral-idle','Cursa lateral no activa crol ni braça IK');
+assert(u.gameSwimBlend<.0001,'Animació anterior de natació lateral ràpida');
 const newPlayer=player();
 for(let i=0;i<135;i++)animate(newPlayer,{running:true});
 assert(newPlayer.userData.crawlBlend>.99,'COOP: altre jugador té rellotge propi de crol');
