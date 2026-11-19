@@ -295,12 +295,12 @@ function installCanonicalPlayer(T,model){
 }
 
 export function createHumanGameRuntimeV17(){
- let suppressed=0;
+ let suppressed=0,nativeVisualHeight=null;
  const runtime={
   version:GAME_HUMAN_SKIN_VERSION,
-  // Es mesura la geometria humana original; no hi ha un sostre de 2 m.
-  // Queda determinat en construir el primer pilot o el model a peu.
-  footVisualHeight:null,
+  // Object.freeze(runtime) al final: el valor mesurat s'emmagatzema al
+  // tancament i s'exposa amb un getter només lectura.
+  get footVisualHeight(){return nativeVisualHeight},
   // La malla del pilot de dues rodes és literalment la del jugador a peu.
   // Cap os s'estira per encaixar mans o peus a manillars i pedals.
   createTwoWheelRider(T){
@@ -321,7 +321,7 @@ export function createHumanGameRuntimeV17(){
    // No es fa servir cap alçada final ni el límit històric de 2 m.
    const bakedScale=FOOT_PLAYER_VISUAL_FACTOR*root.scale.x;
    const referenceHeight=bareHeight*FOOT_PLAYER_VISUAL_FACTOR;
-   runtime.footVisualHeight=referenceHeight;
+   nativeVisualHeight=referenceHeight;
    root.traverse(node=>{
     if(node===root)return;
     node.position.multiplyScalar(bakedScale);
