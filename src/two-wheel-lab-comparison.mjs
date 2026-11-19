@@ -100,7 +100,8 @@ export async function createTwoWheelLabComparison(T,{makeVehicle,box,material,
  avatar.position.y-=footBounds.min.y;
  const footGuide=addGuide(T,foot,footJoints);
  footGuide.update();
- const footHeight=globalThis.HUNTER_HUMAN_V17.footVisualHeight;
+ // Alçada real de la malla visible, sense suposar que mesura 2 m.
+ const footHeight=footBounds.getSize(new T.Vector3()).y;
  const makeDriver=type=>{
   const root=new T.Group();
   root.name=type==='bici'?'Bicicleta i ciclista · joc':'Moto i motorista · joc';
@@ -137,9 +138,12 @@ export async function createTwoWheelLabComparison(T,{makeVehicle,box,material,
    getStandingHeight:()=>rider.object.userData.twoWheelCanonicalHeight};
  };
  const bicycle=makeDriver('bici'),motorcycle=makeDriver('moto');
+ const riderNativeHeight=globalThis.HUNTER_HUMAN_V17.footVisualHeight;
+ if(!(riderNativeHeight>0))throw Error('El pilot no ha mesurat la geometria real');
  return {foot:{model:foot,joints:footJoints,guide:footGuide,
    step:()=>footGuide.update(),getStandingHeight:()=>footHeight},
   bicycle,motorcycle,views:[],footHeight,
+  riderHeight:riderNativeHeight,
   setGuides(visible){for(const g of [footGuide,bicycle.guide,motorcycle.guide])
    g.overlay.visible=visible;},
   step(dt,speed=0){footGuide.update();bicycle.step(dt,speed);motorcycle.step(dt,speed);},
