@@ -141,7 +141,7 @@ window.HUNTER_RIDER=Object.freeze({
       cycleBody.position.set(0,seatHipY-standingHipY-drop,seat.z-forward);
       cycleJoints.pelvis.rotation.set(0,0,0);
       cycleJoints.spine.rotation.set(
-        bike?-.33+.19*stopped:-.28+.15*stopped,0,0);
+        bike?-.62+.46*stopped:-.38+.25*stopped,0,0);
       cycleJoints.head.rotation.set(bike?.13:.07,0,0);
       g.updateWorldMatrix(true,true);
       for(let i=0;i<2;i++){
@@ -161,8 +161,8 @@ window.HUNTER_RIDER=Object.freeze({
         const footOnGround=g.worldToLocal(ground),
               footOnPedal=riderAnchor(v,anchors['pedal'+letter],
                 bike?vec(side*.40*fit,
-                  (.75-side*Math.sin(phase)*.28)*fit,
-                  side*Math.cos(phase)*.28*fit):
+                  (.90-side*Math.sin(phase)*.22)*fit,
+                  side*Math.cos(phase)*.22*fit):
                   vec(side*.34*fit,.42*fit,.16*fit)),
               foot=footOnGround.lerp(footOnPedal,motion);
         placeCanonicalLimb(hip,knee,ankle,foot,side,true);
