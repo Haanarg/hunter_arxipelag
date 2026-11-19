@@ -51,6 +51,8 @@ jobs:
         run: npm run test:deploy
       - name: Validar models humans i editor en temps real
         run: npm run test:lab
+      - name: Validar recollida del fusell d'assalt i munició (individual i cooperatiu)
+        run: node tests/assault-repeat-pickup.mjs
       - name: Validar HUMANS V17 al joc i als conductors
         run: node tests/human-game-runtime-v17.mjs
       - name: Regenerar el runtime a partir dels fitxers font validats
