@@ -342,7 +342,10 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
    }
   }else assert.equal(straps.length,0,'Sense cintes militars a '+role);
   const size=new T.Box3().setFromObject(model).getSize(new T.Vector3());
-  assert(Math.abs(size.y-p.height)<.002,'Alçada del joc '+role+style);
+  assert(Math.abs(size.y-model.userData.humanNativeHeight)<.002,
+   'Alçada natural de la malla sense normalitzar a 2 metres '+role+style);
+  assert(Math.abs(model.scale.x-1)<1e-10,
+   'L’editor no aplica cap factor automàtic a '+role+style);
   assert(size.x/size.y<.55,'Silueta humana amb braços oberts, pit moderat i proporcions controlades '+role+style+' ('+(size.x/size.y).toFixed(3)+')');
   let triangles=0;for(const m of meshes){assert([...m.geometry.attributes.position.array].every(Number.isFinite));assert(m.geometry.userData.labOwned);triangles+=(m.geometry.index?.count??m.geometry.attributes.position.count)/3}
   const bodyMeshes=meshes.filter(m=>!m.userData.humanGameWeaponPart);
