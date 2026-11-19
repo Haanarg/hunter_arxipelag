@@ -45,8 +45,12 @@ console.log('PASS transició caminar/córrer, fase contínua i punta posterior d
 for(const [role,p]of Object.entries(HUMAN_PROFILES)){
  assert.throws(()=>createHumanProposal(T,role,'c'),/desconeguda/,'Variant C retirada');
  const actual=await createCurrentHuman(T,role);assert.equal(actual.userData.humanOriginal,role);
- assert(Math.abs(new T.Box3().setFromObject(actual).getSize(new T.Vector3()).y-2)<.002,'Original normalitzat proporcionalment a 2 m');
- assert(actual.userData.previewOnlyScale>0&&actual.userData.previewHeight===2);
+ const nativeHeight=new T.Box3().setFromObject(actual).getSize(new T.Vector3()).y;
+ assert(nativeHeight>0,'Model humà original no buit');
+ assert(Math.abs(nativeHeight-actual.userData.previewHeight)<.002,
+  'L’editor mostra la mida natural, no força un límit de 2 m');
+ assert.equal(actual.userData.previewOnlyScale,1,
+  'No hi ha cap factor de normalització automàtica al laboratori');
  assert.doesNotThrow(()=>new T.ObjectLoader().parse(actual.toJSON()),'Original serialitzable '+role);
  const shapes=new Set();
  for(const style of Object.keys(HUMAN_STYLES)){
