@@ -11,6 +11,13 @@ window.HUNTER_RIDER=Object.freeze({
     const twoWheel=window.HUNTER_HUMAN_V17.createTwoWheelRider(THREE),
           cycleBody=twoWheel.root,cycleJoints=twoWheel.joints;
     const standingHipY=cycleJoints.pelvis.getWorldPosition(new THREE.Vector3()).y;
+    // Mesuram la part més baixa dels pantalons del model a peu, no
+    // aproximam els malucs a l'altura del selló: abans el cul hi entrava.
+    const pelvisBounds=new THREE.Box3();
+    for(const part of cycleJoints.pelvis.children)
+      if(part.isMesh)pelvisBounds.expandByObject(part);
+    const buttBelowHip=pelvisBounds.isEmpty() ? .13*cycleBody.scale.y :
+      standingHipY-pelvisBounds.min.y;
     const limbs=[],boots=rig.boots;
     for(let i=0;i<2;i++){
       const shoulder=i?rig.ar:rig.al,elbow=i?rig.aer:rig.ael;
@@ -44,6 +51,7 @@ window.HUNTER_RIDER=Object.freeze({
     // No es descompon aquest model en cilindres/segments estirables.
     cycleBody.visible=false;g.add(cycleBody);
     g.userData.twoWheelCanonicalHeight=twoWheel.standingHeight;
+    g.userData.twoWheelButtBelowHip=buttBelowHip;
     g.userData.riderFarProxy=riderFar;
     g.userData.riderDetailNodes=riderDetailNodes;
     g.userData.riderFarActive=false;
@@ -103,7 +111,10 @@ window.HUNTER_RIDER=Object.freeze({
             size=bike?(v.o.userData.bicycleVisualScale??.70):
               (v.o.userData.motorcycleVisualScale??1),
             fit=sc*size,
-            seat=bike?1.65*fit:.99*fit,
+            // El punt de referència és la superfície SUPERIOR del selló,
+            // no l'antic pivot situat a 1.65 (que queda per sota).
+            saddleTop=(v.o.userData.bicycleSaddleTop??1.905)*fit,
+            seat=bike?saddleTop+buttBelowHip+.018:.99*fit,
             seatZ=bike?.4*fit:.26*fit;
       cycleBody.position.set(0,seat-standingHipY,seatZ);
       cycleJoints.pelvis.rotation.set(0,0,0);
@@ -133,7 +144,13 @@ window.HUNTER_RIDER=Object.freeze({
                 pivotZ=(steering?.position?.z??-.28)*fit,
                 pivotY=(steering?.position?.y??1.07)*fit;
           hand=vec(x*Math.cos(turn),pivotY-.015*fit,pivotZ-x*Math.sin(turn));
-          foot=vec(side*.34*fit,.42*fit,.16*fit);
+          // Mateixa animació que a la bici: quan frena, el peu baixa
+          // del reposapeus al terreny; quan accelera, torna al reposapeus.
+          const footrest=vec(side*.34*fit,.42*fit,.16*fit);
+          foot=vec(side*.34*fit,0,.16*fit);
+          const ground=g.localToWorld(foot.clone());
+          ground.y=heightAt(ground.x,ground.z)+.14;
+          foot.copy(g.worldToLocal(ground)).lerp(footrest,motion);
         }
         placeCanonicalLimb(hip,knee,ankle,foot,side,true);
         placeCanonicalLimb(shoulder,elbow,wrist,hand,side,false);
