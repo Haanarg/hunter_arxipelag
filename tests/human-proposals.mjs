@@ -583,7 +583,7 @@ assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
 assert(lab.includes('(config.twoWheelAudit?comparatorList:config.human?humanList:list).append(button)'),
  'Els humans continuen a Personatges i els models comparatius s’obren a Vehicles → COMPARADOR');
-assert(!lab.includes('await createCurrentHuman(THREE,config.human)')&&lab.includes('config.options.map((entry,i)=>loadExternal(slots[i+1],entry,used,token))'), 'L’editor només mostra variants HUMANS V18');
+assert(!lab.includes('await createCurrentHuman(THREE,config.human)')&&lab.includes('const visible=slots.slice(1,config.options.length+1)'), 'L’editor només mostra variants HUMANS V18');
 assert(lab.includes('!original&&!currentType.human&&'),'Les proporcions humanes no s’ajusten a l’amplada antiga');
 for(const mode of ['walk','run','crouch','aim','work','wave'])assert(html.includes('value="'+mode+'"'));
 assert(readFileSync(new URL('../src/bootstrap.mjs',import.meta.url),'utf8').includes('human-game-runtime-v17'),
