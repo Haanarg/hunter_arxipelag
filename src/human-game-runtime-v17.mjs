@@ -5,7 +5,11 @@ import {createGameSwimBridge} from './human-game-swim-bridge.mjs?rev=human-game-
 
 export const GAME_HUMAN_SKIN_VERSION='humans-v18';
 // Escala exclusivament visual a peu: rig i geometria intactes.
-export const FOOT_PLAYER_VISUAL_FACTOR=8/5; // +20% respecte del factor anterior 4/3
+export const FOOT_PLAYER_VISUAL_FACTOR=1.6; // mida FINAL del personatge natiu respecte de l'editor, ja consolidada
+// L'esquelet antic només és un controlador ocult d'armes i física.
+// La seva escala original queda en un únic grup; l'arrel del jugador
+// i el model de l'editor no hereten cap correcció d'escala.
+export const LEGACY_GAME_RIG_SCALE=0.6666666666666666;
 const SOURCE_THIGH=.49,SOURCE_SHIN=.49,SOURCE_ARM=.385,SOURCE_FOREARM=.310;
 const cache=new Map();
 function sourceFor(T,role){
@@ -96,13 +100,14 @@ function installCanonicalPlayer(T,model){
  };
  const rest=Object.fromEntries(Object.entries(control).map(([id,bone])=>[id,bone.quaternion.clone().invert()]));
  const lowerRest=u.lowerBody.quaternion.clone().invert(),upperRest=u.upperBody.quaternion.clone().invert();
- const editorScale=visual.scale.clone();
+ // Única escala explícita del model visible, sense compensacions dinàmiques.
+ visual.scale.setScalar(FOOT_PLAYER_VISUAL_FACTOR);
  const swimBridge=createGameSwimBridge(T,visual,j);
  let updatingCanonical=false;
  const pelvisY=u.hipHeight,spineY=u.upperBodyPivotHeight,actualSpineY=j.spine.position.y;
  // El desplaçament d'ajupir-se prové del controlador antic.
  // Adaptam el moviment al maluc real de la geometria nativa, mai a 2 m.
- const canonicalPelvisY=j.pelvis.parent.position.y*visual.scale.y;
+ const canonicalPelvisY=j.pelvis.parent.position.y; // dimensions locals de l'editor
  const crouchRatio=Math.min(1,canonicalPelvisY/pelvisY);
  const weapons=[
   // Pivot de la culata dins el puny: centre del mànec (y=-.20)
@@ -165,16 +170,13 @@ function installCanonicalPlayer(T,model){
   visual.quaternion.identity();
   j.neck.quaternion.identity();
   j.pelvis.position.z=0;
-  // Gameplay rescales its actor ROOT by 2/3; compensate it AND give the
-  // unchanged native editor skin another third of size, uniformly. The
-  // collision, controls and animations remain exactly the same.
-  if(Math.min(Math.abs(model.scale.x),Math.abs(model.scale.y),Math.abs(model.scale.z))<1e-6)
-   throw Error('Escala visual del protagonista no vàlida');
-  visual.scale.set(FOOT_PLAYER_VISUAL_FACTOR*editorScale.x/model.scale.x,
-    FOOT_PLAYER_VISUAL_FACTOR*editorScale.y/model.scale.y,
-    FOOT_PLAYER_VISUAL_FACTOR*editorScale.z/model.scale.z);
+  // La geometria visual està escalada UN sol cop quan es crea.
+  // El transform de compatibilitat dels controls antics queda separat
+  // i mai altera l'escala del model animat.
   const dy=u.lowerBody.position.y-pelvisY;
-  visual.position.y=dy*crouchRatio;
+  // El desplaçament del controlador històric ja tenia l'escala final
+  // 0.6666666666666666; la posició de l'editor ara és independent.
+  visual.position.y=dy*crouchRatio*LEGACY_GAME_RIG_SCALE;
   j.pelvis.quaternion.copy(lowerRest).multiply(u.lowerBody.quaternion);
   j.spine.quaternion.copy(j.pelvis.quaternion).invert()
    .multiply(upperRest).multiply(u.upperBody.quaternion);
@@ -275,7 +277,16 @@ function installCanonicalPlayer(T,model){
    swimBridge.pose({active:!!u.gameSwimActive,blend:u.gameSwimBlend,
     crawlBlend:u.crawlBlend||0,time:u.gameSwimSeconds||0});
  }
- model.add(visual);
+ // Consolidació sense escales en cadena: el jugador i el model humà
+ // tenen transform d'arrel independent. Els pivots antics es traslladen
+ // junts a un únic grup ocult d'escala definitiva; les armes continuen
+ // sent filles dels mateixos pivots i mantenen les dimensions d'abans.
+ const legacyRig=new T.Group();
+ legacyRig.name='hunter-legacy-control-rig · escala física consolidada';
+ legacyRig.scale.setScalar(LEGACY_GAME_RIG_SCALE);
+ for(const child of [...model.children])legacyRig.add(child);
+ model.add(legacyRig,visual);
+ u.humanGameLegacyRig=legacyRig;
  const update=visual.updateMatrixWorld;
  visual.updateMatrixWorld=function(force){
   if(updatingCanonical)return update.call(this,force);

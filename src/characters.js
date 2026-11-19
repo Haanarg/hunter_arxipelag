@@ -495,7 +495,10 @@ window.HUNTER_CHARACTERS=Object.freeze({
     sniper.add(sniperRightGrip,sniperLeftGrip);
     sniper.visible=false;u.sniper=sniper;u.sniperMuzzle=sniperMuzzle;
     u.sniperRightGrip=sniperRightGrip;u.sniperLeftGrip=sniperLeftGrip;
-    player.scale.setScalar(2/3);
+    // La pell de l'editor és filla directa del jugador a escala 1.
+    // La mida antiga dels pivots/armes ja es consolida a
+    // human-game-runtime-v17.mjs, sense multiplicar tota l'arrel.
+    player.scale.setScalar(1);
     // Conservam el rumb Y i la inclinació X: aquesta ja situa el
     // cap davant i la cara cap avall durant el crol. No cal cap volta
     // addicional de 180° (la combinació anterior elevava els peus).

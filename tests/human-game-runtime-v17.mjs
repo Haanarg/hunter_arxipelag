@@ -113,18 +113,19 @@ for(const role of ['player','soldier','rocket','elite','general']){
   assert(moved>.35&&moved<.45,'Game pose drives native shoulder joint');
   u.ar.rotation.x=oldR;g.updateMatrixWorld(true);
   assert(restShoulder.angleTo(bones.shoulderR.quaternion)<.002,'Rest pose exactly recovers editor geometry');
-  // El controlador antic aplica 2/3 a l’arrel del protagonista.
-  // La pell ha de conservar les seves dimensions naturals multiplicades
-  // només pel factor visual explícit, sense forçar 2 m.
-  g.scale.setScalar(2/3);g.updateMatrixWorld(true);
+  // Dimensions consolidades: model natiu 1.6, root del jugador 1,
+  // el controlador antic i les armes conserven la mida física original.
+  assert.equal(g.scale.x,1,'L’arrel del jugador ja no corregeix l’escala');
+  assert(Math.abs(u.humanGameLegacyRig.scale.x-2/3)<1e-12,
+   'Un únic grup de compatibilitat conserva l’escala dels controls antics');
   const scaledView=new T.Box3();
   for(const mesh of actual)scaledView.union(new T.Box3().setFromObject(mesh,true));
   const inGameSize=scaledView.getSize(new T.Vector3());
   assert(Math.abs(inGameSize.y-expectedSize.y*FOOT_PLAYER_VISUAL_FACTOR)<.002,
    'El protagonista conserva la geometria nativa (sense límit de 2 m): '+inGameSize.y);
   const sampleRatio=canonical.getWorldScale(new T.Vector3());
-  assert(Math.abs(sampleRatio.x-reference.scale.x*FOOT_PLAYER_VISUAL_FACTOR)<.002,'World visual uniformly 1.6 times the editor');
-  g.scale.setScalar(1);g.updateMatrixWorld(true);
+  assert(Math.abs(sampleRatio.x-reference.scale.x*FOOT_PLAYER_VISUAL_FACTOR)<.002,
+   'L’escala visual de món és directa, sense multiplicar-la per l’arrel');
   const gunProxy=canonical.getObjectByName('Arma canònica · gun');
   assert(gunProxy&&gunProxy.parent===bones.wristR,'Visible pistol grip on editor wrist');
   assert.equal(gunProxy.userData.humanPistolHeldInFist,true,
@@ -175,7 +176,7 @@ for(const role of ['player','soldier','rocket','elite','general']){
   const oldLowerY=u.lowerBody.position.y,oldUpperY=u.upperBody.position.y;
   u.lowerBody.position.y-=.72;u.upperBody.position.y-=.72;
   g.updateMatrixWorld(true);
-  assert(canonical.position.y<-.30&&canonical.position.y>-.50,
+  assert(canonical.position.y<-.19&&canonical.position.y>-.35,
    'Old 4m crouch is translated to native 2m joints, not -0.72m full drop');
   u.lowerBody.position.y=oldLowerY;u.upperBody.position.y=oldUpperY;
   g.updateMatrixWorld(true);
