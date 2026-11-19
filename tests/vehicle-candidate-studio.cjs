@@ -51,7 +51,10 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
  const inline=[...html.matchAll(/<script type="module">([\s\S]*?)<\/script>/g)].map(m=>m[1]);
  assert.equal(inline.length,1,'Exactly one inline editor bootstrap expected');
  execFileSync(process.execPath,['--check','--input-type=module'],{input:inline[0],stdio:['pipe','pipe','pipe']});
- assert(html.includes("import('./src/vehicles-externs-proves.mjs?rev="+revision+"')"));
+ // Permet paràmetres addicionals de cache-busting després de la revisió
+ // aprovada, sense perdre el contracte del laboratori.
+ assert(html.includes("import('./src/vehicles-externs-proves.mjs?rev="+revision),
+  'El mòdul de l’editor s’importa amb la revisió aprovada');
  // The compound viewer is standalone, NOT bootstrapped by the game's classic bridges.
  const compoundHtml=read('compounds-preview.html');
  assert(!compoundHtml.includes('src/vehicles.js')&&!compoundHtml.includes('src/player-model.js')&&!compoundHtml.includes('src/palette.js'));
