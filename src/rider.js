@@ -115,10 +115,18 @@ window.HUNTER_RIDER=Object.freeze({
             // no l'antic pivot situat a 1.65 (que queda per sota).
             saddleTop=(v.o.userData.bicycleSaddleTop??1.905)*fit,
             seat=bike?saddleTop+buttBelowHip+.018:.99*fit,
-            seatZ=bike?.4*fit:.26*fit;
-      cycleBody.position.set(0,seat-standingHipY,seatZ);
+            seatZ=bike?.4*fit:.26*fit,
+            // En aturar-se, el ciclista deixa de seure damunt del selló:
+            // avança una mica la pelvis sobre el quadre i recolza els
+            // peus a terra amb els genolls flexionats. A velocitat de
+            // marxa recupera EXACTAMENT l'alçada aprovada del selló.
+            stopped=Math.max(0,1-motion),
+            offSaddle=bike?stopped:0,
+            hipDrop=bike?.22*offSaddle:.04*stopped,
+            hipForward=bike?.28*offSaddle:.03*stopped;
+      cycleBody.position.set(0,seat-standingHipY-hipDrop,seatZ-hipForward);
       cycleJoints.pelvis.rotation.set(0,0,0);
-      cycleJoints.spine.rotation.set(bike?-.33:-.20-.08*motion,0,0);
+      cycleJoints.spine.rotation.set(bike?-.33+.19*offSaddle:-.20-.08*motion,0,0);
       cycleJoints.head.rotation.set(bike?.13:.07,0,0);
       g.updateWorldMatrix(true,true);
       for(let i=0;i<2;i++){
@@ -129,7 +137,10 @@ window.HUNTER_RIDER=Object.freeze({
         let hand,foot;
         if(bike){
           hand=vec(side*.5*fit,1.96*fit,-fit);
-          foot=vec(side*.55,0,.45*fit);
+          // Peus sota el cos quan deixa el selló. L'antic objectiu
+          // (.45*fit enrere) deixava tots dos genolls pràcticament a
+          // 180° i feia semblar les cames molt més llargues que el tors.
+          foot=vec(side*.50*fit,0,-.02*fit);
           const ground=g.localToWorld(foot.clone());
           ground.y=heightAt(ground.x,ground.z)+.14;
           foot.copy(g.worldToLocal(ground));
