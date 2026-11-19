@@ -673,7 +673,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
       tx(u.lr,mix(.18-kick,.10-.30*flutter));
       tx(u.lkl,mix(-(.48-.18*kick),-.20-.16*Math.max(0,flutter)));
       tx(u.lkr,mix(-(.48+.18*kick),-.20-.16*Math.max(0,-flutter)));
-      player.position.y+=Math.sin(ph*2)*mix(.035,.018);
+      if(!canonicalSwim)player.position.y+=Math.sin(ph*2)*mix(.035,.018);
       return;
     }
 
