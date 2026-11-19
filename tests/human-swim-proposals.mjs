@@ -100,7 +100,7 @@ assert(catchB.pelvis.y<straight.pelvis.y-.006,'Braça: els malucs cauen una mica
 assert(catchB.armL.distanceTo(catchB.armR)<.20,'Braça: les mans s’ajunten sota el pit');
 assert(catchB.elbow.y>catchB.armR.y+.12,'Braça: el colze es manté per sobre de la mà');
 assert(catchB.armR.z<catchB.shoulder.z,'Braça: la mà no retrocedeix de l’espatlla');
-assert(loadB.kneeL.distanceTo(loadB.kneeR)<loadB.hipL.distanceTo(loadB.hipR)*1.5,'Braça: genolls prop de l’amplada dels malucs');
+assert(loadB.kneeL.distanceTo(loadB.kneeR)>loadB.hipL.distanceTo(loadB.hipR)*1.8&&loadB.kneeL.distanceTo(loadB.kneeR)<loadB.hipL.distanceTo(loadB.hipR)*3,'Braça: obertura clara però limitada dels genolls');
 assert(loadB.anklePitch>.2,'Braça: dorsiflexió del peu durant la càrrega');
 inspectB(1.52);rootB.updateWorldMatrix(true,true);
 const outwardR=new THREE.Vector3(0,0,-1).transformDirection(b.ankleR.matrixWorld);
@@ -126,12 +126,12 @@ for(let i=0;i<321;i++){
 poseHumanProposal(rootB,0,'rest');
 
 const rootC=createHumanProposal(THREE,'player','a',{visualOnly:true}),c=jointMap(rootC);
-const rollMax=37*Math.PI/180,steps=720,kicks=[];
+const rollMax=40*Math.PI/180,steps=720,kicks=[];
 for(let i=0;i<=steps;i++){
  const time=HUMAN_SWIM_PROPOSALS.crawl[3].period*i/steps;
  const pose=sampleHumanSwimming('swim-crawl-4',time);
  poseHumanProposal(rootC,time,'swim-crawl-4');
- assert(Math.abs(pose.bodyRoll)<=rollMax+1e-9,'Crol: roll dins de 37 graus');
+ assert(Math.abs(pose.bodyRoll)<=rollMax+1e-9,'Crol: roll dins de 40 graus');
  assert(Math.abs(pose.bodyPitch+Math.PI/2)<1e-9,'Crol: tronc horitzontal');
  assert(Math.abs(c.spine.rotation.y)<1e-9,'Crol: zona lumbar sense torsió');
  for(const side of ['L','R']){
@@ -185,7 +185,50 @@ assert(c4Catch.arms.R[4]>.08&&c4Catch.arms.R[5]<-.15,
  'Crol: rotació humeral interna i pronació en l’agafada');
 assert(c4Recovery.arms.R[4]<-.15,
  'Crol: rotació externa de l’espatlla al recobrament');
-console.log('PASS B3 simetria, braços, respiració, peu i lliscament d’1s; C4 37 graus, colze alt, 6 batudes, coll i keyframes');
+// Cadena de 2 ossos. Un colze anatòmic només flexiona X (10° a 100°):
+// l'orientació de la mà i l'abducció les resol l'espatlla, no el colze.
+const expectedC4=[[0,20],[.24,100],[.39,90],[.62,10],[.82,100]];
+for(const [phase,expected] of expectedC4){
+ const tm=phase*HUMAN_SWIM_PROPOSALS.crawl[3].period;
+ poseHumanProposal(rootC,tm,'swim-crawl-4');rootC.updateWorldMatrix(true,true);
+ assert(Math.abs(-c.elbowR.rotation.x*180/Math.PI-expected)<.1,
+  'Crol: flexió del colze en fase '+phase+' = '+expected+' graus');
+}
+const b3Stroke=[.29,.58,.94,1.18];
+for(const tm of b3Stroke){
+ poseHumanProposal(rootB,tm,'swim-breast-3');rootB.updateWorldMatrix(true,true);
+ const elbowR=point(THREE,b,'elbowR'),handR=point(THREE,b,'wristR');
+ const elbowL=point(THREE,b,'elbowL'),handL=point(THREE,b,'wristL');
+ const localElbowR=rootB.worldToLocal(elbowR.clone()),localHandR=rootB.worldToLocal(handR.clone());
+ const localElbowL=rootB.worldToLocal(elbowL.clone()),localHandL=rootB.worldToLocal(handL.clone());
+ assert(localElbowR.x>localHandR.x&&localElbowL.x<localHandL.x,
+ 'Braça: colzes cap enfora, mà interior, fase '+tm);
+}
+const b3Open=inspectB(1.66);
+assert(b3Open.kneeL.distanceTo(b3Open.kneeR)>.5,'Braça: puntada més oberta als dos costats');
+for(let i=0;i<=720;i++){
+ const tm=i/720*HUMAN_SWIM_PROPOSALS.crawl[3].period;
+ poseHumanProposal(rootC,tm,'swim-crawl-4');rootC.updateWorldMatrix(true,true);
+ for(const side of ['L','R']){
+  const elbow=c['elbow'+side],wrist=c['wrist'+side];
+  const flex=-elbow.rotation.x*180/Math.PI,sign=side==='R'?1:-1;
+  assert(flex>=9.99&&flex<=100.1,'Crol: no hiperextensió i flexió màxima <=100°');
+  assert(Math.abs(elbow.rotation.y)<1e-10&&Math.abs(elbow.rotation.z)<1e-10,
+   'Crol: frontissa de colze sense torsió ni abducció');
+  assert(Math.abs(wrist.rotation.x)<=15*Math.PI/180+1e-9,
+   'Crol: flexió de canell subaquàtica i aèria <=15°');
+  const hand=rootC.worldToLocal(point(THREE,c,'wrist'+side));
+  assert(sign*hand.x>=.04,'Crol: la mà mai creua la línia mitjana');
+ }
+}
+for(const phase of [.24,.39,.79,.82]){
+ const tm=phase*HUMAN_SWIM_PROPOSALS.crawl[3].period;
+ poseHumanProposal(rootC,tm,'swim-crawl-4');rootC.updateWorldMatrix(true,true);
+ assert(point(THREE,c,'elbowR').y>point(THREE,c,'wristR').y,
+  'Crol: colze alt a EVF/tirada i a recobrament, fase '+phase);
+}
+poseHumanProposal(rootC,0,'rest');
+console.log('PASS B3 colzes enfora i puntada ampla; C4 IK 5 fases, roll 40°, colze frontissa, canell <15° i mans sense creuar el cos');
 
 assert.equal(positions.size,8,'Les vuit propostes tenen paràmetres realment diferents');
 console.log('PASS 8 variants de natació, cicles, extremitats, visibilitat i retorn al rig original');
