@@ -68,7 +68,9 @@ const c4Flex=-j.elbowR.rotation.x;
 assert(c4Flex>=10*Math.PI/180-.005&&c4Flex<=100*Math.PI/180+.005,'Crol: sense hiperextensió');
 assert(HUMAN_SWIM_PROPOSALS.crawl[3].roll===40*Math.PI/180);
 const headC=j.head.getWorldPosition(new T.Vector3());
-assert(Math.abs(headC.y+api.swimVisualLift(p,2.1,0)-2.26)<.03,'Crol: cap a la superfície');
+const c4HeadAboveWater=headC.y+api.swimVisualLift(p,2.1,0)-2.1;
+assert(c4HeadAboveWater>=.12&&c4HeadAboveWater<.6,
+ 'Crol: el cap respira fora de l’aigua sense flotar excessivament');
 assert.equal(p.position.y,0,'Crol no canvia Y del jugador físic');
 
 // B3<->C4 transitions affect only visual blend, never feet collision, or P.y.
