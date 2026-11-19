@@ -322,6 +322,7 @@ assert.equal(rider.userData.boots.length,2);
    seat:driver.object.userData.twoWheelSeatHip,
    stop:driver.object.userData.twoWheelStopped,
    bone:stoppedLegLength,
+   hipTrace:driver.object.userData.twoWheelHipTrace,
    saddle:moto.userData.twoWheelAnchors.seat.getWorldPosition(new T.Vector3()).toArray()
   }));
   assert(Math.abs(point('pelvis').y-
