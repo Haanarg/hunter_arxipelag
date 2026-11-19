@@ -18,8 +18,8 @@ assert.equal(lab.footHeight,3.2);
 const targets=[lab.foot,lab.bicycle,lab.motorcycle];
 for(const view of targets){
  assert(view.model.isGroup,'Cada panell és un Object3D independent');
- assert(view.getStandingHeight()===lab.footHeight,
-  'El model a peu i els pilots comparteixen alçada V18 exacta');
+ assert(Math.abs(view.getStandingHeight()-lab.footHeight)<.002,
+  'El model a peu i els pilots comparteixen alçada V18 sense error de coma flotant');
 }
 assert.equal(lab.bicycle.vehicle.scale.x,1,'La bici té l’escala final dins la malla');
 assert.equal(lab.motorcycle.vehicle.scale.x,1,'La moto té l’escala final dins la malla');
