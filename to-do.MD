@@ -1,3 +1,11 @@
+**2026-11-19 · v0.6.239 · Implementació B3 i C4 al joc (SOLO i COOP):**
+- [x] Les dues cinemàtiques aprovades del laboratori es renderitzen ara directament al rig natiu de 16 articulacions del protagonista, amb braços i cames d'IK B3 i C4, ±40° de roll al C4, i pausa de lliscament d'1 s a la braça.
+- [x] Crol quan el jugador neda avançant i corre; braça a la resta de natació. Transició de quaternions entre B3/C4 i en entrar/sortir de l'aigua; rellotge animat per jugador i mai pel render.
+- [x] Física, natació per inputs, HP, col·lisions i autoritat del COOP intactes. No canvien els riders, soldats ni armes; model visual i línia d'aigua calculats des del cap i les espatlles reals.
+- [x] Corregida la variable `knifeEquipped` no definida que podia fer fallar l'animació en sortir de l'aigua.
+- [x] Prova d'integració del `characters.js` original i dos jugadors amb estils independents afegida a `test:lab`.
+- [ ] Verificar la suite sencera Node/GitHub Actions, el build, el desplegament i una natació real al navegador/Android/COOP. Valorar la qualitat visual de la flotació B3 i C4 després de publicar.
+
 **2026-11-19 · B3/C4: cinemàtica revisada per a proves (versió posterior a la de 37°):**
 - [x] B3: trajectòria de mans en espai 3D mitjançant IK de dues barres, simetria perfecta, colzes dirigits cap enfora al llarg de l'obertura, tracció subaquàtica i recobrament cap endavant sense dur les mans darrere de les espatlles. Colzes amb 20°–89° de flexió sense inversions.
 - [x] B3: puntada més ampla i vigorosa; flexió més gran de genolls, abducció de maluc graduada, puntada circular cap enfora/enrere i turmells passant del martell a la punta. Separació màxima mesurada dels genolls ~0,58 m. Cicle 3,20 s i lliscament 1,00 s.
