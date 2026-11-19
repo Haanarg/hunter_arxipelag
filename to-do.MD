@@ -4,7 +4,8 @@
 - [x] Física, natació per inputs, HP, col·lisions i autoritat del COOP intactes. No canvien els riders, soldats ni armes; model visual i línia d'aigua calculats des del cap i les espatlles reals.
 - [x] Corregida la variable `knifeEquipped` no definida que podia fer fallar l'animació en sortir de l'aigua.
 - [x] Prova d'integració del `characters.js` original i dos jugadors amb estils independents afegida a `test:lab`.
-- [ ] Verificar la suite sencera Node/GitHub Actions, el build, el desplegament i una natació real al navegador/Android/COOP. Valorar la qualitat visual de la flotació B3 i C4 després de publicar.
+- [x] Suite Node/GitHub Actions (inclou test:lab), build del runtime, desplegament Cloudflare i comprovació d'assets exactes a Paradoxa de la v0.6.239: workflow 44568852833 superat.
+- [ ] Inspecció visual real de B3/C4 al navegador, Android i COOP; comprovar braços, cap, nivell de l'aigua i fluïdesa de l'entrada/sortida.
 
 **2026-11-19 · B3/C4: cinemàtica revisada per a proves (versió posterior a la de 37°):**
 - [x] B3: trajectòria de mans en espai 3D mitjançant IK de dues barres, simetria perfecta, colzes dirigits cap enfora al llarg de l'obertura, tracció subaquàtica i recobrament cap endavant sense dur les mans darrere de les espatlles. Colzes amb 20°–89° de flexió sense inversions.
