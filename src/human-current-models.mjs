@@ -35,12 +35,16 @@ export async function createCurrentHuman(T,role){
  }
  root.traverse(n=>{n.userData={};if(n.isMesh){n.geometry.userData.labOwned=true;n.material.userData.labOwned=true}});
  root.name='Actual · '+HUMAN_PROFILES[role].name;
- // Lab-only scaling; no runtime gameplay model is modified.
+ // L'editor conserva exactament les dimensions de la fàbrica real.
+ // Només situa els peus al terra; no hi ha un límit forçat de 2 metres.
  root.updateMatrixWorld(true);
- const bounds=new T.Box3().setFromObject(root),factor=2/bounds.getSize(new T.Vector3()).y;
- root.scale.multiplyScalar(factor);
- root.position.y-=bounds.min.y*factor;
+ const bounds=new T.Box3().setFromObject(root);
+ const nativeHeight=bounds.getSize(new T.Vector3()).y;
+ if(!(nativeHeight>0))throw Error('Model humà sense dimensions: '+role);
+ root.position.y-=bounds.min.y;
  root.userData.humanOriginal=role;
- root.userData.previewOnlyScale=factor;root.userData.previewHeight=2;
+ root.userData.previewOnlyScale=1;
+ root.userData.previewHeight=nativeHeight;
+ root.userData.previewNativeHeight=nativeHeight;
  return root;
 }
