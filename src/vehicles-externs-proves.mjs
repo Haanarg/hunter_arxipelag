@@ -3,6 +3,7 @@ import {HUMAN_CATALOG,HUMAN_SWIM_CATALOG} from './human-model-catalog.mjs?rev=sw
 import {createHumanProposal,setHumanPreviewWeapon,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,createHumanGaitClock,advanceHumanGait} from './human-proposals.mjs?rev=swim-ik-20261119-4';
 import {isHumanSwimmingMode,sampleHumanSwimming,HUMAN_SWIM_PROPOSALS} from './human-swim-proposals.mjs?rev=swim-ik-20261119-4';
 import {createCurrentHuman} from './human-current-models.mjs?rev=humans-v8';
+import {createTwoWheelLabComparison} from './two-wheel-lab-comparison.mjs?rev=rig-comparison-20261119-1';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
 import {createVehicleLiveEditor,LAB_REVISION} from './vehicle-live-editor.mjs?rev=live-editor-20261118-226-humans-gaz-cutter-camera-14';
@@ -23,7 +24,15 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261118-226-humans-gaz-cutter-camera-14';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
-const humanList=document.querySelector('#humanList'),ALL_CATALOG=[...CATALOG,...HUMAN_CATALOG,...HUMAN_SWIM_CATALOG];
+const TWO_WHEEL_AUDIT=Object.freeze({
+ id:'human-two-wheel-audit',name:'Pilotatge · comparador',human:'player',
+ kind:'huma',twoWheelAudit:true,validated:false,
+ options:[{title:'Bicicleta'},{title:'Moto'}],
+ note:'Tres models reals, una mateixa càmera. El rig a peu és la referència; cap normalització automàtica de cada targeta.'
+});
+const humanList=document.querySelector('#humanList'),
+ ALL_CATALOG=[...CATALOG,...HUMAN_CATALOG,TWO_WHEEL_AUDIT,...HUMAN_SWIM_CATALOG];
+let twoWheelAuditSession=null;
 let humanTime=0,humanMode='rest',humanGait=createHumanGaitClock();
 const isHumanGait=mode=>mode==='walk'||mode==='run';
 const previewHumanPose=(slot,mode)=>isHumanSwimmingMode(mode)?mode+'-'+(slot.swimVariant||1):mode;
@@ -280,11 +289,13 @@ function setModel(slot,obj,original,animations=[],keepNativeOrientation=false){
  // la fàbrica del joc el dibuixa cap a -Z. Orientam sense deformar.
  if(!original&&!keepNativeOrientation)obj.rotation.y+=Math.PI;
  const wrap=new THREE.Group();wrap.add(obj);
- normalize(wrap,original||obj.userData.labFixedScale===true,obj.userData.labSizeMultiplier||1);
+ if(!currentType.twoWheelAudit)
+  normalize(wrap,original||obj.userData.labFixedScale===true,obj.userData.labSizeMultiplier||1);
  wrap.traverse(o=>{if(o.isMesh){o.castShadow=!o.material?.transparent;o.receiveShadow=true}});
  slot.scene.add(wrap);slot.model=wrap;
  if(animations?.length){slot.mixer=new THREE.AnimationMixer(obj);for(const clip of animations)slot.mixer.clipAction(clip).play()}
- queueMicrotask(()=>{if(slot.model===wrap)liveEditor.ready(slot,{restore:!suppressDraftRestore})});
+ if(!currentType.twoWheelAudit)
+  queueMicrotask(()=>{if(slot.model===wrap)liveEditor.ready(slot,{restore:!suppressDraftRestore})});
  return wrap;
 }
 
@@ -388,7 +399,7 @@ async function choose(config){
  if(config.human)lastHuman=config;else lastVehicle=config;
  liveEditor.reset();
  vehicleEditor.reset();
-  currentType=config;generation++;
+  currentType=config;generation++;twoWheelAuditSession=null;
   document.querySelector('#btrPartTool').hidden=false;
  const token=generation;
  nameOut.textContent=config.name;
@@ -407,11 +418,15 @@ async function choose(config){
  const t90Study=config.id==='tanc';
  const soloStudy=config.validated&&config.options.length===0;
  grid.classList.toggle('btr-study',soloStudy);
+ grid.classList.toggle('two-wheel-audit',!!config.twoWheelAudit);
  document.querySelector('#fitScale').closest('label').hidden=soloStudy||!!config.human;
  document.querySelector('#t90Motion').hidden=!t90Study;
- document.querySelector('#humanMotion').hidden=!config.human;
+ document.querySelector('#humanMotion').hidden=!config.human||!!config.twoWheelAudit;
+ document.querySelector('#twoWheelAudit').hidden=!config.twoWheelAudit;
+ document.querySelector('#liveEditor').hidden=!!config.twoWheelAudit;
+ document.querySelector('#btrPartTool').hidden=!!config.twoWheelAudit;
  document.querySelector('#humanWeaponControl').hidden=config.human!=='player';
- humanEvidence.show(config.human||null);
+ humanEvidence.show(config.twoWheelAudit?null:config.human||null);
  humanTime=0;humanMode='rest';humanGait=createHumanGaitClock();
  if(config.human){
  const start=config.swimming?'swim-'+config.swimming:'rest';
@@ -425,9 +440,10 @@ async function choose(config){
  labTankKeys.clear();labTurretSwitch=false;labTurretYaw=0;labTurretPitch=0;
  syncLabTurretButton();
  for(const slot of slots){
-   slot.outer.hidden=slots.indexOf(slot)>(soloStudy?0:config.options.length);
+   slot.outer.hidden=slots.indexOf(slot)>(config.twoWheelAudit?2:soloStudy?0:config.options.length);
    dropPrevious(slot);
-   slot.kind=config.kind;slot.camera=config.human?slot.ortho:slot.perspective;slot.guide.hidden=true;slot.versionTag.hidden=!config.human;
+   slot.kind=config.kind;slot.camera=config.human?slot.ortho:slot.perspective;
+   slot.guide.hidden=true;slot.versionTag.hidden=!config.human||!!config.twoWheelAudit;
    slot.person.visible=!config.human&&document.querySelector('#showGrid').checked;
    slot.ground.material.color.setHex(marine?0x285f65:config.kind==='aire'?0x6a7b67:0x69735e);
    slot.ground.material.roughness=marine?.43:1;
@@ -438,6 +454,41 @@ async function choose(config){
    if(fileLabel&&fileLabel.tagName==='LABEL')fileLabel.firstChild.textContent='Importa GLB';
    slot.sub.textContent=slots.indexOf(slot)?'Preparant candidat…':'Model real del joc';
    slot.source.hidden=true;
+ }
+ if(config.twoWheelAudit){
+   try{
+     const lab=await createTwoWheelLabComparison(THREE,{
+      makeVehicle:makeOriginal,box,material,shadows:true
+     });
+     if(token!==generation)return;
+     twoWheelAuditSession=lab;
+     const named=[
+      ['Protagonista a peu','Rig de la partida · model V18',lab.foot],
+      ['Pilot de la bicicleta','Malla real · selló, manillar i pedals del joc',lab.bicycle],
+      ['Pilot de la moto','Malla real · seient, manillar i reposapeus del joc',lab.motorcycle]
+     ];
+     for(let i=0;i<named.length;i++){
+       const [title,subtitle,view]=named[i],slot=slots[i];
+       setModel(slot,view.model,true,[],true);
+       slot.bold.textContent=title;slot.sub.textContent=subtitle;
+       slot.status.textContent='Rig canònic de 3,2 u · escala d’arrel neutra o compensada';
+       slot.person.visible=false;slot.source.hidden=true;
+     }
+     const guides=document.querySelector('#twoWheelAuditGuides');
+     lab.setGuides(guides.checked);
+     comparisonDims.set(3.8,lab.footHeight+.4,5.1);
+     originalDims.copy(comparisonDims);
+     zoom=1;panScreenX=0;yaw=0;elev=0;
+     lookY=lab.footHeight*.5;defaultLookY=lookY;
+     document.querySelector('#animate').checked=true;
+     document.querySelector('#twoWheelAuditState').value='stopped';
+     showTwoWheelAuditReading();
+     updateCamera();
+   }catch(error){
+     console.error('Comparador de pilots no disponible',error);
+     slots[0].status.textContent='Error en preparar els rigs: '+error.message;
+   }
+   return;
  }
  try{
    const model=config.human?await createCurrentHuman(THREE,config.human):config.base?createProceduralModel(config.base.variant):await createCurrentVehicle(config.id);
@@ -529,7 +580,8 @@ function resizeRenderer(){
 }
 // The printed model version comes from the loaded Object3D, not the page title.
 function drawHumanGuide(slot,w,h){
- const active=!!currentType.human,show=active&&document.querySelector('#humanGuides').checked&&document.querySelector('#humanPose').value==='rest';
+ const active=!!currentType.human&&!currentType.twoWheelAudit,
+       show=active&&document.querySelector('#humanGuides').checked&&document.querySelector('#humanPose').value==='rest';
  slot.versionTag.hidden=!active;
  if(!active){slot.guide.hidden=true;return}
  let model=null;slot.model?.traverse(n=>{if(n.userData.humanProposal)model=n.userData.humanProposal});
@@ -562,13 +614,29 @@ function drawHumanGuide(slot,w,h){
  }
 }
 
+let twoWheelAuditCounter=0;
+function showTwoWheelAuditReading(){
+ if(!twoWheelAuditSession)return;
+ const v=twoWheelAuditSession.metrics(),fmt=n=>n.toFixed(3);
+ document.querySelector('#twoWheelAuditReading').textContent=
+  'A peu: '+fmt(v.referenceHeight)+' u · Cuixa '+fmt(v.footThigh)+
+  ' | Bici: cuixa '+fmt(v.bicycleThigh)+', selló '+fmt(v.bicycleSeat)+
+  ' u, pilot ×'+v.bicycleScale+
+  ' | Moto: cuixa '+fmt(v.motorcycleThigh)+', selló '+fmt(v.motorcycleSeat)+
+  ' u, pilot ×'+v.motorcycleScale;
+}
 function draw(now){
  requestAnimationFrame(draw);
  if(document.getElementById('modelWorkshop')?.hidden){prev=now;return;}
  const dt=Math.min(.07,(now-prev)/1000);prev=now;
  if(document.querySelector('#animate').checked){
    for(const slot of slots){slot.mixer?.update(dt);if(slot.model)stepKamovRotors(slot.model,dt);}
-   if(currentType.human){const elapsed=dt*Number(document.querySelector('#humanSpeed').value);humanTime+=elapsed;const mode=document.querySelector('#humanPose').value;const gait=isHumanGait(mode);if(gait)humanGait=advanceHumanGait(humanGait,elapsed,mode);for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,humanTime,previewHumanPose(slot,mode),gait?humanGait:null);const out=document.querySelector('#humanGaitMix');out.textContent=gait?'Cursa '+Math.round(humanGait.blend*100)+' %':isHumanSwimmingMode(mode)?'Quatre cicles diferents · comparació en directe':'';if(isHumanSwimmingMode(mode))showSwimPhase(mode,humanTime);}
+   if(currentType.twoWheelAudit&&twoWheelAuditSession){
+     const speed=document.querySelector('#twoWheelAuditState').value==='moving'?7:0;
+     twoWheelAuditSession.step(dt,speed);
+     if((twoWheelAuditCounter++%14)===0)showTwoWheelAuditReading();
+   }
+   if(currentType.human&&!currentType.twoWheelAudit){const elapsed=dt*Number(document.querySelector('#humanSpeed').value);humanTime+=elapsed;const mode=document.querySelector('#humanPose').value;const gait=isHumanGait(mode);if(gait)humanGait=advanceHumanGait(humanGait,elapsed,mode);for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,humanTime,previewHumanPose(slot,mode),gait?humanGait:null);const out=document.querySelector('#humanGaitMix');out.textContent=gait?'Cursa '+Math.round(humanGait.blend*100)+' %':isHumanSwimmingMode(mode)?'Quatre cicles diferents · comparació en directe':'';if(isHumanSwimmingMode(mode))showSwimPhase(mode,humanTime);}
    if(currentType.id==='tanc'&&slots[0].model)
      stepT90MPreview(slots[0].model,t90MotionInput(dt),dt);
  }
@@ -624,6 +692,15 @@ document.querySelector('#pan-down').addEventListener('click',()=>{lookY-=panStep
 // moure el punt de mira a la dreta desplaça el model a l'esquerra.
 document.querySelector('#pan-left').addEventListener('click',()=>{panScreenX+=panStep();updateCamera()});
 document.querySelector('#pan-right').addEventListener('click',()=>{panScreenX-=panStep();updateCamera()});
+document.querySelector('#twoWheelAuditGuides').addEventListener('change',event=>{
+ twoWheelAuditSession?.setGuides(event.target.checked);
+});
+document.querySelector('#twoWheelAuditReset').addEventListener('click',()=>{
+ if(currentType.twoWheelAudit)choose(currentType);
+});
+document.querySelector('#twoWheelAuditState').addEventListener('change',()=>{
+ twoWheelAuditCounter=0;
+});
 document.querySelector('#fitScale').addEventListener('change',()=>choose(currentType));
 document.querySelector('#showGrid').addEventListener('change',e=>{for(const s of slots){s.lines.visible=e.target.checked;s.person.visible=e.target.checked&&!currentType.human}});
 document.querySelector('#humanPose').addEventListener('change',e=>{
