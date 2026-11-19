@@ -10,6 +10,8 @@ on:
       - 'assets/vehicle-candidates/lab-revision.json'
       - 'src/hovercraft-concepts.mjs'
       - 'src/human-proposals.mjs'
+      - 'src/human-weapon-preview.mjs'
+      - 'tests/human-weapon-editor-init.mjs'
       - 'src/vehicle-model-core.mjs'
       - 'src/model-scale-normalization.mjs'
       - 'src/two-wheel-lab-comparison.mjs'
@@ -71,6 +73,8 @@ jobs:
         run: npm run test:deploy
       - name: Validar models humans i editor en temps real
         run: npm run test:lab
+      - name: Validar la inicialització independent de les armes de l'editor
+        run: node tests/human-weapon-editor-init.mjs
       - name: Validar selecció SOURCE per defecte i BUNDLE optatiu
         run: node tests/runtime-mode.mjs
       - name: Validar sintaxi del panell V18 independent de Three.js

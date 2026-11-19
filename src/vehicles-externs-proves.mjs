@@ -1,6 +1,7 @@
 import {createMi24Proposal,MI24_MODELS} from './mi24-proposals.mjs?rev=mi24-d-optimized-20261115-3';
 import {HUMAN_CATALOG,HUMAN_SWIM_CATALOG} from './human-model-catalog.mjs?rev=swim-ik-20261119-4';
 import {createHumanProposal,setHumanPreviewWeapon,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,createHumanGaitClock,advanceHumanGait} from './human-proposals.mjs?rev=swim-ik-20261119-4';
+import {prepareGameWeaponPreview} from './human-weapon-preview.mjs';
 import {isHumanSwimmingMode,sampleHumanSwimming,HUMAN_SWIM_PROPOSALS} from './human-swim-proposals.mjs?rev=swim-ik-20261119-4';
 import {createTwoWheelLabComparison} from './two-wheel-lab-comparison.mjs?rev=rig-comparison-20261119-1';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-v18-20261119-1';
@@ -312,6 +313,7 @@ function createProceduralModel(variant){
 }
 async function loadExternal(slot,entry,used,token){
  if(entry.provider==='human'){
+   if(entry.role==='player')await prepareGameWeaponPreview();
    if(token!==generation)return;
    const model=createHumanProposal(THREE,entry.role,entry.style);
    if(entry.role==='player')setHumanPreviewWeapon(THREE,model,document.querySelector('#humanWeapon').value);
@@ -464,6 +466,14 @@ async function choose(config){
  // HUMANS V18: renderitza cada variant directament. Cap visor ocult
  // no ha de condicionar la càrrega dels models que veu l'usuari.
  if(config.human){
+   if(config.human==='player'){
+     try{await prepareGameWeaponPreview()}
+     catch(error){
+       console.error('No s’han pogut carregar les armes reals del protagonista a l’editor',error);
+       warning.textContent='Armes del protagonista no disponibles: '+(error?.message||String(error));
+     }
+     if(token!==generation)return;
+   }
    const visible=slots.slice(1,config.options.length+1);
    const mode=config.swimming?'swim-'+config.swimming:'rest';
    for(let i=0;i<visible.length;i++){

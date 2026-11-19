@@ -4,8 +4,23 @@ import {playerBatching} from './player-batching-core.mjs';
 import {playerModel} from './player-model-core.mjs';
 import {palette} from './palette-core.mjs';
 
-let source=null;
+let source=null,loaderPromise=null;
 export const GAME_WEAPON_TYPES=Object.freeze(['pistol','assault','sniper','bazooka','knife','cutters','grenade']);
+
+// El laboratori no carrega el bootstrap del joc. Abans de crear V18,
+// inicialitzam les fàbriques originals de les armes; mai no carregam el bundle.
+export function prepareGameWeaponPreview(){
+ if(!loaderPromise){
+  loaderPromise=Promise.all([import('./bolt-cutters.js'),import('./characters.js')])
+   .then(()=>{
+    if(typeof globalThis.HUNTER_CHARACTERS?.createPlayer!=='function'||
+       typeof globalThis.HUNTER_BOLT_CUTTERS?.create!=='function')
+      throw Error('Fàbriques del joc no disponibles per al visor d’armes V18');
+    return true;
+   }).catch(error=>{loaderPromise=null;throw error});
+ }
+ return loaderPromise;
+}
 
 export function createGameWeaponPreview(T,kind){
  if(!GAME_WEAPON_TYPES.includes(kind))throw Error('Arma del joc no reconeguda: '+kind);

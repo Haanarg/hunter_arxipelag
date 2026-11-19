@@ -61,6 +61,7 @@ const suites={
     "vehicle-live-editor.mjs",
     "vehicle-lab-player-reference.mjs",
     "human-proposals.mjs",
+    "human-weapon-editor-init.mjs",
     "human-swim-proposals.mjs",
     "human-game-runtime-v17.mjs",
     "human-lab-evidence.mjs"
