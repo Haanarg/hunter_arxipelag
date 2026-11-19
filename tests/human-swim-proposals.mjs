@@ -17,7 +17,15 @@ for(const [kind,variants] of Object.entries(HUMAN_SWIM_PROPOSALS)){
  assert.equal(variants.length,4);
  for(const [i,variant] of variants.entries()){
   const mode='swim-'+kind+'-'+(i+1);
-  const root=createHumanProposal(THREE,'player','a');
+  // Aquesta prova només necessita un accessori de referència per
+  // comprovar que es desa/amaga/restaura durant la natació. Les armes
+  // reals requereixen inicialitzar el runtime de joc i no són part
+  // de l'animació del laboratori.
+  const root=createHumanProposal(THREE,'player','a',{visualOnly:true});
+  const mockWeapon=new THREE.Group();
+  mockWeapon.userData.humanPreviewWeapon=true;
+  mockWeapon.userData.humanWeapon='pistol';
+  root.add(mockWeapon);
   const joints={};let weapon=null;
   root.traverse(n=>{
    if(n.userData?.humanMotionJoint)joints[n.userData.humanMotionJoint]=n;
