@@ -150,7 +150,7 @@ body[data-editor-kind=""] #draw{display:none!important}
 
 </div></section>
 <section id="twoWheelAudit" class="t90-motion" hidden aria-label="Comparació del pilot a peu, la bicicleta i la moto">
- <h2>COMPARADOR · protagonist a peu, bicicleta i moto</h2>
+ <h2>COMPARADOR · protagonista a peu, bicicleta i moto</h2>
  <div class="btr-part-controls">
   <label>Estat <select id="twoWheelAuditState"><option value="stopped">Aturat · peus a terra</option><option value="moving">En marxa · pedalant / conduint</option></select></label>
   <label><input id="twoWheelAuditGuides" type="checkbox" checked> Ossos i ancoratges (cian · articulacions, rosa · controls)</label>
@@ -238,7 +238,7 @@ function loadWorkshop(){
  if(workshopStarted)return;
  workshopStarted=true;
  // Report import failures instead of leaving a blank editor.
- import('./src/vehicles-externs-proves.mjs?rev=swim-ik-20261119-4')
+ import('./src/vehicles-externs-proves.mjs?rev=vehicle-comparador-20261119-1')
   .catch(error=>{
    workshopStarted=false;
    console.error('Error en arrencar l’editor:',error);
