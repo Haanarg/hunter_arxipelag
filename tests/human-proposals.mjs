@@ -581,7 +581,8 @@ const lab=readFileSync(new URL('../src/vehicles-externs-proves.mjs',import.meta.
 assert(html.includes('id="humanGuides"')&&html.includes('HUMANS V18'));assert(lab.includes('measureHumanAnatomy(THREE,slot.model)'));assert(lab.includes('if(continuous)return')&&lab.includes('advanceHumanGait(humanGait,elapsed,mode)'));
 assert(html.indexOf('id="humanList"')>html.indexOf('id="vehicleList"'));
 assert(html.includes(':is(#vehicleList,#humanList) button[data-validation=\'pending\']'));
-assert(lab.includes('(config.human?humanList:list).append(button)'));
+assert(lab.includes('(config.twoWheelAudit?comparatorList:config.human?humanList:list).append(button)'),
+ 'Els humans continuen a Personatges i els models comparatius s’obren a Vehicles → COMPARADOR');
 assert(lab.includes('config.human?await createCurrentHuman(THREE,config.human)'));
 assert(lab.includes('!original&&!currentType.human&&'),'Les proporcions humanes no s’ajusten a l’amplada antiga');
 for(const mode of ['walk','run','crouch','aim','work','wave'])assert(html.includes('value="'+mode+'"'));
