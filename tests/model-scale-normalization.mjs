@@ -53,6 +53,12 @@ before.steering.rotation.y=.37;
 const rotated=new T.Box3().setFromObject(before.wheel);
 const reference=buildFixture();reference.steering.rotation.y=.37;
 const expected=new T.Box3().setFromObject(reference.wheel);
+console.log('ROTATED_WHEEL_PARITY',JSON.stringify({
+ before:{min:expected.min.toArray(),max:expected.max.toArray()},
+ after:{min:rotated.min.toArray(),max:rotated.max.toArray()},
+ deltaMin:rotated.min.distanceTo(expected.min),
+ deltaMax:rotated.max.distanceTo(expected.max)
+}));
 assert(rotated.min.distanceTo(expected.min)<2e-6 &&
        rotated.max.distanceTo(expected.max)<2e-6,
  'La forquilla girada continua idèntica després de consolidar les escales');
