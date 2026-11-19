@@ -124,6 +124,18 @@ for(const role of ['player','soldier','rocket','elite','general']){
   g.scale.setScalar(1);g.updateMatrixWorld(true);
   const gunProxy=canonical.getObjectByName('Arma canònica · gun');
   assert(gunProxy&&gunProxy.parent===bones.wristR,'Visible pistol grip on editor wrist');
+  assert.equal(gunProxy.userData.humanPistolHeldInFist,true,
+   'La pistola no pot desplaçar-se fora del puny dret');
+  const rightHand=bones.wristR.children.find(o=>o.userData.humanHand==='R');
+  const leftHand=bones.wristL.children.find(o=>o.userData.humanHand==='L');
+  const fist=rightHand.children.find(o=>o.name==='Puny dret sobre la culata');
+  const palm=leftHand.children.find(o=>o.name==='Palmell esquerre pla sota la pistola');
+  assert(fist&&palm&&fist.children.length>=5&&palm.children.length>=5,
+   'El puny dret tanca els dits i el palmell esquerre es manté obert');
+  u.pistolBlend=0;g.updateMatrixWorld(true);
+  assert(fist.visible&&!palm.visible,'Puny dret tancat també quan no apunta');
+  u.pistolBlend=1;g.updateMatrixWorld(true);
+  assert(fist.visible&&palm.visible,'Dreta tancada i esquerra plana quan apunta');
    // En repòs i caminar, l'arma segueix l'avantbraç del rig natiu.
    u.pistolBlend=0;g.updateMatrixWorld(true);
    const carried=new T.Vector3(0,0,-1).applyQuaternion(gunProxy.getWorldQuaternion(new T.Quaternion()));
@@ -133,8 +145,9 @@ for(const role of ['player','soldier','rocket','elite','general']){
    u.pistolBlend=1;
    u.gun.quaternion.setFromAxisAngle(new T.Vector3(1,0,0),.42);
    g.updateMatrixWorld(true);
-   const center=g.worldToLocal(gunProxy.getWorldPosition(new T.Vector3()));
-   assert(Math.abs(center.x)<.17,'Pistola visible centrada davant el pit');
+   const gripOffset=gunProxy.position.clone();
+   assert(Math.abs(gripOffset.y+.095)<.002&&Math.abs(gripOffset.z+.085)<.002,
+    'La culata visible roman dins del puny i segueix el canell, no orbita pel pit');
    const actualGun=new T.Vector3(0,0,-1).applyQuaternion(gunProxy.getWorldQuaternion(new T.Quaternion()));
    const sourceGun=new T.Vector3(0,0,-1).applyQuaternion(u.gun.getWorldQuaternion(new T.Quaternion()));
    assert(actualGun.dot(sourceGun)>.999,'Canó visible orientat com l’arma real');
@@ -240,6 +253,17 @@ assert.equal(rider.userData.boots.length,2);
   // a peu; cap bone scale ha de variar amb la posició del pedal.
   const anatomicalBody=driver.object.children.find(o=>o.userData.twoWheelCanonical);
   assert(anatomicalBody,'La moto i la bicicleta han de tenir el model canònic');
+  assert.deepEqual(anatomicalBody.scale.toArray(),[1,1,1],
+   'Malles i pivots tenen la mida del jugador a peu incorporada, no un factor d’escala ocult');
+  const footAvatar=playerModel.create(T,{articulated:true});
+  footAvatar.scale.setScalar(2/3);
+  footAvatar.updateMatrixWorld(true,true);
+  const footRig=footAvatar.userData.humanGameCanonicalRig;
+  const footBounds=new T.Box3().setFromObject(footRig,true).getSize(new T.Vector3()),
+        pilotBounds=new T.Box3().setFromObject(anatomicalBody,true).getSize(new T.Vector3());
+  for(const axis of ['x','y','z'])
+   assert(Math.abs(footBounds[axis]-pilotBounds[axis])<.003,
+    'Pilot de dues rodes i model a peu tenen la mateixa mida mundial ('+axis+')');
   assert(Math.abs(driver.object.userData.twoWheelCanonicalHeight-runtime.footVisualHeight)<.002,
    'La mida inicial del pilot coincideix amb la del protagonista a peu (3,2 m)');
   const riderJoints={};
@@ -260,6 +284,15 @@ assert.equal(rider.userData.boots.length,2);
    'Els malucs del pilot queden sobre el seient de la moto');
   const motoMeasures=boneMeasures();
   assert(motoMeasures.every(n=>n>.4&&n<1),'Longituds anatòmiques del pilot');
+  const footJoint=footAvatar.userData.humanGameCanonicalJoints;
+  const footLength=(a,b)=>footJoint[a].getWorldPosition(new T.Vector3())
+    .distanceTo(footJoint[b].getWorldPosition(new T.Vector3()));
+  const footLengths=['L','R'].flatMap(side=>[
+   footLength('hip'+side,'knee'+side),footLength('knee'+side,'ankle'+side),
+   footLength('shoulder'+side,'elbow'+side),footLength('elbow'+side,'wrist'+side)
+  ]);
+  footLengths.forEach((len,i)=>assert(Math.abs(len-motoMeasures[i])<.002,
+   'Cada segment de cama i braç coincideix amb el rig a peu ('+i+')'));
   const bici=new T.Group();bici.userData.bicycleVisualScale=.70;
   bici.userData.bicycleSaddleTop=1.905;
   driver.update({t:'bici',o:bici,v:0,pedalPhase:0},1/60);
