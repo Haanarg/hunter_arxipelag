@@ -46,5 +46,5 @@ const button=audit.panel.children[2];button.onclick();
 frame(1050);
 assert.match(audit.readout.textContent,/Prova forçada: ACTIVADA/);
 assert.equal(audit.forced,true);
-assert.equal(listeners.error instanceof Function,true);
+assert.equal(typeof listeners.error,'function');
 console.log('PASS avatar audit: loader independent, ready without runtime probe, live V18/shadow state, forced toggle');
