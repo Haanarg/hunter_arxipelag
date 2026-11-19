@@ -159,6 +159,32 @@ const neutral=sampleHumanSwimming('swim-crawl-4',.92*HUMAN_SWIM_PROPOSALS.crawl[
 assert(neutral.breathing===0,'Crol: cara neutral abans de l’entrada');
 poseHumanProposal(rootC,0,'rest');
 assert(Math.abs(rootC.rotation.y)<1e-9&&Math.abs(rootC.rotation.x)<1e-9,'Restauració del rig després de nedar');
+// Mostreig a 120 fps: cap quaternion ha de fer salts al retorn del cicle
+// ni en travessar un keyframe intermedi (inclou el canvi -PI/+PI del crol).
+for(const [mode,period]of [['swim-breast-3',3.2],['swim-crawl-4',1.54]]){
+ const swimmer=createHumanProposal(THREE,'player','a',{visualOnly:true});
+ const joints=jointMap(swimmer);
+ const ids=['shoulderL','shoulderR','elbowL','elbowR','wristL','wristR',
+  'hipL','hipR','kneeL','kneeR','ankleL','ankleR','neck','head','spine','pelvis'];
+ const prior={};
+ const frames=Math.ceil(period*120);
+ for(let frame=0;frame<=frames;frame++){
+  poseHumanProposal(swimmer,frame*period/frames,mode);
+  for(const id of ids){
+   const q=joints[id].quaternion;
+   if(prior[id])assert(q.angleTo(prior[id])<.23,
+    mode+' keyframe continu a '+id+' fotograma '+frame);
+   prior[id]=q.clone();
+  }
+ }
+ poseHumanProposal(swimmer,0,'rest');
+}
+const c4Catch=sampleHumanSwimming('swim-crawl-4',1.54*.29);
+const c4Recovery=sampleHumanSwimming('swim-crawl-4',1.54*.78);
+assert(c4Catch.arms.R[4]>.08&&c4Catch.arms.R[5]<-.15,
+ 'Crol: rotació humeral interna i pronació en l’agafada');
+assert(c4Recovery.arms.R[4]<-.15,
+ 'Crol: rotació externa de l’espatlla al recobrament');
 console.log('PASS B3 simetria, braços, respiració, peu i lliscament d’1s; C4 37 graus, colze alt, 6 batudes, coll i keyframes');
 
 assert.equal(positions.size,8,'Les vuit propostes tenen paràmetres realment diferents');
