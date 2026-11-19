@@ -2,7 +2,7 @@
 // laboratory poses on the live player, including remote COOP players.
 // The legacy game controller remains authoritative for input, collision,
 // physics, weapons and seated characters.
-import {poseHumanSwimming,restoreHumanSwimming,HUMAN_SWIM_PROPOSALS} from './human-swim-proposals.mjs';
+import {poseHumanSwimming,restoreHumanSwimming,HUMAN_SWIM_PROPOSALS} from './human-swim-proposals.mjs?rev=game-swim-b3-c4-20261119-2';
 
 export const GAME_SWIM_MODES=Object.freeze({breast:'swim-breast-3',crawl:'swim-crawl-4'});
 export const GAME_SWIM_PERIODS=Object.freeze({
