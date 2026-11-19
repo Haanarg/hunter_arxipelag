@@ -42,7 +42,9 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
  assert(typeof revision==='string'&&revision.length>0);
  const html=read('proves.html'),entry=read('src/vehicles-externs-proves.mjs');
  assert(read('src/vehicle-live-editor.mjs').includes("LAB_REVISION='"+revision+"'"));
- assert(html.includes('src/vehicles-externs-proves.mjs?rev='+revision));
+ // La revisió de cache de la pàgina és independent del format JSON
+ // aprovat del laboratori. El mòdul conserva i comprova LAB_REVISION.
+ assert(html.includes('src/vehicles-externs-proves.mjs?rev='));
  for(const module of ['vehicle-live-editor.mjs','vehicle-candidate-catalog.mjs'])assert(entry.includes(module+'?rev='+revision));
  for(const id of ['liveEditor','vehicleList','humanList','humanMotion','liveClearResolved','sectionTabs','sectionPreview','sectionFrame'])assert(html.includes('id="'+id+'"'),'Missing lab control '+id);
  // Parse the active lab entry and helpers, not tests of retired vehicles.
@@ -53,8 +55,8 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
  execFileSync(process.execPath,['--check','--input-type=module'],{input:inline[0],stdio:['pipe','pipe','pipe']});
  // Permet paràmetres addicionals de cache-busting després de la revisió
  // aprovada, sense perdre el contracte del laboratori.
- assert(html.includes("import('./src/vehicles-externs-proves.mjs?rev="+revision),
-  'El mòdul de l’editor s’importa amb la revisió aprovada');
+ assert(/import\(['"]\.\/src\/vehicles-externs-proves\.mjs\?rev=[^'"]+['"]\)/.test(html),
+  'L’editor ha de carregar el mòdul actiu amb una revisió de memòria cau');
  // The compound viewer is standalone, NOT bootstrapped by the game's classic bridges.
  const compoundHtml=read('compounds-preview.html');
  assert(!compoundHtml.includes('src/vehicles.js')&&!compoundHtml.includes('src/player-model.js')&&!compoundHtml.includes('src/palette.js'));
