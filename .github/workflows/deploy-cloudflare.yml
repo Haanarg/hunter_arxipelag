@@ -86,6 +86,8 @@ jobs:
         run: |
           npm run build
           npm run check:build
+      - name: Comparar partida real del harness en source i bundle
+        run: node tests/runtime-bundle-parity.cjs
       - name: Comprovar la compilació del Worker
         run: npm run build:worker
       - name: Desplegar Worker i assets a Cloudflare

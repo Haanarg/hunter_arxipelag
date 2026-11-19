@@ -1,3 +1,10 @@
+**2026-11-19 · Auditoria executable de paritat source/bundle (0.6.250):**
+- [x] `tests/runtime-parity-snapshot.cjs`: genera snapshots de partida amb el mateix jugador i llavor en mode source i bundle, amb V18 instal·lat i animació de caminar, braça B3, crol C4 i ombres.
+- [x] `tests/runtime-bundle-parity.cjs`: compara els dos resultats en processos Node separats, exigeix canvis reals dels malucs i transicions B3/C4, i falla amb divergències.
+- [x] El desplegament exigeix ara aquesta paritat a més de `npm run check:build`. Això prova l'equivalència lògica en harness, no substitueix una prova WebGL/navegador real.
+- [ ] CI i comprovació final del desplegament.
+- [ ] Comparar al navegador el bundle amb `source` i inspeccionar headers/cache i manifest per descartar desincronitzacions.
+
 **2026-11-19 · v0.6.250 · Fonts originals per defecte (paritat del bundle pendent):**
 - [x] Source com a runtime per defecte, a portada i motor, amb un sol selector `src/runtime-mode.mjs`; `?runtime=bundle` disponible només per comparar.
 - [x] `perfAudit=1` continua forçant source; precàrrega i arrencada fan servir exactament el mateix selector.
