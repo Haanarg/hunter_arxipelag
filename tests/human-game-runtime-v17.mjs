@@ -3,6 +3,8 @@ import {runInNewContext} from 'node:vm';
 import {readFileSync} from 'node:fs';
 import * as T from '../vendor/three-r186.module.mjs';
 import {playerModel} from '../src/player-model-core.mjs';
+import {vehicleModels} from '../src/vehicle-model-core.mjs';
+import {playerBatching} from '../src/player-batching-core.mjs';
 import {createHumanProposal,sampleHumanGait} from '../src/human-proposals.mjs';
 import {createHumanGameRuntimeV17,GAME_HUMAN_SKIN_VERSION,FOOT_PLAYER_VISUAL_FACTOR} from '../src/human-game-runtime-v17.mjs';
 
@@ -293,13 +295,28 @@ assert.equal(rider.userData.boots.length,2);
     point('shoulder'+side).distanceTo(point('elbow'+side)),
     point('elbow'+side).distanceTo(point('wrist'+side))
   ]);
-  const moto=new T.Group();moto.userData.motorcycleVisualScale=1.375;
+  const makeVehicle=vehicleModels.createFactory(T,{
+   box:(parent,w,h,d,color)=>{
+    const piece=new T.Mesh(new T.BoxGeometry(w,h,d),
+      new T.MeshStandardMaterial({color}));parent.add(piece);return piece;
+   },
+   material:color=>new T.MeshStandardMaterial({color}),
+   shadows:false,batching:playerBatching
+  });
+  const moto=makeVehicle('moto');
+  assert.equal(moto.userData.motorcycleVisualScale,1.70,'Motorcycle actual scaled model');
+  assert(moto.userData.twoWheelAnchors?.seat&&moto.userData.twoWheelAnchors?.gripL
+    &&moto.userData.twoWheelAnchors?.pedalR,'Moto: ancoratges reals del xassís');
+  assert(Math.abs(moto.userData.wheels[0].userData.radius-.34738122819654627*1.70*1.2)<.002,
+   'Moto: roda física i visual de la mateixa mida');
   const motorcycle={t:'moto',o:moto,v:0,pedalPhase:0};
   driver.update(motorcycle,1/60);
   assert.equal(driver.object.scale.x,1,'Escala global neutra per al pilot anatòmic');
   assert(anatomicalBody.visible,'La malla de la moto ha de ser visible');
-  assert(Math.abs(point('pelvis').y-(.99*1.2*1.375-.04))<.005,
-   'En aturar-se, els malucs del pilot de moto baixen lleugerament cap a terra');
+  const stoppedLegLength=2*.8060867773;
+  assert(Math.abs(point('pelvis').y-
+   (driver.object.userData.twoWheelFloorY+.86*stoppedLegLength))<.012,
+   'Moto aturada: maluc a l’alçada de suport calculada a partir de les cames a peu');
   const motoMeasures=boneMeasures();
   assert(motoMeasures.every(n=>n>.4&&n<1),'Longituds anatòmiques del pilot');
   assert(driver.object.userData.riderDetailNodes.every(node=>
@@ -330,17 +347,21 @@ assert.equal(rider.userData.boots.length,2);
   ]);
   footLengths.forEach((len,i)=>assert(Math.abs(len-motoMeasures[i])<.002,
    'Cada segment de cama i braç coincideix amb el rig a peu ('+i+')'));
-  const bici=new T.Group();bici.userData.bicycleVisualScale=.70;
-  bici.userData.bicycleSaddleTop=1.905;
+  const bici=makeVehicle('bici');
+  assert.equal(bici.userData.bicycleVisualScale,.88,'Bicicleta: nova escala visible aprovada');
+  assert(bici.userData.twoWheelAnchors?.seat&&bici.userData.twoWheelAnchors?.gripR
+    &&bici.userData.twoWheelAnchors?.pedalL,'Bici: ancoratges del selló, manillar i pedals');
+  assert(Math.abs(bici.userData.wheels[0].userData.radius-.62*.88*1.2)<.001,
+    'Bicicleta: les rodes comparteixen el factor visual i físic');
   driver.update({t:'bici',o:bici,v:0,pedalPhase:0},1/60);
   assert.equal(driver.object.scale.x,1,'Ciclista amb escala visual canònica');
-  const topOfSaddle=bici.userData.bicycleSaddleTop*1.2*.70;
+  const topOfSaddle=bici.userData.twoWheelAnchors.seat.getWorldPosition(new T.Vector3()).y;
   const pelvisBottom=new T.Box3();
   for(const piece of riderJoints.pelvis.children)
    if(piece.isMesh)pelvisBottom.expandByObject(piece);
   assert(Math.abs(point('pelvis').y-
-   (topOfSaddle+driver.object.userData.twoWheelButtBelowHip+.018-.22))<.005,
-   'En aturar-se, el ciclista baixa lleugerament la pelvis fora del selló');
+   (driver.object.userData.twoWheelFloorY+.86*stoppedLegLength))<.012,
+   'Bici aturada: genolls flexionats sense deformar la cama');
   const bentKnee=(side)=>{
    const hip=point('hip'+side),knee=point('knee'+side),ankle=point('ankle'+side);
    const a=hip.distanceTo(knee),b=knee.distanceTo(ankle),c=hip.distanceTo(ankle);
@@ -357,13 +378,17 @@ assert.equal(rider.userData.boots.length,2);
   const stopped=boneMeasures();
   stopped.forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
    'Ni les cuixes ni els panxells no canvien de llargada entre moto i bici'));
-  for(let n=0;n<45;n++)driver.update({t:'bici',o:bici,v:7,pedalPhase:n*.18},1/60);
+  for(let n=0;n<45;n++){
+   bici.userData.crank.rotation.x=-n*.18;
+   driver.update({t:'bici',o:bici,v:7,pedalPhase:n*.18},1/60);
+  }
   pelvisBottom.makeEmpty();
   for(const piece of riderJoints.pelvis.children)
    if(piece.isMesh)pelvisBottom.expandByObject(piece);
   assert(Math.abs(pelvisBottom.min.y-topOfSaddle-.018)<.006,
    'Quan pedala, el cul torna a situar-se just per sobre del selló');
   for(const phase of [0,Math.PI/3,2*Math.PI/3,Math.PI,Math.PI*1.6]){
+   bici.userData.crank.rotation.x=-phase;
    driver.update({t:'bici',o:bici,v:7,pedalPhase:phase},1/60);
    boneMeasures().forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
     'Les cames i els braços han de conservar la longitud mentre pedala'));
@@ -372,6 +397,20 @@ assert.equal(rider.userData.boots.length,2);
      'El genoll durant el pedaleig conserva una flexió anatòmica real');
   }
   inspectPose('bike-pedaling');
+  // La mà ha d'arribar fins al manillar real i el peu fins al pedal
+  // real, no fins a punts inventats que es desplacen amb l'escala.
+  for(const side of ['L','R']){
+   const wrist=point('wrist'+side),
+     grip=bici.userData.twoWheelAnchors['grip'+side]
+       .getWorldPosition(new T.Vector3());
+   const foot=point('ankle'+side),
+     pedal=bici.userData.twoWheelAnchors['pedal'+side]
+       .getWorldPosition(new T.Vector3());
+   const gap=wrist.distanceTo(grip),pedalGap=foot.distanceTo(pedal);
+   console.log('BIKE_ACTUAL_GRIP_PEDAL',side,JSON.stringify({gap,pedalGap}));
+   assert(gap<.18,'Mà '+side+' arriba al manillar geomètric de la bicicleta');
+   assert(pedalGap<.12,'Peu '+side+' arriba al pedal físic de la bicicleta');
+  }
   driver.update({...motorcycle,v:8},1/60);
   inspectPose('moto-moving-early');
   boneMeasures().forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
@@ -379,6 +418,16 @@ assert.equal(rider.userData.boots.length,2);
   // Igual que a la bicicleta: peus al reposapeus en marxa,
   // peus al terreny després de frenar, sense canviar de longitud.
   for(let n=0;n<45;n++)driver.update({...motorcycle,v:8},1/60);
+  for(const side of ['L','R']){
+    const wrist=point('wrist'+side),
+      grip=moto.userData.twoWheelAnchors['grip'+side].getWorldPosition(new T.Vector3());
+    const ankle=point('ankle'+side),
+      footrest=moto.userData.twoWheelAnchors['pedal'+side].getWorldPosition(new T.Vector3());
+    const gap=wrist.distanceTo(grip),footGap=ankle.distanceTo(footrest);
+    console.log('MOTO_ACTUAL_GRIP_FOOTREST',side,JSON.stringify({gap,footGap}));
+    assert(gap<.18,'Mà '+side+' arriba al manillar real de la moto');
+    assert(footGap<.12,'Peu '+side+' arriba al reposapeu real de la moto');
+  }
   const ridingFootY=(point('ankleL').y+point('ankleR').y)/2;
   const ridingSpread=point('ankleR').x-point('ankleL').x;
   assert(ridingFootY>.55,'A la moto en marxa els peus són als reposapeus');
