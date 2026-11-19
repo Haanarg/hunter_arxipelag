@@ -165,7 +165,7 @@ window.HUNTER_RIDER=Object.freeze({
       };
       cycleJoints.pelvis.rotation.set(0,0,0);
       cycleJoints.spine.rotation.set(
-        bike?-.62+.46*stopped:-.38+.25*stopped,0,0);
+        bike?-.62+.46*stopped:-.55+.36*stopped,0,0);
       cycleJoints.head.rotation.set(bike?.13:.07,0,0);
       g.updateWorldMatrix(true,true);
       for(let i=0;i<2;i++){
@@ -178,7 +178,7 @@ window.HUNTER_RIDER=Object.freeze({
         const hand=riderAnchor(v,anchors['grip'+letter],
           bike?vec(side*.42*fit,1.97*fit,-.78*fit):
             vec(side*.36*fit,1.10*fit,-.34*fit));
-        const footAtRest=vec(side*(bike?.32:.31)*fit,0,
+        const footAtRest=vec(side*(bike?.32:.29)*fit,0,
           seat.z-(bike?.18:.035)*fit);
         const ground=g.localToWorld(footAtRest);
         ground.y=heightAt(ground.x,ground.z)+.14;
