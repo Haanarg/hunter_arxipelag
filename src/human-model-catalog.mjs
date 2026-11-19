@@ -18,3 +18,28 @@ export const HUMAN_CATALOG=Object.entries(HUMAN_PROFILES).map(([role,p])=>({
  options:Object.entries(HUMAN_STYLES).map(([style,s])=>({provider:'human',role,style,title:p.name+' · '+s.name,note:s.note})),
  note:''
 }));
+
+// Comparatives d'ANIMACIÓ: quatre variants sobre la mateixa pell A.
+// El cinquè visor conserva el model actual del joc com a referència.
+export const HUMAN_SWIM_CATALOG=Object.freeze([
+ {id:'human-swim-breast',name:'Nedar · braça',kind:'huma',human:'player',swimming:'breast',validated:false,
+  note:'Quatre animacions candidates de braça. Només laboratori; cap canvi a la natació del joc.',
+  references:[
+   {label:'Imatges · fases de braça (Swim England)',url:'https://spaces.schoolspider.co.uk/uploads/706/page/33552502_page_file.pdf?ofn=swimenglandexpectedstandardsbreaststroke.pdf'},
+   {label:'Fotogrames i tècnica · U.S. Masters Swimming',url:'https://www.usms.org/fitness-and-training/articles-and-videos/articles/2020/01/03/16/21/how-to-swim-breaststroke-properly'}],
+  options:[
+   {provider:'human',role:'player',style:'a',swimVariant:1,title:'B1 · Equilibrada',note:'Tracció, respiració, puntada i lliscament proporcionats'},
+   {provider:'human',role:'player',style:'a',swimVariant:2,title:'B2 · Esportiva',note:'Recuperació ràpida, puntada estreta i ondulació'},
+   {provider:'human',role:'player',style:'a',swimVariant:3,title:'B3 · Oberta',note:'Escombrada i genolls més oberts, cadència tranquil·la'},
+   {provider:'human',role:'player',style:'a',swimVariant:4,title:'B4 · Lliscament',note:'Tracció compacta i fletxa final prolongada'}]},
+ {id:'human-swim-crawl',name:'Nedar · crol',kind:'huma',human:'player',swimming:'crawl',validated:false,
+  note:'Quatre animacions candidates de crol. Rotació, braços alterns i batuda segons variant. No integrades al joc.',
+  references:[
+   {label:'Imatges · fases del crol (estudi de biomecànica)',url:'https://www.mdpi.com/2673-7078/3/2/17'},
+   {label:'Fotogrames · tècnica de crol (Swim England)',url:'https://www.swimming.org/masters/improving-front-crawl-technique/19/'}],
+  options:[
+   {provider:'human',role:'player',style:'a',swimVariant:1,title:'C1 · Sis batudes',note:'Rotació moderada, colze alt i sis batudes per cicle'},
+   {provider:'human',role:'player',style:'a',swimVariant:2,title:'C2 · Fons',note:'Dues batudes, braçada llarga i respiració lateral'},
+   {provider:'human',role:'player',style:'a',swimVariant:3,title:'C3 · Tècnic',note:'Quatre batudes i recuperació de colze alt'},
+   {provider:'human',role:'player',style:'a',swimVariant:4,title:'C4 · Ràpid',note:'Cadència alta, sis batudes i recuperació menys flexionada'}]}
+]);
