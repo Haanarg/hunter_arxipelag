@@ -264,6 +264,35 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
   for(let i=0;i<na.count;i++){const key=na.getY(i).toFixed(5);if(!rings.has(key))rings.set(key,[]);rings.get(key).push(na.getZ(i))}
   const centers=[...rings.values()].map(z=>z.reduce((a,b)=>a+b,0)/z.length);
   assert(Math.max(...centers)-Math.min(...centers)<1e-6,'Eix cervical vertical, sense corba');
+  // Regressió del 19/11: el coll inflat venia d'una segona malla de
+  // transició superposada a la primera. No es pot recuperar aquest collar.
+  assert(!meshes.some(m=>m.userData.humanNeckBlend||m.name==='Transició coll-crani'
+    ||m.userData.batchedParts?.includes('Transició coll-crani')),
+   'Sense coll addicional: la unió s’ha de resoldre amb coll i crani originals');
+  const widths=new Map();
+  for(let i=0;i<na.count;i++){
+   const key=na.getY(i).toFixed(3);
+   widths.set(key,Math.max(widths.get(key)||0,Math.abs(na.getX(i))));
+  }
+  assert((widths.get('.040')||0)<=.053,'Coll central prim, sense engrossiments');
+  assert((widths.get('.068')||0)<=.053,'Coll prim just sota el cap');
+  assert((widths.get('-.050')||0)<=.083,'Base cervical sense volum afegit');
+  // El clatell del crani ha de trobar el coll a la part posterior:
+  // el contacte real es comprova en el mateix nivell 3D, no amb
+  // caixes que poden intersectar encara que hi hagi un escaló.
+  const backSurface=(mesh,y)=>{
+   const level=neckMesh.localToWorld(new T.Vector3(0,y,0));
+   const hit=new T.Raycaster(new T.Vector3(level.x,level.y,10),
+     new T.Vector3(0,0,-1)).intersectObject(mesh,false);
+   return hit[0]?.point.z;
+  };
+  for(const y of [.070,.085]){
+   const nape=backSurface(skull,y),column=backSurface(neckMesh,y);
+   assert(Number.isFinite(nape)&&Number.isFinite(column),
+     'Contacte real coll-crani visible per darrere a '+y);
+   assert(Math.abs(nape-column)<.035,
+     'Coll i crani sense escaló posterior a '+y+': '+nape+' vs '+column);
+  }
   // The actual front neck surface must enter the jaw volume, not merely
   // overlap its bounding box behind the chin.
   const level=neckMesh.localToWorld(new T.Vector3(0,.068,0));
