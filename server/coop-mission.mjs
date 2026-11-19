@@ -439,9 +439,10 @@ export function restoreRelayMission(record,geometry){
             bag.sniper=1;
             if(meta.mode==='native')bag.sniperAmmo=Math.min(capacities.sniperAmmo,bag.sniperAmmo+6);
           }else if(supply.item==='assault'){
-            if(bag.assault>=1)
-              bag.bullets=Math.min(capacities.bullets,bag.bullets+16);
-            else bag.assault=1;
+            // Primera recollida: desbloqueja el fusell i suma munició,
+            // igual que qualsevol fusell repetit (sense superar el topall).
+            bag.assault=1;
+            bag.bullets=Math.min(capacities.bullets,bag.bullets+16);
           }else bag[supply.item]=(bag[supply.item]||0)+supply.amount;
         }
         if(loose.has(supply.id))loose.delete(supply.id);else claimed.add(supply.id);}
