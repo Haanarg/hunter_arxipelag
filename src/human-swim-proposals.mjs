@@ -56,15 +56,17 @@ const normalizeSeconds=rows=>rows.map(([sec,...values])=>[sec/b3Seconds,...value
 // L'últim segon queda en fletxa perfecta. Les mans no passen darrere la
 // línia de l'espatlla: braç elevat >= 2.02 rad i colze en flexió <= PI/2.
 const B3_ARM=normalizeSeconds([
- [0,3.06,.04,.025,0],
- [.29,2.86,.16,.20,.015],
- [.58,2.55,.46,.39,.040],
- [.94,2.10,Math.PI/2,.12,.030], // insweep cap al pit
- [1.18,2.26,1.46,.08,.015],
- [1.48,2.70,.77,.05,0],
- [1.75,3.06,.04,.025,0], // braç ja estirat en iniciar puntada
- [2.20,3.06,.04,.025,0],
- [3.20,3.06,.04,.025,0]
+ // t, elevació espatlla, flexió colze, obertura espatlla,
+ // rotació humeral, adducció de l'avantbraç.
+ [0,3.06,-.04,-.29,0,0],
+ [.29,2.92,-.16,.15,.015,.04],
+ [.58,2.83,-.46,.43,.040,.10],
+ [.94,2.80,-Math.PI/2,.18,.030,.90], // colze alt, mans juntes sota el pit
+ [1.18,2.83,-1.37,.12,.015,.77],
+ [1.48,2.94,-.70,-.12,0,.30],
+ [1.75,3.06,-.04,-.29,0,0], // braços estirats mentre entra la puntada
+ [2.20,3.06,-.04,-.29,0,0],
+ [3.20,3.06,-.04,-.29,0,0]
 ]);
 const B3_LEG=normalizeSeconds([
  [0,.0,-.02,0,-.97,0,0],
@@ -86,15 +88,15 @@ const B3_BREATH=normalizeSeconds([
 // Darrer valor = primer - 2PI; el signe negatiu de x en recobrament
 // allunya la mà de l'aigua i la torna cap endavant.
 const C4_ARM=[
- [0,3.045,.055,.025,-.025],
- [.12,2.86,.14,.06,-.04],
- [.24,2.48,1.57,.10,-.08],
- [.40,1.38,1.68,.09,-.11],
- [.55,.28,.15,.04,.08],
- [.65,-.42,.42,.15,.07],
- [.79,-1.72,1.40,.51,.0], // colze per sobre la mà aèria
- [.91,-2.61,.66,.37,-.035],
- [1,3.045-TAU,.055,.025,-.025]
+ [0,3.045,-.055,.025,-.025],
+ [.12,2.86,-.14,.06,-.04],
+ [.24,2.62,-1.57,.10,-.08], // entrada i agarre: canell sota el colze
+ [.40,1.85,-1.68,.09,-.11], // colze 96° durant la tracció
+ [.55,.28,-.15,.04,.08], // extén i finalitza l'empenta a la cuixa
+ [.65,-1.20,-1.67,.21,.07], // extracció i inici recobrament aeri
+ [.79,-1.72,-1.70,.51,0], // colze lidera, mà relaxada per sota
+ [.91,-2.61,-.66,.37,-.035],
+ [1,3.045-TAU,-.055,.025,-.025]
 ];
 const bell=(x,start,peak,end)=>{
  if(x<=start||x>=end)return 0;
@@ -106,7 +108,7 @@ function sampleBreast3(phase,config){
  const leg=samplePeriodicHumanTrack(B3_LEG,phase);
  const inhale=samplePeriodicHumanTrack(B3_BREATH,phase)[0];
  return {kind:'breast',variant:2,refined:true,phase,config,arm,leg,inhale,
-  bodyPitch:-Math.PI/2 + .018*inhale,bodyRoll:0,bob:.012*inhale,
+  bodyPitch:-Math.PI/2 + .018*inhale,bodyRoll:0,bob:-.020*inhale,
   phaseName:phase<.19?'Obertura':phase<.38?'Estrebada i respiració':phase<.55?'Recobrament':
     phase<.69?'Puntada':'Lliscament (1 s)',
   glideActive:phase>=2.2/3.2};
@@ -217,8 +219,8 @@ export function poseHumanSwimming(model,joints,weapon,time,mode){
   set('head',-.018*p.inhale);
   for(const [i,side]of ['L','R'].entries()){
    const sign=i?1:-1;
-   set('shoulder'+side,p.arm[0],p.arm[3],sign*p.arm[2]);
-   set('elbow'+side,p.arm[1]);
+   set('shoulder'+side,p.arm[0],sign*p.arm[3],sign*p.arm[2]);
+   set('elbow'+side,p.arm[1],0,-sign*p.arm[4]);
    set('wrist'+side,-.095*p.arm[1],0,sign*.018);
    set('hip'+side,p.leg[0],0,sign*p.leg[2]);
    set('knee'+side,p.leg[1]);
