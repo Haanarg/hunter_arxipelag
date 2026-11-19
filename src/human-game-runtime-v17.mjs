@@ -1,6 +1,7 @@
 // V17-compatible rigid-rig adapter for the latest V18 skin (general cassaca). No gameplay animation,
 // seat, IK, collision, physics, weapon anchor or AI state is replaced.
-import {createHumanProposal,HUMAN_VERSION,sampleHumanGait} from './human-proposals.mjs?rev=humans-v18-thin-neck-nape-20261119-1';
+import {createHumanProposal,HUMAN_VERSION,sampleHumanGait} from './human-proposals.mjs?rev=human-game-swim-20261119-1';
+import {createGameSwimBridge} from './human-game-swim-bridge.mjs?rev=human-game-swim-20261119-1';
 
 export const GAME_HUMAN_SKIN_VERSION='humans-v18';
 // Escala exclusivament visual a peu: rig i geometria intactes.
@@ -96,6 +97,8 @@ function installCanonicalPlayer(T,model){
  const rest=Object.fromEntries(Object.entries(control).map(([id,bone])=>[id,bone.quaternion.clone().invert()]));
  const lowerRest=u.lowerBody.quaternion.clone().invert(),upperRest=u.upperBody.quaternion.clone().invert();
  const editorScale=visual.scale.clone();
+ const swimBridge=createGameSwimBridge(T,visual,j);
+ let updatingCanonical=false;
  const pelvisY=u.hipHeight,spineY=u.upperBodyPivotHeight,actualSpineY=j.spine.position.y;
  // A .72m crouch offset belonged to the old ~4m controller. Scale only
  // that movement distance to the native 2m pelvis; NEVER scale the meshes.
@@ -155,6 +158,13 @@ function installCanonicalPlayer(T,model){
   pistolGrips.push({side,original,hold,hand});
  }
  function sync(){
+  // The lab's horizontal swimmer is on the VISUAL ONLY. Always restore
+  // its canonical upright parent before building the next game frame,
+  // otherwise repeated camera/bounding-box updates accumulate a tilt.
+  visual.position.set(0,0,0);
+  visual.quaternion.identity();
+  j.neck.quaternion.identity();
+  j.pelvis.position.z=0;
   // Gameplay rescales its actor ROOT by 2/3; compensate it AND give the
   // unchanged native editor skin another third of size, uniformly. The
   // collision, controls and animations remain exactly the same.
@@ -258,10 +268,21 @@ function installCanonicalPlayer(T,model){
     hold.quaternion.copy(handWorld).invert().multiply(weaponWorld);
    }else hold.quaternion.identity();
   }
+  // Apply the exact approved swimming IK to the canonical skin, NOT the
+  // legacy physics controller. During style changes the arms, legs and roll
+  // are blended by quaternion; exiting the water blends to the standing rig.
+  if((u.gameSwimBlend||0)>.0001)
+   swimBridge.pose({active:!!u.gameSwimActive,blend:u.gameSwimBlend,
+    crawlBlend:u.crawlBlend||0,time:u.gameSwimSeconds||0});
  }
  model.add(visual);
  const update=visual.updateMatrixWorld;
- visual.updateMatrixWorld=function(force){sync();return update.call(this,force)};
+ visual.updateMatrixWorld=function(force){
+  if(updatingCanonical)return update.call(this,force);
+  updatingCanonical=true;
+  try{sync()}finally{updatingCanonical=false}
+  return update.call(this,force);
+ };
  sync();
  u.humanGameCanonicalRig=visual;
  u.humanGameCanonicalJoints=j;
