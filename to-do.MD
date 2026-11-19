@@ -1,3 +1,12 @@
+**2026-11-19 · Auditoria source/bundle i publicació (v0.6.250):**
+- [x] Dues partides Node realment executades en processos separats (source/bundle) amb la mateixa llavor: paritat estricta dels valors de V18, caminar, B3, C4 i ombres; malles 81, casters 11.
+- [x] GitHub Actions exigeix la paritat després del build i abans del deploy: PASS a l'execució 44632276188.
+- [x] El desplegament també ha verificat el paquet de 70 mòduls, el manifest, el bootstrap, el menú i la versió 0.6.250.
+- [x] Segona ronda de protecció afegida: verifica el selector source, el fitxer `src/runtime-mode.mjs` públic i torna a comparar els assets crítics 20 segons després d'un desplegament aparentment correcte.
+- [ ] Distingir si els manifests desincronitzats són causats per caché CDN o per un segon desplegament automàtic: revisar les entrades cronològiques de Cloudflare Workers > Deployments.
+- [ ] Comparació visual WebGL source/bundle en navegador abans de tornar a activar bundle per defecte.
+- [ ] Verificar CI del control d'estabilitat.
+
 **2026-11-19 · Auditoria executable de paritat source/bundle (0.6.250):**
 - [x] `tests/runtime-parity-snapshot.cjs`: genera snapshots de partida amb el mateix jugador i llavor en mode source i bundle, amb V18 instal·lat i animació de caminar, braça B3, crol C4 i ombres.
 - [x] `tests/runtime-bundle-parity.cjs`: compara els dos resultats en processos Node separats, exigeix canvis reals dels malucs i transicions B3/C4, i falla amb divergències.

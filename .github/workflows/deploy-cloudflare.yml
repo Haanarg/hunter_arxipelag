@@ -71,6 +71,8 @@ jobs:
         run: npm run test:deploy
       - name: Validar models humans i editor en temps real
         run: npm run test:lab
+      - name: Validar selecció SOURCE per defecte i BUNDLE optatiu
+        run: node tests/runtime-mode.mjs
       - name: Validar sintaxi del panell V18 independent de Three.js
         run: |
           node --check src/avatar-audit-boot.js
@@ -118,7 +120,7 @@ jobs:
           version="$(sed -n "s/.*GAME_VERSION = '\([^']*\)'.*/\1/p" src/version.mjs)"
           if [ -z "$version" ]; then echo "::error::No s'ha pogut llegir la versió"; exit 1; fi
           # Compare the final HTTP body, not Cloudflare's canonical HTML redirect.
-          files=(index.html src/avatar-audit-boot.js src/runtime-bundle.mjs src/characters.js src/water.js src/game-core.js src/human-game-swim-bridge.mjs src/human-swim-proposals.mjs src/bootstrap.mjs src/menu-boot.mjs src/player-model-core.mjs src/human-game-runtime-v17.mjs src/version.mjs src/human-weapon-preview.mjs src/compound-preview.mjs src/compound-concepts.mjs compounds-preview.html src/hovercraft-concepts.mjs src/vehicle-model-core.mjs src/vehicle-specs.mjs src/ka60-runtime.mjs assets/vehicle-candidates/lab-revision.json src/human-model-catalog.mjs src/human-current-models.mjs src/human-proposals.mjs src/human-lab-evidence.mjs src/human-lab-evidence-ui.mjs src/vehicle-live-editor.mjs src/vehicles-externs-proves.mjs src/proves-hub.mjs proves.html vehicles-externs-proves.html)
+          files=(index.html src/runtime-mode.mjs src/avatar-audit-boot.js src/runtime-bundle.mjs src/characters.js src/water.js src/game-core.js src/human-game-swim-bridge.mjs src/human-swim-proposals.mjs src/bootstrap.mjs src/menu-boot.mjs src/player-model-core.mjs src/human-game-runtime-v17.mjs src/version.mjs src/human-weapon-preview.mjs src/compound-preview.mjs src/compound-concepts.mjs compounds-preview.html src/hovercraft-concepts.mjs src/vehicle-model-core.mjs src/vehicle-specs.mjs src/ka60-runtime.mjs assets/vehicle-candidates/lab-revision.json src/human-model-catalog.mjs src/human-current-models.mjs src/human-proposals.mjs src/human-lab-evidence.mjs src/human-lab-evidence-ui.mjs src/vehicle-live-editor.mjs src/vehicles-externs-proves.mjs src/proves-hub.mjs proves.html vehicles-externs-proves.html)
           # Verify the *compiled*, content-addressed classic runtime too,
           # not only the source files. This catches stale B3/C4 packages.
           bundle="$(sed -n 's/.*RUNTIME_BUNDLE_PATH = "\([^"]*\)".*/\1/p' src/runtime-bundle.mjs)"
@@ -144,7 +146,24 @@ jobs:
               fi
             done
             if [ "$failed" -eq 0 ]; then
-              echo "Paradoxa: versió $version i assets exactes del commit $COMMIT verificats"
+              # La primera comprovació podia passar mentre un segon desplegament
+              # sobreescrivia els assets. Esperam i repetim els fitxers clau.
+              echo "Comprovant estabilitat dels assets crítics després de 20 segons..."
+              sleep 20
+              for path in index.html src/runtime-mode.mjs src/runtime-bundle.mjs "$bundle" src/bootstrap.mjs src/menu-boot.mjs; do
+                url="https://hunter.paradoxa.cat/$path?release=$COMMIT&stable=$delay"
+                if ! curl --fail --silent --show-error --location --max-redirs 5 --proto-redir '=https' --connect-timeout 10 --max-time 30 \
+                  -H 'Cache-Control: no-cache' "$url" -o "$RUNNER_TEMP/hunter-published-check"; then
+                  echo "::warning::L'asset ha desaparegut durant la verificació estable: $path"
+                  failed=1
+                elif ! cmp -s "$path" "$RUNNER_TEMP/hunter-published-check"; then
+                  echo "::warning::Un asset ha canviat després del desplegament: $path"
+                  failed=1
+                fi
+              done
+            fi
+            if [ "$failed" -eq 0 ]; then
+              echo "Paradoxa: versió $version i assets estables del commit $COMMIT verificats"
               exit 0
             fi
           done
