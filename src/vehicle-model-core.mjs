@@ -75,6 +75,15 @@ export const vehicleModels=Object.freeze({
   },
   createFactory(THREE,{box,material,shadows,resources=null,civilianCar=null,gaz:gazFactory=null,truck:truckFactory=null,batching=null}){
     const VS=this.scales,templates=new Map(),distant=createDistantVehicleFactory(THREE,resources);
+    // Dimensions fixades contra l'avatar canònic a peu (3,2 unitats).
+    // Bici: roda de 1,31 m visuals (41% de la persona);
+    // moto: roda de 1,42 m visuals (44% de la persona).
+    // Els hitboxes actuals ja cobreixen tots dos models augmentats.
+    const BICYCLE_VISUAL_SCALE=.88,MOTORCYCLE_VISUAL_SCALE=1.70;
+    const markAnchor=(parent,name,x,y,z)=>{
+      const anchor=new THREE.Object3D();anchor.name=name;
+      anchor.position.set(x,y,z);parent.add(anchor);return anchor;
+    };
     const rod=(g,a,b,r,c,profile='metal')=>{const v=new THREE.Vector3(...a),w=new THREE.Vector3(...b),delta=w.clone().sub(v),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),8),material(c,profile));m.position.copy(v.add(w).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());g.add(m);return m};
     const round=(g,r,h,c,x,y,z,axis='y',profile='metal')=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,12),material(c,profile));m.position.set(x,y,z);if(axis==='x')m.rotation.z=Math.PI/2;if(axis==='z')m.rotation.x=Math.PI/2;g.add(m);return m};
     const roundedPrism=(g,w,h,d,r,c,x,y,z,profile='paint')=>{const hw=w/2,hh=h/2,rr=Math.min(r,hw-.02,hh-.02),s=new THREE.Shape();s.moveTo(-hw+rr,-hh);s.lineTo(hw-rr,-hh);s.quadraticCurveTo(hw,-hh,hw,-hh+rr);s.lineTo(hw,hh-rr);s.quadraticCurveTo(hw,hh,hw-rr,hh);s.lineTo(-hw+rr,hh);s.quadraticCurveTo(-hw,hh,-hw,hh-rr);s.lineTo(-hw,-hh+rr);s.quadraticCurveTo(-hw,-hh,-hw+rr,-hh);s.closePath();const geo=new THREE.ExtrudeGeometry(s,{depth:d,bevelEnabled:false,curveSegments:2});geo.translate(0,0,-d/2);const m=new THREE.Mesh(geo,material(c,profile));m.position.set(x,y,z);g.add(m);return m};
@@ -232,9 +241,9 @@ export const vehicleModels=Object.freeze({
         // Malla precompilada; sense GLB ni meshoptimizer en temps de joc.
         const color=appearance.color??0x228fef;
         const bike=createStreetfighter25(THREE,{color,material});
-        // Reducció del 26,7%: la streetfighter era desproporcionada
-        // respecte al nou conductor de 2 m i al radi de les rodes.
-        const visualScale=1.1*1.25; // Augment de la moto en un 25%.
+        // L'escala anterior (1,375) deixava el vehicle massa petit
+        // per a l'avatar real de 3,2 unitats.
+        const visualScale=MOTORCYCLE_VISUAL_SCALE;
         bike.scale.setScalar(visualScale);
         g.add(bike);
         g.userData.wheels=bike.userData.wheels;
@@ -243,6 +252,16 @@ export const vehicleModels=Object.freeze({
         // visual; els pivots de direcció continuen compartint el mateix gir.
         for(const w of g.userData.wheels)w.userData.radius*=visualScale*VS.moto;
         g.userData.motorcycleVisualScale=visualScale;
+        // Preses solidàries amb la forquilla: segueixen el gir del manillar.
+        // El seient i els reposapeus són locals del mateix xassís 3D.
+        const steer=bike.userData.steeringPivots[0];
+        g.userData.twoWheelAnchors={
+          seat:markAnchor(bike,'Moto · centre del seient',0,.99,.26),
+          gripL:markAnchor(steer,'Moto · puny esquerre',-.36,.015,-.075),
+          gripR:markAnchor(steer,'Moto · puny dret',.36,.015,-.075),
+          pedalL:markAnchor(bike,'Moto · reposapeu esquerre',-.34,.42,.16),
+          pedalR:markAnchor(bike,'Moto · reposapeu dret',.34,.42,.16)
+        };
         g.userData.motorcycleModel='naked-streetfighter-25';
         g.userData.motorcycleColor=color;
         g.userData.motorcycleTriangles=STREETFIGHTER_25_META.triangles;
@@ -317,6 +336,12 @@ export const vehicleModels=Object.freeze({
         // Superfície real del selló (extrusió vertical de .065).
         // El pilot fa servir aquesta alçada per seure, sense penetrar-hi.
         g.userData.bicycleSaddleTop=1.84+.065;
+        // Referències físiques reals del model, no nombres independents
+        // de la malla. El pedalier i els punys segueixen els seus pivots.
+        const seatAnchor=markAnchor(g,'Bicicleta · superfície selló',0,1.905,.33);
+        const gripL=markAnchor(steering,'Bicicleta · puny esquerre',-.42,.29,.44);
+        const gripR=markAnchor(steering,'Bicicleta · puny dret',.42,.29,.44);
+        g.userData.twoWheelAnchors={seat:seatAnchor,gripL,gripR};
         rod(g,[0,1.65,.34],[0,1.80,.33],.035,metal);
         round(g,.105,.14,metal,0,.73,0,'x','metal');
         // Els pedals animats continuen definits al bloc de pedalier comu.
@@ -767,17 +792,21 @@ export const vehicleModels=Object.freeze({
           box(crank,.26,.08,.18,rubber,side*.4,0,side*.28,'rubber');
         }
         g.add(crank);g.userData.crank=crank;
+        g.userData.twoWheelAnchors.pedalL=
+          markAnchor(crank,'Bicicleta · pedal esquerre',-.40,0,-.28);
+        g.userData.twoWheelAnchors.pedalR=
+          markAnchor(crank,'Bicicleta · pedal dret',.40,0,.28);
       }
       if(t==='bici'){
-        // Bicicleta només un 6,7% menor; mantenim geometria i mecànica.
-        // El grup inclou rodes, manillar i pedalier; la col.lisio i
-        // la conduccio continuen regides per les dimensions existents.
+        // Augment visual coherent amb el protagonista a peu.
+        // Sense canviar la física ni les caixes de col·lisió, que ja
+        // eren més grans que la carrosseria representada.
         const visual=new THREE.Group();
         for(const child of [...g.children])visual.add(child);
-        visual.scale.setScalar(.70);
+        visual.scale.setScalar(BICYCLE_VISUAL_SCALE);
         g.add(visual);
-        for(const w of g.userData.wheels||[])w.userData.radius*=.70*VS.bici;
-        g.userData.bicycleVisualScale=.70;
+        for(const w of g.userData.wheels||[])w.userData.radius*=BICYCLE_VISUAL_SCALE*VS.bici;
+        g.userData.bicycleVisualScale=BICYCLE_VISUAL_SCALE;
       }
       // La coordenada Y de l'origen no és l'altura dels patins.
       // Les dues barres inferiors estan centrades a y=.48 i tenen radi .075.
