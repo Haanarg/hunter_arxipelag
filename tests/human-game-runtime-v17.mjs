@@ -315,6 +315,15 @@ assert.equal(rider.userData.boots.length,2);
   assert(anatomicalBody.visible,'La malla de la moto ha de ser visible');
   const stoppedLegLength=point('hipL').distanceTo(point('kneeL'))+
     point('kneeL').distanceTo(point('ankleL'));
+  console.log('TWO_WHEEL_SEAT_DEBUG',JSON.stringify({
+   pelvisY:point('pelvis').y,
+   target:driver.object.userData.twoWheelFloorY+.86*stoppedLegLength,
+   floor:driver.object.userData.twoWheelFloorY,
+   seat:driver.object.userData.twoWheelSeatHip,
+   stop:driver.object.userData.twoWheelStopped,
+   bone:stoppedLegLength,
+   saddle:moto.userData.twoWheelAnchors.seat.getWorldPosition(new T.Vector3()).toArray()
+  }));
   assert(Math.abs(point('pelvis').y-
    (driver.object.userData.twoWheelFloorY+.86*stoppedLegLength))<.012,
    'Moto aturada: maluc a l’alçada de suport calculada a partir de les cames a peu');
