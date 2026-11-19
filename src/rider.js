@@ -50,6 +50,16 @@ window.HUNTER_RIDER=Object.freeze({
     g.add(riderFar);
     // No es descompon aquest model en cilindres/segments estirables.
     cycleBody.visible=false;g.add(cycleBody);
+    g.updateWorldMatrix(true,true);
+    // Els joints «motion» tenen posició local ZERO: la longitud real
+    // queda al grup de repòs (parent). No llegir mai knee.position!
+    const upperLegLength=cycleJoints.hipL.getWorldPosition(new THREE.Vector3())
+      .distanceTo(cycleJoints.kneeL.getWorldPosition(new THREE.Vector3())),
+          lowerLegLength=cycleJoints.kneeL.getWorldPosition(new THREE.Vector3())
+      .distanceTo(cycleJoints.ankleL.getWorldPosition(new THREE.Vector3()));
+    if(upperLegLength<.1||lowerLegLength<.1)
+      throw Error('Longitud zero a les cames canòniques del pilot');
+    g.userData.twoWheelCanonicalLegLengths={thigh:upperLegLength,shin:lowerLegLength};
     g.userData.twoWheelCanonicalHeight=twoWheel.standingHeight;
     g.userData.twoWheelButtBelowHip=buttBelowHip;
     g.userData.riderFarProxy=riderFar;
@@ -124,8 +134,8 @@ window.HUNTER_RIDER=Object.freeze({
               vec(0,(bike?1.905:.99)*fit,(bike?.33:.26)*fit)),
             // La mateixa cama de l'avatar a peu: no s'escalen ni se
             // substitueixen el fèmur, la tíbia o les malles.
-            upperLeg=cycleJoints.kneeL.position.length(),
-            lowerLeg=cycleJoints.ankleL.position.length(),
+            upperLeg=upperLegLength,
+            lowerLeg=lowerLegLength,
             seatHipY=seat.y+buttBelowHip+.018,
             footReference=g.localToWorld(vec(0,0,seat.z)),
             floorWorld=vec(footReference.x,
