@@ -69,14 +69,14 @@ const B3_ARM=normalizeSeconds([
  [3.20,3.06,-.04,-.29,0,0]
 ]);
 const B3_LEG=normalizeSeconds([
- [0,.0,-.02,0,-.97,0,0],
+ [0,.0,-.02,0,-1.27,0,0],
  [.65,.035,-.06,.015,-.90,0,0],
  [1.23,.25,-.86,.055,-.24,.06,.015],
  [1.52,.40,-1.64,.075,.30,.24,.035], // càrrega, peus en martell
  [1.70,.32,-1.24,.085,.26,.30,.040], // puntada circular
  [1.96,.14,-.54,.045,-.12,.15,.015],
- [2.20,.0,-.02,0,-.97,0,0], // cames juntes, peus en punta
- [3.20,.0,-.02,0,-.97,0,0]
+ [2.20,.0,-.02,0,-1.27,0,0], // cames juntes, peus en punta
+ [3.20,.0,-.02,0,-1.27,0,0]
 ]);
 const B3_BREATH=normalizeSeconds([
  [0,0],[.36,.06],[.66,.48],[.94,1],[1.17,.78],
@@ -130,7 +130,7 @@ function sampleCrawl4(phase,config){
   const a=TAU*(3*phase-.07)+i*Math.PI;
   legs[side]={hip:config.kick*Math.sin(a),
    knee:-.08-.48*(.5+.5*Math.sin(a-.8)), // 4.6°...32.1° flexió
-   ankle:-1.02+.065*Math.sin(a-1.05), // flexió plantar, mai dorsiflexió
+   ankle:-1.28+.055*Math.sin(a-1.05), // flexió plantar, mai dorsiflexió
    toeIn:.075};
  }
  // Quan la dreta acaba d'empènyer i es recupera, acompanya el roll
