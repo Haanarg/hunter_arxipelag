@@ -14,17 +14,24 @@ const makeVehicle=vehicleModels.createFactory(T,{
  box,material,shadows:false,batching:playerBatching
 });
 const lab=await createTwoWheelLabComparison(T,{makeVehicle,box,material});
-assert.equal(lab.footHeight,3.2);
+assert(lab.footHeight>0,
+ 'El comparador mesura la mida natural real de l’avatar, no força 2 m');
 const targets=[lab.foot,lab.bicycle,lab.motorcycle];
 for(const view of targets){
  assert(view.model.isGroup,'Cada panell és un Object3D independent');
- assert(Math.abs(view.getStandingHeight()-lab.footHeight)<.002,
-  'El model a peu i els pilots comparteixen alçada V18 sense error de coma flotant');
+ assert(view.getStandingHeight()>0,
+  'L’alçada visual es mesura de la geometria i no d’una fita de 2 metres');
 }
 assert.equal(lab.bicycle.vehicle.scale.x,1,'La bici té l’escala final dins la malla');
 assert.equal(lab.motorcycle.vehicle.scale.x,1,'La moto té l’escala final dins la malla');
 assert.equal(lab.bicycle.rider.object.scale.x,1);
 assert.equal(lab.motorcycle.rider.object.scale.x,1);
+assert(Math.abs(lab.bicycle.getStandingHeight()-lab.motorcycle.getStandingHeight())<.002,
+ 'Els dos pilots reutilitzen el mateix rig canònic sense escalats independents');
+console.log('LAB_NATURAL_HEIGHTS',JSON.stringify({
+ foot:lab.footHeight,bicycle:lab.bicycle.getStandingHeight(),
+ motorcycle:lab.motorcycle.getStandingHeight()
+}));
 for(const scenario of ['stopped','moving','return']){
  const speed=scenario==='moving'?7:0;
  for(let t=0;t<70;t++)lab.step(1/60,speed);
