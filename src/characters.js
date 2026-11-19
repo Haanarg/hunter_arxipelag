@@ -541,7 +541,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     return crawl*Math.max(0,surface+.22-physicalY-chestRel,
                             surface+.38-physicalY-headRel);
   },
-  animatePlayer(player,{forward,strafe=0,dt,swimming,inVehicle,ammo,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,assaultRifleEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false,crouching=false}){
+  animatePlayer(player,{forward,strafe=0,dt,swimming,inVehicle,ammo,knifeEquipped=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,assaultRifleEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false,crouching=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),
           move=Math.min(1,Math.hypot(forward,strafe*.85)),dir=forward<-.02?-1:1;
     // Cintura i cames apunten 45° cap al desplaçament lateral; el tronc
