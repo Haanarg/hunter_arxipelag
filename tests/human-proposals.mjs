@@ -274,8 +274,8 @@ for(const [role,p]of Object.entries(HUMAN_PROFILES)){
    const key=na.getY(i).toFixed(3);
    widths.set(key,Math.max(widths.get(key)||0,Math.abs(na.getX(i))));
   }
-  assert((widths.get('.040')||0)<=.053,'Coll central prim, sense engrossiments');
-  assert((widths.get('.068')||0)<=.053,'Coll prim just sota el cap');
+  assert((widths.get('0.040')||0)<=.053,'Coll central prim, sense engrossiments');
+  assert((widths.get('0.068')||0)<=.053,'Coll prim just sota el cap');
   assert((widths.get('-.050')||0)<=.083,'Base cervical sense volum afegit');
   // El clatell del crani ha de trobar el coll a la part posterior:
   // el contacte real es comprova en el mateix nivell 3D, no amb
