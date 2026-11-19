@@ -63,6 +63,7 @@ const suites={
     "human-proposals.mjs",
     "human-swim-proposals.mjs",
     "human-game-runtime-v17.mjs",
+    "human-game-swimming.mjs",
     "human-lab-evidence.mjs"
   ]
 };
