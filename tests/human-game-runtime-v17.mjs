@@ -215,7 +215,10 @@ assert.equal(rider.userData.boots.length,2);
 
  // La fàbrica real del rider: canvia només la mida dels ocupants del GAZ.
  const riderSandbox={
-  window:{HUNTER_PLAYER_MODEL:{create:(Three,options)=>playerModel.create(Three,options)}},
+  window:{
+   HUNTER_PLAYER_MODEL:{create:(Three,options)=>playerModel.create(Three,options)},
+   HUNTER_HUMAN_V17:runtime
+  },
   createPlayerPistol:()=>({flash:{visible:false}})
  };
  runInNewContext(readFileSync(new URL('../src/rider.js',import.meta.url),'utf8'),riderSandbox);
@@ -233,17 +236,45 @@ assert.equal(rider.userData.boots.length,2);
  assert(Math.abs(driver.object.scale.x-.82)<1e-9,'Escala del cotxe civil intacta');
  driver.update({t:'cotxe',o:new T.Group(),v:0,pedalPhase:0},1/60);
  assert(Math.abs(driver.object.scale.x-.82)<1e-9,'Altres cotxes mantenen l’escala');
-  const moto=new T.Group();moto.userData.motorcycleVisualScale=1.1;
+  // Els pilots de dues rodes fan servir EXACTAMENT la pell del jugador
+  // a peu; cap bone scale ha de variar amb la posició del pedal.
+  const anatomicalBody=driver.object.children.find(o=>o.userData.twoWheelCanonical);
+  assert(anatomicalBody,'La moto i la bicicleta han de tenir el model canònic');
+  assert(Math.abs(driver.object.userData.twoWheelCanonicalHeight-runtime.footVisualHeight)<.002,
+   'La mida inicial del pilot coincideix amb la del protagonista a peu (3,2 m)');
+  const riderJoints={};
+  anatomicalBody.traverse(o=>{if(o.userData.humanMotionJoint)riderJoints[o.userData.humanMotionJoint]=o});
+  const point=id=>riderJoints[id].getWorldPosition(new T.Vector3());
+  const boneMeasures=()=>['L','R'].flatMap(side=>[
+    point('hip'+side).distanceTo(point('knee'+side)),
+    point('knee'+side).distanceTo(point('ankle'+side)),
+    point('shoulder'+side).distanceTo(point('elbow'+side)),
+    point('elbow'+side).distanceTo(point('wrist'+side))
+  ]);
+  const moto=new T.Group();moto.userData.motorcycleVisualScale=1.375;
   driver.update({t:'moto',o:moto,v:0,pedalPhase:0},1/60);
-  assert(Math.abs(driver.object.scale.x-.56)<1e-9,'Conductor de moto a mida humana');
-  assert(Math.abs(driver.object.userData.torso.position.y*driver.object.scale.y-.99*1.2*1.1)<1e-9,
-   'Seient moto conservat en coordenades del vehicle');
+  assert.equal(driver.object.scale.x,1,'Escala global neutra per al pilot anatòmic');
+  assert(anatomicalBody.visible,'La malla de la moto ha de ser visible');
+  assert(Math.abs(point('pelvis').y-.99*1.2*1.375)<.005,
+   'Els malucs del pilot queden sobre el seient de la moto');
+  const motoMeasures=boneMeasures();
+  assert(motoMeasures.every(n=>n>.4&&n<1),'Longituds anatòmiques del pilot');
   const bici=new T.Group();bici.userData.bicycleVisualScale=.70;
   driver.update({t:'bici',o:bici,v:0,pedalPhase:0},1/60);
-  assert(Math.abs(driver.object.scale.x-.56)<1e-9,'Ciclista a mida humana');
-  assert(Math.abs(driver.object.userData.torso.position.y*driver.object.scale.y-1.65*1.2*.70)<1e-9,
-   'Seient bici encaixat amb el quadre redimensionat');
-  assert(driver.object.userData.limbs.every(l=>l.quaternion.lengthSq()>.99),'Articulacions de bicicleta normalitzades');
+  assert.equal(driver.object.scale.x,1,'Ciclista amb escala visual canònica');
+  assert(Math.abs(point('pelvis').y-1.65*1.2*.70)<.005,
+   'Malucs del ciclista encaixats amb el selló');
+  const stopped=boneMeasures();
+  stopped.forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
+   'Ni les cuixes ni els panxells no canvien de llargada entre moto i bici'));
+  for(const phase of [0,Math.PI/3,2*Math.PI/3,Math.PI,Math.PI*1.6]){
+   driver.update({t:'bici',o:bici,v:7,pedalPhase:phase},1/60);
+   boneMeasures().forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
+    'Les cames i els braços han de conservar la longitud mentre pedala'));
+  }
+  driver.update({t:'moto',o:moto,v:8,pedalPhase:0},1/60);
+  boneMeasures().forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
+   'La transició de bicicleta a moto no pot estirar cap segment'));
 
 for(const path of ['src/rider.js','src/marine-patrol.js','src/enemy-ai.js','src/coop-world-runtime.js']){
  const source=readFileSync(new URL('../'+path,import.meta.url),'utf8');
