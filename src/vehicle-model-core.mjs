@@ -314,6 +314,9 @@ export const vehicleModels=Object.freeze({
           material(0x252a2c,'rubber'));
         saddle.rotation.x=-Math.PI/2;
         saddle.position.set(0,1.84,.33);g.add(saddle);
+        // Superfície real del selló (extrusió vertical de .065).
+        // El pilot fa servir aquesta alçada per seure, sense penetrar-hi.
+        g.userData.bicycleSaddleTop=1.84+.065;
         rod(g,[0,1.65,.34],[0,1.80,.33],.035,metal);
         round(g,.105,.14,metal,0,.73,0,'x','metal');
         // Els pedals animats continuen definits al bloc de pedalier comu.
