@@ -24,7 +24,7 @@ export function mountHumanEvidence({T,slots,revision,getPose,getAnimated}){
  };
  const download=(name,data,type)=>{const url=URL.createObjectURL(new Blob([data],{type})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)};
  const variant=i=>options[i]?.style||'a';
- const current=i=>slots[i]?.model;
+ const current=i=>slots[i+1]?.model;
  const snapshot=i=>humanSnapshot(T,current(i),{role,variant:variant(i),swimVariant:options[i]?.swimVariant||null,revision,pose:getPose(),animated:getAnimated()});
  model.addEventListener('change',render);status.addEventListener('change',save);notes.addEventListener('input',save);
  el('humanObj').addEventListener('click',()=>{try{if(!role)return;const i=Number(model.value),s=snapshot(i);download('hunter-'+role+'-'+variant(i)+'.obj',humanOBJ(T,current(i),s),'text/plain');info.textContent='OBJ exportat: '+s.meshes+' malles, '+s.triangles+' triangles.'}catch(e){info.textContent=e.message}});
