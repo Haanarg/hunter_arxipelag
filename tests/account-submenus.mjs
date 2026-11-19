@@ -29,7 +29,10 @@ const ctx={window:{HUNTER_ACCOUNT_SERVICE:accounts},document:{
 runInNewContext(source,ctx);
 runInNewContext('accountCloud={list:async()=>{globalThis.cloudQueriesCalled();return []},retry:async()=>{},syncHistory:async()=>{}}',ctx);
 ctx.cloudQueriesCalled=()=>cloudQueries++;
-const body=new El('div'),text=()=>JSON.stringify(body.children.map(x=>x.textContent));
+const body=new El('div'),text=()=>{
+ const walk=node=>[node.textContent,...node.children.flatMap(walk)];
+ return JSON.stringify(body.children.flatMap(walk));
+};
 const click=async label=>{
  const button=body.children.find(x=>x.tagName==='button'&&x.textContent.includes(label));
  assert(button,'Falta el botó '+label+' al submenú '+text());
