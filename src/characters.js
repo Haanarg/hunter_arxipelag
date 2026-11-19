@@ -568,12 +568,25 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // Un blend propi preserva una transició suau entre braça i crol.
     u.crawlBlend=(u.crawlBlend||0)+((swimming&&running&&forward>.08&&move>.08&&!inVehicle?1:0)-(u.crawlBlend||0))*(1-Math.exp(-9*dt));
     const run=u.runBlend,crawl=u.crawlBlend,crouch=u.crouchBlend;
-    // The canonical swimmer is visual only; shared B3/C4 clock is advanced
-    // once per game animation tick, never by shadows or the scene renderer.
-    const gameSwim=!!swimming&&!inVehicle;
+    // BRACA B3 és la braçada de desplaçament per defecte. CROL C4
+    // només quan se neda endavant i s'activa córrer. Sense impuls
+    // frontal (quiet, lateral o enrere) conservam la pose de natació
+    // antiga, com a moviment de manteniment de posició a l'aigua.
+    // El criteri és direccional, no la velocitat total del jugador.
+    const forwardStroke=Number.isFinite(forward)&&forward>.12&&
+      forward>=Math.abs(strafe)*.75;
+    const gameSwim=!!swimming&&!inVehicle&&forwardStroke;
+    const wasSwimmingForward=!!u.gameSwimActive;
     u.gameSwimActive=gameSwim;
-    u.gameSwimBlend=(u.gameSwimBlend||0)+(Number(gameSwim)-(u.gameSwimBlend||0))*(1-Math.exp(-8*dt));
-    if(gameSwim)u.gameSwimSeconds=(u.gameSwimSeconds||0)+dt*Math.max(.15,move);
+    u.gameSwimStyle=gameSwim?(running?'C4':'B3'):'lateral-idle';
+    u.gameSwimBlend=(u.gameSwimBlend||0)+
+      (Number(gameSwim)-(u.gameSwimBlend||0))*(1-Math.exp(-11*dt));
+    if(gameSwim){
+      // Reiniciar en reprendre l'impuls frontal: la primera braçada
+      // real és visible, en lloc de caure a una fase aleatòria de lliscament.
+      if(!wasSwimmingForward)u.gameSwimSeconds=0;
+      u.gameSwimSeconds=(u.gameSwimSeconds||0)+dt*Math.max(.35,move);
+    }
 
      // Reajust dels peus quan el jugador gira sense caminar.
      const yaw=player.rotation.y,previous=u.previousFootHeading;
