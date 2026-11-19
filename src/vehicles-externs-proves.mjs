@@ -1,6 +1,7 @@
 import {createMi24Proposal,MI24_MODELS} from './mi24-proposals.mjs?rev=mi24-d-optimized-20261115-3';
-import {HUMAN_CATALOG} from './human-model-catalog.mjs?rev=humans-v8';
-import {createHumanProposal,setHumanPreviewWeapon,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,createHumanGaitClock,advanceHumanGait} from './human-proposals.mjs?rev=humans-v18-thin-neck-nape-20261119-1';
+import {HUMAN_CATALOG,HUMAN_SWIM_CATALOG} from './human-model-catalog.mjs?rev=swim-lab-20261119-1';
+import {createHumanProposal,setHumanPreviewWeapon,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,createHumanGaitClock,advanceHumanGait} from './human-proposals.mjs?rev=swim-lab-20261119-1';
+import {isHumanSwimmingMode} from './human-swim-proposals.mjs';
 import {createCurrentHuman} from './human-current-models.mjs?rev=humans-v8';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
@@ -22,9 +23,11 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261118-226-humans-gaz-cutter-camera-14';
 const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
-const humanList=document.querySelector('#humanList'),ALL_CATALOG=[...CATALOG,...HUMAN_CATALOG];
+const humanList=document.querySelector('#humanList'),ALL_CATALOG=[...CATALOG,...HUMAN_CATALOG,...HUMAN_SWIM_CATALOG];
 let humanTime=0,humanMode='rest',humanGait=createHumanGaitClock();
 const isHumanGait=mode=>mode==='walk'||mode==='run';
+const previewHumanPose=(slot,mode)=>isHumanSwimmingMode(mode)?mode+'-'+(slot.swimVariant||1):mode;
+const updateSwimWater=mode=>{for(const s of slots)s.swimWater.visible=!!s.swimVariant&&isHumanSwimmingMode(mode)};
 import {mountHumanEvidence} from './human-lab-evidence-ui.mjs?rev=human-evidence-5';
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
 renderer.setPixelRatio(Math.min(1.5,window.devicePixelRatio||1));
@@ -119,13 +122,15 @@ for(let i=0;i<5;i++){
  sun.shadow.bias=-.00025;scene.add(sun);
  const ground=new THREE.Mesh(new THREE.PlaneGeometry(230,230),new THREE.MeshStandardMaterial({color:0x687461,roughness:1}));
  ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;ground.position.y=-.07;scene.add(ground);
+ const swimWater=new THREE.Mesh(new THREE.PlaneGeometry(5.5,5.5),new THREE.MeshBasicMaterial({color:0x1b8a9b,transparent:true,opacity:.22,depthWrite:false,side:THREE.DoubleSide}));
+ swimWater.rotation.x=-Math.PI/2;swimWater.position.y=.56;swimWater.visible=false;swimWater.renderOrder=2;scene.add(swimWater);
  const lines=new THREE.GridHelper(230,230,0xacc3ab,0x819788);
  lines.position.y=.015;lines.material.transparent=true;lines.material.opacity=.24;scene.add(lines);
  const person=createLabPlayerReference(THREE);scene.add(person);
  const perspective=new THREE.PerspectiveCamera(36,1,.05,1300),ortho=new THREE.OrthographicCamera(-2,2,2,-2,.05,1300);
  const guide=document.createElement('canvas');guide.className='human-guide';guide.hidden=true;outer.append(guide);
  const versionTag=document.createElement('span');versionTag.className='human-version-tag';versionTag.hidden=true;label.append(versionTag);
- const slot={outer,viewport,scene,camera:perspective,perspective,ortho,guide,versionTag,ground,lines,person,status,source,bold,sub,upload,downloadBtr,model:null,mixer:null,kind:null,sourceFrame:null};
+ const slot={outer,viewport,scene,camera:perspective,perspective,ortho,guide,versionTag,ground,lines,swimWater,person,status,source,bold,sub,upload,downloadBtr,model:null,mixer:null,kind:null,sourceFrame:null,swimVariant:null};
  slots.push(slot);
  upload.addEventListener('change',async()=>{
    const file=upload.files?.[0];if(!file)return;
@@ -220,6 +225,7 @@ function metrics(root){
    ' materials · '+d.x.toFixed(1)+' × '+d.y.toFixed(1)+' × '+d.z.toFixed(1)+' m';
 }
 function dropPrevious(slot){
+ slot.swimVariant=null;slot.swimWater.visible=false;
  if(slot.downloadBtr){slot.downloadBtr.hidden=true;slot.downloadBtr.onclick=null;}
  if(slot.sourceFrame){slot.sourceFrame.remove();slot.sourceFrame=null;slot.viewport.classList.remove('has-embed')}
  if(slot.model){
@@ -280,7 +286,11 @@ async function loadExternal(slot,entry,used,token){
    if(token!==generation)return;
    const model=createHumanProposal(THREE,entry.role,entry.style);
    if(entry.role==='player')setHumanPreviewWeapon(THREE,model,document.querySelector('#humanWeapon').value);
-   poseHumanProposal(model,0,'rest');setModel(slot,model,false,[],true);
+   setModel(slot,model,false,[],true);
+   slot.swimVariant=entry.swimVariant||null;
+   const initialMode=currentType.swimming?'swim-'+currentType.swimming:'rest';
+   poseHumanProposal(slot.model,0,previewHumanPose(slot,initialMode));
+   slot.swimWater.visible=!!slot.swimVariant;
    slot.bold.textContent=entry.title;slot.sub.textContent='Articulat · escala del joc · '+entry.note;
    slot.status.textContent=metrics(slot.model);slot.source.hidden=true;return;
  }
@@ -388,7 +398,7 @@ async function choose(config){
  document.querySelector('#humanWeaponControl').hidden=config.human!=='player';
  humanEvidence.show(config.human||null);
  humanTime=0;humanMode='rest';humanGait=createHumanGaitClock();
- if(config.human){document.querySelector('#humanPose').value='rest';document.querySelector('#animate').checked=false;document.querySelector('#humanRevision').textContent='HUMANS V18 · '+HUMAN_VERSION;}
+ if(config.human){const start=config.swimming?'swim-'+config.swimming:'rest';document.querySelector('#humanPose').value=start;document.querySelector('#animate').checked=!!config.swimming;document.querySelector('#humanRevision').textContent='HUMANS V18 · '+HUMAN_VERSION+(config.swimming?' · 4 PROPOSTES DE NATACIÓ':'');document.querySelector('#humanGaitMix').textContent=config.swimming?'Quatre cicles diferents · comparació en directe':'';}
  labTankKeys.clear();labTurretSwitch=false;labTurretYaw=0;labTurretPitch=0;
  syncLabTurretButton();
  for(const slot of slots){
@@ -535,7 +545,7 @@ function draw(now){
  const dt=Math.min(.07,(now-prev)/1000);prev=now;
  if(document.querySelector('#animate').checked){
    for(const slot of slots){slot.mixer?.update(dt);if(slot.model)stepKamovRotors(slot.model,dt);}
-   if(currentType.human){const elapsed=dt*Number(document.querySelector('#humanSpeed').value);humanTime+=elapsed;const mode=document.querySelector('#humanPose').value;const gait=isHumanGait(mode);if(gait)humanGait=advanceHumanGait(humanGait,elapsed,mode);for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,humanTime,mode,gait?humanGait:null);const out=document.querySelector('#humanGaitMix');out.textContent=gait?'Cursa '+Math.round(humanGait.blend*100)+' %':'';}
+   if(currentType.human){const elapsed=dt*Number(document.querySelector('#humanSpeed').value);humanTime+=elapsed;const mode=document.querySelector('#humanPose').value;const gait=isHumanGait(mode);if(gait)humanGait=advanceHumanGait(humanGait,elapsed,mode);for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,humanTime,previewHumanPose(slot,mode),gait?humanGait:null);const out=document.querySelector('#humanGaitMix');out.textContent=gait?'Cursa '+Math.round(humanGait.blend*100)+' %':isHumanSwimmingMode(mode)?'Quatre cicles diferents · comparació en directe':'';}
    if(currentType.id==='tanc'&&slots[0].model)
      stepT90MPreview(slots[0].model,t90MotionInput(dt),dt);
  }
@@ -594,12 +604,18 @@ document.querySelector('#pan-right').addEventListener('click',()=>{panScreenX-=p
 document.querySelector('#fitScale').addEventListener('change',()=>choose(currentType));
 document.querySelector('#showGrid').addEventListener('change',e=>{for(const s of slots){s.lines.visible=e.target.checked;s.person.visible=e.target.checked&&!currentType.human}});
 document.querySelector('#humanPose').addEventListener('change',e=>{
- const mode=e.target.value,continuous=isHumanGait(humanMode)&&isHumanGait(mode);
+ const mode=e.target.value;
+ if(isHumanSwimmingMode(mode)&&currentType.swimming!==mode.split('-')[1]){
+  const next=HUMAN_SWIM_CATALOG.find(p=>p.swimming===mode.split('-')[1]);
+  if(next){choose(next);return}
+ }
+ updateSwimWater(mode);
+ const continuous=isHumanGait(humanMode)&&isHumanGait(mode);
  humanMode=mode;document.querySelector('#animate').checked=mode!=='rest';
  if(continuous)return; // Retain the current phase AND blend when changing gait.
  humanTime=0;humanGait=createHumanGaitClock(mode);
  document.querySelector('#humanGaitMix').textContent=isHumanGait(mode)?'Cursa '+Math.round(humanGait.blend*100)+' %':'';
- for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,0,mode,isHumanGait(mode)?humanGait:null);
+ for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,0,previewHumanPose(slot,mode),isHumanGait(mode)?humanGait:null);
 });
 document.querySelector('#humanWeapon').addEventListener('change',e=>{
  if(currentType.human!=='player')return;
@@ -607,7 +623,7 @@ document.querySelector('#humanWeapon').addEventListener('change',e=>{
   if(!slot.model)continue;
   if(setHumanPreviewWeapon(THREE,slot.model,e.target.value)){
    const mode=document.querySelector('#humanPose').value;
-   poseHumanProposal(slot.model,humanTime,mode,isHumanGait(mode)?humanGait:null);
+   poseHumanProposal(slot.model,humanTime,previewHumanPose(slot,mode),isHumanGait(mode)?humanGait:null);
    slot.status.textContent=metrics(slot.model)+' · '+e.target.selectedOptions[0].textContent;
   }
  }
@@ -717,7 +733,7 @@ for(const config of ALL_CATALOG){
  button.dataset.validation=config.validated?'validated':'pending';
  button.textContent=config.name;
  const small=document.createElement('small');
- small.textContent=(config.validated?'✓ Validat':'● Pendent')+' · '+(config.experimental?'Experimental':kinds[config.kind]);
+ small.textContent=config.swimming?'4 propostes d’animació':(config.validated?'✓ Validat':'● Pendent')+' · '+(config.experimental?'Experimental':kinds[config.kind]);
  button.append(small);button.addEventListener('click',()=>choose(config));
  (config.human?humanList:list).append(button);
 }
