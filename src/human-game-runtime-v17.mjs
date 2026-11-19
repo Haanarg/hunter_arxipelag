@@ -103,7 +103,6 @@ function installCanonicalPlayer(T,model){
  // Única escala explícita del model visible, sense compensacions dinàmiques.
  visual.scale.setScalar(FOOT_PLAYER_VISUAL_FACTOR);
  const swimBridge=createGameSwimBridge(T,visual,j);
- let updatingCanonical=false;
  const pelvisY=u.hipHeight,spineY=u.upperBodyPivotHeight,actualSpineY=j.spine.position.y;
  // El desplaçament d'ajupir-se prové del controlador antic.
  // Adaptam el moviment al maluc real de la geometria nativa, mai a 2 m.
@@ -270,13 +269,7 @@ function installCanonicalPlayer(T,model){
     hold.quaternion.copy(handWorld).invert().multiply(weaponWorld);
    }else hold.quaternion.identity();
   }
-  // Apply the exact approved swimming IK to the canonical skin, NOT the
-  // legacy physics controller. During style changes the arms, legs and roll
-  // are blended by quaternion; exiting the water blends to the standing rig.
-  if((u.gameSwimBlend||0)>.0001)
-   swimBridge.pose({active:!!u.gameSwimActive,blend:u.gameSwimBlend,
-    crawlBlend:u.crawlBlend||0,time:u.gameSwimSeconds||0});
- }
+  }
  // Consolidació sense escales en cadena: el jugador i el model humà
  // tenen transform d'arrel independent. Els pivots antics es traslladen
  // junts a un únic grup ocult d'escala definitiva; les armes continuen
@@ -287,14 +280,18 @@ function installCanonicalPlayer(T,model){
  for(const child of [...model.children])legacyRig.add(child);
  model.add(legacyRig,visual);
  u.humanGameLegacyRig=legacyRig;
- const update=visual.updateMatrixWorld;
- visual.updateMatrixWorld=function(force){
-  if(updatingCanonical)return update.call(this,force);
-  updatingCanonical=true;
-  try{sync()}finally{updatingCanonical=false}
-  return update.call(this,force);
+ // Postura completament determinada pel tick de personatge. Three.js,
+ // el shadow map, la càmera i Box3 només calculen matrius: mai no
+ // animen ni reinicien les articulacions. Un sol camí per SOLO/COOP.
+ u.humanGamePose=()=>{
+  sync();
+  swimBridge.pose({mode:u.gameSwimMode||'idle',
+   previousMode:u.gameSwimPreviousMode||u.gameSwimMode||'idle',
+   transition:u.gameSwimTransition??1,
+   blend:u.gameSwimBlend||0,
+   time:u.gameSwimSeconds||0});
  };
- sync();
+ u.humanGamePose();
  u.humanGameCanonicalRig=visual;
  u.humanGameCanonicalJoints=j;
  u.humanGameCanonicalSoles=meshes.filter(m=>m.userData.humanLandmark==='sole');

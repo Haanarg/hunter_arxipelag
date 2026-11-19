@@ -506,6 +506,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.swimChest=new THREE.Vector3();
     u.swimHead=new THREE.Vector3();
     u.gameSwimSeconds=0;u.gameSwimBlend=0;u.gameSwimActive=false;
+    u.gameSwimMode='idle';u.gameSwimPreviousMode='idle';
+    u.gameSwimTransition=1;u.gameSwimStyle='lateral-idle';
     // Fusionam peces rígides germanes sense tocar les articulacions,
     // els pivots de les armes ni les malles referenciades per l'animació.
     u.batchStats=window.HUNTER_PLAYER_BATCH.optimize(THREE,player);
@@ -544,7 +546,14 @@ window.HUNTER_CHARACTERS=Object.freeze({
     return crawl*Math.max(0,surface+.22-physicalY-chestRel,
                             surface+.38-physicalY-headRel);
   },
-  animatePlayer(player,{forward,strafe=0,dt,swimming,inVehicle,ammo,knifeEquipped=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,assaultRifleEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false,crouching=false}){
+  animatePlayer(player,options){
+    // L'única aplicació del rig visible passa per aquesta frontera.
+    // Les sortides anticipades (aigua, paracaigudes) també hi passen;
+    // mai no delegam l'animació al render ni a updateMatrixWorld().
+    try{return this.animatePlayerControls(player,options)}
+    finally{player?.userData?.humanGamePose?.()}
+  },
+  animatePlayerControls(player,{forward,strafe=0,dt,swimming,inVehicle,ammo,knifeEquipped=false,bazookaEquipped=false,grenadeEquipped=false,cisallaEquipped=false,sniperEquipped=false,assaultRifleEquipped=false,grenadeChargePower=0,parachuting=false,airborne=false,running=false,crouching=false}){
     const u=player.userData,k=1-Math.exp(-11*dt),limbK=1-Math.exp(-15*dt),
           move=Math.min(1,Math.hypot(forward,strafe*.85)),dir=forward<-.02?-1:1;
     // Cintura i cames apunten 45° cap al desplaçament lateral; el tronc
@@ -567,29 +576,34 @@ window.HUNTER_CHARACTERS=Object.freeze({
      // Els braços es relaxen progressivament després d'una passa o carrera.
      const restArmRate=move<.08&&!swimming&&!inVehicle?1-Math.exp(-5.5*dt):limbK;
     u.crouchBlend=(u.crouchBlend||0)+((crouching&&!swimming&&!inVehicle&&!airborne&&!parachuting?1:0)-(u.crouchBlend||0))*(1-Math.exp(-10*dt));
-    // La mateixa acció de velocitat passa a ser crol quan som a l'aigua.
-    // Un blend propi preserva una transició suau entre braça i crol.
-    u.crawlBlend=(u.crawlBlend||0)+((swimming&&running&&forward>.08&&move>.08&&!inVehicle?1:0)-(u.crawlBlend||0))*(1-Math.exp(-9*dt));
-    const run=u.runBlend,crawl=u.crawlBlend,crouch=u.crouchBlend;
-    // BRACA B3 és la braçada de desplaçament per defecte. CROL C4
-    // només quan se neda endavant i s'activa córrer. Sense impuls
-    // frontal (quiet, lateral o enrere) conservam la pose de natació
-    // antiga, com a moviment de manteniment de posició a l'aigua.
-    // El criteri és direccional, no la velocitat total del jugador.
-    const forwardStroke=Number.isFinite(forward)&&forward>.12&&
-      forward>=Math.abs(strafe)*.75;
-    const gameSwim=!!swimming&&!inVehicle&&forwardStroke;
-    const wasSwimmingForward=!!u.gameSwimActive;
-    u.gameSwimActive=gameSwim;
-    u.gameSwimStyle=gameSwim?(running?'C4':'B3'):'lateral-idle';
-    u.gameSwimBlend=(u.gameSwimBlend||0)+
-      (Number(gameSwim)-(u.gameSwimBlend||0))*(1-Math.exp(-11*dt));
-    if(gameSwim){
-      // Reiniciar en reprendre l'impuls frontal: la primera braçada
-      // real és visible, en lloc de caure a una fase aleatòria de lliscament.
-      if(!wasSwimmingForward)u.gameSwimSeconds=0;
-      u.gameSwimSeconds=(u.gameSwimSeconds||0)+dt*Math.max(.35,move);
+    // ÚNIC selector de natació per al rig de l'editor.
+    // Braça B3: qualsevol avanç frontal. Crol C4: avanç ràpid.
+    // Quiet, lateral o enrere: moviment antic RECUPERAT SOBRE EL RIG NOU.
+    // Un únic rellotge, un únic pes de submersió i una sola transició.
+    const run=u.runBlend,crouch=u.crouchBlend,
+      wet=!!swimming&&!inVehicle&&!airborne&&!parachuting,
+      forwardStroke=Number.isFinite(forward)&&forward>.12&&
+        forward>=Math.abs(strafe)*.75,
+      selected=!forwardStroke?'idle':running?'crawl':'breast';
+    if(wet){
+      const before=u.gameSwimMode||'idle';
+      if(selected!==before){
+        u.gameSwimPreviousMode=before;
+        u.gameSwimMode=selected;
+        u.gameSwimTransition=0;
+        if(before==='idle')u.gameSwimSeconds=0;
+      }
+      u.gameSwimTransition=Math.min(1,(u.gameSwimTransition??1)+dt*6.5);
+      u.gameSwimSeconds=(u.gameSwimSeconds||0)+dt*
+        (selected==='idle'?.9:Math.max(.65,move));
     }
+    u.gameSwimBlend=(u.gameSwimBlend||0)+
+      (Number(wet)-(u.gameSwimBlend||0))*(1-Math.exp(-11*dt));
+    u.gameSwimActive=wet;
+    u.gameSwimStyle=wet?(selected==='breast'?'B3':selected==='crawl'?'C4':'lateral-idle'):'land';
+    // Compatibilitat de lectura per a qui encara consulta l'estil de crol:
+    // no és un segon motor, ni governa l'animació.
+    u.crawlBlend=wet&&selected==='crawl'?1:0;
 
      // Reajust dels peus quan el jugador gira sense caminar.
      const yaw=player.rotation.y,previous=u.previousFootHeading;
@@ -603,7 +617,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // les botes prop del terra i evita reduir l'escala de tot el model.
     u.lowerBody.position.y+=(u.hipHeight-.72*crouch-u.lowerBody.position.y)*k;
     u.upperBody.position.y+=(u.upperBodyPivotHeight-.72*crouch-u.upperBody.position.y)*k;
-    u.ph+=dt*(swimming?(move?(4.2+3.5*crawl)*move:2.1):(8.4+.6*run)*(1-.48*crouch)*move);
+    if(!swimming)u.ph+=dt*(8.4+.6*run)*(1-.48*crouch)*move;
     const ph=u.ph,breath=Math.sin(u.breath);
 
     const tx=(joint,target,rate=limbK)=>joint.rotation.x+=(target-joint.rotation.x)*rate;
@@ -642,54 +656,20 @@ window.HUNTER_CHARACTERS=Object.freeze({
     }
 
     if(swimming&&!inVehicle){
-      const stroke=Math.sin(ph),recover=(1-Math.cos(ph))*.5,
-            mix=(normal,fast)=>normal+(fast-normal)*crawl,
-            sinOpp=-Math.sin(ph),flutter=Math.sin(ph*2);
-      u.gun.visible=false;u.knife.visible=false;u.bazooka.visible=false;u.grenade.visible=false;u.sniper.visible=false;u.assault.visible=false;u.cisalla.visible=false;
+      // Ni B3 ni C4 ni manteniment/lateral toquen els ossos antics.
+      // El sistema canònic reprodueix TOTS tres moviments directament
+      // al model de l'editor després d'aquesta fase de controls.
+      for(const weapon of [u.gun,u.knife,u.bazooka,u.grenade,
+        u.sniper,u.assault,u.cisalla])if(weapon)weapon.visible=false;
       if(u.pistolFlash)u.pistolFlash.visible=false;
       u.pistolBlend=0;
-      // Braça: postura habitual. Crol: cos gairebé horitzontal,
-      // cap avançat i peus enfonsats. La volta anterior de 180° del
-      // tors, pelvis i arrel invertia l'altura del cap i els peus.
-      // La cara ja apunta cap avall amb el pitch X negatiu.
-      u.upperBody.rotation.y+=(0-u.upperBody.rotation.y)*k;
-      const canonicalSwim=!!u.humanGameCanonicalRig;
-      u.upperBody.rotation.x+=(mix(-.1,0)-u.upperBody.rotation.x)*k;
-      u.upperBody.rotation.z+=((canonicalSwim?0:.10*stroke*crawl)-u.upperBody.rotation.z)*k;
-      // Native B3/C4 is tilted on the render skin itself. Applying the old
-      // -1.20 pitch on the actor root would flip the entire swimmer twice.
-      player.rotation.x+=((canonicalSwim?0:mix(0,-1.20))-player.rotation.x)*k;
-      // Només una oscil·lació subtil de costat durant la braça;
-      // el crol es manté de panxa, sense girar cap i peus a l'inrevés.
-      const roll=canonicalSwim?0:stroke*.035*(1-crawl);
-      player.rotation.z+=(roll-player.rotation.z)*k;
-      // Quan el cos s'ajau, el cap aixeca lleument la mirada i es gira
-      // una mica de costat per respirar, sense oscil·lacions brusques.
-      const headX=mix(-u.upperBody.rotation.x,.38),
-            headYaw=crawl*.18*Math.max(0,stroke);
-      tx(u.head,headX,k);
-      u.head.rotation.y+=(headYaw-u.head.rotation.y)*k;
-      u.head.rotation.z+=(-u.upperBody.rotation.z*.6-u.head.rotation.z)*k;
-      // Braçada el·líptica: el sinus marca el recorregut
-      // endavant/enrere i el cosinus (desfasat 90°) dibuixa l'arc
-      // lateral i vertical. Els dos braços van en oposició de fase.
-      // Els colzes es flexionen a la recuperació per damunt l'aigua.
-      const arc=Math.cos(ph),leftRecovery=.5-.5*stroke,
-            rightRecovery=.5+.5*stroke;
-      tx(u.al,mix(1.15+.18*stroke,1.15+1.06*stroke));
-      tx(u.ar,mix(1.15-.18*stroke,1.15-1.06*stroke));
-      tz(u.al,mix(-.42-.38*stroke,-.20-.32*arc));
-      tz(u.ar,mix(.42+.38*stroke,.20-.32*arc));
-      tx(u.ael,mix(.72+.45*recover,.40+.68*leftRecovery));
-      tx(u.aer,mix(.72+.45*(1-recover),.40+.68*rightRecovery));
-      tz(u.ael,mix(0,-.09-.18*arc));
-      tz(u.aer,mix(0,.09-.18*arc));
-      const kick=.22*flutter;
-      tx(u.ll,mix(.18+kick,.10+.30*flutter));
-      tx(u.lr,mix(.18-kick,.10-.30*flutter));
-      tx(u.lkl,mix(-(.48-.18*kick),-.20-.16*Math.max(0,flutter)));
-      tx(u.lkr,mix(-(.48+.18*kick),-.20-.16*Math.max(0,-flutter)));
-      if(!canonicalSwim)player.position.y+=Math.sin(ph*2)*mix(.035,.018);
+      const neutral=joint=>{if(joint)joint.rotation.set(0,0,0)};
+      for(const joint of [u.al,u.ar,u.ael,u.aer,u.ll,u.lr,u.lkl,u.lkr])
+       neutral(joint);
+      u.upperBody.rotation.set(0,0,0);
+      u.head.rotation.set(0,0,0);
+      player.rotation.x+=(0-player.rotation.x)*k;
+      player.rotation.z+=(0-player.rotation.z)*k;
       return;
     }
 

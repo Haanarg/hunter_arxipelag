@@ -155,7 +155,9 @@ function solveSwimArmIK(model,j,side,hand,poleSide=.18,poleUp=1,wristPitch=0,pro
  const shoulder=j['shoulder'+side],elbow=j['elbow'+side],wrist=j['wrist'+side];
  if(!shoulder||!elbow||!wrist)return;
  const sign=side==='R'?1:-1;
- model.updateMatrixWorld(true);
+ // getWorldQuaternion() del pare actualitza la seva cadena d'ancestres.
+ // No cal forçar aquí TOT l'arbre: es tracta d'una postura del tick,
+ // no d'un segon pas d'animació dins updateMatrixWorld().
  const upper=elbow.parent.position.length(),lower=wrist.parent.position.length();
  const flex=Math.max(10*DEG,Math.min(105*DEG,hand.flex*DEG));
  const d=Math.sqrt(upper*upper+lower*lower+2*upper*lower*Math.cos(flex));
