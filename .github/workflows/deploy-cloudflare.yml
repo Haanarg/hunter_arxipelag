@@ -24,7 +24,6 @@ on:
       - 'proves.html'
       - 'src/vehicles-externs-proves.mjs'
       - 'tests/human-game-runtime-v17.mjs'
-      - 'tests/human-game-swimming.mjs'
       - 'src/human-weapon-preview.mjs'
       - 'src/human-current-models.mjs'
       - 'src/human-model-catalog.mjs'
