@@ -741,9 +741,16 @@ window.addEventListener('hunter:proves-section',event=>{
  const wanted=event.detail==='characters'?lastHuman:event.detail==='vehicles'?lastVehicle:null;
  if(wanted&&currentType.id!==wanted.id)choose(wanted);
 });
+window.addEventListener('hunter:proves-swim',event=>{
+ const requested=event.detail;
+ const wanted=requested==='gait'?HUMAN_CATALOG[0]:HUMAN_SWIM_CATALOG.find(p=>p.swimming===requested);
+ if(wanted&&currentType.id!==wanted.id)choose(wanted);
+});
 addEventListener('resize',resizeRenderer);
 resizeRenderer();requestAnimationFrame(draw);
-const params=new URLSearchParams(location.search),requestedType=params.get('model')||params.get('vehicle');
+const params=new URLSearchParams(location.search);
+const directSwim=params.get('seccio')==='animations'&&['breast','crawl'].includes(params.get('prova'))?'human-swim-'+params.get('prova'):null;
+const requestedType=params.get('model')||params.get('vehicle')||directSwim;
 fetch('./assets/vehicle-candidates/manifest.json',{cache:'no-store'})
  .then(response=>response.ok?response.json():null)
  .then(manifest=>{savedManifest=manifest;return choose((()=>{const saved=ALL_CATALOG.find(c=>c.id===(resumedView?.type||requestedType));const kind=document.body.dataset.editorKind;return saved&&((kind==='characters')===!!saved.human)?saved:kind==='characters'?HUMAN_CATALOG[0]:CATALOG[0]})());})
