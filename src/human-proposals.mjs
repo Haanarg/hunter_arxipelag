@@ -200,21 +200,30 @@ export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
  // Positive Z is posterior. The cervical axis meets the occiput behind
  // the chin; sloped jaw rings leave a natural submandibular contour.
  const neck=joint(torso,'neck','Coll',[0,.480,.012-HUMAN_NECK_FOLLOW]);
- // A vertical cervical column: every cross-section shares the same Z centre.
- // The throat continues into the underside of the jaw, while the upper
- // rings are buried in the cranium. Do not bow the neck back toward the pivot.
- loft(neck,'Coll anatòmic i clatell',[[-.050,.090,.080,.002],[-.018,.078,.072,.002],[.012,.065,.063,.002],[.040,.063,.062,.002],[.068,.063,.062,.002],[.096,.061,.059,.002],[.124,.055,.055,.002],[.148,.040,.040,.002]],p.skin).userData.humanLandmark='neck';
- // Teixit de transició curt entre clatell i mandíbula: dissimula
- // la costura sense alterar el coll vertical, el cap ni els pivots.
- const neckBlend=loft(neck,'Transició coll-crani',
-   [[.005,.064,.074,.012],[.035,.082,.086,.014],[.070,.084,.092,.018],
-    [.104,.073,.084,.022],[.136,.056,.069,.020]],p.skin,Math.max(10,s.segments));
- neckBlend.userData.humanNeckBlend=true;
+ // Coll únic i més prim: cap capa superposada de transició.
+ // La base s'obre gradualment cap al trapezi, però la part cervical
+ // conserva una secció estreta i vertical. El final entra DINS el
+ // crani; l'encaix posterior es resol a la malla del mateix cap.
+ loft(neck,'Coll anatòmic i clatell',[
+   [-.050,.082,.071,.002],[-.018,.070,.063,.002],
+   [.012,.057,.055,.002],[.040,.052,.051,.002],
+   [.068,.052,.051,.002],[.096,.050,.049,.002],
+   [.124,.046,.045,.002],[.148,.034,.035,.002]
+ ],p.skin).userData.humanLandmark='neck';
  // Move the pivot forward, bringing the entire head, face and headwear with it.
  // Preserve the vertical cervical column and its connection beneath the jaw.
  const head=joint(neck,'head','Cap',[0,.095,.065-(HUMAN_HEAD_ADVANCE-HUMAN_NECK_FOLLOW)]);
  head.scale.set(s.head,.95,s.head);
- loft(head,'Mandíbula i crani',[[0,.032,.033,-.062,.046],[.018,.055,.056,-.041,.039],[.043,.075,.079,-.019,.031],[.081,.086,.095,.003,.017],[.128,.093,.104,.010],[.174,.094,.103,.012],[.216,.076,.082,.016],[.242,.047,.049,.015],[.252,.012,.015,.014]],p.skin,Math.max(10,s.segments)).userData.humanLandmark='skull';
+ // El clatell del crani baixa fins al coll estret, en lloc de deixar
+ // la part posterior de la mandíbula elevada sobre una protuberància.
+ // S'adapten només els anells INFERIORS; galtes, rostre i volta cranial
+ // mantenen la mida original. La cara posterior creix amb suavitat.
+ loft(head,'Mandíbula i crani',[
+   [0,.032,.033,-.062,.010],[.018,.058,.060,-.038,-.005],
+   [.043,.075,.088,-.014,-.008],[.081,.086,.091,.004,-.004],
+   [.128,.093,.104,.010],[.174,.094,.103,.012],
+   [.216,.076,.082,.016],[.242,.047,.049,.015],[.252,.012,.015,.014]
+ ],p.skin,Math.max(10,s.segments)).userData.humanLandmark='skull';
  // Closed five-vertex nose with outward winding (-Z is the face front).
  // The rear rim penetrates the cheek surface so the nose cannot float.
  // Keep FrontSide materials; the fix belongs to the mesh, not double-sided rendering.
