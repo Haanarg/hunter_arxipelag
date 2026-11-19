@@ -692,8 +692,8 @@ function orientHumanEquippedWeapon(model,weapon,mode,rig,j){
   target.copy(j.wristR.getWorldPosition(rig.wrist)).sub(j.elbowR.getWorldPosition(rig.elbow)).normalize();
  }else{
   target.set(mode==='run'&&long?-.28:0,
-   blade?1:tool?0:mode==='aim'?0:mode==='run'&&long?-.72:lowered?-.20:bazookaCarry?-.64:-1,
-   blade?0:tool?-1:mode==='aim'?-1:mode==='run'&&long?-.64:lowered?-.9797958971:bazookaCarry?-.7683749085:0)
+   blade?1:tool?-1:mode==='aim'?0:mode==='run'&&long?-.72:lowered?-.20:bazookaCarry?-.64:-1,
+   blade||tool?0:mode==='aim'?-1:mode==='run'&&long?-.64:lowered?-.9797958971:bazookaCarry?-.7683749085:0)
    .normalize().applyQuaternion(model.getWorldQuaternion(rig.modelQ));
  }
  weapon.parent.getWorldQuaternion(rig.parentQ);
