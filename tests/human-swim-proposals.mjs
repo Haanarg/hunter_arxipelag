@@ -78,5 +78,84 @@ for(const [kind,variants] of Object.entries(HUMAN_SWIM_PROPOSALS)){
   root.traverse(n=>{if(n.isMesh){n.geometry.dispose();if(Array.isArray(n.material))n.material.forEach(m=>m.dispose());else n.material.dispose()}});
  }
 }
+// Validacions específiques de les dues propostes refinades: els límits
+// s'apliquen a les articulacions reals i a les posicions en món dels canells.
+const jointMap=root=>{
+ const j={};root.traverse(n=>{if(n.userData?.humanMotionJoint)j[n.userData.humanMotionJoint]=n});
+ return j;
+};
+const point=(T,j,id)=>j[id].getWorldPosition(new T.Vector3());
+const rootB=createHumanProposal(THREE,'player','a',{visualOnly:true}),b=jointMap(rootB);
+const inspectB=time=>{poseHumanProposal(rootB,time,'swim-breast-3');rootB.updateWorldMatrix(true,true);return {
+  armL:point(THREE,b,'wristL'),armR:point(THREE,b,'wristR'),
+  elbow:point(THREE,b,'elbowR'),shoulder:point(THREE,b,'shoulderR'),
+  head:point(THREE,b,'head'),pelvis:point(THREE,b,'pelvis'),
+  kneeL:point(THREE,b,'kneeL'),kneeR:point(THREE,b,'kneeR'),
+  hipL:point(THREE,b,'hipL'),hipR:point(THREE,b,'hipR')
+}};
+const straight=inspectB(0),catchB=inspectB(.94),loadB=inspectB(1.52),glideB=inspectB(2.2);
+assert.equal(HUMAN_SWIM_PROPOSALS.breast[2].glideSeconds,1);
+assert(catchB.head.y>straight.head.y+.045,'Braça: el pit eleva el cap per respirar');
+assert(catchB.pelvis.y<straight.pelvis.y-.006,'Braça: els malucs cauen una mica en inspirar');
+assert(catchB.armL.distanceTo(catchB.armR)<.20,'Braça: les mans s’ajunten sota el pit');
+assert(catchB.elbow.y>catchB.armR.y+.12,'Braça: el colze es manté per sobre de la mà');
+assert(catchB.armR.z<catchB.shoulder.z,'Braça: la mà no retrocedeix de l’espatlla');
+assert(loadB.kneeL.distanceTo(loadB.kneeR)<loadB.hipL.distanceTo(loadB.hipR)*1.5,'Braça: genolls prop de l’amplada dels malucs');
+assert(b.ankleR.rotation.x>.2,'Braça: dorsiflexió del peu durant la càrrega');
+inspectB(2.2);
+assert(b.ankleR.rotation.x<-.85,'Braça: flexió plantar durant el lliscament');
+for(const t of [2.2,2.45,2.8,3.05,3.1999]){
+ const pose=sampleHumanSwimming('swim-breast-3',t);
+ assert(pose.glideActive&&pose.bodyRoll===0,'Braça: un segon sense rotació axial');
+ assert(Math.abs(pose.arm[0]-3.06)<1e-9&&Math.abs(pose.leg[1]+.02)<1e-9,'Braça: fletxa estable');
+ poseHumanProposal(rootB,t,'swim-breast-3');
+ for(const joint of ['shoulder','elbow','hip','knee','ankle']){
+  const L=b[joint+'L'].rotation,R=b[joint+'R'].rotation;
+  assert(Math.abs(L.x-R.x)<1e-10&&Math.abs(L.z+R.z)<1e-10,'Braça: simetria '+joint);
+ }
+}
+for(let i=0;i<321;i++){
+ const pose=sampleHumanSwimming('swim-breast-3',i*.01);
+ assert(pose.arm[1]>=-Math.PI/2-1e-8&&pose.arm[1]<=.001,'Braça: colze mai >90 graus');
+ assert(pose.bodyRoll===0,'Braça sense roll');
+}
+poseHumanProposal(rootB,0,'rest');
+
+const rootC=createHumanProposal(THREE,'player','a',{visualOnly:true}),c=jointMap(rootC);
+const rollMax=37*Math.PI/180,steps=720,kicks=[];
+for(let i=0;i<=steps;i++){
+ const time=HUMAN_SWIM_PROPOSALS.crawl[3].period*i/steps;
+ const pose=sampleHumanSwimming('swim-crawl-4',time);
+ poseHumanProposal(rootC,time,'swim-crawl-4');
+ assert(Math.abs(pose.bodyRoll)<=rollMax+1e-9,'Crol: roll dins de 37 graus');
+ assert(Math.abs(pose.bodyPitch+Math.PI/2)<1e-9,'Crol: tronc horitzontal');
+ assert(Math.abs(c.spine.rotation.y)<1e-9,'Crol: zona lumbar sense torsió');
+ for(const side of ['L','R']){
+  const leg=pose.legs[side];
+  assert(leg.knee>=-.70&&leg.knee<=0,'Crol: flexió de genoll per sota dels 40 graus');
+  assert(leg.ankle<-.85,'Crol: peu en flexió plantar');
+  assert(Math.abs(c['knee'+side].rotation.x-leg.knee)<1e-9);
+ }
+ assert(Math.abs(c.neck.rotation.x)<1e-9&&Math.abs(c.head.rotation.x)<1e-9,
+  'Crol: respiració no aixeca el cap');
+ kicks.push(pose.legs.R.hip);
+}
+let crossings=0;
+for(let i=1;i<kicks.length;i++)if((kicks[i-1]<0&&kicks[i]>=0)||(kicks[i-1]>0&&kicks[i]<=0))crossings++;
+assert.equal(crossings,6,'Crol: tres oscil·lacions per cama = sis batuts alterns');
+for(const phase of [.24,.79]){
+ const time=phase*HUMAN_SWIM_PROPOSALS.crawl[3].period;
+ poseHumanProposal(rootC,time,'swim-crawl-4');rootC.updateWorldMatrix(true,true);
+ assert(point(THREE,c,'elbowR').y>point(THREE,c,'wristR').y,
+  'Crol: colze més alt que la mà en agafada i recuperació');
+}
+const breathe=sampleHumanSwimming('swim-crawl-4',.69*HUMAN_SWIM_PROPOSALS.crawl[3].period);
+assert(breathe.breathing>.95&&breathe.headTurn<-.3,'Crol: respiració lateral dreta');
+const neutral=sampleHumanSwimming('swim-crawl-4',.92*HUMAN_SWIM_PROPOSALS.crawl[3].period);
+assert(neutral.breathing===0,'Crol: cara neutral abans de l’entrada');
+poseHumanProposal(rootC,0,'rest');
+assert(Math.abs(rootC.rotation.y)<1e-9&&Math.abs(rootC.rotation.x)<1e-9,'Restauració del rig després de nedar');
+console.log('PASS B3 simetria, braços, respiració, peu i lliscament d’1s; C4 37 graus, colze alt, 6 batudes, coll i keyframes');
+
 assert.equal(positions.size,8,'Les vuit propostes tenen paràmetres realment diferents');
 console.log('PASS 8 variants de natació, cicles, extremitats, visibilitat i retorn al rig original');
