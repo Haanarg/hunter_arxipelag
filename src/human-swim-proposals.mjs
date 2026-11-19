@@ -116,6 +116,14 @@ function sampleBreast3(phase,config){
 function sampleCrawl4(phase,config){
  const arms={R:samplePeriodicHumanTrack(C4_ARM,phase,{angularIndex:1}),
   L:samplePeriodicHumanTrack(C4_ARM,wrap(phase+.5),{angularIndex:1})};
+ // Petita rotació interna durant l'agafada i externa durant el recobrament.
+ // El canell prona l'avantbraç subaquàtic i es relaxa fora de l'aigua.
+ for(const [side,offset]of [['R',0],['L',.5]]){
+  const p=wrap(phase+offset);
+  const catchPower=bell(p,.11,.29,.53),recoverPower=bell(p,.60,.78,.95);
+  arms[side].push(.10*catchPower-.16*recoverPower,
+   -.20*catchPower+.045*recoverPower);
+ }
  const legs={};
  for(const [i,side]of ['L','R'].entries()){
   // 3 oscil·lacions/cama x 2 cames = 6 batuts alterns per braçada doble.
@@ -221,7 +229,7 @@ export function poseHumanSwimming(model,joints,weapon,time,mode){
    const sign=i?1:-1;
    set('shoulder'+side,p.arm[0],sign*p.arm[3],sign*p.arm[2]);
    set('elbow'+side,p.arm[1],0,-sign*p.arm[4]);
-   set('wrist'+side,-.095*p.arm[1],0,sign*.018);
+   set('wrist'+side,-.095*p.arm[1],sign*(.22*Math.max(0,p.arm[2])/.43-.095*p.arm[4]),sign*.018);
    set('hip'+side,p.leg[0],0,sign*p.leg[2]);
    set('knee'+side,p.leg[1]);
    // Martell durant la càrrega / puntada; punta i cames juntes al lliscament.
@@ -236,9 +244,9 @@ export function poseHumanSwimming(model,joints,weapon,time,mode){
   set('head',0,-.55*p.bodyRoll+.55*p.headTurn,0);
   for(const [i,side]of ['L','R'].entries()){
    const sign=i?1:-1,a=p.arms[side],leg=p.legs[side];
-   set('shoulder'+side,a[0],0,sign*a[2]);
+   set('shoulder'+side,a[0],sign*a[4],sign*a[2]);
    set('elbow'+side,a[1]);
-   set('wrist'+side,a[3],0,sign*.015);
+   set('wrist'+side,a[3],sign*a[5],sign*.015);
    set('hip'+side,leg.hip,0,sign*.02);
    set('knee'+side,leg.knee);
    set('ankle'+side,leg.ankle,sign*leg.toeIn,0);
