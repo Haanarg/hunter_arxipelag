@@ -3,7 +3,7 @@
 - [x] `prepareGameWeaponPreview()` carrega `src/characters.js` i `src/bolt-cutters.js` abans de crear el V18 al laboratori; sense iniciar la partida ni tocar el motor source.
 - [x] La preparació només s’executa al laboratori per al protagonista; els errors es mostren visiblement.
 - [x] Regressió: `tests/human-weapon-editor-init.mjs` reprodueix l’error sense fàbriques i verifica totes 7 armes reals a les dues variants.
-- [ ] Validar CI de GitHub i desplegament de v0.6.251 a Cloudflare.
+- [x] GitHub Actions 44634441043: PASS càrrega autònoma de les 7 armes per a HUMANS V18 A/B, paritat source/bundle, compilació i Cloudflare v0.6.251 verificada; assets estables (commit 85a3423d06c66d7418900939d3466b12ba3f82fc). Pendent comprovació visual de l'editor al navegador.
 
 **2026-11-19 · Auditoria source/bundle i publicació (v0.6.250):**
 - [x] Dues partides Node realment executades en processos separats (source/bundle) amb la mateixa llavor: paritat estricta dels valors de V18, caminar, B3, C4 i ombres; malles 81, casters 11.
