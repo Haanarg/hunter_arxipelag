@@ -573,9 +573,14 @@ export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
    const m=new T.Mesh(geo,material);m.name=g.name+' · '+names.slice(0,3).join(', ');m.userData.batchedParts=names;m.castShadow=m.receiveShadow=true;g.add(m);
   }
  };merge(root);
- root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
- root.scale.setScalar(p.height/height);
- root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:18},humanHeight:p.height,labAssemblies:true};
+ root.updateMatrixWorld(true);
+ const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
+ // No imposem una alçada de 2 m ni reduïm l'objecte automàticament.
+ // L'alçada original és una mesura de la geometria i es pot editar
+ // explícitament a l'editor. Escala 1 en tota la jerarquia anatòmica.
+ if(!(height>0))throw Error('Geometria humana sense alçada: '+role);
+ root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:18},
+  humanHeight:height,humanNativeHeight:height,labAssemblies:true};
  if(role==='player'&&!visualOnly)setHumanPreviewWeapon(T,root,'pistol');
  return root;
 }
