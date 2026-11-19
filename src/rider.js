@@ -1,6 +1,6 @@
 // Pilot visual per vehicles oberts. La física del vehicle continua al nucli.
 window.HUNTER_RIDER=Object.freeze({
-  create(THREE,{scene,box,material,scales,heightAt,shadows}){
+  create(THREE,{scene,box,material,scales,heightAt,shadows,createPistol=null}){
     const g=new THREE.Group(),torso=new THREE.Group();g.add(torso);
     // El rider és el mateix protagonista: fa servir el cap D i el coll curt,
     // sense canviar cap seient, escala del vehicle ni pivot de les extremitats.
@@ -32,7 +32,9 @@ window.HUNTER_RIDER=Object.freeze({
     // Pistola visual pròpia del rider; no reempram la del model ocult a peu.
     // Mateixa geometria i retrocés que l'arma de la resta del joc.
     const pistol=new THREE.Group();pistol.scale.setScalar(.92);g.add(pistol);
-    const pistolParts=createPlayerPistol(THREE,pistol);
+    // El laboratori injecta una pistola neutra, sense carregar els
+    // scripts de combat; el joc conserva la fàbrica d'arma real.
+    const pistolParts=(createPistol||createPlayerPistol)(THREE,pistol);
     pistol.visible=false;
     g.userData={torso,limbs,boots,head:rig.head,neck:rig.neck,headVariant:rig.headVariant,
       mats:rig.mats,profile:rig.profile,motion:0,shotTime:0,shotAge:10,shotBlend:0,
