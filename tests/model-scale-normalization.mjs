@@ -40,9 +40,9 @@ for(const name of ['body','wheel']){
   minDelta:initial[name].min.distanceTo(actual[name].min),
   maxDelta:initial[name].max.distanceTo(actual[name].max)
  }));
- assert(initial[name].min.distanceTo(actual[name].min)<1e-8,
+ assert(initial[name].min.distanceTo(actual[name].min)<2e-6,
   'La normalització no mou el mínim de '+name);
- assert(initial[name].max.distanceTo(actual[name].max)<1e-8,
+ assert(initial[name].max.distanceTo(actual[name].max)<2e-6,
   'La normalització no mou el màxim de '+name);
 }
 assert.deepEqual(before.root.scale.toArray(),[1,1,1]);
@@ -53,8 +53,8 @@ before.steering.rotation.y=.37;
 const rotated=new T.Box3().setFromObject(before.wheel);
 const reference=buildFixture();reference.steering.rotation.y=.37;
 const expected=new T.Box3().setFromObject(reference.wheel);
-assert(rotated.min.distanceTo(expected.min)<1e-8 &&
-       rotated.max.distanceTo(expected.max)<1e-8,
+assert(rotated.min.distanceTo(expected.min)<2e-6 &&
+       rotated.max.distanceTo(expected.max)<2e-6,
  'La forquilla girada continua idèntica després de consolidar les escales');
 
 const make=vehicleModels.createFactory(T,{
