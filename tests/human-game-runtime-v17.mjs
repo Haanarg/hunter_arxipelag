@@ -335,20 +335,34 @@ assert.equal(rider.userData.boots.length,2);
   const pelvisBottom=new T.Box3();
   for(const piece of riderJoints.pelvis.children)
    if(piece.isMesh)pelvisBottom.expandByObject(piece);
-  assert(Math.abs(pelvisBottom.min.y-topOfSaddle-.018)<.005,
-   'El cul real del ciclista ha de quedar 1,8 cm per damunt del selló');
   assert(Math.abs(point('pelvis').y-
-   (topOfSaddle+driver.object.userData.twoWheelButtBelowHip+.018))<.005,
-   'Els malucs i el tors s’alcen junts sense modificar l’anatomia');
+   (topOfSaddle+driver.object.userData.twoWheelButtBelowHip+.018-.22))<.005,
+   'En aturar-se, el ciclista baixa lleugerament la pelvis fora del selló');
+  const bentKnee=(side)=>{
+   const hip=point('hip'+side),knee=point('knee'+side),ankle=point('ankle'+side);
+   const a=hip.distanceTo(knee),b=knee.distanceTo(ankle),c=hip.distanceTo(ankle);
+   return Math.acos(Math.max(-1,Math.min(1,(a*a+b*b-c*c)/(2*a*b))))*180/Math.PI;
+  };
+  assert(bentKnee('L')<150&&bentKnee('R')<150,
+   'El ciclista aturat no queda amb les cames hiperesteses');
+  assert(Math.abs(point('ankleL').y-.14)<.04&&Math.abs(point('ankleR').y-.14)<.04,
+   'Tots dos peus del ciclista arriben a terra');
   inspectPose('bike-stopped');
   const stopped=boneMeasures();
   stopped.forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
    'Ni les cuixes ni els panxells no canvien de llargada entre moto i bici'));
+  for(let n=0;n<45;n++)driver.update({t:'bici',o:bici,v:7,pedalPhase:n*.18},1/60);
+  pelvisBottom.makeEmpty();
+  for(const piece of riderJoints.pelvis.children)
+   if(piece.isMesh)pelvisBottom.expandByObject(piece);
+  assert(Math.abs(pelvisBottom.min.y-topOfSaddle-.018)<.006,
+   'Quan pedala, el cul torna a situar-se just per sobre del selló');
   for(const phase of [0,Math.PI/3,2*Math.PI/3,Math.PI,Math.PI*1.6]){
    driver.update({t:'bici',o:bici,v:7,pedalPhase:phase},1/60);
    boneMeasures().forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
     'Les cames i els braços han de conservar la longitud mentre pedala'));
   }
+  inspectPose('bike-pedaling');
   driver.update({...motorcycle,v:8},1/60);
   inspectPose('moto-moving-early');
   boneMeasures().forEach((v,i)=>assert(Math.abs(v-motoMeasures[i])<.0001,
