@@ -120,6 +120,8 @@ function prepareLabRuntimeModel(model){
 async function createCurrentVehicle(type){
  return prepareLabRuntimeModel(makeOriginal(type,{color:0x4b9fd1}));
 }
+// Una sola geometria de referència, compartida entre els visors (clons independents).
+const playerReferenceTemplate=createLabPlayerReference(THREE);
 const slots=[];
 for(let i=0;i<5;i++){
  const outer=document.createElement('article');outer.className='panel';
@@ -151,7 +153,7 @@ for(let i=0;i<5;i++){
  swimWater.rotation.x=-Math.PI/2;swimWater.position.y=.56;swimWater.visible=false;swimWater.renderOrder=2;scene.add(swimWater);
  const lines=new THREE.GridHelper(230,230,0xacc3ab,0x819788);
  lines.position.y=.015;lines.material.transparent=true;lines.material.opacity=.24;scene.add(lines);
- const person=createLabPlayerReference(THREE);scene.add(person);
+ const person=playerReferenceTemplate.clone(true);scene.add(person);
  const perspective=new THREE.PerspectiveCamera(36,1,.05,1300),ortho=new THREE.OrthographicCamera(-2,2,2,-2,.05,1300);
  const guide=document.createElement('canvas');guide.className='human-guide';guide.hidden=true;outer.append(guide);
  const versionTag=document.createElement('span');versionTag.className='human-version-tag';versionTag.hidden=true;label.append(versionTag);
@@ -443,7 +445,7 @@ async function choose(config){
  labTankKeys.clear();labTurretSwitch=false;labTurretYaw=0;labTurretPitch=0;
  syncLabTurretButton();
  for(const slot of slots){
-   slot.outer.hidden=slots.indexOf(slot)>=(config.human?config.options.length:config.twoWheelAudit?3:soloStudy?1:config.options.length+1);
+   slot.outer.hidden=config.human?(slots.indexOf(slot)===0||slots.indexOf(slot)>config.options.length):slots.indexOf(slot)>=(config.twoWheelAudit?3:soloStudy?1:config.options.length+1);
    dropPrevious(slot);
    slot.kind=config.kind;
    slot.camera=(config.human||config.twoWheelAudit)?slot.ortho:slot.perspective;
@@ -452,11 +454,11 @@ async function choose(config){
    slot.ground.material.color.setHex(marine?0x285f65:config.kind==='aire'?0x6a7b67:0x69735e);
    slot.ground.material.roughness=marine?.43:1;
    slot.ground.material.needsUpdate=true;
-   slot.status.textContent='Carregant…';slot.bold.textContent=config.human?'Model HUMANS V18':slots.indexOf(slot)?'Alternativa '+slots.indexOf(slot):'Actual · '+config.name;
+   slot.status.textContent='Carregant…';slot.bold.textContent=config.human?'HUMANS V18 · '+(slots.indexOf(slot)===0?'base no visible':'variant '+slots.indexOf(slot)):slots.indexOf(slot)?'Alternativa '+slots.indexOf(slot):'Actual · '+config.name;
    const isSource=slots.indexOf(slot)===0;
    const fileLabel=slot.upload.parentNode;
    if(fileLabel&&fileLabel.tagName==='LABEL')fileLabel.firstChild.textContent='Importa GLB';
-   slot.sub.textContent=config.human?'Preparant model nou…':slots.indexOf(slot)?'Preparant candidat…':'Model real del joc';
+   slot.sub.textContent=config.human?'Preparant model HUMANS V18…':slots.indexOf(slot)?'Preparant candidat…':'Model real del joc';
    slot.source.hidden=true;
  }
  if(config.twoWheelAudit){
@@ -494,30 +496,10 @@ async function choose(config){
    }
    return;
  }
- // Els personatges només mostren les variants noves, no el model antic.
- if(config.human){
-  try{
-   const used=new Set();
-   await Promise.all(config.options.map((entry,i)=>loadExternal(slots[i],entry,used,token)));
-   if(token!==generation)return;
-   if(!slots[0].model)throw Error('No s’ha carregat el primer model HUMANS V18');
-   originalDims=dimsOf(slots[0].model);
-   comparisonDims.copy(originalDims);
-   for(const slot of slots)if(slot.model&&!slot.outer.hidden)comparisonDims.max(dimsOf(slot.model));
-   for(const slot of slots)slot.person.position.x=originalDims.x*.62+1;
-   defaultLookY=Math.max(.55,comparisonDims.y*.43);
-   lookY=defaultLookY;yaw=Math.PI;elev=0;zoom=1;panScreenX=0;
-   if(resumedView?.type===config.id){({yaw,elev,zoom,lookY,panScreenX}=resumedView);resumedView=null}
-   updateCamera();
-  }catch(error){
-   if(token!==generation)return;
-   console.error('Model HUMANS V18 no disponible',config.id,error);
-   slots[0].status.textContent='Error carregant el model nou: '+error.message;
-  }
-  return;
- }
+ // El visor 0 és un model nou HUMANS V18 emprat només per mesurar
+ // l'escala; no es renderitza. Les variants aprovades ocupen 1..N.
  try{
-   const model=config.base?createProceduralModel(config.base.variant):await createCurrentVehicle(config.id);
+   const model=config.human?createHumanProposal(THREE,config.human,'a',{visualOnly:true}):config.base?createProceduralModel(config.base.variant):await createCurrentVehicle(config.id);
    // No reintroduir models antics quan es canvia de pestanya durant la càrrega.
    if(token!==generation)return;
    setModel(slots[0],model,true,[],soloStudy);
@@ -526,7 +508,7 @@ async function choose(config){
    originalDims=dimsOf(slots[0].model);
    slots[0].status.textContent=metrics(slots[0].model);
    slots[0].person.position.x=originalDims.x*.62+1.0;
-   slots[0].sub.textContent=config.human?'Model actual del joc · postura neutra':btrStudy?
+   slots[0].sub.textContent=config.human?'Base HUMANS V18 · només dimensions':btrStudy?
      'Casc i torreta 3B, defenses i visors · SIpriv · CC BY 4.0':
      t90Study?'Model real del joc · torreta, canó i erugues animables':
      config.id==='heli_combat'?'Mil Mi-24 · D definitiu · cinc pales principals':
@@ -761,7 +743,7 @@ document.querySelector('#humanSwimPhase').addEventListener('input',e=>{
 });
 document.querySelector('#humanWeapon').addEventListener('change',e=>{
  if(currentType.human!=='player')return;
- for(const slot of slots){
+ for(const slot of slots.slice(1)){
   if(!slot.model)continue;
   if(setHumanPreviewWeapon(THREE,slot.model,e.target.value)){
    const mode=document.querySelector('#humanPose').value;
