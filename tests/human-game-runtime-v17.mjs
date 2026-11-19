@@ -264,7 +264,9 @@ assert.equal(rider.userData.boots.length,2);
   assert.deepEqual(anatomicalBody.scale.toArray(),[1,1,1],
    'Malles i pivots tenen la mida del jugador a peu incorporada, no un factor d’escala ocult');
   const footAvatar=playerModel.create(T,{articulated:true});
-  footAvatar.scale.setScalar(2/3);
+  // La pell té escala nativa 1.6 amb l'arrel a 1; l'escala antiga
+  // 2/3 només pertany al grup ocult de controls i armes.
+  assert.equal(footAvatar.scale.x,1);
   footAvatar.updateMatrixWorld(true,true);
   const footRig=footAvatar.userData.humanGameCanonicalRig;
   // Compare ONLY the identical anatomical meshes, not optional hidden
