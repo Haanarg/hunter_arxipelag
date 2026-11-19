@@ -539,13 +539,22 @@ function updateNativeCoopFrame(dt){
      riderDistance=riderFocused?0:Math.hypot(riderTarget.x-P.x,riderTarget.z-P.z);
    model.userData.nativeRider.update(remoteVehicle,dt,
      remoteSeat>=0?remoteSeat:null,riderDistance);
-   const speed=Math.hypot(model.position.x-oldX,model.position.z-oldZ)/Math.max(.001,dt);
+   const dx=model.position.x-oldX,dz=model.position.z-oldZ;
+   const speed=Math.hypot(dx,dz)/Math.max(.001,dt);
+   // No inferir sempre "endavant" de la velocitat remota: un convidat
+   // que només neda lateralment ha de conservar l'animació anterior.
+   // Els eixos són els mateixos que player-simulation.moveOnFoot().
+   const heading=model.rotation.y,invDt=1/Math.max(.001,dt);
+   const swimForward=(-Math.sin(heading)*dx-Math.cos(heading)*dz)*invDt;
+   const swimSide=(Math.cos(heading)*dx-Math.sin(heading)*dz)*invDt;
    const remoteBag=s.remoteLoadouts?.get(other.id),u=model.userData,
      weapon=u.nativeShotRemaining>0?u.nativeShotWeapon:remoteBag?.weapon||'pistol';
    window.HUNTER_CHARACTERS.animatePlayer(model,{
-     forward:Math.min(1,speed/6),dt,swimming:other.swimming,
+     forward:other.swimming?Math.max(-1,Math.min(1,swimForward/5)):Math.min(1,speed/6),
+     strafe:other.swimming?Math.max(-1,Math.min(1,swimSide/4.5)):0,
+     dt,swimming:other.swimming,
      crouching:!!other.crouched,inVehicle:!!remoteVehicle,
-     ammo:remoteBag?.bullets??1,running:speed>7,
+     ammo:remoteBag?.bullets??1,running:other.swimming?swimForward>6.8:speed>7,
      bazookaEquipped:weapon==='bazooka',sniperEquipped:weapon==='sniper',
      assaultRifleEquipped:weapon==='assault',grenadeEquipped:weapon==='grenade'
    });
