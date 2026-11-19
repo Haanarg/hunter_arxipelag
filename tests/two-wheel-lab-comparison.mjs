@@ -36,6 +36,7 @@ for(const scenario of ['stopped','moving','return']){
  const speed=scenario==='moving'?7:0;
  for(let t=0;t<70;t++)lab.step(1/60,speed);
  const data=lab.metrics();
+ console.log('EDITOR_TWO_WHEEL_LENGTHS',scenario,JSON.stringify(data));
  assert(Math.abs(data.footThigh-data.bicycleThigh)<.001,
   'Cuixa del ciclista idèntica a la del jugador a peu en '+scenario);
  assert(Math.abs(data.footThigh-data.motorcycleThigh)<.001,
