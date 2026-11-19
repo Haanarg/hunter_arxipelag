@@ -11,6 +11,7 @@ import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs?rev=vivi
 import {createStreetfighter25,STREETFIGHTER_25_META} from './streetfighter-25-geometry.mjs';
 import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?rev=mi24-d-approved-1';
 import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.mjs?v=0.6.81';
+import {bakeFixedModelScales} from './model-scale-normalization.mjs';
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 export const vehicleModels=Object.freeze({
   ...vehicleSpecs,
@@ -853,7 +854,18 @@ export const vehicleModels=Object.freeze({
           batchStats.before++;batchStats.after++;
         }
       }
+      // TOTES les escales fixes del vehicle (VS, ajusts històrics del
+      // model i peces primitives) queden consolidades en malles i pivots
+      // abans d'instanciar-lo. Les rodes, els manillars, les rampes i les
+      // referències userData conserven coordenades mundials idèntiques.
+      // VS continua disponible per la física i la càmera, no al renderer.
       g.scale.setScalar(VS[t]);
+      const baked=bakeFixedModelScales(g);
+      if(baked.remainingNonUniform>0)
+       g.userData.modelNonUniformScaleCount=baked.remainingNonUniform;
+      if(Math.abs(g.scale.x-1)>1e-10)
+       throw Error('Vehicle amb escala global pendent: '+t);
+      g.userData.modelScaleNormalized=true;
       if(resources&&cacheKey){
         resources.retainModel(g);templates.set(cacheKey,g);
         return resources.cloneModel(g);
