@@ -75,11 +75,12 @@ export const vehicleModels=Object.freeze({
   },
   createFactory(THREE,{box,material,shadows,resources=null,civilianCar=null,gaz:gazFactory=null,truck:truckFactory=null,batching=null}){
     const VS=this.scales,templates=new Map(),distant=createDistantVehicleFactory(THREE,resources);
-    // Dimensions fixades contra l'avatar canònic a peu (3,2 unitats).
-    // Bici: roda de 1,31 m visuals (41% de la persona);
-    // moto: roda de 1,42 m visuals (44% de la persona).
-    // Els hitboxes actuals ja cobreixen tots dos models augmentats.
-    const BICYCLE_VISUAL_SCALE=.88,MOTORCYCLE_VISUAL_SCALE=1.70;
+    // Proporcions reals respecte al protagonista de 2 m (3,2 unitats):
+    // bicicleta 700C: pneumàtic exterior ~0,69 m (ETRTO 622 + coberta);
+    // streetfighter: distància entre eixos ~1,45 m, selló ~0,81 m.
+    // En aquest motor 1 metre físic correspon a 1,6 unitats visuals.
+    // No augmentar el pilot ni compensar-ho estirant el rig.
+    const BICYCLE_VISUAL_SCALE=.74,MOTORCYCLE_VISUAL_SCALE=1.24;
     const markAnchor=(parent,name,x,y,z)=>{
       const anchor=new THREE.Object3D();anchor.name=name;
       anchor.position.set(x,y,z);parent.add(anchor);return anchor;
@@ -241,8 +242,8 @@ export const vehicleModels=Object.freeze({
         // Malla precompilada; sense GLB ni meshoptimizer en temps de joc.
         const color=appearance.color??0x228fef;
         const bike=createStreetfighter25(THREE,{color,material});
-        // L'escala anterior (1,375) deixava el vehicle massa petit
-        // per a l'avatar real de 3,2 unitats.
+        // 1.24: wheelbase 1,563 × 1,24 × 1,2 / 1,6 = 1,45 m reals.
+        // L'antic factor 1,70 l'allargava a 1,99 m i elevava el selló.
         const visualScale=MOTORCYCLE_VISUAL_SCALE;
         bike.scale.setScalar(visualScale);
         g.add(bike);
@@ -256,11 +257,11 @@ export const vehicleModels=Object.freeze({
         // El seient i els reposapeus són locals del mateix xassís 3D.
         const steer=bike.userData.steeringPivots[0];
         g.userData.twoWheelAnchors={
-          seat:markAnchor(bike,'Moto · centre del seient',0,.99,.26),
+          seat:markAnchor(bike,'Moto · centre del seient',0,.88,.54),
           gripL:markAnchor(steer,'Moto · puny esquerre',-.36,.015,-.075),
           gripR:markAnchor(steer,'Moto · puny dret',.36,.015,-.075),
-          pedalL:markAnchor(bike,'Moto · reposapeu esquerre',-.34,.42,.16),
-          pedalR:markAnchor(bike,'Moto · reposapeu dret',.34,.42,.16)
+          pedalL:markAnchor(bike,'Moto · reposapeu esquerre',-.24,.42,.16),
+          pedalR:markAnchor(bike,'Moto · reposapeu dret',.24,.42,.16)
         };
         g.userData.motorcycleModel='naked-streetfighter-25';
         g.userData.motorcycleColor=color;
@@ -272,7 +273,7 @@ export const vehicleModels=Object.freeze({
         // rodes primes i unions compactes. Conserva els pivots, radi de
         // rodament, animacio de les rodes i pedalier originals.
         const r=.62,L=1.22,col=appearance.color??0x3f9b9d;
-        const rear=[0,r,L],bb=[0,.90,0],seatTop=[0,1.67,.34],
+        const rear=[0,r,L],bb=[0,.62,0],seatTop=[0,1.67,.34],
               headTop=[0,1.73,-.85],headBottom=[0,1.48,-.94];
         const tube=(a,b,radius=.042)=>rod(g,a,b,radius,col,'paint');
         // El triangle principal es troba al pla central, no duplicat
@@ -284,7 +285,7 @@ export const vehicleModels=Object.freeze({
         // Tirants de darrere curts, units a unes punteres petites.
         for(const x of[-.11,.11]){
           tube([x,r,L],[x*.35,1.60,.36],.034);
-          tube([x,r,L],[x*.4,.90,.02],.041);
+          tube([x,r,L],[x*.4,.62,.02],.041);
           round(g,.066,.052,metal,x,r,L,'x','metal');
         }
         const steering=new THREE.Group();
@@ -343,7 +344,7 @@ export const vehicleModels=Object.freeze({
         const gripR=markAnchor(steering,'Bicicleta · puny dret',.42,.29,.44);
         g.userData.twoWheelAnchors={seat:seatAnchor,gripL,gripR};
         rod(g,[0,1.65,.34],[0,1.80,.33],.035,metal);
-        round(g,.105,.14,metal,0,.90,0,'x','metal');
+        round(g,.105,.14,metal,0,.62,0,'x','metal');
         // Els pedals animats continuen definits al bloc de pedalier comu.
         g.userData.bicycleModel='road-frame-v2';
       }
@@ -784,23 +785,22 @@ export const vehicleModels=Object.freeze({
         else {g.userData.ka60Model=KA60_RUNTIME_ID;g.userData.ka60Contact=g.userData.aircraftContact;}
       }
       if(t==='bici'){
-        const crank=new THREE.Group();crank.position.set(0,.90,0);
+        const crank=new THREE.Group();crank.position.set(0,.62,0);
         // Eix del pedalier: uneix les dues bieles i gira amb els pedals.
-        rod(crank,[-.3,0,0],[.3,0,0],.058,metal,'metal');
+        rod(crank,[-.15,0,0],[.15,0,0],.058,metal,'metal');
         for(const side of[-1,1]){
-          rod(crank,[side*.3,0,0],[side*.3,0,side*.22],.045,metal);
-          box(crank,.26,.08,.18,rubber,side*.4,0,side*.22,'rubber');
+          rod(crank,[side*.15,0,0],[side*.15,0,side*.30],.045,metal);
+          box(crank,.20,.06,.15,rubber,side*.24,0,side*.30,'rubber');
         }
         g.add(crank);g.userData.crank=crank;
         g.userData.twoWheelAnchors.pedalL=
-          markAnchor(crank,'Bicicleta · pedal esquerre',-.40,0,-.22);
+          markAnchor(crank,'Bicicleta · pedal esquerre',-.24,0,-.30);
         g.userData.twoWheelAnchors.pedalR=
-          markAnchor(crank,'Bicicleta · pedal dret',.40,0,.22);
+          markAnchor(crank,'Bicicleta · pedal dret',.24,0,.30);
       }
       if(t==='bici'){
-        // Augment visual coherent amb el protagonista a peu.
-        // Sense canviar la física ni les caixes de col·lisió, que ja
-        // eren més grans que la carrosseria representada.
+        // 0,74: diàmetre de la roda ~0,688 m reals per al pilot de 2 m.
+        // La col·lisió de la bicicleta manté marge per a la nova roda.
         const visual=new THREE.Group();
         for(const child of [...g.children])visual.add(child);
         visual.scale.setScalar(BICYCLE_VISUAL_SCALE);
