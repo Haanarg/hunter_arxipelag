@@ -70,6 +70,8 @@ jobs:
         run: node tests/account-submenus.mjs
       - name: Validar normalització de les escales estàtiques dels vehicles
         run: node tests/model-scale-normalization.mjs
+      - name: Validar comparador V18 peu, bicicleta i moto
+        run: node tests/two-wheel-lab-comparison.mjs
       - name: Validar HUMANS V17 al joc i als conductors
         run: node tests/human-game-runtime-v17.mjs
       - name: Regenerar el runtime a partir dels fitxers font validats
