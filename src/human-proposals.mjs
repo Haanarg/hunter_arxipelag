@@ -1,7 +1,7 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs?rev=humans-v5';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {createGameWeaponPreview} from './human-weapon-preview.mjs';
-import {isHumanSwimmingMode,poseHumanSwimming,restoreHumanSwimming} from './human-swim-proposals.mjs?rev=swim-lab-20261119-3';
+import {isHumanSwimmingMode,poseHumanSwimming,restoreHumanSwimming} from './human-swim-proposals.mjs?rev=swim-ik-20261119-4';
 export const HUMAN_VERSION='humans-v18';
 // V18 general only: elaborate classical officer moustache and a split,
 // knee-length dress coat. The joints, weapon mounts and gait are unchanged.

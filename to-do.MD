@@ -1,3 +1,11 @@
+**2026-11-19 · B3/C4: cinemàtica revisada per a proves (versió posterior a la de 37°):**
+- [x] B3: trajectòria de mans en espai 3D mitjançant IK de dues barres, simetria perfecta, colzes dirigits cap enfora al llarg de l'obertura, tracció subaquàtica i recobrament cap endavant sense dur les mans darrere de les espatlles. Colzes amb 20°–89° de flexió sense inversions.
+- [x] B3: puntada més ampla i vigorosa; flexió més gran de genolls, abducció de maluc graduada, puntada circular cap enfora/enrere i turmells passant del martell a la punta. Separació màxima mesurada dels genolls ~0,58 m. Cicle 3,20 s i lliscament 1,00 s.
+- [x] C4: cinc fases explícites d'IK [entrada, agafada EVF, tirada, empenta, recobrament aeri], objectius 3D de canell, colze amb una sola frontissa (sense torsió) i límits 10°–100°; no creuar la línia sagital (mínim marge corporal mesurat > 0,11 m). Canell amb pitch màxim < 15°.
+- [x] C4: roll longitudinal ±40°, sis batuts i respiració lateral de coll conservats. Pol del colze projectat segons la vertical global (també durant el roll); el colze queda per sobre del canell durant EVF i en el recobrament, evitant els angles invertits de la versió anterior.
+- [x] Proves geomètriques detallades de la malla i dels pivots reals, incloent 120 fps, màxims de quaternions, angles exactes als keyframes i absència d'hiperextensió; la resta de variants B1/B2/B4 i C1/C2/C3 no canvien.
+- [ ] Confirmar el resultat visual real en navegadors (ordinador/mòbil) i eventual selecció per al joc. El joc no utilitza aquestes IK del laboratori.
+
 **2026-11-19 · Revisió biomecànica de natació (B3 i C4):**
 - [x] **B3 braça seleccionada:** moviment simultani i simètric, sense cap roll axial; els colzes no superen els 90° de flexió. Mans convergents sota el pit i sempre davant de la línia de les espatlles; colzes més alts que els canells en agafada i estrebada.
 - [x] Ondulació sagital moderada i respiració amb elevació del tòrax i descens lleu dels malucs; coll sense hiperextensió. Puntada estreta, genolls prop de l'amplada dels malucs, peus en martell i amb dits cap enfora durant la càrrega, flexió plantar al final.
