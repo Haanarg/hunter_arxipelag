@@ -330,6 +330,10 @@ assert.equal(rider.userData.boots.length,2);
    'Moto aturada: maluc a l’alçada de suport calculada a partir de les cames a peu');
   const motoMeasures=boneMeasures();
   assert(motoMeasures.every(n=>n>.4&&n<1),'Longituds anatòmiques del pilot');
+  assert(Math.abs(driver.object.userData.twoWheelCanonicalLegLengths.thigh-
+    motoMeasures[0])<.001,'L’IK usa la distància real del maluc al genoll, no la posició local zero');
+  assert(Math.abs(driver.object.userData.twoWheelCanonicalLegLengths.shin-
+    motoMeasures[1])<.001,'L’IK usa la distància real del genoll al turmell, no la posició local zero');
   assert(driver.object.userData.riderDetailNodes.every(node=>
    node===driver.object.userData.pistol||node.visible===false),
    'Cap pilot antic ni cames extensibles poden aparèixer damunt de la moto');
@@ -446,8 +450,8 @@ assert.equal(rider.userData.boots.length,2);
   inspectPose('moto-stopped-final');
   const stoppedFootY=(point('ankleL').y+point('ankleR').y)/2,
     stoppedSpread=point('ankleR').x-point('ankleL').x;
-  assert(stoppedSpread>ridingSpread+.025,
-   'En aturar-se, els peus s’obren lleugerament a cada costat de la moto');
+  assert(stoppedSpread<ridingSpread+.02,
+   'En aturar-se, les cames baixen sense obrir-se exageradament');
   assert(stoppedFootY<.25,'La moto aturada baixa tots dos peus fins al terra');
   assert(stoppedFootY<ridingFootY-.25,
    'Cal veure la transició de baixada dels peus quan la moto frena');
