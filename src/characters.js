@@ -502,6 +502,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     player.rotation.order='YZX';
     u.swimChest=new THREE.Vector3();
     u.swimHead=new THREE.Vector3();
+    u.gameSwimSeconds=0;u.gameSwimBlend=0;u.gameSwimActive=false;
     // Fusionam peces rígides germanes sense tocar les articulacions,
     // els pivots de les armes ni les malles referenciades per l'animació.
     u.batchStats=window.HUNTER_PLAYER_BATCH.optimize(THREE,player);
@@ -511,12 +512,23 @@ window.HUNTER_CHARACTERS=Object.freeze({
   // just sobre l'onada, el pit queda parcialment submergit i els peus
   // més profunds. No hem de situar tot el tors per damunt de l'aigua.
   swimVisualLift(player,surface,physicalY){
-    const crawl=Math.max(0,Math.min(1,player.userData.crawlBlend||0));
-    // Fora de l'aigua no s'aplica mai la flotació visual del crol.
+    const u=player.userData,crawl=Math.max(0,Math.min(1,u.crawlBlend||0));
+    const canonical=u.humanGameCanonicalJoints;
+    // Both B3 breaststroke and C4 crawl now use a horizontal visual rig.
+    // Anchor the exact editor head/shoulders at the waterline, without
+    // changing the authoritative physical position or ground collisions.
+    if(canonical&&(u.gameSwimBlend||0)>.001&&physicalY<surface-.6){
+      player.updateMatrixWorld(true);
+      canonical.head.getWorldPosition(u.swimHead);
+      canonical.shoulderR.getWorldPosition(u.swimChest);
+      const lift=Math.max(0,surface+.16-u.swimHead.y,
+       surface+.04-u.swimChest.y);
+      return Math.max(0,Math.min(1,u.gameSwimBlend))*lift;
+    }
+    // Older player skins retain the previous visual-only crawl offset.
     if(crawl<.001||physicalY>=surface-.6)return 0;
     // Mesuram l'altura real del cap i pit transformats: el punt físic
     // P.y queda intacte i només desplaçam el model durant el crol.
-    const u=player.userData;
     player.updateMatrixWorld(true);
     u.swimChest.set(0,2.31*1.2-u.upperBodyPivotHeight,0);
     u.upperBody.localToWorld(u.swimChest);
@@ -556,6 +568,13 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // Un blend propi preserva una transició suau entre braça i crol.
     u.crawlBlend=(u.crawlBlend||0)+((swimming&&running&&forward>.08&&move>.08&&!inVehicle?1:0)-(u.crawlBlend||0))*(1-Math.exp(-9*dt));
     const run=u.runBlend,crawl=u.crawlBlend,crouch=u.crouchBlend;
+    // The canonical swimmer is visual only; shared B3/C4 clock is advanced
+    // once per game animation tick, never by shadows or the scene renderer.
+    const gameSwim=!!swimming&&!inVehicle;
+    u.gameSwimActive=gameSwim;
+    u.gameSwimBlend=(u.gameSwimBlend||0)+(Number(gameSwim)-(u.gameSwimBlend||0))*(1-Math.exp(-8*dt));
+    if(gameSwim)u.gameSwimSeconds=(u.gameSwimSeconds||0)+dt*Math.max(.15,move);
+
      // Reajust dels peus quan el jugador gira sense caminar.
      const yaw=player.rotation.y,previous=u.previousFootHeading;
      const delta=previous===null?0:Math.atan2(Math.sin(yaw-previous),Math.cos(yaw-previous));
@@ -618,12 +637,15 @@ window.HUNTER_CHARACTERS=Object.freeze({
       // tors, pelvis i arrel invertia l'altura del cap i els peus.
       // La cara ja apunta cap avall amb el pitch X negatiu.
       u.upperBody.rotation.y+=(0-u.upperBody.rotation.y)*k;
+      const canonicalSwim=!!u.humanGameCanonicalRig;
       u.upperBody.rotation.x+=(mix(-.1,0)-u.upperBody.rotation.x)*k;
-      u.upperBody.rotation.z+=(.10*stroke*crawl-u.upperBody.rotation.z)*k;
-      player.rotation.x+=(mix(0,-1.20)-player.rotation.x)*k;
+      u.upperBody.rotation.z+=((canonicalSwim?0:.10*stroke*crawl)-u.upperBody.rotation.z)*k;
+      // Native B3/C4 is tilted on the render skin itself. Applying the old
+      // -1.20 pitch on the actor root would flip the entire swimmer twice.
+      player.rotation.x+=((canonicalSwim?0:mix(0,-1.20))-player.rotation.x)*k;
       // Només una oscil·lació subtil de costat durant la braça;
       // el crol es manté de panxa, sense girar cap i peus a l'inrevés.
-      const roll=stroke*.035*(1-crawl);
+      const roll=canonicalSwim?0:stroke*.035*(1-crawl);
       player.rotation.z+=(roll-player.rotation.z)*k;
       // Quan el cos s'ajau, el cap aixeca lleument la mirada i es gira
       // una mica de costat per respirar, sense oscil·lacions brusques.
