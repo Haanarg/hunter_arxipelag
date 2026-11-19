@@ -102,7 +102,9 @@ function installCanonicalPlayer(T,model){
  const canonicalPelvisY=j.pelvis.parent.position.y*visual.scale.y;
  const crouchRatio=Math.min(1,canonicalPelvisY/pelvisY);
  const weapons=[
-  ['gun',.40,-.095,-.085],
+  // Pivot de la culata dins el puny: centre del mànec (y=-.20)
+  // coincideix amb el plec dels dits (y≈-.065) amb escala .40.
+  ['gun',.40,.015,-.040],
   ['assault',.27,-.11,-.12],
   ['sniper',.26,-.11,-.12],
   ['bazooka',.44,-.12,-.10],
@@ -170,19 +172,7 @@ function installCanonicalPlayer(T,model){
   for(const [id,bone]of Object.entries(control))j[id].quaternion.copy(rest[id]).multiply(bone.quaternion);
   // Traslladam la passa de l'editor a les cames i turmells en córrer.
   // El rig del joc encara controla la física, els trets i les interaccions.
-  const pistolVisible=!!u.gun?.visible;
-  const pistolAiming=pistolVisible&&(u.pistolBlend||0)>.10;
-  for(const {side,original,hold,hand}of pistolGrips){
-   const posed=side==='R'?pistolVisible:pistolAiming;
-   hold.visible=posed;
-   for(const node of original)node.visible=!posed;
-   if(side==='L'&&pistolAiming){
-    // Rotar el palmell pla cap al canó, no cap al terra quan gira el tors.
-    hand.getWorldQuaternion(handWorld);
-    hold.quaternion.copy(handWorld).invert()
-      .multiply(u.gun.getWorldQuaternion(weaponWorld));
-   }else hold.quaternion.identity();
-  }
+
   const run=Math.max(0,Math.min(1,u.runBlend||0));
   if(run>.001){
    const phase=(u.ph||0)/(Math.PI*2);
@@ -251,6 +241,22 @@ function installCanonicalPlayer(T,model){
     };
     grasp('L');grasp('R');
    }else proxy.position.set(0,y,z);
+  }
+  // Actualitzar la presa DESPRÉS de moure el model visual de l'arma.
+  // Tant el puny dret com el palmell esquerre s'orienten amb la
+  // pistola real, i l'esquerre només apareix en mode apuntar.
+  const pistolVisible=!!u.gun?.visible;
+  const pistolAiming=pistolVisible&&(u.pistolBlend||0)>.10;
+  const pistolMesh=proxies.get('gun');
+  for(const {side,original,hold,hand}of pistolGrips){
+   const posed=side==='R'?pistolVisible:pistolAiming;
+   hold.visible=posed;
+   for(const node of original)node.visible=!posed;
+   if(posed&&pistolMesh){
+    hand.getWorldQuaternion(handWorld);
+    pistolMesh.getWorldQuaternion(weaponWorld);
+    hold.quaternion.copy(handWorld).invert().multiply(weaponWorld);
+   }else hold.quaternion.identity();
   }
  }
  model.add(visual);
