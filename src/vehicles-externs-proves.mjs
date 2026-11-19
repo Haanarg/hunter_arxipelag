@@ -1,6 +1,6 @@
 import {createMi24Proposal,MI24_MODELS} from './mi24-proposals.mjs?rev=mi24-d-optimized-20261115-3';
 import {HUMAN_CATALOG} from './human-model-catalog.mjs?rev=humans-v8';
-import {createHumanProposal,setHumanPreviewWeapon,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,createHumanGaitClock,advanceHumanGait} from './human-proposals.mjs?rev=humans-v18-neck-cutter-grenade-20261118-3';
+import {createHumanProposal,setHumanPreviewWeapon,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,createHumanGaitClock,advanceHumanGait} from './human-proposals.mjs?rev=humans-v18-thin-neck-nape-20261119-1';
 import {createCurrentHuman} from './human-current-models.mjs?rev=humans-v8';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
