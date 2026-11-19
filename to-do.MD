@@ -1,3 +1,9 @@
+**2026-11-19 · v0.6.242 · Braça B3 invisible sota l'aigua: correcció visual:**
+- [x] Diagnosticat sobre el model real de `characters.js`: en avançar, `gameSwimStyle='B3'`, el rig canònic de l'editor mou les mans entre ~25 i 50 cm sota la superfície i l'antic controlador és només font de física/postures, no geometria renderitzada (71 malles antigues retirades, 56 malles humanes reals afegides).
+- [x] La superfície oceànica era opaca (`depthWrite:true`, `gl_FragColor=vec4(c,1.)`) i tapava la tracció B3. Ara el shader és transparent només en un disc de difuminat de fins a 4,2 m entorn del jugador que neda endavant; el mar continua opac fora de la zona. Activació per `gameSwimBlend` al render tant SOLO com COOP, sense alterar el nivell físic.
+- [x] Versió 0.6.242 publicada; paquet compilat `dist/hunter-runtime.892231c74e7fe340.js` (70 mòduls). GitHub Actions 44601820762: proves existents, compilació, Cloudflare i comprovació HTTP de `water.js`, `game-core.js` i bundle correctes. Sense proves noves.
+- [ ] Verificació visual manual per l'usuari dins la partida, amb braça B3 endavant, C4 corrent i moviment antic quiet/de costat.
+
 **2026-11-19 · Natació B3/C4 a producció v0.6.240:**
 - [x] Identificat bloqueig de compilació: les darreres versions no arribaven a Cloudflare per una prova de normalització de vehicles i després canvis simultanis del comparador V18. Corregides les matrius de referència de la prova existent; sense afegir proves noves.
 - [x] Versió 0.6.240 amb cache-busting dels punts d'entrada i dels mòduls de natació: selector B3 en avançar, C4 en avançar ràpid i animació anterior quan s'està quiet/lateral. Confirmació de compatibilitat amb SOLO/COOP segons el codi actual.
