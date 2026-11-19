@@ -339,9 +339,13 @@ assert.equal(rider.userData.boots.length,2);
   // peus al terreny després de frenar, sense canviar de longitud.
   for(let n=0;n<45;n++)driver.update({...motorcycle,v:8},1/60);
   const ridingFootY=(point('ankleL').y+point('ankleR').y)/2;
+  const ridingSpread=point('ankleR').x-point('ankleL').x;
   assert(ridingFootY>.55,'A la moto en marxa els peus són als reposapeus');
   for(let n=0;n<45;n++)driver.update(motorcycle,1/60);
-  const stoppedFootY=(point('ankleL').y+point('ankleR').y)/2;
+  const stoppedFootY=(point('ankleL').y+point('ankleR').y)/2,
+    stoppedSpread=point('ankleR').x-point('ankleL').x;
+  assert(stoppedSpread>ridingSpread+.025,
+   'En aturar-se, els peus s’obren lleugerament a cada costat de la moto');
   assert(stoppedFootY<.25,'La moto aturada baixa tots dos peus fins al terra');
   assert(stoppedFootY<ridingFootY-.25,
    'Cal veure la transició de baixada dels peus quan la moto frena');
