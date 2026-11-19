@@ -51,7 +51,10 @@ assert.deepEqual(before.body.scale.toArray(),[1,1,1]);
 assert(report.bakedUniform>=2&&report.bakedMeshAxes>=1);
 before.steering.rotation.y=.37;
 const rotated=new T.Box3().setFromObject(before.wheel);
+// Three.js Box3.setFromObject(child) no actualitza els avantpassats.
+// Construïm les matrius mundials del model de referència abans de comparar.
 const reference=buildFixture();reference.steering.rotation.y=.37;
+reference.root.updateWorldMatrix(true,true);
 const expected=new T.Box3().setFromObject(reference.wheel);
 console.log('ROTATED_WHEEL_PARITY',JSON.stringify({
  before:{min:expected.min.toArray(),max:expected.max.toArray()},
