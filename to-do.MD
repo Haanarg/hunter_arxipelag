@@ -1,3 +1,10 @@
+**2026-11-19 · v0.6.247 · Diagnòstic integrat del V18, sense més ajusts especulatius:**
+- [x] Mode optatiu `?avatarAudit=1&quality=desktop`: panell sobre el joc WebGL real que informa de presència del rig V18, crides `humanGamePose` per RAF, inputs de locomoció, fases, estil i pes de natació, articulacions visibles, casters, i configuració real d'ombres.
+- [x] Botó de prova forçada del V18: quatre articulacions canvien directament en cada RAF sense consultar l'esquelet antic ni el selector de natació. Permet separar una avaria de selecció d'estat d'una avaria de dibuix/escena. Només existeix amb el paràmetre de diagnòstic; no altera física ni savegames.
+- [ ] Validació amb captura real de pantalla de caminar, entrar a l'aigua i prova forçada. Si V18 absent o pose() no és funció, problema de càrrega/inicialització; si els angles canvien però el cos no, problema de jerarquia/render.
+- [ ] Contrastar `?runtime=source&quality=desktop&avatarAudit=1` per descartar el bundle; comprovar els camps d'ombres abans de canviar-ne els valors.
+- [ ] CI i desplegament a Cloudflare pendents de verificació.
+
 **2026-11-19 · v0.6.246 · Tancament d'auditoria del rig anterior i caché:**
 - [x] La cinemàtica de mort mantenia postures sobre ossos antics sense cridar el motor V18 perquè s'executa fora del tick del joc. Ara força la pose V18 i el cap visible mira la càmera; es mantenen els controls antics de compatibilitat.
 - [x] L'ajust de les soles ja no fa fallback a punts de contacte del rig antic si manca el model canònic; la instal·lació V18 exigeix exactament dues soles.

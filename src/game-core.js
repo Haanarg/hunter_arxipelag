@@ -1772,6 +1772,33 @@ function flag(x,z,c){if(!seedSearchMode)world.add(buildingVisual.createFlag({x,y
 const bx=(g,w,h,d,c,x,y,z,profile='organic')=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,profile));m.position.set(x,y,z);g.add(m);return m};
 const buildingVisual=window.HUNTER_BUILDINGS.create(THREE,{material:M,materialProfile,box:bx});
 const pl=window.HUNTER_CHARACTERS.createPlayer(THREE,{box:bx});scene.add(pl);
+// Opt-in de diagnòstic del protagonista real del joc. No canvia la partida
+// normal i evita confondre proves del laboratori amb el render WebGL.
+const avatarAuditEnabled=new URLSearchParams(location.search).get('avatarAudit')==='1';
+let avatarAuditForced=false,avatarAuditPoseCalls=0,avatarAuditReadout=null;
+if(avatarAuditEnabled){
+ const panel=document.createElement('section');
+ panel.id='hunterAvatarAudit';
+ panel.style.cssText='position:fixed;right:8px;top:8px;z-index:10002;'+
+  'width:min(345px,calc(100vw - 16px));box-sizing:border-box;'+
+  'padding:10px;background:#071620ee;color:#d5f6e5;'+
+  'border:1px solid #92bbad;border-radius:8px;'+
+  'font:11px/1.36 ui-monospace,monospace;'+
+  'white-space:pre-wrap;pointer-events:auto';
+ avatarAuditReadout=document.createElement('div');
+ avatarAuditReadout.textContent='AUDITORIA V18 · Inicialitzant…';
+ const test=document.createElement('button');
+ test.type='button';
+ test.style.cssText='margin-top:7px;padding:7px;font:600 12px system-ui;'+
+  'background:#ddd;color:#122;border:0;border-radius:5px';
+ test.textContent='PROVA FORÇADA V18: DESACTIVADA';
+ test.onclick=()=>{
+  avatarAuditForced=!avatarAuditForced;
+  test.textContent='PROVA FORÇADA V18: '+(avatarAuditForced?'ACTIVADA':'DESACTIVADA');
+ };
+ panel.append(avatarAuditReadout,test);
+ document.body.append(panel);
+}
 const animPl=(f,dt,running=false,strafe=0)=>window.HUNTER_CHARACTERS.animatePlayer(pl,{
   forward:f,strafe,dt,running,crouching:playerCrouched&&!cv&&!swimming&&!playerFall&&!playerEject&&!scopeActive,
   swimming,inVehicle:!!cv,ammo,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,assaultRifleEquipped,
@@ -4422,7 +4449,24 @@ if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
   if(pl.visible){
    // El lift visual no es pot acumular en RAF sense subpas de física.
    if(!cv&&!scopeActive&&!playerFall&&!playerEject)pl.position.y=P.y;
-   pl.userData.humanGamePose?.();
+   // Registram la crida REAL del motor, no sols l'existència del mètode.
+   // L'absència es mostra al diagnòstic sense silenciar-la en proves.
+   if(typeof pl.userData.humanGamePose==='function'){
+    pl.userData.humanGamePose();if(avatarAuditEnabled)avatarAuditPoseCalls++;
+   }
+   // Prova visual separada del controlador antic i de la física:
+   // si aquestes articulacions no es mouen en pantalla, el problema és
+   // a la jerarquia o al render, no al selector de caminar/B3/C4.
+   if(avatarAuditEnabled&&avatarAuditForced){
+    const joints=pl.userData.humanGameCanonicalJoints;
+    if(joints){
+     const stroke=Math.sin(now*.007);
+     joints.hipL.rotation.x=.68*stroke;
+     joints.hipR.rotation.x=-.68*stroke;
+     joints.shoulderL.rotation.x=-.68*stroke;
+     joints.shoulderR.rotation.x=.68*stroke;
+    }
+   }
    if(!cv&&!scopeActive&&!playerFall&&!playerEject){
     if(swimming){
      pl.position.y+=window.HUNTER_CHARACTERS.swimVisualLift(
@@ -4497,6 +4541,35 @@ for(const proxy of shadowBoatNodes){
 }
 const shadowRedrawn=shadowCache.schedule({now:performance.now(),x:sun.target.position.x,z:sun.target.position.z,
   nodes:shadowPoseNodes,enabled:!!ren.shadowMap.enabled});
+if(avatarAuditReadout&&renderLoopFrameId%12===0){
+ const u=pl.userData,j=u.humanGameCanonicalJoints,body=u.humanGameCanonicalRig;
+ let meshes=0,casters=0;
+ body?.traverse(o=>{if(o.isMesh){meshes++;if(o.castShadow)casters++}});
+ const angle=id=>j?.[id]?j[id].rotation.x.toFixed(2):'ABSENT';
+ avatarAuditReadout.textContent=[
+  'HUNTER · V18 · DIAGNÒSTIC REAL',
+  'Versió: '+(window.HUNTER_VERSION||'consulta badge')+
+   ' · runtime: '+(window.HUNTER_RUNTIME_MODE||'carregant'),
+  'Qualitat: '+qualityName+' · partida: '+started+' · pausa: '+paused,
+  'Instal·lat: '+String(!!body)+' · pose(): '+typeof u.humanGamePose+
+   ' · crides RAF: '+avatarAuditPoseCalls,
+  'Model visible: '+!!(pl.visible&&body?.visible)+
+   ' · malles V18: '+meshes,
+  'Caminar: '+Number(u.gameLandMove||0).toFixed(2)+
+   ' · fase: '+Number(u.ph||0).toFixed(2)+
+   ' · cursa: '+Number(u.runBlend||0).toFixed(2),
+  'Aigua física: '+swimming+' · mode: '+u.gameSwimMode+
+   ' · pes natació: '+Number(u.gameSwimBlend||0).toFixed(2),
+  'Malucs L/R: '+angle('hipL')+' / '+angle('hipR')+
+   ' · braç R: '+angle('shoulderR'),
+  'Ombres: mapa='+ren.shadowMap.enabled+
+   ' sol='+sun.castShadow+' desact.='+shadowsDisabled,
+  'Candidats V18: '+casters+'/'+meshes+
+   ' · assignats: '+shadowStats.playerCasters+
+   ' · totals propers: '+shadowStats.active,
+  'Prova forçada: '+(avatarAuditForced?'ACTIVA':'apagada')
+ ].join('\n');
+}
 const renderStarted=performance.now();
 const measuringRenderMatrix=performanceAudit?.status==='running'&&gameplayActive;
 let renderMatrixCpuMs=0;
