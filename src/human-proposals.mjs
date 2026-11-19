@@ -1,6 +1,7 @@
 import {HUMAN_PROFILES,HUMAN_STYLES} from './human-model-catalog.mjs?rev=humans-v5';
 import * as THREE from '../vendor/three-r186.module.mjs';
 import {createGameWeaponPreview} from './human-weapon-preview.mjs';
+import {isHumanSwimmingMode,poseHumanSwimming,restoreHumanSwimming} from './human-swim-proposals.mjs';
 export const HUMAN_VERSION='humans-v18';
 // V18 general only: elaborate classical officer moustache and a split,
 // knee-length dress coat. The joints, weapon mounts and gait are unchanged.
@@ -826,6 +827,14 @@ export function poseHumanProposal(root,time=0,mode='idle',locomotion=null){
     else if(!shoulderAim)weapon.position.set(0,-.055,model.userData.humanProposal.role==='player'?-.09:-.015);
   }
   for(const n of Object.values(j)){n.rotation.set(0,0,0);n.position.set(0,0,0)}
+  if(isHumanSwimmingMode(mode)){
+   // The lab's experimental horizontal rig has no ground-clearance correction
+   // and never changes the game's walking/combat/vehicle animations.
+   poseHumanSwimming(model,j,weapon,time,mode);
+   model.updateMatrixWorld(true);
+   continue;
+  }
+  restoreHumanSwimming(model,weapon);
   if(mode==='rest'){
     // Lleu flexió de les espatlles, abducció asimètrica i colzes tous.
     j.shoulderL?.rotation.set(.045,0,-.14);
