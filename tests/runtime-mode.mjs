@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {selectRuntimeMode} from '../src/runtime-mode.mjs';
+const mode=query=>selectRuntimeMode(new URLSearchParams(query));
+assert.equal(mode(''),'source','Source és el mode predeterminat');
+assert.equal(mode('?avatarAudit=1'),'source','El panell V18 no activa el bundle');
+assert.equal(mode('?runtime=source'),'source','Source explícit');
+assert.equal(mode('?runtime=bundle'),'bundle','Bundle només amb opt-in explícit');
+assert.equal(mode('?runtime=bundle&perfAudit=1'),'source','PerfAudit força source');
+assert.equal(mode('?runtime=unknown'),'source','Mode desconegut no activa un paquet');
+console.log('PASS runtime mode: source per defecte, bundle només explícit');

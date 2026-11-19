@@ -1,3 +1,11 @@
+**2026-11-19 · v0.6.250 · Fonts originals per defecte (paritat del bundle pendent):**
+- [x] Source com a runtime per defecte, a portada i motor, amb un sol selector `src/runtime-mode.mjs`; `?runtime=bundle` disponible només per comparar.
+- [x] `perfAudit=1` continua forçant source; precàrrega i arrencada fan servir exactament el mateix selector.
+- [x] Nova prova `tests/runtime-mode.mjs` per protegir la ruta source davant de regressions.
+- [ ] Auditar amb partida idèntica el runtime de mòduls i el compilat (rig V18, animacions, natació i ombres).
+- [ ] Comprovar el manifest, asset hash, cache headers i desplegament complet a Cloudflare.
+- [ ] Confirmar la paritat visual en navegador abans de restaurar el bundle per defecte.
+
 **2026-11-19 · v0.6.249 · Panell V18 que no avança malgrat que el joc funciona:**
 - [x] Causa funcional del diagnòstic antic: la seva informació depenia del RAF de game-core i podia quedar encallada a «Carregant el motor 3D»; la captura del 0.6.248 demostrava que el botó independent funcionava.
 - [x] El HUD ara té un RAF propi (cada 250 ms) independent del joc: distingeix `HUNTER_READY` de l'existència real de la sonda `game-core`, inclòs missatge clar quan el runtime en joc no l'ha connectada.

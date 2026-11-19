@@ -1,6 +1,7 @@
 import './menu-main-integration.mjs?menu=direct-html-v1';
-import {GAME_VERSION} from './version.mjs?v=0.6.249';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.249&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1';
+import {selectRuntimeMode} from './runtime-mode.mjs?v=0.6.250';
+import {GAME_VERSION} from './version.mjs?v=0.6.250';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.250&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1';
 
 // La portada reutilitza els controls reals i un renderitzat Three.js independent.
 // El canvas del fons s'allibera abans d'arrencar el motor de la partida.
@@ -28,6 +29,7 @@ const badge = document.getElementById('versionBadge');
 if(badge)badge.textContent='v'+GAME_VERSION;
 
 const params = new URLSearchParams(location.search);
+const runtimeMode=selectRuntimeMode(params);
 if(window.HUNTER_AVATAR_AUDIT)
  window.HUNTER_AVATAR_AUDIT.paint('HUNTER V18 · Portada carregada.\nEl panell ja funciona sense el motor 3D.\nEntra en una partida per diagnosticar el personatge.');
 const stressAuditRequested=params.get('perfAudit')==='1'&&params.get('stress')==='1';
@@ -79,7 +81,7 @@ function preloadEngine(){
     link.fetchPriority='low';
     document.head.appendChild(link);
   };
-  if(params.get('runtime')!=='source'&&params.get('perfAudit')!=='1'&&RUNTIME_BUNDLE_PATH)preloadScript(RUNTIME_BUNDLE_PATH);
+  if(runtimeMode==='bundle'&&RUNTIME_BUNDLE_PATH)preloadScript(RUNTIME_BUNDLE_PATH);
   else import('./runtime-scripts.mjs').then(({runtimeScripts})=>{
     // Desenvolupament: precàrrega dels scripts font, sense compilar.
     for(const path of runtimeScripts)preloadScript(path,true);
@@ -108,7 +110,7 @@ function loadGame(){
       background.hidden=true;
     }
     window.dispatchEvent(new Event('hunter:menu-background-stop'));
-    bootPromise=import('./bootstrap.mjs?v=0.6.249&humansV17=3&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1&bunkerParapet=1&civilNose=1&ka60=1').then(()=>{
+    bootPromise=import('./bootstrap.mjs?v=0.6.250&humansV17=3&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1&bunkerParapet=1&civilNose=1&ka60=1').then(()=>{
     if(!window.HUNTER_READY)throw new Error('El motor 3D no ha acabat de carregar');
   }).catch(error=>{bootPromise=null;throw error});
   }
