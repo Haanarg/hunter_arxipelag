@@ -23,17 +23,17 @@ export const HUMAN_CATALOG=Object.entries(HUMAN_PROFILES).map(([role,p])=>({
 // El cinquè visor conserva el model actual del joc com a referència.
 export const HUMAN_SWIM_CATALOG=Object.freeze([
  {id:'human-swim-breast',name:'Nedar · braça',kind:'huma',human:'player',swimming:'breast',validated:false,
-  note:'B3 revisada per biomecànica: tracció, respiració, puntada i lliscament. Les altres tres propostes es conserven. Només laboratori.',
+  note:'B3: braços endavant amb colzes oberts, tracció submarina, puntada àmplia i lliscament 1 s. Les altres variants es conserven; només laboratori.',
   references:[
    {label:'Imatges · fases de braça (Swim England)',url:'https://spaces.schoolspider.co.uk/uploads/706/page/33552502_page_file.pdf?ofn=swimenglandexpectedstandardsbreaststroke.pdf'},
    {label:'Fotogrames i tècnica · U.S. Masters Swimming',url:'https://www.usms.org/fitness-and-training/articles-and-videos/articles/2020/01/03/16/21/how-to-swim-breaststroke-properly'}],
   options:[
    {provider:'human',role:'player',style:'a',swimVariant:1,title:'B1 · Equilibrada',note:'Tracció, respiració, puntada i lliscament proporcionats'},
    {provider:'human',role:'player',style:'a',swimVariant:2,title:'B2 · Esportiva',note:'Recuperació ràpida, puntada estreta i ondulació'},
-   {provider:'human',role:'player',style:'a',swimVariant:3,title:'B3 · REVISADA · Braça',note:'Simetria perfecta · colze alt · peus en martell i en punta · lliscament 1 s'},
+   {provider:'human',role:'player',style:'a',swimVariant:3,title:'B3 · REVISADA · Braça',note:'Colzes enfora · mans submarines · puntada més oberta i potent · lliscament 1 s'},
    {provider:'human',role:'player',style:'a',swimVariant:4,title:'B4 · Lliscament',note:'Tracció compacta i fletxa final prolongada'}]},
  {id:'human-swim-crawl',name:'Nedar · crol',kind:'huma',human:'player',swimming:'crawl',validated:false,
-  note:'C4 revisada per biomecànica: roll ±37°, colze alt i sis batudes. Les altres tres propostes es conserven. Només laboratori.',
+  note:'C4: IK húmer–avantbraç en cinc fases, roll longitudinal ±40°, colze de 10°–100°, sis batudes. Altres variants conservades; només laboratori.',
   references:[
    {label:'Imatges · fases del crol (estudi de biomecànica)',url:'https://www.mdpi.com/2673-7078/3/2/17'},
    {label:'Fotogrames · tècnica de crol (Swim England)',url:'https://www.swimming.org/masters/improving-front-crawl-technique/19/'}],
@@ -41,5 +41,5 @@ export const HUMAN_SWIM_CATALOG=Object.freeze([
    {provider:'human',role:'player',style:'a',swimVariant:1,title:'C1 · Sis batudes',note:'Rotació moderada, colze alt i sis batudes per cicle'},
    {provider:'human',role:'player',style:'a',swimVariant:2,title:'C2 · Fons',note:'Dues batudes, braçada llarga i respiració lateral'},
    {provider:'human',role:'player',style:'a',swimVariant:3,title:'C3 · Tècnic',note:'Quatre batudes i recuperació de colze alt'},
-   {provider:'human',role:'player',style:'a',swimVariant:4,title:'C4 · REVISADA · Crol',note:'Roll 37° · colze alt · 6 batudes · respiració lateral al costat dret'}]}
+   {provider:'human',role:'player',style:'a',swimVariant:4,title:'C4 · REVISADA · Crol',note:'5 fases IK · roll ±40° · frontissa de colze segura · sis batudes · respiració lateral'}]}
 ]);
