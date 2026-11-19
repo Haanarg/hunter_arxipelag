@@ -5,10 +5,12 @@ window.HUNTER_RIDER=Object.freeze({
     // El rider és el mateix protagonista: fa servir el cap D i el coll curt,
     // sense canviar cap seient, escala del vehicle ni pivot de les extremitats.
     const model=window.HUNTER_PLAYER_MODEL.create(THREE,{headVariant:'compactD'}),rig=model.userData;
-    // Mides reals, sense valors d'escala estimats: el mateix cos complet
-    // que a peu (2 m canònics × factor visual) és la referència de bici.
-    const nativeHeight=Math.max(.001,new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3()).y);
-    const bicycleRiderScale=(window.HUNTER_HUMAN_V17?.footVisualHeight??3.2)/nativeHeight;
+    // El model vell només alimenta les postures dels altres vehicles.
+    // Per a moto i bicicleta empram directament el rig de l'editor:
+    // exactament la mateixa geometria, 2 m anatòmics i escala a peu.
+    const twoWheel=window.HUNTER_HUMAN_V17.createTwoWheelRider(THREE),
+          cycleBody=twoWheel.root,cycleJoints=twoWheel.joints;
+    const standingHipY=cycleJoints.pelvis.getWorldPosition(new THREE.Vector3()).y;
     const limbs=[],boots=rig.boots;
     for(let i=0;i<2;i++){
       const shoulder=i?rig.ar:rig.al,elbow=i?rig.aer:rig.ael;
@@ -39,6 +41,9 @@ window.HUNTER_RIDER=Object.freeze({
     riderFar.add(farBody,farHead);riderFar.visible=false;
     riderFar.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;o.userData.noCastShadow=true}});
     g.add(riderFar);
+    // No es descompon aquest model en cilindres/segments estirables.
+    cycleBody.visible=false;g.add(cycleBody);
+    g.userData.twoWheelCanonicalHeight=twoWheel.standingHeight;
     g.userData.riderFarProxy=riderFar;
     g.userData.riderDetailNodes=riderDetailNodes;
     g.userData.riderFarActive=false;
@@ -50,6 +55,114 @@ window.HUNTER_RIDER=Object.freeze({
       if(length>1e-6)m.quaternion.setFromUnitVectors(down,delta.multiplyScalar(1/length));
     };
     const vec=(x,y,z)=>new THREE.Vector3(x,y,z);
+    const ikDown=new THREE.Vector3(0,-1,0),ikQuaternion=new THREE.Quaternion();
+    const pointJoint=(joint,target)=>{
+      const direction=target.clone().sub(joint.getWorldPosition(new THREE.Vector3()));
+      if(direction.lengthSq()<1e-8)return;
+      joint.parent.getWorldQuaternion(ikQuaternion);
+      direction.applyQuaternion(ikQuaternion.invert()).normalize();
+      joint.quaternion.setFromUnitVectors(ikDown,direction);
+      g.updateWorldMatrix(true,true);
+    };
+    // IK de dos ossos amb longituds mesurades a la malla a peu.
+    // El genoll/colze es doblega; MAI no es canvia scale.y ni la malla.
+    const placeCanonicalLimb=(upper,lower,end,targetLocal,side,leg)=>{
+      g.updateWorldMatrix(true,true);
+      const start=upper.getWorldPosition(new THREE.Vector3()),
+            mid=lower.getWorldPosition(new THREE.Vector3()),
+            finish=end.getWorldPosition(new THREE.Vector3()),
+            upperLength=start.distanceTo(mid),lowerLength=mid.distanceTo(finish),
+            desired=g.localToWorld(targetLocal.clone()),
+            axis=desired.sub(start);
+      if(axis.lengthSq()<1e-8)return;
+      const reach=axis.length(),length=Math.max(
+        Math.abs(upperLength-lowerLength)+.0005,
+        Math.min(upperLength+lowerLength-.0005,reach));
+      axis.normalize();
+      const goal=start.clone().addScaledVector(axis,length),
+            preferred=new THREE.Vector3(side*(leg?.24:.8),leg?0:-.4,-1)
+              .applyQuaternion(g.getWorldQuaternion(new THREE.Quaternion()));
+      preferred.addScaledVector(axis,-preferred.dot(axis)).normalize();
+      if(preferred.lengthSq()<1e-8)preferred.set(side,0,0);
+      const along=(upperLength*upperLength+length*length-
+        lowerLength*lowerLength)/(2*length),
+            bend=Math.sqrt(Math.max(0,upperLength*upperLength-along*along)),
+            hinge=start.clone().addScaledVector(axis,along)
+              .addScaledVector(preferred,bend);
+      pointJoint(upper,hinge);
+      pointJoint(lower,goal);
+      if(leg){
+        // Botes en posició de pedalar, sense torsions acumulades als turmells.
+        end.parent.getWorldQuaternion(ikQuaternion);
+        end.quaternion.copy(ikQuaternion.invert().multiply(
+          g.getWorldQuaternion(new THREE.Quaternion())));
+      }
+    };
+    const poseCanonicalTwoWheel=(v,sc,motion,phase)=>{
+      const bike=v.t==='bici',
+            size=bike?(v.o.userData.bicycleVisualScale??.70):
+              (v.o.userData.motorcycleVisualScale??1),
+            fit=sc*size,
+            seat=bike?1.65*fit:.99*fit,
+            seatZ=bike?.4*fit:.26*fit;
+      cycleBody.position.set(0,seat-standingHipY,seatZ);
+      cycleJoints.pelvis.rotation.set(0,0,0);
+      cycleJoints.spine.rotation.set(bike?-.33:-.20-.08*motion,0,0);
+      cycleJoints.head.rotation.set(bike?.13:.07,0,0);
+      g.updateWorldMatrix(true,true);
+      for(let i=0;i<2;i++){
+        const side=i?1:-1,letter=i?'R':'L',hip=cycleJoints['hip'+letter],
+              knee=cycleJoints['knee'+letter],ankle=cycleJoints['ankle'+letter],
+              shoulder=cycleJoints['shoulder'+letter],
+              elbow=cycleJoints['elbow'+letter],wrist=cycleJoints['wrist'+letter];
+        let hand,foot;
+        if(bike){
+          hand=vec(side*.5*fit,1.96*fit,-fit);
+          foot=vec(side*.55,0,.45*fit);
+          const ground=g.localToWorld(foot.clone());
+          ground.y=heightAt(ground.x,ground.z)+.14;
+          foot.copy(g.worldToLocal(ground));
+          const pedal=vec(side*.4*fit,
+            (.75-side*Math.sin(phase)*.28)*fit,
+            side*Math.cos(phase)*.28*fit);
+          foot.lerp(pedal,motion);
+        }else{
+          const steering=v.o.userData.steeringPivots?.[0],
+                turn=steering?.rotation?.y||0,
+                x=side*.34*fit,
+                pivotZ=(steering?.position?.z??-.28)*fit,
+                pivotY=(steering?.position?.y??1.07)*fit;
+          hand=vec(x*Math.cos(turn),pivotY-.015*fit,pivotZ-x*Math.sin(turn));
+          foot=vec(side*.34*fit,.42*fit,.16*fit);
+        }
+        placeCanonicalLimb(hip,knee,ankle,foot,side,true);
+        placeCanonicalLimb(shoulder,elbow,wrist,hand,side,false);
+      }
+    };
+    const aimCanonicalPistol=(v,dt)=>{
+      const u=g.userData;
+      u.shotTime=Math.max(0,u.shotTime-dt);
+      u.shotAge=Math.min(10,u.shotAge+dt);
+      const active=u.shotTime>0;
+      u.shotBlend+=(Number(active)-u.shotBlend)*(1-Math.exp(-(active?8:9)*dt));
+      if(!active&&u.shotBlend<.01){
+        pistol.visible=false;pistolParts.flash.visible=false;return;
+      }
+      const shoulder=cycleJoints.shoulderR.getWorldPosition(new THREE.Vector3());
+      const shoulderLocal=g.worldToLocal(shoulder),
+            resting=g.worldToLocal(cycleJoints.wristR.getWorldPosition(new THREE.Vector3())),
+            raised=shoulderLocal.clone().add(vec(.22,-.22,-.75));
+      resting.lerp(raised,u.shotBlend);
+      placeCanonicalLimb(cycleJoints.shoulderR,cycleJoints.elbowR,
+        cycleJoints.wristR,resting,1,false);
+      pistol.visible=true;pistol.scale.setScalar(.70);
+      pistol.position.copy(g.worldToLocal(cycleJoints.wristR.getWorldPosition(new THREE.Vector3())))
+        .add(vec(.025,-.05,-.09));
+      pistol.quaternion.identity();
+      if(u.pistolAim)pistol.quaternion.setFromUnitVectors(forward,u.pistolAim);
+      pistolParts.slide.position.z=Math.exp(-u.shotAge*18)*.055;
+      pistolParts.flash.visible=false;
+    };
     const shoulderAt=side=>vec(side*.57,1.17,0).applyQuaternion(torso.quaternion).add(torso.position);
     const muzzleLocal=new THREE.Vector3(0,.183,-1.47),
           forward=new THREE.Vector3(0,0,-1);
@@ -127,7 +240,8 @@ window.HUNTER_RIDER=Object.freeze({
       // No forçam shotBlend: l'animació del remador s'interpola en update().
       if(v.t!=='barca_rems')u.shotBlend=Math.max(u.shotBlend,.82);
       u.pistolAim=null;
-      aimOneHand(v,0);
+      if(v.t==='bici'||v.t==='moto')aimCanonicalPistol(v,0);
+      else aimOneHand(v,0);
       g.updateWorldMatrix(true,true);
       let origin=pistol.localToWorld(muzzleLocal.clone());
       const initial=forward.clone().applyQuaternion(pistol.getWorldQuaternion(new THREE.Quaternion()));
@@ -155,19 +269,20 @@ window.HUNTER_RIDER=Object.freeze({
       // En cotxes l'habitacle és més baix que el protagonista dret.
       // Escalam el mateix model de jugador i preservam l'orientació
       // tridimensional del xassís en girs i pendents.
-      // Les motos i bicicletes feien servir un rider de gairebé 4 m a
-      // escala 1, desproporcionat respecte als manillars i als seients.
+      const twoWheeled=v.t==='moto'||v.t==='bici';
       const gazTigr=car&&v.o?.userData?.gazModel==='Tigr-M';
-      const riderScale=gazTigr?.825:car?.82:v.t==='hover'?.63:
-        v.t==='bici'?bicycleRiderScale:v.t==='moto'?.56:1;
+      const riderScale=twoWheeled?1:gazTigr?.825:car?.82:v.t==='hover'?.63:1;
       g.scale.setScalar(riderScale);
       g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);
-      const far=Number.isFinite(viewDistance)&&viewDistance>
+      // La silueta simplificada no pot substituir el model canònic en dues rodes.
+      const far=!twoWheeled&&Number.isFinite(viewDistance)&&viewDistance>
         (u.riderFarActive?350:430);
-      if(far!==u.riderFarActive){
+      if(far!==u.riderFarActive||cycleBody.visible!==twoWheeled){
         u.riderFarActive=far;
-        for(const child of riderDetailNodes)child.visible=!far&&child!==pistol;
+        cycleBody.visible=twoWheeled;
+        for(const child of riderDetailNodes)if(child!==pistol)child.visible=!far&&!twoWheeled;
         riderFar.visible=far;
+        if(twoWheeled)pistol.visible=false;
       }
       if(far){
         // El cos simplificat es posa sobre el seient sense animar cames,
@@ -277,72 +392,14 @@ window.HUNTER_RIDER=Object.freeze({
         return;
       }
 
-      if(v.t==='moto'){
-        // Naked streetfighter amb les dimensions de la v0.6.187.
-        // Seient, mans i peus mantenen el seu encaix amb el xassís i la direcció.
-        const steering=v.o?.userData?.steeringPivots?.[0],
-              size=v.o?.userData?.motorcycleVisualScale??1,
-              fit=sc*size,invScale=1/riderScale,
-              turn=steering?.rotation?.y||0,
-              pivotZ=(steering?.position?.z??-.28)*fit,
-              pivotY=(steering?.position?.y??1.07)*fit,
-              seat=.99*fit,seatZ=.26*fit;
-        // Escalam el cos, però no les coordenades del seient, manillar i pedals
-        // en el món: tots els punts de contacte passen a l'espai del rider.
-        torso.position.set(0,seat*invScale,seatZ*invScale);
-        torso.rotation.x=.12*motion;
-        for(let i=0;i<2;i++){
-          const side=i?1:-1,hip=vec(side*.25*size*invScale,seat*invScale,seatZ*invScale),
-                shoulder=shoulderAt(side),
-                x=side*.34*fit,
-                hand=vec(x*Math.cos(turn)*invScale,(pivotY-.015*fit)*invScale,
-                  (pivotZ-x*Math.sin(turn))*invScale),
-                elbow=shoulder.clone().lerp(hand,.54);
-          elbow.x+=side*.08*invScale;elbow.y-=.12*invScale;
-          limbBetween(limbs[i*2],shoulder,elbow);
-          limbBetween(limbs[i*2+1],elbow,hand);
-          const foot=vec(side*.34*fit*invScale,.42*fit*invScale,.16*fit*invScale),
-                knee=hip.clone().lerp(foot,.54);
-          knee.z-=.12*motion*invScale;knee.x+=side*.07*invScale;
-          limbBetween(limbs[4+i*2],hip,knee);
-          limbBetween(limbs[5+i*2],knee,foot);
-          boots[i].position.copy(foot);boots[i].rotation.x=0;
-        }
-        aimOneHand(v,dt);return;
+      if(twoWheeled){
+        // Exactament la malla de 3,2 m del protagonista a peu, no un
+        // pilot antic miniaturitzat. Mans i peus segueixen els controls
+        // per rotació dels ossos (sense mai allargar les extremitats).
+        poseCanonicalTwoWheel(v,sc,motion,phase);
+        aimCanonicalPistol(v,dt);
+        return;
       }
-      if(v.t==='bici'){
-        const visualScale=v.o?.userData?.bicycleVisualScale??.70,
-              fit=sc*visualScale,invScale=1/riderScale,
-              seat=1.65*fit,seatZ=.4*fit;
-        torso.position.set(0,seat*invScale,seatZ*invScale);
-        torso.rotation.x=.15*motion;
-        g.updateWorldMatrix(true,false);
-        for(let i=0;i<2;i++){
-          const side=i?1:-1,
-                hip=vec(side*.28*invScale,seat*invScale,seatZ*invScale),
-                shoulder=shoulderAt(side),
-                hand=vec(side*.5*fit*invScale,1.96*fit*invScale,-fit*invScale),
-                elbow=shoulder.clone().lerp(hand,.52);
-          elbow.x+=side*.1*invScale;elbow.y-=.2*invScale;
-          limbBetween(limbs[i*2],shoulder,elbow);
-          limbBetween(limbs[i*2+1],elbow,hand);
-          const foot=vec(side*.55*invScale,0,.45*fit*invScale);
-          const worldFoot=g.localToWorld(foot.clone());
-          worldFoot.y=heightAt(worldFoot.x,worldFoot.z)+.14;
-          const groundFoot=g.worldToLocal(worldFoot);
-          const pedal=vec(side*.4*fit*invScale,
-            (.75-side*Math.sin(phase)*.28)*fit*invScale,
-            side*Math.cos(phase)*.28*fit*invScale);
-          foot.copy(groundFoot).lerp(pedal,motion);
-          const knee=hip.clone().lerp(foot,.5);
-          knee.z-=.5*motion*invScale;knee.x+=side*.12*(1-motion)*invScale;
-          limbBetween(limbs[4+i*2],hip,knee);
-          limbBetween(limbs[5+i*2],knee,foot);
-          boots[i].position.copy(foot);boots[i].rotation.x=0;
-        }
-        aimOneHand(v,dt);return;
-      }
-
       if(v.t==='moto_aquatica'){
         const seat=.98*sc,lean=.18+.12*motion;torso.position.set(0,seat,.3*sc);torso.rotation.x=lean;
         for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.25,seat,.3*sc),shoulder=shoulderAt(side),hand=vec(side*.38*sc,1.32*sc,-.58*sc),elbow=shoulder.clone().lerp(hand,.55);elbow.y-=.12;limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
