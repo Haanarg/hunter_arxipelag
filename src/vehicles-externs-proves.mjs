@@ -1,7 +1,7 @@
 import {createMi24Proposal,MI24_MODELS} from './mi24-proposals.mjs?rev=mi24-d-optimized-20261115-3';
 import {HUMAN_CATALOG,HUMAN_SWIM_CATALOG} from './human-model-catalog.mjs?rev=swim-lab-20261119-1';
-import {createHumanProposal,setHumanPreviewWeapon,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,createHumanGaitClock,advanceHumanGait} from './human-proposals.mjs?rev=swim-lab-20261119-1';
-import {isHumanSwimmingMode} from './human-swim-proposals.mjs';
+import {createHumanProposal,setHumanPreviewWeapon,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,createHumanGaitClock,advanceHumanGait} from './human-proposals.mjs?rev=swim-lab-20261119-2';
+import {isHumanSwimmingMode,sampleHumanSwimming,HUMAN_SWIM_PROPOSALS} from './human-swim-proposals.mjs?rev=swim-lab-20261119-2';
 import {createCurrentHuman} from './human-current-models.mjs?rev=humans-v8';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
@@ -27,7 +27,22 @@ const humanList=document.querySelector('#humanList'),ALL_CATALOG=[...CATALOG,...
 let humanTime=0,humanMode='rest',humanGait=createHumanGaitClock();
 const isHumanGait=mode=>mode==='walk'||mode==='run';
 const previewHumanPose=(slot,mode)=>isHumanSwimmingMode(mode)?mode+'-'+(slot.swimVariant||1):mode;
-const updateSwimWater=mode=>{for(const s of slots)s.swimWater.visible=!!s.swimVariant&&isHumanSwimmingMode(mode)};
+const updateSwimWater=mode=>{
+ for(const s of slots)s.swimWater.visible=!!s.swimVariant&&isHumanSwimmingMode(mode);
+ document.querySelector('#humanSwimTimeline').hidden=!isHumanSwimmingMode(mode);
+};
+const selectedSwimInfo=(mode,secs)=>{
+ if(!isHumanSwimmingMode(mode))return null;
+ const kind=mode.split('-')[1],variant=kind==='breast'?3:4;
+ const sample=sampleHumanSwimming('swim-'+kind+'-'+variant,secs);
+ return {sample,kind,period:HUMAN_SWIM_PROPOSALS[kind][variant-1].period};
+};
+function showSwimPhase(mode,secs){
+ const info=selectedSwimInfo(mode,secs);if(!info)return;
+ const percent=(info.sample.phase*100);
+ document.querySelector('#humanSwimPhase').value=String(percent);
+ document.querySelector('#humanSwimPhaseName').textContent=percent.toFixed(0)+' % · '+(info.sample.phaseName||'Cicle');
+}
 import {mountHumanEvidence} from './human-lab-evidence-ui.mjs?rev=human-evidence-5';
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
 renderer.setPixelRatio(Math.min(1.5,window.devicePixelRatio||1));
@@ -398,7 +413,15 @@ async function choose(config){
  document.querySelector('#humanWeaponControl').hidden=config.human!=='player';
  humanEvidence.show(config.human||null);
  humanTime=0;humanMode='rest';humanGait=createHumanGaitClock();
- if(config.human){const start=config.swimming?'swim-'+config.swimming:'rest';document.querySelector('#humanPose').value=start;document.querySelector('#animate').checked=!!config.swimming;document.querySelector('#humanRevision').textContent='HUMANS V18 · '+HUMAN_VERSION+(config.swimming?' · 4 PROPOSTES DE NATACIÓ':'');document.querySelector('#humanGaitMix').textContent=config.swimming?'Quatre cicles diferents · comparació en directe':'';}
+ if(config.human){
+ const start=config.swimming?'swim-'+config.swimming:'rest';
+ document.querySelector('#humanPose').value=start;
+ document.querySelector('#animate').checked=!!config.swimming;
+ document.querySelector('#humanRevision').textContent='HUMANS V18 · '+HUMAN_VERSION+(config.swimming?' · 4 PROPOSTES DE NATACIÓ':'');
+ document.querySelector('#humanGaitMix').textContent=config.swimming?'Quatre cicles diferents · comparació en directe':'';
+ updateSwimWater(start);
+ if(config.swimming)showSwimPhase(start,0);
+}
  labTankKeys.clear();labTurretSwitch=false;labTurretYaw=0;labTurretPitch=0;
  syncLabTurretButton();
  for(const slot of slots){
@@ -545,7 +568,7 @@ function draw(now){
  const dt=Math.min(.07,(now-prev)/1000);prev=now;
  if(document.querySelector('#animate').checked){
    for(const slot of slots){slot.mixer?.update(dt);if(slot.model)stepKamovRotors(slot.model,dt);}
-   if(currentType.human){const elapsed=dt*Number(document.querySelector('#humanSpeed').value);humanTime+=elapsed;const mode=document.querySelector('#humanPose').value;const gait=isHumanGait(mode);if(gait)humanGait=advanceHumanGait(humanGait,elapsed,mode);for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,humanTime,previewHumanPose(slot,mode),gait?humanGait:null);const out=document.querySelector('#humanGaitMix');out.textContent=gait?'Cursa '+Math.round(humanGait.blend*100)+' %':isHumanSwimmingMode(mode)?'Quatre cicles diferents · comparació en directe':'';}
+   if(currentType.human){const elapsed=dt*Number(document.querySelector('#humanSpeed').value);humanTime+=elapsed;const mode=document.querySelector('#humanPose').value;const gait=isHumanGait(mode);if(gait)humanGait=advanceHumanGait(humanGait,elapsed,mode);for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,humanTime,previewHumanPose(slot,mode),gait?humanGait:null);const out=document.querySelector('#humanGaitMix');out.textContent=gait?'Cursa '+Math.round(humanGait.blend*100)+' %':isHumanSwimmingMode(mode)?'Quatre cicles diferents · comparació en directe':'';if(isHumanSwimmingMode(mode))showSwimPhase(mode,humanTime);}
    if(currentType.id==='tanc'&&slots[0].model)
      stepT90MPreview(slots[0].model,t90MotionInput(dt),dt);
  }
@@ -616,6 +639,23 @@ document.querySelector('#humanPose').addEventListener('change',e=>{
  humanTime=0;humanGait=createHumanGaitClock(mode);
  document.querySelector('#humanGaitMix').textContent=isHumanGait(mode)?'Cursa '+Math.round(humanGait.blend*100)+' %':'';
  for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,0,previewHumanPose(slot,mode),isHumanGait(mode)?humanGait:null);
+});
+// Arrossega fins a un fotograma concret sense avançar el rellotge:
+ // els quatre candidats comparteixen el percentatge del seu propi cicle.
+document.querySelector('#humanSwimPhase').addEventListener('input',e=>{
+ const mode=document.querySelector('#humanPose').value;
+ const info=selectedSwimInfo(mode,0);if(!info)return;
+ const phase=Math.max(0,Math.min(1,Number(e.target.value)/100));
+ document.querySelector('#animate').checked=false;
+ humanTime=phase*info.period;
+ for(const slot of slots){
+  if(!slot.model)continue;
+  const target=previewHumanPose(slot,mode);
+  const candidate=slot.swimVariant||1;
+  const time=HUMAN_SWIM_PROPOSALS[info.kind][candidate-1].period*phase;
+  poseHumanProposal(slot.model,time,target);
+ }
+ showSwimPhase(mode,humanTime);
 });
 document.querySelector('#humanWeapon').addEventListener('change',e=>{
  if(currentType.human!=='player')return;
