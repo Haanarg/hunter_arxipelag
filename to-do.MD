@@ -3,7 +3,9 @@
 - [x] El motor únic manté B3/C4/manteniment/caminar/córrer i les escales consolidades, però aplica la pell V18 només un cop, abans del dibuix i les ombres. L'ajust de soles i l'elevació en natació es fan immediatament després de la postura visible.
 - [x] Els jugadors remots COOP comparteixen exactament aquest pas d'animació; els models de vehicle/rig de controls antics no es modifiquen. Sense proves noves.
 - [ ] Comprovació dins del navegador/Android: caminar, córrer, B3, C4, manteniment, sortida de vehicles i línia d'aigua.
-- [ ] Desplegament Cloudflare de v0.6.244: comprovar paquet dist immutable HTTP 200, no només codi font.
+- [x] Versió 0.6.244 compilada, desplegada i verificada a Paradoxa: GitHub Actions 44619247108; `dist/hunter-runtime.849b97e09104414e.js` (70 mòduls), HTTP 200 i contingut idèntic al build.
+- [x] Execució directa del model real amb 3 subpassos per RAF: caminar i córrer mouen malucs oposats; manteniment aquàtic conserva el cos vertical; B3 inclina el cos ~-1,55 rad i deixa el cap +0,16 m sobre l'aigua; C4 ~-1,57 rad, cap +0,28 m sobre l'aigua; sortida torna a posició de terra. Sense afegir proves.
+- [ ] Comprovar les animacions visualment en WebGL real, Android i COOP; el CI no pot certificar el resultat al dispositiu.
 
 **2026-11-19 · Incidència de publicació independent del visor V18:**
 - [ ] L'Action 44614968917 valida tots els fitxers de l'editor a Paradoxa, però la verificació global falla perquè `dist/hunter-runtime.109409efa9e49c11.js` retorna HTTP 404 i el manifest `src/runtime-bundle.mjs` deixa de coincidir. Cal sincronitzar el paquet generat amb el sistema de publicació que serveix `hunter.paradoxa.cat`.
