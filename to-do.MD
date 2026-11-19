@@ -1,3 +1,8 @@
+**2026-11-19 · Reparació de les targetes HUMANS V18 buides:**
+- [x] Càrrega directa de les variants V18 visibles, sense dependre d’un model ocult.
+- [x] Errors locals llegibles per targeta, amb degradació segura de previsualització d’armes i animacions.
+- [x] Revisió i proves existents actualitzades. Desplegament iniciat; pendent de la comprovació visual de l’editor.
+
 **2026-11-19 · v0.6.243 · Animació de natació: motor únic i escales consolidades:**
 - [x] Escala fixa del protagonista: arrel `1`, malla de l'editor `1,6` i controladors antics exclusivament dins del grup de compatibilitat `0,6666666666666666`. Eliminades les divisions/reescales al render; els actors i les armes mantenen les dimensions físiques originals.
 - [x] Selector únic: davant `B3`, davant amb córrer `C4`, quiet/lateral/enrere `idle` portat al sistema de moviments de l'editor. Un sol rellotge i transició d'estils; la variable de compatibilitat `crawlBlend` no governa l'animador.
