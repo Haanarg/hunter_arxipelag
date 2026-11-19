@@ -25,7 +25,7 @@ const accounts={
 };
 const ctx={window:{HUNTER_ACCOUNT_SERVICE:accounts},document:{
  createElement:tag=>new El(tag),getElementById:()=>null,body:new El('body')
-},started:false,ui:{hide(){}},console,Blob,URL,setTimeout};
+},started:false,ui:{hide(){}},openCoopPanel(){},console,Blob,URL,setTimeout};
 runInNewContext(source,ctx);
 runInNewContext('accountCloud={list:async()=>{globalThis.cloudQueriesCalled();return []},retry:async()=>{},syncHistory:async()=>{}}',ctx);
 ctx.cloudQueriesCalled=()=>cloudQueries++;
