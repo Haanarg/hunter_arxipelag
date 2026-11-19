@@ -313,7 +313,8 @@ assert.equal(rider.userData.boots.length,2);
   driver.update(motorcycle,1/60);
   assert.equal(driver.object.scale.x,1,'Escala global neutra per al pilot anatòmic');
   assert(anatomicalBody.visible,'La malla de la moto ha de ser visible');
-  const stoppedLegLength=2*.8060867773;
+  const stoppedLegLength=point('hipL').distanceTo(point('kneeL'))+
+    point('kneeL').distanceTo(point('ankleL'));
   assert(Math.abs(point('pelvis').y-
    (driver.object.userData.twoWheelFloorY+.86*stoppedLegLength))<.012,
    'Moto aturada: maluc a l’alçada de suport calculada a partir de les cames a peu');
