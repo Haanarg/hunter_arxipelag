@@ -304,11 +304,26 @@ assert.equal(rider.userData.boots.length,2);
    shadows:false,batching:playerBatching
   });
   const moto=makeVehicle('moto');
-  assert.equal(moto.userData.motorcycleVisualScale,1.70,'Motorcycle actual scaled model');
+  assert.equal(moto.userData.motorcycleVisualScale,1.24,'Moto amb escala real segons distància entre eixos');
   assert(moto.userData.twoWheelAnchors?.seat&&moto.userData.twoWheelAnchors?.gripL
     &&moto.userData.twoWheelAnchors?.pedalR,'Moto: ancoratges reals del xassís');
-  assert(Math.abs(moto.userData.wheels[0].userData.radius-.34738122819654627*1.70*1.2)<.002,
+  assert(Math.abs(moto.userData.wheels[0].userData.radius-.34738122819654627*1.24*1.2)<.002,
    'Moto: roda física i visual de la mateixa mida');
+  // Proporcions de referència: el jugador és de 2 m anatòmics,
+  // representats amb 3,2 unitats visuals (factor 1,6).
+  // Honda CB650R: distància eixos 1,45 m; selló 0,81 m.
+  const meters=units=>units*(2/3.2);
+  moto.updateWorldMatrix(true,true);
+  const axles=moto.userData.wheels.map(w=>w.getWorldPosition(new T.Vector3()));
+  const wheelbase=meters(axles[0].distanceTo(axles[1]));
+  const motoSeatMeters=meters(
+    moto.userData.twoWheelAnchors.seat.getWorldPosition(new T.Vector3()).y);
+  assert(Math.abs(wheelbase-1.45)<.025,
+   'Moto: distància entre eixos de streetfighter real, no 1,99 m');
+  assert(Math.abs(motoSeatMeters-.81)<.025,
+   'Moto: selló proper als 81 cm reals, no 1,26 m');
+  console.log('REAL_WORLD_MOTORCYCLE_PROPORTIONS',JSON.stringify({
+   riderHeightM:2,wheelbaseM:wheelbase,seatM:motoSeatMeters}));
   const motorcycle={t:'moto',o:moto,v:0,pedalPhase:0};
   driver.update(motorcycle,1/60);
   assert.equal(driver.object.scale.x,1,'Escala global neutra per al pilot anatòmic');
@@ -317,7 +332,7 @@ assert.equal(rider.userData.boots.length,2);
     point('kneeL').distanceTo(point('ankleL'));
   console.log('TWO_WHEEL_SEAT_DEBUG',JSON.stringify({
    pelvisY:point('pelvis').y,
-   target:driver.object.userData.twoWheelFloorY+.86*stoppedLegLength,
+   target:driver.object.userData.twoWheelFloorY+.82*stoppedLegLength,
    floor:driver.object.userData.twoWheelFloorY,
    seat:driver.object.userData.twoWheelSeatHip,
    stop:driver.object.userData.twoWheelStopped,
@@ -325,7 +340,7 @@ assert.equal(rider.userData.boots.length,2);
    saddle:moto.userData.twoWheelAnchors.seat.getWorldPosition(new T.Vector3()).toArray()
   }));
   assert(Math.abs(point('pelvis').y-
-   (driver.object.userData.twoWheelFloorY+.86*stoppedLegLength))<.012,
+   (driver.object.userData.twoWheelFloorY+.82*stoppedLegLength))<.012,
    'Moto aturada: maluc a l’alçada de suport calculada a partir de les cames a peu');
   const motoMeasures=boneMeasures();
   assert(motoMeasures.every(n=>n>.4&&n<1),'Longituds anatòmiques del pilot');
@@ -362,11 +377,21 @@ assert.equal(rider.userData.boots.length,2);
   footLengths.forEach((len,i)=>assert(Math.abs(len-motoMeasures[i])<.002,
    'Cada segment de cama i braç coincideix amb el rig a peu ('+i+')'));
   const bici=makeVehicle('bici');
-  assert.equal(bici.userData.bicycleVisualScale,.88,'Bicicleta: nova escala visible aprovada');
+  assert.equal(bici.userData.bicycleVisualScale,.74,'Bicicleta: roda adulta 700C');
   assert(bici.userData.twoWheelAnchors?.seat&&bici.userData.twoWheelAnchors?.gripR
     &&bici.userData.twoWheelAnchors?.pedalL,'Bici: ancoratges del selló, manillar i pedals');
-  assert(Math.abs(bici.userData.wheels[0].userData.radius-.62*.88*1.2)<.001,
+  assert(Math.abs(bici.userData.wheels[0].userData.radius-.62*.74*1.2)<.001,
     'Bicicleta: les rodes comparteixen el factor visual i físic');
+  bici.updateWorldMatrix(true,true);
+  const bikeWheelM=meters(2*bici.userData.wheels[0].userData.radius),
+    bikeSeatM=meters(bici.userData.twoWheelAnchors.seat
+      .getWorldPosition(new T.Vector3()).y);
+  assert(Math.abs(bikeWheelM-.69)<.025,
+    'Bici: diàmetre de roda 700C real, no 82 cm');
+  assert(bikeSeatM>1.00&&bikeSeatM<1.12,
+    'Bici: alçada de selló plausible per al ciclista de 2 m');
+  console.log('REAL_WORLD_BICYCLE_PROPORTIONS',JSON.stringify({
+   riderHeightM:2,wheelDiameterM:bikeWheelM,seatM:bikeSeatM}));
   driver.update({t:'bici',o:bici,v:0,pedalPhase:0},1/60);
   assert.equal(driver.object.scale.x,1,'Ciclista amb escala visual canònica');
   const topOfSaddle=bici.userData.twoWheelAnchors.seat.getWorldPosition(new T.Vector3()).y;
@@ -374,7 +399,7 @@ assert.equal(rider.userData.boots.length,2);
   for(const piece of riderJoints.pelvis.children)
    if(piece.isMesh)pelvisBottom.expandByObject(piece);
   assert(Math.abs(point('pelvis').y-
-   (driver.object.userData.twoWheelFloorY+.86*stoppedLegLength))<.012,
+   (driver.object.userData.twoWheelFloorY+.82*stoppedLegLength))<.012,
    'Bici aturada: genolls flexionats sense deformar la cama');
   const bentKnee=(side)=>{
    const hip=point('hip'+side),knee=point('knee'+side),ankle=point('ankle'+side);
@@ -423,6 +448,8 @@ assert.equal(rider.userData.boots.length,2);
    const gap=wrist.distanceTo(grip),pedalGap=foot.distanceTo(pedal);
    console.log('BIKE_ACTUAL_GRIP_PEDAL',side,JSON.stringify({gap,pedalGap}));
    assert(gap<.18,'Mà '+side+' arriba al manillar geomètric de la bicicleta');
+   assert(grip.y<point('shoulder'+side).y-.08,
+    'El manillar de la bicicleta no pot obligar a aixecar els colzes fins al cap');
    assert(pedalGap<.12,'Peu '+side+' arriba al pedal físic de la bicicleta');
   }
   driver.update({...motorcycle,v:8},1/60);
@@ -440,6 +467,8 @@ assert.equal(rider.userData.boots.length,2);
     const gap=wrist.distanceTo(grip),footGap=ankle.distanceTo(footrest);
     console.log('MOTO_ACTUAL_GRIP_FOOTREST',side,JSON.stringify({gap,footGap}));
     assert(gap<.18,'Mà '+side+' arriba al manillar real de la moto');
+    assert(grip.y<point('shoulder'+side).y-.08,
+      'Manillar de la moto situat per sota de les espatlles del pilot');
     assert(footGap<.12,'Peu '+side+' arriba al reposapeu real de la moto');
   }
   const ridingFootY=(point('ankleL').y+point('ankleR').y)/2;
