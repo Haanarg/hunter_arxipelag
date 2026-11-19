@@ -3,7 +3,7 @@
 - [x] Botó de prova forçada del V18: quatre articulacions canvien directament en cada RAF sense consultar l'esquelet antic ni el selector de natació. Permet separar una avaria de selecció d'estat d'una avaria de dibuix/escena. Només existeix amb el paràmetre de diagnòstic; no altera física ni savegames.
 - [ ] Validació amb captura real de pantalla de caminar, entrar a l'aigua i prova forçada. Si V18 absent o pose() no és funció, problema de càrrega/inicialització; si els angles canvien però el cos no, problema de jerarquia/render.
 - [ ] Contrastar `?runtime=source&quality=desktop&avatarAudit=1` per descartar el bundle; comprovar els camps d'ombres abans de canviar-ne els valors.
-- [ ] CI i desplegament a Cloudflare pendents de verificació.
+- [x] GitHub Actions 44624893663: 7/7 proves del laboratori correctes, runtime de 70 mòduls `dist/hunter-runtime.89e8f9a2ae0b22d0.js` compilat, Cloudflare verificat amb HTTP 200 i bytes coincidents a `hunter.paradoxa.cat` (v0.6.247). No equival a validació visual de l'avatar.
 
 **2026-11-19 · v0.6.246 · Tancament d'auditoria del rig anterior i caché:**
 - [x] La cinemàtica de mort mantenia postures sobre ossos antics sense cridar el motor V18 perquè s'executa fora del tick del joc. Ara força la pose V18 i el cap visible mira la càmera; es mantenen els controls antics de compatibilitat.
