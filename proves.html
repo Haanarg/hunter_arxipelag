@@ -30,6 +30,13 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 #warning{color:#f0d9a8;font-size:12px;line-height:1.5;max-width:900px}
 #grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;position:relative}
 #grid.btr-study{grid-template-columns:minmax(0,1fr);max-width:1120px;margin:0 auto}
+#grid.two-wheel-audit{grid-template-columns:repeat(3,minmax(0,1fr));max-width:none}
+#grid.two-wheel-audit .panel{height:clamp(430px,43vw,640px)}
+@media(max-width:980px){#grid.two-wheel-audit{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:630px){#grid.two-wheel-audit{grid-template-columns:1fr}}
+#twoWheelAudit[hidden]{display:none!important}
+#twoWheelAudit .audit-reading{font-variant-numeric:tabular-nums;color:#c8f4df}
+
 #grid.btr-study .panel{height:clamp(440px,67vh,720px)}
 .panel[hidden]{display:none!important}
 .panel{min-width:0;height:clamp(350px,40vw,470px);position:relative;border:1px solid #54736e;border-radius:12px;overflow:hidden;background:linear-gradient(#314c52,#142c34);touch-action:pan-y}
@@ -130,6 +137,16 @@ body[data-editor-kind=""] #draw{display:none!important}
 <label><input id="showGrid" type="checkbox" checked> Graella i protagonista</label>
 
 </div></section>
+<section id="twoWheelAudit" class="t90-motion" hidden aria-label="Comparació del pilot a peu, la bicicleta i la moto">
+ <h2>Comparador de pilots · escala de joc sense ajustament automàtic</h2>
+ <div class="btr-part-controls">
+  <label>Estat <select id="twoWheelAuditState"><option value="stopped">Aturat · peus a terra</option><option value="moving">En marxa · pedalant / conduint</option></select></label>
+  <label><input id="twoWheelAuditGuides" type="checkbox" checked> Ossos i ancoratges (cian · articulacions, rosa · controls)</label>
+  <button id="twoWheelAuditReset" type="button">Reiniciar postures</button>
+ </div>
+ <output id="twoWheelAuditReading" class="audit-reading" aria-live="polite">Comparant tres rigs…</output>
+ <p>Tres models instanciats amb les fàbriques del joc, mateixa càmera ortogràfica i mateixes unitats, sense reajustar l'altura ni la geometria per enquadrar. El pilot a peu és la referència visual. Els punts roses indiquen selló, manillar i pedals/reposapeus reals. Pots girar totes les vistes alhora.</p>
+</section>
 <section id="humanMotion" class="t90-motion" hidden aria-label="Animacions dels candidats humans">
  <label>Moviment <select id="humanPose"><option value="idle">Repòs</option><option value="rest" selected>Postura neutra</option><option value="walk">Caminar</option><option value="run">Córrer</option><option value="crouch">Ajupir-se</option><option value="aim">Apuntar</option><option value="work">Treballar</option><option value="wave">Saludar</option><option value="throw">Llançar granada</option><optgroup label="NATACIÓ · QUATRE PROPOSTES"><option value="swim-breast">Nedar a braça · B1–B4</option><option value="swim-crawl">Nedar a crol · C1–C4</option></optgroup></select></label>
  <label id="humanWeaponControl" hidden>Arma del protagonista <select id="humanWeapon"><option value="pistol">Pistola silenciada</option><option value="assault">Fusell AEK-971</option><option value="sniper">Franctirador SV-98</option><option value="bazooka">Bazuca</option><option value="knife">Ganivet</option><option value="cutters">Cisalla</option><option value="grenade">Granada</option></select></label>
