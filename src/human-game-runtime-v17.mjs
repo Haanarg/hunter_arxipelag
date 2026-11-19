@@ -251,6 +251,26 @@ export function createHumanGameRuntimeV17(){
  const runtime={
   version:GAME_HUMAN_SKIN_VERSION,
   footVisualHeight:2*FOOT_PLAYER_VISUAL_FACTOR,
+  // La malla del pilot de dues rodes és literalment la del jugador a peu.
+  // Cap os s'estira per encaixar mans o peus a manillars i pedals.
+  createTwoWheelRider(T){
+   const root=createHumanProposal(T,'player','a',{visualOnly:true}),joints={};
+   root.traverse(node=>{
+    if(node.userData?.humanMotionJoint)joints[node.userData.humanMotionJoint]=node;
+   });
+   for(const id of ['pelvis','spine','neck','head','hipL','hipR',
+     'kneeL','kneeR','ankleL','ankleR','shoulderL','shoulderR',
+     'elbowL','elbowR','wristL','wristR'])
+    if(!joints[id])throw Error('Pilot de dues rodes: falta articulació '+id);
+   root.scale.multiplyScalar(FOOT_PLAYER_VISUAL_FACTOR);
+   root.updateWorldMatrix(true,true);
+   const standingHeight=new T.Box3().setFromObject(root).getSize(new T.Vector3()).y;
+   if(Math.abs(standingHeight-runtime.footVisualHeight)>.025)
+    throw Error('Pilot i protagonista a peu tenen alçades diferents');
+   root.userData.twoWheelStandingHeight=standingHeight;
+   root.userData.twoWheelCanonical=true;
+   return {root,joints,standingHeight};
+  },
   suppress(callback){suppressed++;try{return callback()}finally{suppressed--}},
   install(T,model,{role='player'}={}){
    if(suppressed)return model;
