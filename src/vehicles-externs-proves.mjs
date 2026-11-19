@@ -22,16 +22,18 @@ import {stepT90MPreview} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 // els manifests oficials de packs CC0; mai no es generen URLs GLB inventats.
 // Un fallback de cerca pública només s'usa quan no hi ha una coincidència.
 import {CATALOG} from './vehicle-candidate-catalog.mjs?rev=live-editor-20261118-226-humans-gaz-cutter-camera-14';
-const list=document.querySelector('#vehicleList'),grid=document.querySelector('#grid'),
+const list=document.querySelector('#vehicleList'),
+      comparatorList=document.querySelector('#vehicleComparatorList'),
+      grid=document.querySelector('#grid'),
   warning=document.querySelector('#warning'),nameOut=document.querySelector('#vehicleName');
 const TWO_WHEEL_AUDIT=Object.freeze({
- id:'human-two-wheel-audit',name:'Pilotatge · comparador',human:'player',
- kind:'huma',twoWheelAudit:true,validated:false,
+ id:'comparador-pilots',name:'A peu · Bicicleta · Moto',
+ kind:'terra',twoWheelAudit:true,validated:true,
  options:[{title:'Bicicleta'},{title:'Moto'}],
  note:'Tres models reals, una mateixa càmera. El rig a peu és la referència; cap normalització automàtica de cada targeta.'
 });
 const humanList=document.querySelector('#humanList'),
- ALL_CATALOG=[...CATALOG,...HUMAN_CATALOG,TWO_WHEEL_AUDIT,...HUMAN_SWIM_CATALOG];
+ ALL_CATALOG=[...CATALOG,TWO_WHEEL_AUDIT,...HUMAN_CATALOG,...HUMAN_SWIM_CATALOG];
 let twoWheelAuditSession=null;
 let humanTime=0,humanMode='rest',humanGait=createHumanGaitClock();
 const isHumanGait=mode=>mode==='walk'||mode==='run';
@@ -411,7 +413,9 @@ async function choose(config){
   a.textContent=reference.label;a.href=reference.url;a.target='_blank';a.rel='noopener noreferrer';
   refs.append(a);
  }
- for(const b of [...list.querySelectorAll('button'),...humanList.querySelectorAll('button')])b.classList.toggle('active',b.dataset.type===config.id);
+ for(const b of [...list.querySelectorAll('button'),...humanList.querySelectorAll('button'),
+ ...comparatorList.querySelectorAll('button')])
+ b.classList.toggle('active',b.dataset.type===config.id);
  const marine=config.kind==='mar';
  grid.classList.remove('featured');
  const btrStudy=config.id==='tanqueta';
@@ -419,7 +423,7 @@ async function choose(config){
  const soloStudy=config.validated&&config.options.length===0;
  grid.classList.toggle('btr-study',soloStudy);
  grid.classList.toggle('two-wheel-audit',!!config.twoWheelAudit);
- document.querySelector('#fitScale').closest('label').hidden=soloStudy||!!config.human;
+ document.querySelector('#fitScale').closest('label').hidden=soloStudy||!!config.human||!!config.twoWheelAudit;
  document.querySelector('#t90Motion').hidden=!t90Study;
  document.querySelector('#humanMotion').hidden=!config.human||!!config.twoWheelAudit;
  document.querySelector('#twoWheelAudit').hidden=!config.twoWheelAudit;
@@ -442,9 +446,10 @@ async function choose(config){
  for(const slot of slots){
    slot.outer.hidden=slots.indexOf(slot)>(config.twoWheelAudit?2:soloStudy?0:config.options.length);
    dropPrevious(slot);
-   slot.kind=config.kind;slot.camera=config.human?slot.ortho:slot.perspective;
+   slot.kind=config.kind;
+   slot.camera=(config.human||config.twoWheelAudit)?slot.ortho:slot.perspective;
    slot.guide.hidden=true;slot.versionTag.hidden=!config.human||!!config.twoWheelAudit;
-   slot.person.visible=!config.human&&document.querySelector('#showGrid').checked;
+   slot.person.visible=!config.human&&!config.twoWheelAudit&&document.querySelector('#showGrid').checked;
    slot.ground.material.color.setHex(marine?0x285f65:config.kind==='aire'?0x6a7b67:0x69735e);
    slot.ground.material.roughness=marine?.43:1;
    slot.ground.material.needsUpdate=true;
@@ -471,12 +476,12 @@ async function choose(config){
        const [title,subtitle,view]=named[i],slot=slots[i];
        setModel(slot,view.model,true,[],true);
        slot.bold.textContent=title;slot.sub.textContent=subtitle;
-       slot.status.textContent='Rig canònic de 3,2 u · escala d’arrel neutra o compensada';
+       slot.status.textContent='Rig del joc · alçada mesurada, sense alçada obligatòria ni ajust visual per targeta';
        slot.person.visible=false;slot.source.hidden=true;
      }
      const guides=document.querySelector('#twoWheelAuditGuides');
      lab.setGuides(guides.checked);
-     comparisonDims.set(3.8,lab.footHeight+.4,5.1);
+     comparisonDims.set(4.3,Math.max(lab.footHeight,lab.riderHeight)+.65,5.1);
      originalDims.copy(comparisonDims);
      zoom=1;panScreenX=0;yaw=0;elev=0;
      lookY=lab.footHeight*.5;defaultLookY=lookY;
@@ -850,9 +855,11 @@ for(const config of ALL_CATALOG){
  button.dataset.validation=config.validated?'validated':'pending';
  button.textContent=config.name;
  const small=document.createElement('small');
- small.textContent=config.swimming?'4 propostes d’animació':(config.validated?'✓ Validat':'● Pendent')+' · '+(config.experimental?'Experimental':kinds[config.kind]);
+ small.textContent=config.twoWheelAudit?'3 rigs reals · càmera compartida':
+  config.swimming?'4 propostes d’animació':
+  (config.validated?'✓ Validat':'● Pendent')+' · '+(config.experimental?'Experimental':kinds[config.kind]);
  button.append(small);button.addEventListener('click',()=>choose(config));
- (config.human?humanList:list).append(button);
+ (config.twoWheelAudit?comparatorList:config.human?humanList:list).append(button);
 }
 window.addEventListener('hunter:proves-section',event=>{
  const wanted=event.detail==='characters'?lastHuman:event.detail==='vehicles'?lastVehicle:null;
