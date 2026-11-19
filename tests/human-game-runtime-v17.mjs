@@ -259,8 +259,22 @@ assert.equal(rider.userData.boots.length,2);
   footAvatar.scale.setScalar(2/3);
   footAvatar.updateMatrixWorld(true,true);
   const footRig=footAvatar.userData.humanGameCanonicalRig;
-  const footBounds=new T.Box3().setFromObject(footRig,true).getSize(new T.Vector3()),
-        pilotBounds=new T.Box3().setFromObject(anatomicalBody,true).getSize(new T.Vector3());
+  // Compare ONLY the identical anatomical meshes, not optional hidden
+  // hand/weapon overlays created by the on-foot gameplay adapter.
+  const anatomicalBounds=root=>{
+   const bounds=new T.Box3(),meshBounds=new T.Box3();
+   root.traverse(n=>{
+    if(n.isMesh&&(root!==footRig||n.userData.humanCanonicalOriginalGeometry)){
+     meshBounds.setFromObject(n,true);bounds.union(meshBounds);
+    }
+   });
+   return bounds.getSize(new T.Vector3());
+  };
+  const footBounds=anatomicalBounds(footRig),
+        pilotBounds=anatomicalBounds(anatomicalBody);
+  console.log('FOOT_TWO_WHEEL_PARITY',JSON.stringify({
+    foot:footBounds.toArray(),pilot:pilotBounds.toArray(),
+    riderRigScale:anatomicalBody.scale.toArray()}));
   for(const axis of ['x','y','z'])
    assert(Math.abs(footBounds[axis]-pilotBounds[axis])<.003,
     'Pilot de dues rodes i model a peu tenen la mateixa mida mundial ('+axis+')');
