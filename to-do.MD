@@ -1,3 +1,11 @@
+**2026-11-19 · v0.6.243 · Animació de natació: motor únic i escales consolidades:**
+- [x] Escala fixa del protagonista: arrel `1`, malla de l'editor `1,6` i controladors antics exclusivament dins del grup de compatibilitat `0,6666666666666666`. Eliminades les divisions/reescales al render; els actors i les armes mantenen les dimensions físiques originals.
+- [x] Selector únic: davant `B3`, davant amb córrer `C4`, quiet/lateral/enrere `idle` portat al sistema de moviments de l'editor. Un sol rellotge i transició d'estils; la variable de compatibilitat `crawlBlend` no governa l'animador.
+- [x] `animatePlayer()` crida explícitament `humanGamePose()` una vegada en cada tick, tant SOLO com COOP, fins i tot en retorn anticipat. `visual.updateMatrixWorld()` no té més efectes d'animació. L'IK no força l'actualització de tot l'arbre en calcular cada braç.
+- [x] Eliminada la braçada sinusoidal sobre els pivots antics en el cas canònic; l'animació que abans es feia quiet/lateral ara es posa directament sobre la malla de l'editor. Les armes i la física continuen controlades pels pivots de compatibilitat.
+- [x] Proves existents del model humà i comparador de pilots adaptades a escala consolidada i actualització explícita, sense cap prova nova. GitHub Actions 44611028841 superat en els quatre passos (inclòs desplegament i verificació HTTP) abans del bump de subversió.
+- [ ] Verificació manual B3/C4/quiet-lateral dins de la partida a 0.6.243; no se'n promet una captura WebGL des del CI.
+
 **2026-11-19 · Correcció urgent de visibilitat HUMANS V18:**
 - [x] Restaurada la càrrega de variants humanes al posicionament de visors provat (1..N); el visor 0 queda ocult i s'usa únicament per mesurar el model V18, sense recrear el model antic.
 - [x] Geometria HUMANS V18 compartida com a plantilla a la referència dels vehicles; clons independents amb geometria reutilitzada.

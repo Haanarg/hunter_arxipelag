@@ -1,3 +1,7 @@
+## Implementació de la correcció — v0.6.243 (2026-11-19)
+L'auditoria original següent descriu l'estat de 0.6.242. Els problemes P0 i P1 s'han corregit en el motor posterior: els valors d'escala ja són definitius; el moviment antic quiet/lateral s'ha implementat sobre el rig de l'editor; B3 i C4 tenen prioritat quan s'avança; `animatePlayer()` és l'únic selector i crida `humanGamePose()` després de cada tick; el renderitzat no anima articulacions. Es conserva només un grup antic ocult per a controls, física i armes, sense que pugui imposar la braçada visible. Proves prèvies actualitzades, sense afegir proves.
+
+---
 # Auditoria de la natació B3/C4 — Hunter: Arxipèlag
 **Data:** 19 de novembre de 2026  
 **Versió del joc auditada:** 0.6.242  

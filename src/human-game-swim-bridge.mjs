@@ -2,7 +2,7 @@
 // Les posicions i angles s'actualitzen des de animatePlayer(), no en
 // updateMatrixWorld(), càmera, ombres ni render. L'estat es calcula per
 // avatar: el cooperatiu no comparteix rellotge ni quaternions mutables.
-import {poseHumanSwimming,restoreHumanSwimming,HUMAN_SWIM_PROPOSALS} from './human-swim-proposals.mjs?rev=game-swim-b3-c4-20261119-2';
+import {poseHumanSwimming,restoreHumanSwimming,HUMAN_SWIM_PROPOSALS} from './human-swim-proposals.mjs?rev=game-swim-b3-c4-20261119-3';
 
 export const GAME_SWIM_MODES=Object.freeze({
  idle:'swim-idle',breast:'swim-breast-3',crawl:'swim-crawl-4'
