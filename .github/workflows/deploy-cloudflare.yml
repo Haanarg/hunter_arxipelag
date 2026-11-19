@@ -66,6 +66,8 @@ jobs:
         run: npm run test:deploy
       - name: Validar models humans i editor en temps real
         run: npm run test:lab
+      - name: Validar sintaxi del panell V18 independent de Three.js
+        run: node --check src/avatar-audit-boot.js
       - name: Validar recollida del fusell d'assalt i munició (individual i cooperatiu)
         run: node tests/assault-repeat-pickup.mjs
       - name: Validar navegació del compte i submenús
@@ -107,7 +109,7 @@ jobs:
           version="$(sed -n "s/.*GAME_VERSION = '\([^']*\)'.*/\1/p" src/version.mjs)"
           if [ -z "$version" ]; then echo "::error::No s'ha pogut llegir la versió"; exit 1; fi
           # Compare the final HTTP body, not Cloudflare's canonical HTML redirect.
-          files=(index.html src/runtime-bundle.mjs src/characters.js src/water.js src/game-core.js src/human-game-swim-bridge.mjs src/human-swim-proposals.mjs src/bootstrap.mjs src/menu-boot.mjs src/player-model-core.mjs src/human-game-runtime-v17.mjs src/version.mjs src/human-weapon-preview.mjs src/compound-preview.mjs src/compound-concepts.mjs compounds-preview.html src/hovercraft-concepts.mjs src/vehicle-model-core.mjs src/vehicle-specs.mjs src/ka60-runtime.mjs assets/vehicle-candidates/lab-revision.json src/human-model-catalog.mjs src/human-current-models.mjs src/human-proposals.mjs src/human-lab-evidence.mjs src/human-lab-evidence-ui.mjs src/vehicle-live-editor.mjs src/vehicles-externs-proves.mjs src/proves-hub.mjs proves.html vehicles-externs-proves.html)
+          files=(index.html src/avatar-audit-boot.js src/runtime-bundle.mjs src/characters.js src/water.js src/game-core.js src/human-game-swim-bridge.mjs src/human-swim-proposals.mjs src/bootstrap.mjs src/menu-boot.mjs src/player-model-core.mjs src/human-game-runtime-v17.mjs src/version.mjs src/human-weapon-preview.mjs src/compound-preview.mjs src/compound-concepts.mjs compounds-preview.html src/hovercraft-concepts.mjs src/vehicle-model-core.mjs src/vehicle-specs.mjs src/ka60-runtime.mjs assets/vehicle-candidates/lab-revision.json src/human-model-catalog.mjs src/human-current-models.mjs src/human-proposals.mjs src/human-lab-evidence.mjs src/human-lab-evidence-ui.mjs src/vehicle-live-editor.mjs src/vehicles-externs-proves.mjs src/proves-hub.mjs proves.html vehicles-externs-proves.html)
           # Verify the *compiled*, content-addressed classic runtime too,
           # not only the source files. This catches stale B3/C4 packages.
           bundle="$(sed -n 's/.*RUNTIME_BUNDLE_PATH = "\([^"]*\)".*/\1/p' src/runtime-bundle.mjs)"
