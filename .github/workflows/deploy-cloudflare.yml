@@ -53,8 +53,10 @@ jobs:
         run: npm run test:lab
       - name: Validar HUMANS V17 al joc i als conductors
         run: node tests/human-game-runtime-v17.mjs
-      - name: Comprovar versió i bundle publicable
-        run: npm run check:build
+      - name: Regenerar el runtime a partir dels fitxers font validats
+        run: |
+          npm run build
+          npm run check:build
       - name: Comprovar la compilació del Worker
         run: npm run build:worker
       - name: Desplegar Worker i assets a Cloudflare
