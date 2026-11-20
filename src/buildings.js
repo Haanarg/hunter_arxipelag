@@ -171,6 +171,13 @@ window.HUNTER_BUILDINGS??=Object.freeze({
       const glassMat=material(0x3e7185,'glass'),trimMat=material(0xd0bf9c,'masonry');
       const frame=.13,depth=Math.max(.09,T*.18);
       const faceOffset=T*.08;
+      // Les cares interiors de la paret coincideixen exactament amb els
+      // extrems del buit. Els marcs han de quedar dins del buit amb una
+      // separació real, no superposats als murs que el delimiten.
+      const frameClearance=.02,frameDepth=T*.24;
+      // El cantell posterior del marc queda per davant de la cara exterior
+      // del vidre; així tampoc no hi ha intersecció entre vidre i marc.
+      const frameCenter=-(faceOffset+depth/2+.022+frameDepth/2);
       for(const c of centers){
         const wx=alongX?lx+c:lx,wz=alongX?lz:lz+c;
         const glass=new THREE.Mesh(
@@ -185,29 +192,31 @@ window.HUNTER_BUILDINGS??=Object.freeze({
         glass.userData.windowPane=parts.filter(p=>p.userData.windowPane!==undefined).length;
         glass.name='hunter-breakable-window';group.add(glass);parts.push(glass);
 
-        // Unió a testa: els muntants acaben just on comencen els
-        // travessers. Abans els quatre marcs se solapaven a les cantonades,
-        // creant cares coplanàries (z-fighting) fins i tot sense vidre.
-        const frameSpan=winW+frame*2,frameDepth=depth*1.5;
+        // Marcs dins de l'obertura, a 2 cm de tots els murs. L'unió a
+        // testa entre travessers i muntants continua sense solapaments.
+        // El marc queda davant del vidre, sense penetrar-lo.
+        const frameSpan=winW-2*frameClearance;
+        const uprightSpan=winH-2*(frameClearance+frame);
         const addCrosspiece=offset=>{
           const m=new THREE.Mesh(
             new THREE.BoxGeometry(alongX?frameSpan:frameDepth,frame,alongX?frameDepth:frameSpan),
             trimMat
           );
-          if(alongX)m.position.set(wx,bottom+winH/2+offset,lz-faceOffset*1.4);
-          else m.position.set(lx-faceOffset*1.4,bottom+winH/2+offset,wz);
+          if(alongX)m.position.set(wx,bottom+winH/2+offset,lz+frameCenter);
+          else m.position.set(lx+frameCenter,bottom+winH/2+offset,wz);
           group.add(m);parts.push(m)
         };
-        addCrosspiece(winH/2+frame/2);
-        addCrosspiece(-winH/2-frame/2);
+        addCrosspiece(winH/2-frameClearance-frame/2);
+        addCrosspiece(-winH/2+frameClearance+frame/2);
 
         for(const side of[-1,1]){
           const m=new THREE.Mesh(
-            new THREE.BoxGeometry(alongX?frame:frameDepth,winH,alongX?frameDepth:frame),
+            new THREE.BoxGeometry(alongX?frame:frameDepth,uprightSpan,alongX?frameDepth:frame),
             trimMat
           );
-          if(alongX)m.position.set(lx+c+side*(winW/2+frame/2),bottom+winH/2,lz-faceOffset*1.4);
-          else m.position.set(lx-faceOffset*1.4,bottom+winH/2,lz+c+side*(winW/2+frame/2));
+          const offset=side*(winW/2-frameClearance-frame/2);
+          if(alongX)m.position.set(wx+offset,bottom+winH/2,lz+frameCenter);
+          else m.position.set(lx+frameCenter,bottom+winH/2,wz+offset);
           group.add(m);parts.push(m)
         }
       }
