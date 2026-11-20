@@ -651,7 +651,14 @@ assert.equal(rider.userData.boots.length,2);
  const rowShot=driver.firePistol(rowing,()=>null);
  assert(rowShot?.origin?.toArray().every(Number.isFinite),
   'Pistola del remador continua disparant des del punt de canó');
- checkMarine(rowing,null,Math.PI-.52*driver.object.userData.shotBlend);
+ const rowFiringPose=checkMarine(rowing);
+ const rowFiringExpectedYaw=Math.PI-.52*driver.object.userData.shotBlend;
+ assert(Math.abs(Math.atan2(
+   Math.sin(driver.object.userData.torso.rotation.y-rowFiringExpectedYaw),
+   Math.cos(driver.object.userData.torso.rotation.y-rowFiringExpectedYaw)))<1e-10&&
+   Math.abs(rowFiringPose.body.quaternion.dot(
+     driver.object.userData.torso.quaternion))>1-1e-9,
+  'Després del tick, el gir de tret del remador i del V18 coincideixen');
  const sailBoard=new T.Group(),sailBoom=new T.Group();
  sailBoard.add(sailBoom);
  sailBoard.userData.windsurfRig=sailBoom;
