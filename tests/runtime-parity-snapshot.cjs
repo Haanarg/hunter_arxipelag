@@ -42,8 +42,7 @@ const path=require('node:path');
   const crawl=capture();
   // Prova de la mateixa ruta de l'autoapuntat que usa combat.js:
   // la pistola té un objectiu actiu i el controlador respon durant 36 ticks.
-  // L'objectiu 3.10 és en l'espai antic. Si es transforma des de player
-  // després de reparentar a un rig 2/3, es desplaça damunt del cap.
+  // La meta de les mans surt del V18, no d'un punt 3.10 del rig 2/3.
   const pistolAim=JSON.parse(game.run(`JSON.stringify((()=>{
     swimming=false;
     const u=pl.userData;
@@ -61,11 +60,13 @@ const path=require('node:path');
     const head=joints.head.getWorldPosition(new THREE.Vector3());
     const right=joints.wristR.getWorldPosition(new THREE.Vector3());
     const left=joints.wristL.getWorldPosition(new THREE.Vector3());
-    const expected=new THREE.Vector3(0,3.10,-1.13);
-    (u.humanGameLegacyRig||pl).localToWorld(expected);
+    if(!u.pistolRig.nativeGoal)throw Error('Autoapuntat sense objectiu V18 natiu');
+    const expected=u.pistolRig.nativeGoal.clone();
     u.upperBody.worldToLocal(expected);
     return {
       blend:Number(u.pistolBlend.toFixed(3)),
+      nativeAim:true,
+      aimWorldY:Number(u.pistolRig.nativeGoal.y.toFixed(4)),
       targetError:Number(u.pistolRig.aim.distanceTo(expected).toFixed(5)),
       headY:Number(head.y.toFixed(4)),
       wristRY:Number(right.y.toFixed(4)),

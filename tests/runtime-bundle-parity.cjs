@@ -30,8 +30,10 @@ assert(source.breast.swimBlend>.7&&source.crawl.swimBlend>.9,
  'Natació V18 activa, no només el selector textual');
 assert(source.pistolAim.blend>.95,
  'La pistola entra en autoapuntat després de l’adquisició de l’objectiu');
-assert(source.pistolAim.targetError<.005,
- 'La pistola ha d’usar el punt 3.10 LOCAL DEL RIG ANTIC, no de player');
+assert(source.pistolAim.nativeAim&&source.pistolAim.targetError<.005,
+ 'La pistola ha d’emprar la meta anatòmica del V18 i convertir-la una sola vegada');
+assert(source.pistolAim.aimWorldY<source.pistolAim.headY-.25,
+ 'L’objectiu real de la pistola V18 ha de quedar per sota del crani');
 assert(source.pistolAim.wristRY<source.pistolAim.headY-.04&&
        source.pistolAim.wristLY<source.pistolAim.headY-.04,
  'Amb autoapuntat, les mans V18 han de continuar per sota del cap');

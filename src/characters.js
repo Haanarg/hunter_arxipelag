@@ -879,19 +879,42 @@ window.HUNTER_CHARACTERS=Object.freeze({
     }
     // Les mans apunten al món seguint la direcció del jugador, no la
     // nova rotació local de cintura. Després l'IK treballa en el tors.
-    // La pistola i els seus braços IK viuen dins el control rig històric.
-    // Abans, l'arrel del jugador i aquest rig eren el mateix espai; ara el
-    // rig ocult és fill de player i té escala consolidada 2/3. Si usam
-    // player.localToWorld(3.10), upperBody interpreta un objectiu massa
-    // alt i el V18 visible aixeca els dos canells damunt del cap.
-    // El punt nominal 3.10 pertany a l'espai del rig antic, NO a player.
+    // El V18 defineix el punt real d'apuntat a partir d'espatlla, tors,
+    // i longitud dels dos ossos del braç. L'IK antiga només rep l'objectiu
+    // ja convertit a coordenades locals: mai no determina la seva alçada.
     const pistolAimSpace=u.humanGameLegacyRig||player;
+    const nativeJoints=u.humanGameCanonicalJoints;
+    const nativeAim=!!(pistolAllowed&&(blend>.001||targetBlend)&&
+      nativeJoints?.spine&&nativeJoints?.shoulderR&&
+      nativeJoints?.elbowR&&nativeJoints?.wristR&&
+      u.visualAimSmoothed?.lengthSq?.()>.1);
+    if(nativeAim){
+      player.updateWorldMatrix(true,true);
+      const shoulder=nativeJoints.shoulderR.getWorldPosition(
+        rig.nativeShoulder||(rig.nativeShoulder=new THREE.Vector3()));
+      const chest=nativeJoints.spine.getWorldPosition(
+        rig.nativeChest||(rig.nativeChest=new THREE.Vector3()));
+      const reach=(nativeJoints.elbowR.parent.position.length()+
+        nativeJoints.wristR.parent.position.length())*.61;
+      (rig.nativeGoal||(rig.nativeGoal=new THREE.Vector3()))
+        .copy(shoulder).lerp(chest,.28)
+        .addScaledVector(u.visualAimSmoothed,reach+back);
+      rig.nativeGoal.y+=up-Math.min(.18,reach*.23);
+    }
+    const positionPistolIKTarget=()=>{
+      if(nativeAim)rig.aim.copy(rig.nativeGoal);
+      else{
+        // Fallback només per a figures sense V18; mai en el protagonista.
+        rig.aim.set(0,3.10+up,-1.13+back);
+        pistolAimSpace.localToWorld(rig.aim);
+      }
+      u.upperBody.worldToLocal(rig.aim);
+    };
     if(blend>.001){
       player.updateMatrixWorld(true);
       // Les dues mans orbiten suaument amb el canó; no romanen fixes
       // al davant quan l'autoaim segueix una diana lateral o elevada.
-      rig.aim.set(0,3.10+up,-1.13+back);
-      pistolAimSpace.localToWorld(rig.aim);u.upperBody.worldToLocal(rig.aim);
+      positionPistolIKTarget();
       rig.q3.copy(u.visualAimQuaternion);
       rig.right.set(.045,-.15,.06).applyQuaternion(rig.q3).add(rig.aim);
       rig.left.set(-.095,-.14,.015).applyQuaternion(rig.q3).add(rig.aim);
@@ -902,9 +925,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
     rig.idle.copy(u.pistolIdleMount.position).applyQuaternion(u.aer.quaternion)
       .add(u.aer.position).applyQuaternion(u.ar.quaternion).add(u.ar.position);
     rig.idleQ.copy(u.ar.quaternion).multiply(u.aer.quaternion).multiply(u.pistolIdleMount.quaternion);
-    rig.aim.set(0,3.10+up,-1.13+back);
     player.updateMatrixWorld(true);
-    pistolAimSpace.localToWorld(rig.aim);u.upperBody.worldToLocal(rig.aim);
+    positionPistolIKTarget();
     // El quaternion local ja converteix el vector real de l'autoaim
     // al marc del tors. No hi afegim una compensació antiga de cintura,
     // perquè desalineava el musell de la retícula.
