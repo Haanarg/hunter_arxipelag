@@ -9,7 +9,7 @@ import {vehicleSpecs} from './vehicle-specs.mjs?rev=two-wheel-20261119-footprint
 import {createKa60Runtime,KA60_RUNTIME_ID} from './ka60-runtime.mjs?rev=ka60-native-20261120-1';
 import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs?rev=vivid-engine-cover-2';
 import {createStreetfighter25,STREETFIGHTER_25_META} from './streetfighter-25-geometry.mjs';
-import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?rev=mi24-d-approved-1';
+import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?rev=lod-native-20261120-1';
 import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.mjs?v=0.6.81';
 import {bakeFixedModelScales} from './model-scale-normalization.mjs';
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
