@@ -213,6 +213,8 @@ for(const role of ['player','soldier','rocket','elite','general']){
    pelvisYaw:0,spinePitch:0,spineYaw:0,spineRoll:0,
    headPitch:0,headYaw:0,headRoll:0,crouchDrop:0
   };
+  const legacyLimbBones=[u.ll,u.lr,u.lkl,u.lkr,u.al,u.ar,u.ael,u.aer];
+  const oldLimbRotations=legacyLimbBones.map(b=>b.rotation.clone());
   u.humanGameNativeLimbPose=Object.fromEntries(limbIds.map((id,i)=>[
    id,{x:(i+1)*.055,z:(i%2?1:-1)*.035}
   ]));
@@ -237,8 +239,7 @@ for(const role of ['player','soldier','rocket','elite','general']){
   }
   delete u.humanGameNativeLimbPose;
   delete u.humanGameNativeBodyPose;
-  for(const bone of [u.ll,u.lr,u.lkl,u.lkr,u.al,u.ar,u.ael,u.aer])
-   bone.rotation.set(0,0,0);
+  legacyLimbBones.forEach((bone,i)=>bone.rotation.copy(oldLimbRotations[i]));
   updateHuman(g);
   console.log('PASS V18 native locomotion without reading legacy limb transforms');
   // L'explosió del protagonista no pot animar membres ocults V17.
