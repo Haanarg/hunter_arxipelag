@@ -628,6 +628,30 @@ export function createHumanGameRuntimeV17(){
   nativeRifleMuzzleWorld(T,player,kind){
    return nativeV18WeaponMuzzleWorld(T,player,kind);
   },
+  // Bake de compatibilitat només sobre el jugador REAL, quan encara
+  // no s'han afegit els accessoris de combat. Conserva posicions i
+  // quaternions mundials dels ancoratges i elimina l'escala 2/3
+  // del controlador ocult DURANT LA PARTIDA, sense retocar la pell V18.
+  // Les factories de laboratori/fixtures segueixen sense canvis.
+  normalizeGamePlayerControls(model){
+   const u=model?.userData,old=u?.humanGameLegacyRig;
+   if(!old)return false;
+   if(u.humanGameControlScaleBaked)return model;
+   if(!Number.isFinite(old.scale.x)||old.scale.x<=0||
+      Math.abs(old.scale.x-old.scale.y)>1e-10||
+      Math.abs(old.scale.y-old.scale.z)>1e-10)
+    throw Error('Escala uniforme del controlador antic absent');
+   // Mida definitiva de l'actor i pivots reals; res d'escales
+   // acumulatives o multiplicacions a cada fotograma.
+   const report=bakeFixedModelScales(old);
+   if(old.scale.toArray().some(v=>Math.abs(v-1)>1e-10))
+    throw Error('Controlador lògic encara amb escala posterior');
+   u.hipHeight=u.lowerBody.position.y;
+   u.upperBodyPivotHeight=u.upperBody.position.y;
+   u.humanGameControlScaleBaked=true;
+   u.humanGameControlScaleBakeStats=report;
+   return model;
+  },
   // Figura V18 per a conductor i passatger de cabina. La talla
   // definitiva es cuina en generar geometria i pivots; cap escala sobre
   // l'arrel ni transform del rig antic. Una variant immutable per cabina,
