@@ -1,0 +1,27 @@
+name: Hunter V18 civilian migration branch validation
+on:
+  push:
+    branches:
+      - v18-native-civilians-0-6-296
+permissions:
+  contents: read
+concurrency:
+  group: hunter-v18-civilian-branch
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - run: node tests/civilian-native-v18.mjs
+      - run: npm run test:lab
+      - run: npm run test:all
+      - run: npm run test:deploy
+      - run: npm run build && npm run check:build
+      - run: node tests/runtime-bundle-parity.cjs
+      - run: node tests/browser-startup-smoke.cjs
