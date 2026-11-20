@@ -1478,3 +1478,10 @@
 4. **Tancar**: prova de campanya sencera (solitari i dos jugadors), mapa petit i gran, navegador + Android, documents coherents i sense artefactes.
 
 **Objectiu d'optimització (no resultat mesurat):** millorar almenys un 20% el p95 de temps de fotograma en l'escena problemàtica d'explosions o d'estrès, sense empitjorar perceptiblement qualitat ni cap comportament, i reduir trànsit/treball repetit al COOP segons perfils reals. Si els perfils mostren un coll diferent, canviar la prioritat en aquest mateix fitxer.
+
+
+## Migració integral del protagonista V18 (estat 2026-11-20)
+
+- [x] v0.6.278 — Posició de natació: pont B3/C4/idle sense factor històric 2/3; centre i oscil·lació definits en unitats V18; regressions de blend, COOP parent i escala unitària.
+- [ ] **Implementació:** substituir `LEGACY_GAME_RIG_SCALE=2/3` del grup ocult de controls i unificar armes/IK i balística amb ancoratges V18, conservant els contractes de física i vehicles fins que hi hagi paritat.
+- [ ] **Validació visual:** observar braça, crol, manteniment i sortida de l'aigua en SOLO i COOP (host i guest), incloent parentatge, ombres, nivell d'aigua i transicions; les proves Node no validen GPU.

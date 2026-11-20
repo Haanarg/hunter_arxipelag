@@ -2,7 +2,7 @@
 // Les posicions i angles s'actualitzen des de animatePlayer(), no en
 // updateMatrixWorld(), càmera, ombres ni render. L'estat es calcula per
 // avatar: el cooperatiu no comparteix rellotge ni quaternions mutables.
-import {poseHumanSwimming,restoreHumanSwimming,HUMAN_SWIM_PROPOSALS} from './human-swim-proposals.mjs?rev=game-swim-b3-c4-20261119-3';
+import {poseHumanSwimming,restoreHumanSwimming,HUMAN_SWIM_PROPOSALS} from './human-swim-proposals.mjs?rev=game-swim-v18-native-20261120-1';
 
 export const GAME_SWIM_MODES=Object.freeze({
  idle:'swim-idle',breast:'swim-breast-3',crawl:'swim-crawl-4'
@@ -15,14 +15,14 @@ const JOINTS=['pelvis','spine','neck','head','hipL','hipR','kneeL','kneeR',
  'ankleL','ankleR','shoulderL','shoulderR','elbowL','elbowR','wristL','wristR'];
 const clamp=x=>Math.max(0,Math.min(1,Number(x)||0));
 const VALID=new Set(['idle','breast','crawl']);
-// Transformació definitiva de POSICIÓ del rig animat al seu nou
-// pare directe. No és una correcció d'escala de la geometria.
-const LEGACY_SWIM_POSITION=0.6666666666666666;
+// Desplaçament FINAL de la postura horitzontal del V18 en unitats del joc.
+// Ja és la mida nativa aprovada: no deriva del rig antic, no reescala la pell.
+export const GAME_V18_SWIM_ROOT_MOTION=Object.freeze({lift:.35,centerZ:.61});
 
 export function createGameSwimBridge(T,visual,j){
  for(const id of JOINTS)if(!j[id])throw Error('Falta el pivot canònic de natació '+id);
  const initialRootPosition=new T.Vector3(),initialRootQuaternion=new T.Quaternion(),
-  initialPelvis=new T.Vector3(),swimPosition=new T.Vector3(),delta=new T.Vector3();
+  initialPelvis=new T.Vector3(),swimPosition=new T.Vector3();
  const original=JOINTS.map(()=>new T.Quaternion());
  const source=JOINTS.map(()=>new T.Quaternion()),target=JOINTS.map(()=>new T.Quaternion());
  const firstRoot=new T.Quaternion(),lastRoot=new T.Quaternion(),mixedRoot=new T.Quaternion();
@@ -56,12 +56,13 @@ export function createGameSwimBridge(T,visual,j){
   set('kneeL',-(.48-.18*.22*flutter));
   set('kneeR',-(.48+.18*.22*flutter));
   set('ankleL');set('ankleR');
-  visual.position.y+=.024*Math.sin(ph*2);
+  visual.position.y+=.016*Math.sin(ph*2); // Oscil·lació V18 final, sense divisor antic.
  }
  function sample(mode,time,out,root,pos,pelvis){
   reset();
   if(mode==='idle')tread(time);
-  else poseHumanSwimming(visual,j,null,time,GAME_SWIM_MODES[mode]);
+  else poseHumanSwimming(visual,j,null,time,GAME_SWIM_MODES[mode],
+   {rootMotion:GAME_V18_SWIM_ROOT_MOTION});
   for(let k=0;k<JOINTS.length;k++)out[k].copy(j[JOINTS[k]].quaternion);
   root.copy(visual.quaternion);pos.copy(visual.position);
   pelvis.copy(j.pelvis.position);
@@ -90,11 +91,9 @@ export function createGameSwimBridge(T,visual,j){
    mixedPelvis.copy(lastPelvis);
   }
   visual.quaternion.copy(initialRootQuaternion).slerp(mixedRoot,amount);
-  // Les geometries i les seves escales són fixes; només convertim
-  // el desplaçament del pivot històric als metres finals del model.
-  delta.copy(swimPosition).sub(initialRootPosition);
-  visual.position.copy(initialRootPosition).addScaledVector(delta,
-   amount*LEGACY_SWIM_POSITION);
+  // Mesclam directament les dues poses natives en l'espai del mateix V18.
+  // Cap factor de l'esquelet ocult governa la posició del nedador.
+  visual.position.copy(initialRootPosition).lerp(swimPosition,amount);
   j.pelvis.position.copy(initialPelvis).lerp(mixedPelvis,amount);
   for(let k=0;k<JOINTS.length;k++){
    if(mix<.9999&&previous!==current)

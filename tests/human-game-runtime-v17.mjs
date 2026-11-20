@@ -254,6 +254,49 @@ for(const role of ['player','soldier','rocket','elite','general']){
   }
   u.lowerBody.position.y=oldLowerY;u.upperBody.position.y=oldUpperY;
   updateHuman(g);
+  // V18 natació: desplaçaments finals sense LEGACY_SWIM_POSITION ni
+  // dependència del controlador ocult, en idle, B3 i C4.
+  const swimAt=(mode,time,blend=1,previousMode=mode,transition=1)=>{
+   u.gameSwimActive=blend>0;u.gameSwimBlend=blend;
+   u.gameSwimMode=mode;u.gameSwimPreviousMode=previousMode;
+   u.gameSwimTransition=transition;u.gameSwimSeconds=time;
+   updateHuman(g);
+   return canonical.position.clone();
+  };
+  for(const mode of ['breast','crawl']){
+   for(const second of [0,.55,1.3]){
+    const p=swimAt(mode,second);
+    assert(Math.abs(p.z-.61)<1e-8,
+     'Natació V18 '+mode+': centre horitzontal definit per la postura nativa');
+    assert(p.y>.34&&p.y<.47,
+     'Natació V18 '+mode+': alçada final sense transformació 2/3');
+    assert.deepEqual(canonical.scale.toArray(),[1,1,1],
+     'Natació V18 no modifica l’escala del model '+mode);
+   }
+  }
+  const swimFull=swimAt('breast',.7);
+  const swimHalf=swimAt('breast',.7,.5);
+  assert(Math.abs(swimHalf.z-swimFull.z*.5)<1e-8&&
+   Math.abs(swimHalf.y-swimFull.y*.5)<1e-8,
+   'Entrada a l’aigua: blend de posició real i lineal sobre el mateix V18');
+  const swimIdle=swimAt('idle',.6);
+  assert(Math.abs(swimIdle.z)<1e-10&&Math.abs(swimIdle.y)<.017,
+   'Manteniment en superfície: bob nadiu, sense desplaçament longitudinal');
+  const swimTransition=swimAt('crawl',.7,1,'breast',.5);
+  assert(Math.abs(swimTransition.z-.61)<1e-8&&
+   Math.abs(swimTransition.y-swimFull.y)<.06,
+   'Transició B3 a C4 sense salt d’escala del cos');
+  const coopSwimParent=new T.Group();
+  coopSwimParent.position.set(12,4,-7);coopSwimParent.rotation.y=.67;
+  coopSwimParent.scale.setScalar(1.35);coopSwimParent.add(g);
+  const coopSwim=swimAt('breast',.7);
+  assert(coopSwim.distanceTo(swimFull)<1e-7,
+   'La natació V18 és invariant al pare girat/escalat de COOP');
+  coopSwimParent.remove(g);
+  u.gameSwimBlend=0;u.gameSwimActive=false;
+  updateHuman(g);
+  assert(canonical.position.length()<1e-8,
+   'Sortida de l’aigua: restauració de la postura local nativa');
   // Fusell i bazuca: mà de suport V18 i geometries visuals nadiues.
   // Prova sense el sistema d'armes clàssic: només ancoratges geomètrics.
   const longKinds={

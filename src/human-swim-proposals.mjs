@@ -302,7 +302,7 @@ export function sampleHumanSwimming(mode,time){
   breathing,bodyPitch:-Math.PI/2+.026*Math.sin(TAU*phase*2),
   bodyRoll:config.roll*Math.sin(TAU*phase),bob:.035+.012*Math.sin(TAU*phase*2)};
 }
-export function poseHumanSwimming(model,joints,weapon,time,mode){
+export function poseHumanSwimming(model,joints,weapon,time,mode,{rootMotion=null}={}){
  const p=sampleHumanSwimming(mode,time);
  if(!p)return false;
  const state=snapshot(model);
@@ -313,8 +313,10 @@ export function poseHumanSwimming(model,joints,weapon,time,mode){
  model.rotation.copy(state.rotation);
  model.rotation.x+=p.bodyPitch;model.rotation.y+=p.bodyRoll;
  model.position.copy(state.position);
- model.position.y+=.54+p.bob;
- model.position.z+=.92; // Centra longitudinalment el cos horitzontal.
+ // El laboratori manté el centre de natació original; el joc passa
+ // desplaçaments AUTORATS en unitats V18, no una escala del rig antic.
+ model.position.y+=(rootMotion?.lift??.54)+p.bob;
+ model.position.z+=rootMotion?.centerZ??.92; // Cos horitzontal centrat.
  const set=(id,x=0,y=0,z=0)=>{if(joints[id])joints[id].rotation.set(x,y,z)};
  if(p.kind==='breast'&&p.refined){
   // Sense rotació axial del tronc (ni del coll). El pivot superior
