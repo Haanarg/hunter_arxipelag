@@ -2,7 +2,8 @@
 - [x] La meta de pistola del protagonista es calcula amb l'espatlla, tors i llargades reals del V18, en coordenades mundials, i només després es converteix a l'espai del controlador antic. Eliminat el target fix 3.10/-1.13 del recorregut habitual del V18.
 - [x] Regressió SOURCE/BUNDLE adaptada per verificar que es fa servir una meta nativa i que queda per sota del cap.
 - [ ] Continuar migració dels altres grips, canons, animacions, IK i física, fins a poder retirar el grup de control 2/3; no es considera normalitzat l'esquelet complet.
-- [ ] Confirmació CI, compilació, Cloudflare, WebGL, natació i COOP real.
+- [x] GitHub Actions 44699620238: suites de regressió, laboratori V18, models, comparador moto/bici, audit d'escales, compilació i paritat SOURCE/BUNDLE aprovades; Worker i assets desplegats a Cloudflare, verificació HTTP i contingut de Paradoxa completada correctament per a v0.6.258.
+- [ ] Validació visual en WebGL/navegador, natació i sessió COOP real abans de considerar complet el sistema V18.
 
 **2026-11-20 · v0.6.257 · COOP: diferències trees/targets entre navegadors:**
 - [x] La identitat SHA-256 COOP utilitza una representació canònica amb precisió centimètrica exclusivament per les posicions/valors numèrics dels arbres/roques i els enemics; el Worker continua rebent les dades originals completes de l'amfitrió.
