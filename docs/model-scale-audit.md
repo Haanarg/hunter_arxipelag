@@ -41,6 +41,14 @@ El Ka-60 A ara té la mida aprovada ×2 **dins les malles, els pivots i els roto
 
 S'han afegit proves explícites de mides per a quatre valors VS (inclosa la conversió real del joc), de volums, rotors i places dels pilots. **No es modifica encara** el factor de contacte amb terres/teulades calculat a `game-core.js`, ni els conductors generals de `rider.js`.
 
+## LOD natiu del GAZ i variants d'ocupació · v0.6.262
+
+El GAZ Tigr-M ja no fa `proxy.scale.setScalar(1.25)`: les tres variants de llarga distància es creen amb la proporció de les dues caixes físiques aprovades del GAZ, integrant-hi la mida de cada vèrtex directament a la geometria. La mida física del vehicle complet, els controls, els seients i les col·lisions **no canvien**.
+
+Una auditoria posterior ha detectat que `bakeFixedModelScales(g)` només normalitzava la geometria de la variant de LOD muntada en aquell instant. Quan `setDistantVehicleLOD` canviava la quantitat de tripulants, carregava altres geometries preconstruïdes sense la conversió `vehicleSpecs.scales`. Ara, en tancar la fàbrica de vehicles, **les tres variants s'entreguen en unitats del món**, es sincronitza `variants[0]` amb `proxy.geometry` i s'evita reintroduir l'escala en alternar nivells de detall. Això s'aplica a tota la flota amb LOD, no només al GAZ.
+
+Les regressions contrasten les caixes dels tres LOD amb les geometries originals i el factor físic de cada tipus, també amb 0/1/2 ocupants. La comprovació visual de siluetes i els models humans en seients COOP encara és pendent.
+
 ## Referències trobades, NO eliminades encara perquè alteren altres contractes
 
 | Codi | Situació | Migració necessària |
@@ -53,7 +61,7 @@ S'han afegit proves explícites de mides per a quatre valors VS (inclosa la conv
 | `game-core.js`: `visualScale=1.5/1.1` pels helicòpters | Contacte amb terreny/teulades obtingut per factors històrics, no per malles | Derivar volum de col·lisió de fuselatge i rotor del model aprovat |
 | `characters.js` i `general-model.js`: `fit*0.8` en comandos i general | Factor de generació de personatges antics vinculat als pivots i als enemics | Produir els soldats/generals amb el rig anatòmic V18 final, conservant dany, ragdoll, COOP i presa d'armes |
 | `enemy-ai.js`: models de tripulants `scale=.31/.43/.52` | Figures enemigues dependents del vehicle; la geometria de la tripulació encara canvia després de la creació | Fàbriques natives per tipus de vehicle i IK de passatger sense escalats de l'arrel |
-| `vehicle-model-core.mjs`: models llunyans GAZ ×1,25 | La malla proxy, no el vehicle complet, encara es retoca a posteriori | Fer un LOD natiu de les dimensions del GAZ i comparar-ne el contorn amb el model complet |
+| `vehicle-model-core.mjs`: models llunyans GAZ ×1,25 | **Consolidat v0.6.262:** la silueta distant neix de les caixes aprovades del GAZ; no hi ha factor posterior al proxy | La comparació visual de contorns entre el GAZ complet i el LOD en WebGL encara és pendent |
 | `human-game-runtime-v17.mjs` / `human-weapon-preview.mjs`: proxies d'armes escalats | **Consolidat al joc v0.6.260:** les 7 còpies visibles tenen `scale=1`; la mida de l'editor encara és independent | Unificar en una fàbrica compartida els ancoratges natius d'arma de joc i editor, sense eliminar els controls antics abans de migrar-los |
 
 ## Variacions legítimes no candidates a eliminació
