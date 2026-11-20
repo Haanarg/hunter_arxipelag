@@ -242,6 +242,32 @@ for(const role of ['player','soldier','rocket','elite','general']){
   legacyLimbBones.forEach((bone,i)=>bone.rotation.copy(oldLimbRotations[i]));
   updateHuman(g);
   console.log('PASS V18 native locomotion without reading legacy limb transforms');
+  // Amb l'avatar real en mode V18, la pistola ha de mirar segons el
+  // vector del tick, independentment del quaternion de l'arma oculta.
+  u.humanGameNativeBodyPose={
+   pelvisYaw:0,spinePitch:0,spineYaw:0,spineRoll:0,
+   headPitch:0,headYaw:0,headRoll:0,crouchDrop:0
+  };
+  u.humanGameNativeLimbPose=Object.fromEntries(limbIds.map(id=>[
+   id,{x:0,z:0}
+  ]));
+  const nativeDirection=new T.Vector3(.15,.04,-1).normalize();
+  u.visualAimSmoothed=nativeDirection;
+  u.pistolBlend=1;
+  u.gun.rotation.set(-.60,.78,-.36);
+  updateHuman(g);
+  const nativePistol=canonical.getObjectByName('Arma canònica · gun');
+  const aimingForward=new T.Vector3(0,0,-1).applyQuaternion(
+   nativePistol.getWorldQuaternion(new T.Quaternion()));
+  assert(u.humanGameNativeWeaponAimUsed===true,
+   'L\'orientació del canó surt del vector numèric V18');
+  assert(aimingForward.dot(nativeDirection)>.995,
+   'El canó del V18 coincideix amb la mira encara que l\'arma oculta giri');
+  delete u.humanGameNativeBodyPose;
+  delete u.humanGameNativeLimbPose;
+  u.visualAimSmoothed=null;u.pistolBlend=0;u.gun.rotation.set(0,0,0);
+  updateHuman(g);
+  console.log('PASS V18 native pistol aim orientation independent of ghost weapon');
   // L'explosió del protagonista no pot animar membres ocults V17.
   // El ragdoll V18 es torna a aplicar després de humanGamePose() al RAF.
   const ragdollWindow={window:{}};
