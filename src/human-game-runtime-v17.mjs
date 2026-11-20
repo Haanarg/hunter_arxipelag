@@ -143,8 +143,13 @@ function installCanonicalPlayer(T,model){
  const pelvisY=u.hipHeight,spineY=u.upperBodyPivotHeight,actualSpineY=j.spine.position.y;
  // El desplaçament d'ajupir-se prové del controlador antic.
  // Adaptam el moviment al maluc real de la geometria nativa, mai a 2 m.
- const canonicalPelvisY=sourceFor(T,'player').joints.get('pelvis').parent.position.y; // referència original d'ajupir-se
- const crouchRatio=Math.min(1,canonicalPelvisY/pelvisY);
+ // Les mides de referència provenen del maluc V18 REAL, no d'una
+ // segona instància del model de l'editor sense la mida del joc.
+ const nativePelvisMeters=j.pelvis.position.y/HUMAN_WORLD_UNITS_PER_METER;
+ const crouchRatio=Math.min(1,nativePelvisMeters/pelvisY);
+ // La conversió de l'animació vella a les coordenades mundials del V18
+ // és una transformació entre dos Object3D, no un corrector numèric 2/3.
+ const controlCrouchWorld=new T.Vector3();
  const weapons=[
   // Pivot de la culata dins el puny: centre del mànec (y=-.20)
   // coincideix amb el plec dels dits (y≈-.065) amb escala .40.
@@ -235,9 +240,15 @@ function installCanonicalPlayer(T,model){
   // El transform de compatibilitat dels controls antics queda separat
   // i mai altera l'escala del model animat.
   const dy=u.lowerBody.position.y-pelvisY;
-  // El desplaçament del controlador històric ja tenia l'escala final
-  // 0.6666666666666666; la posició de l'editor ara és independent.
-  visual.position.y=dy*crouchRatio*LEGACY_GAME_RIG_SCALE;
+  // Projectam el desplaçament real del control ocult dins l'espai
+  // propi del V18. Això respecta transformacions de pare, girs i VS
+  // sense cap escala correctora explícita a la pell visible.
+  if(Math.abs(dy)>1e-9){
+   controlCrouchWorld.set(0,dy,0);
+   u.lowerBody.parent.localToWorld(controlCrouchWorld);
+   model.worldToLocal(controlCrouchWorld);
+   visual.position.y=controlCrouchWorld.y*crouchRatio;
+  }
   j.pelvis.quaternion.copy(lowerRest).multiply(u.lowerBody.quaternion);
   j.spine.quaternion.copy(j.pelvis.quaternion).invert()
    .multiply(upperRest).multiply(u.upperBody.quaternion);

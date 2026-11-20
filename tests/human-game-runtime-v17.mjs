@@ -3,6 +3,7 @@ import {runInNewContext} from 'node:vm';
 import {readFileSync} from 'node:fs';
 import * as T from '../vendor/three-r186.module.mjs';
 import {playerModel} from '../src/player-model-core.mjs';
+import {palette as gamePalette} from '../src/palette-core.mjs';
 import {vehicleModels} from '../src/vehicle-model-core.mjs';
 import {playerBatching} from '../src/player-batching-core.mjs';
 import {createHumanProposal,sampleHumanGait} from '../src/human-proposals.mjs';
@@ -229,7 +230,28 @@ for(const role of ['player','soldier','rocket','elite','general']){
   u.lowerBody.position.y-=.72;u.upperBody.position.y-=.72;
   updateHuman(g);
   assert(canonical.position.y<-.19&&canonical.position.y>-.35,
-   'Old 4m crouch is translated to native 2m joints, not -0.72m full drop');
+   'Ajupiment V18 amb mateixa profunditat aprovada');
+  const nativePelvisMeters=bones.pelvis.position.y/HUMAN_WORLD_UNITS_PER_METER;
+  const expectedCrouch=(u.lowerBody.position.y-u.hipHeight)*
+   u.humanGameLegacyRig.scale.y*Math.min(1,nativePelvisMeters/u.hipHeight);
+  assert(Math.abs(canonical.position.y-expectedCrouch)<1e-8,
+   'Desplaçament de la pelvis calculat des de dimensions V18');
+  // El model és fill d'un altre espai en el joc i en COOP:
+  // la conversió entre Object3D ha de ser invariant al pare.
+  const parent=new T.Group();
+  parent.position.set(12,4,-7);parent.rotation.y=.67;
+  parent.scale.setScalar(1.35);parent.add(g);
+  g.rotation.y=-.41;updateHuman(g);
+  assert(Math.abs(canonical.position.y-expectedCrouch)<1e-8,
+   'Ajupiment del model V18 sota transformació del pare COOP');
+  parent.remove(g);g.rotation.y=0;
+  for(const fraction of [.25,.5,.75,1]){
+   u.lowerBody.position.y=oldLowerY-.72*fraction;
+   u.upperBody.position.y=oldUpperY-.72*fraction;
+   updateHuman(g);
+   assert(Math.abs(canonical.position.y-expectedCrouch*fraction)<1e-8,
+    'Ajupiment lineal en la geometria nativa: '+fraction);
+  }
   u.lowerBody.position.y=oldLowerY;u.upperBody.position.y=oldUpperY;
   updateHuman(g);
   // Fusell i bazuca: mà de suport V18 i geometries visuals nadiues.
@@ -1046,3 +1068,46 @@ assert(bootstrap.indexOf('installHooks()')<bootstrap.indexOf('const loadClassic=
 const playerCore=readFileSync(new URL('../src/player-model-core.mjs',import.meta.url),'utf8');
 assert(playerCore.includes("HUNTER_HUMAN_V17?.install(T,g,{role:'player'})"));
 console.log('PASS game V17 player, enemy soldiers, officer, 2 civilian roles, boat/car/bike/motorcycle/hover/rowing drivers; legacy poses');
+
+
+// La fàbrica de joc (no un doble de codi) comprova que una direcció
+// temporalment nul·la no envia la pistola cap a l'antic y=3.10.
+// La meta s'ha de derivar del V18 fins i tot el primer fotograma COOP.
+const characterWindow={
+ HUNTER_PLAYER_MODEL:playerModel,
+ HUNTER_PALETTE:gamePalette,
+ HUNTER_BOLT_CUTTERS:{
+  create:()=>new T.Group(),pose:()=>{}
+ },
+ HUNTER_PLAYER_BATCH:{optimize:()=>({before:0,after:0})}
+};
+const characterContext={window:characterWindow,THREE:T};
+runInNewContext(readFileSync(new URL('../src/characters.js',import.meta.url),'utf8'),characterContext);
+const characterBox=(parent,w,h,d,color,x=0,y=0,z=0)=>{
+ const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),
+  new T.MeshStandardMaterial({color}));
+ mesh.position.set(x,y,z);parent.add(mesh);return mesh;
+};
+const gameAvatar=characterWindow.HUNTER_CHARACTERS.createPlayer(T,{
+ box:characterBox,palette:gamePalette
+});
+assert(gameAvatar.userData.humanGameCanonicalJoints,
+ 'Les articulacions V18 existeixen abans de preparar l’arma');
+const controls=characterWindow.HUNTER_CHARACTERS;
+const controlOptions={forward:0,strafe:0,dt:.001,swimming:false,
+ inVehicle:false,ammo:12};
+gameAvatar.userData.pistolAimTime=1;
+gameAvatar.userData.visualAimSmoothed.set(0,0,0);
+controls.animatePlayerControls(gameAvatar,controlOptions);
+const firstAim=gameAvatar.userData.pistolRig.nativeGoal;
+assert(firstAim&&firstAim.toArray().every(Number.isFinite),
+ 'Sense autoapuntat inicial, la pistola encara té un objectiu V18 real');
+assert(gameAvatar.userData.visualAimSmoothed.lengthSq()<.1,
+ 'L’escena de prova realment exercita la pèrdua temporal d’autoaim');
+const initialAim=firstAim.clone();
+gameAvatar.rotation.y=Math.PI/2;
+gameAvatar.userData.visualAimSmoothed.set(0,0,0);
+controls.animatePlayerControls(gameAvatar,controlOptions);
+assert(gameAvatar.userData.pistolRig.nativeGoal.distanceTo(initialAim)>.3,
+ 'La meta V18 de la pistola segueix el rumb mundial i no el nord antic');
+console.log('PASS native crouch translation + V18 pistol fallback without legacy coordinates');
