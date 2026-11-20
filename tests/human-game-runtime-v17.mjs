@@ -948,16 +948,16 @@ globalThis.HUNTER_CHARACTERS=Object.freeze({
  createCommando(T){return playerModel.create(T)},
  createSoldier(T,{general=false}={}){
   const o=general?globalThis.HUNTER_GENERAL_MODEL.create(T):this.createCommando(T);
-  if(general){
-   o.scale.setScalar(.8);o.userData.profile='general-approved-thick-epaulettes';
-   o.userData.enemyFullRoot=new T.Group();
-   o.userData.enemyMidMesh=new T.Mesh(new T.BoxGeometry(.4,1,.4),
-    new T.MeshStandardMaterial());
-   o.userData.enemyFarMesh=new T.Mesh(new T.BoxGeometry(.3,.8,.3),
-    new T.MeshStandardMaterial());
-   o.add(o.userData.enemyFullRoot,o.userData.enemyMidMesh,
-    o.userData.enemyFarMesh);
-  }
+  o.scale.setScalar(.8);
+  o.userData.profile=general?'general-approved-thick-epaulettes':
+   'enemy-commando-approved';
+  o.userData.enemyFullRoot=new T.Group();
+  o.userData.enemyMidMesh=new T.Mesh(new T.BoxGeometry(.4,1,.4),
+   new T.MeshStandardMaterial());
+  o.userData.enemyFarMesh=new T.Mesh(new T.BoxGeometry(.3,.8,.3),
+   new T.MeshStandardMaterial());
+  o.add(o.userData.enemyFullRoot,o.userData.enemyMidMesh,
+   o.userData.enemyFarMesh);
   return o;
  }
 });
@@ -966,8 +966,12 @@ assert.equal(generalFactory.userData.humanOnFootNativeRole,'general',
  'La fàbrica real d’enemics normalitza el general després dels tres LOD');
 assert.deepEqual(generalFactory.scale.toArray(),[1,1,1]);
 const infantryFactory=globalThis.HUNTER_CHARACTERS.createSoldier(T,{general:false});
-assert.equal(infantryFactory.userData.humanOnFootNativeRole,undefined,
- 'La normalització del general no altera encara els soldats amb bazuca');
+assert.equal(infantryFactory.userData.humanOnFootNativeRole,'soldier',
+ 'Els soldats normals també normalitzen les variants full/mid/far');
+assert.deepEqual(infantryFactory.scale.toArray(),[1,1,1]);
+const driverCrew=globalThis.HUNTER_CHARACTERS.createCommando(T);
+assert.equal(driverCrew.userData.humanOnFootNativeRole,undefined,
+ 'Comandos de vehicles i llanxes continuen amb escala provisional de cabina');
 
 const civilians=[];
 globalThis.HUNTER_PRISONERS=Object.freeze({
