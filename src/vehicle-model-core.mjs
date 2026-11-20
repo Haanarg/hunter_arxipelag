@@ -764,10 +764,15 @@ export const vehicleModels=Object.freeze({
         // no intervenen en la física ni reben impactes independents.
         const seats=combat?[[0,1.98,-3.08],[0,1.32,-4.96]]:
           [[-.49,1.34,-2.65],[.49,1.34,-2.65]];
+        const crewUnits=combat?1:approvedModel.userData.cockpitSeatLocalScale;
         const crew=seats.map(([x,y,z],i)=>{
-          const pilot=createHumanProposal(THREE,'soldier','a',{visualOnly:true,nativeHeight:1.30});
+          // El pilot i el punt de seient tenen dimensions NATIVES, sense
+          // heretar l'antic x2 de l'arrel Ka-60 (ara sempre és 1).
+          const pilot=createHumanProposal(THREE,'soldier','a',{
+            visualOnly:true,nativeHeight:1.30*crewUnits
+          });
           pilot.name='Pilot de cabina '+(i+1);
-          pilot.position.set(x,y-.27,z);
+          pilot.position.set(x*crewUnits,(y-.27)*crewUnits,z*crewUnits);
           pilot.rotation.x=-.08;
           approvedModel.add(pilot);
           return pilot;

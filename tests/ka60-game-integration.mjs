@@ -13,7 +13,25 @@ assert.equal(model.userData.ka60Model,KA60_RUNTIME_ID);
 assert.equal(model.userData.kamovDetail,1);
 assert.equal(model.userData.cockpitSeatCount,2);
 assert.equal(model.userData.roundWheelCount,3);
+assert.equal(approved.userData.kamovNativeDimensions,true);
+assert.deepEqual(approved.scale.toArray(),[1,1,1],
+ 'La variant A ja surt del generador amb la mida aprovada a la geometria');
+assert.deepEqual(model.scale.toArray(),[1,1,1],
+ 'El Ka-60 de joc no requereix transformar l’arrel per corregir-ne la mida');
 assert.equal(count(model),count(approved));
+for(const vs of [1,vehicleSpecs.scales.heli,1.35,2.2]){
+ const variant=createKa60Runtime(T,{vehicleScale:vs});
+ assert.deepEqual(variant.scale.toArray(),[1,1,1],
+  'Escala de model Ka-60 unitària per VS '+vs);
+ assert(bounds(variant).getSize(new T.Vector3()).multiplyScalar(vs)
+   .distanceTo(bounds(approved).getSize(new T.Vector3()))<1e-5,
+  'El fuselatge conserva el volum aprovat amb VS '+vs);
+ assert(Math.abs(variant.userData.rotor.position.y*vs-
+  approved.userData.rotor.position.y)<1e-6,
+  'L’alçada del rotor és nativa i compatible amb VS '+vs);
+ assert(Math.abs(variant.userData.cockpitSeatLocalScale*vs-KA60_WORLD_SCALE)<1e-10,
+  'El seient es converteix a metres finals, no amb l’escala de la malla');
+}
 assert(bounds(model).min.distanceTo(bounds(approved).min)<1e-5);
 assert(bounds(model).max.distanceTo(bounds(approved).max)<1e-5);
 const make=vehicleModels.createFactory(T,{box(){throw Error('No s’ha d’instanciar el model de reserva')},material:c=>new T.MeshStandardMaterial({color:c}),shadows:false,batching:playerBatching});
@@ -27,7 +45,19 @@ const pilots=game.userData.cockpitCrew.reduce((n,p)=>n+count(p),0);
 assert.equal(count(full)-pilots,count(approved),
  'El model Ka-60 no guanya triangles; els pilots anatòmics V18 són malles legítimes de cabina');
 assert.equal(game.userData.cockpitCrew.length,2);
-assert(bounds(full).getSize(new T.Vector3()).distanceTo(bounds(approved).getSize(new T.Vector3()))<1e-5,'Escala mundial x2 sense duplicar factor extern');
+assert(bounds(full).getSize(new T.Vector3()).distanceTo(bounds(approved).getSize(new T.Vector3()))<1e-5,
+ 'Mides mundials definitives del Ka-60, sense corrector a la fàbrica');
+assert.deepEqual(full.scale.toArray(),[1,1,1],
+ 'El fuselatge s’instal·la al joc amb transform unitari');
+for(const [i,pilot]of game.userData.cockpitCrew.entries()){
+ const [x,y,z]=[[-.49,1.34,-2.65],[.49,1.34,-2.65]][i];
+ const position=pilot.getWorldPosition(new T.Vector3());
+ assert(position.distanceTo(new T.Vector3(x*KA60_WORLD_SCALE,
+   (y-.27)*KA60_WORLD_SCALE,z*KA60_WORLD_SCALE))<1e-5,
+  'Pilots Ka-60 en ancoratges finals sense escala heretada');
+ assert.deepEqual(pilot.scale.toArray(),[1,1,1],
+  'Cada pilot té geometria nativa i cap corrector d’arrel');
+}
 assert(Math.abs(game.userData.skidContactHeight-bounds(full).min.y)<1e-5);
 assert(Math.abs(game.userData.rotorContactHeight-game.userData.rotor.getWorldPosition(new T.Vector3()).y)<1e-5);
 assert.equal(game.userData.rotor.userData.kamovRotor.axis,'y');

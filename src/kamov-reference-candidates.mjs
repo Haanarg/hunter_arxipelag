@@ -1,3 +1,5 @@
+import {bakeFixedModelScales} from './model-scale-normalization.mjs';
+
 // Original low-poly geometry, based on photographs linked in the lab catalogue.
 // Nose = -Z, metres before the lab's uniform comparison scale. No external assets.
 export const KAMOV_VERSION='kamov-20261115-cockpit-body-panels-13';
@@ -461,12 +463,16 @@ export function createKamovCandidate(T,variant){
   batchKa60(T,root,detail);
  }
  root.userData.referenceVersion=KAMOV_VERSION;
- // Apply the requested size uniformly to the complete aircraft, not
- // individual vertices. Preserve the explicit multiplier when the lab
- // fits candidates to the reference aircraft.
+ // La mida definitiva aprovada del Ka-60 (x2) és part de la geometria
+ // de base i dels pivots dels dos rotors. No sortir del generador amb
+ // una escala d'arrel pendent per a l'editor, el joc ni els LOD.
  const sizeMultiplier=combat?1:2;
  root.scale.setScalar(sizeMultiplier);
+ bakeFixedModelScales(root);
+ if(root.scale.x!==1||root.scale.y!==1||root.scale.z!==1)
+  throw Error('Kamov amb escala de model pendent');
  root.userData.labSizeMultiplier=sizeMultiplier;
+ root.userData.kamovNativeDimensions=true;
  root.userData.rotorDiameter=(combat?14.5:13.5)*sizeMultiplier;
  root.userData.crewSeats=2;
  return root;
