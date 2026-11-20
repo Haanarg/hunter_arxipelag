@@ -13,6 +13,7 @@ const suites={
     "heliport-tower-clearance.mjs",
     "hq-btr-patrol-clearance.mjs",
     "hangar-roof-destruction.mjs",
+    "window-frame-zfighting.mjs",
     "structure-durability.mjs",
     "tower-blast-guard-containment.mjs",
     "btr82-driving-and-hangar.mjs",
