@@ -1,3 +1,9 @@
+**2026-11-20 · v0.6.273 · Hovercraft D amb geometria nativa i ventilador rodó:**
+- [x] Eliminada la transformació d'arrel no uniforme (1,28 / 1 / 1,20). Casc, bigues, interiors, cobertes, vidres i dos seients amb la mida final integrada a malles i coordenades natives.
+- [x] Ventilador circular: ducte, anelles, gàbia i sis pales no s'estiren en X; rotor amb animació i pivots originals, sense el·lipses en girar.
+- [x] Regressions de paritat de casc, seients, volant, finestres col·lisionables i radi de pales durant diverses fases de gir, abans i després de la conversió uniforme del joc.
+- [ ] Validació CI i desplegament Cloudflare, comprovació visual WebGL de ventilador, seients i finestres (SOLO/COOP). Resten els contactes dels helicòpters i el controlador antic del protagonista 2/3.
+
 **2026-11-20 · v0.6.272 · Bicicleta i moto amb dimensions de geometria nativa:**
 - [x] Streetfighter 25: el factor aprovat 1,24 queda consolidat a geometria, rodes, direcció i cinc ancoratges abans d'instanciar-lo. Escala d'arrel 1, radi de rodament en unitats del model i VS únicament com a conversió mundial.
 - [x] Bicicleta 700C: quadre, selló, direcció, bieles i pedals finalitzen en geometria nativa 0,74, sense wrapper escalat; radi i altura del selló declarats en unitats pròpies.
