@@ -125,3 +125,10 @@ La mateixa 0.6.292 també genera directament els vuit canals V18 de locomoció (
 - Quan l'animador natiu de cos i extremitats ja està inicialitzat, la pistola, el rifle, el fusell d'assalt i el bazuca visibles deriven el quaternion mundial de `u.visualAimSmoothed` (el vector de mira del tick). No necessiten llegir la rotació de `u.gun/u.assault/u.sniper/u.bazooka` amagats.
 - El ganivet 3B/4B publica l'orientació exacta de la fulla V18 durant la transició. La granada conserva rotació local neutra i es munta al canell canònic. Els antics grups segueixen existint per controls de dispar i compatibilitat; no s'ha retirat el 2/3 encara.
 - Regressió: quan es força un quaternion incorrecte al grup ocult de pistola, el canó visible V18 continua seguint el vector mundial d'apuntat. **Pendent** comprovar de forma real l'animació de recoil i els canons en COOP i WebGL, i retirar el controlador ocult de lògica d'armes.
+
+
+## 0.6.294 — V18 inicialitzat des del primer fotograma i sense objectius fixos d'IK
+
+- La fàbrica real `HUNTER_CHARACTERS.createPlayer` inicialitza `humanGameNativeBodyPose` i els vuit `humanGameNativeLimbPose` abans de lliurar el protagonista, també en les rèpliques COOP. El primer render ja entra exclusivament al controlador nadiu (la compatibilitat abans del primer tick només resta en els fixtures antics de `playerModel.create`).
+- El destí de pistola utilitza sempre les articulacions d'espatlla/canell V18 reals; no hi ha reserva `3.10/-1.13` ni transformació amb `humanGameLegacyRig` a `characters.js`. Si falta un rig canònic, s'informa d'error en lloc de pintar una animació falsa.
+- **Encara NO suprimim** l'escala del controlador ocult `2/3`: l'arma lògica, grups de muntatge i rig d'enemics/civils poden dependre d'aquest espai. La seva retirada requereix adaptar també la lògica d'armes i la generació de models no protagonistes i passar tota la suite CI/COOP. No s'ha d'entendre com una migració completa.
