@@ -2,7 +2,8 @@
 - [x] El GAZ, el cotxe civil i l'hovercraft ja no apliquen g.scale=.825/.82/.63; les variants de pell/rig es generen en geometries definitives i es reutilitzen en canviar de vehicle.
 - [x] Eliminades 35 conversions inverses a punts de seient i d'IK. Mantingudes les llargades proporcionals dels segments, les animacions de pistola i el proxy distant amb unitats de cabina.
 - [x] Proves específiques dels conductors GAZ/civil, pilot i passatger de l'hovercraft, dimensions de geometria, reutilització de variants i restauració de mida en tornar a la moto.
-- [ ] CI i desplegament Cloudflare; comprovar visualment seients, mans, pistola/boques de foc, COOP amb passatger i canvi d'escales entre vehicles; encara resten les talles enemigues i el controlador de joc 2/3.
+- [x] GitHub Actions 44723710796: laboratori V18, proves de pilots/cabines i canons, regressions SOLO/COOP, compilació i paritat SOURCE/BUNDLE, bundle guardat a GitHub (commit 1b673aa788f4c4d7fc51bebb9a085bf451ebb1fc), Cloudflare i verificació HTTP de Paradoxa correctes per a v0.6.263.
+- [ ] Comprovar visualment seients, mans, pistola/boques de foc, COOP amb passatger i canvi d'escales entre vehicles; encara resten les talles enemigues i el controlador de joc 2/3.
 
 **2026-11-20 · v0.6.262 · GAZ distant natiu i totes les variants LOD:**
 - [x] El GAZ Tigr-M distant obté les dimensions de les caixes aprovades, integrades als vèrtexs: eliminat `proxy.scale.setScalar(1.25)` i `proxy.position.y*=1.25`.
