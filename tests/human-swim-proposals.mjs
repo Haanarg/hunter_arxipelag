@@ -95,6 +95,20 @@ const inspectB=time=>{poseHumanProposal(rootB,time,'swim-breast-3');rootB.update
 }};
 const straight=inspectB(0),catchB=inspectB(.94),loadB=inspectB(1.52),glideB=inspectB(2.2);
 assert.equal(HUMAN_SWIM_PROPOSALS.breast[2].glideSeconds,1);
+// Les postures de maluc, genoll i obertura han de coincidir amb la B1,
+// però en els instants de la puntada de la B3 (cicle de 3,20 s).
+const b1ActiveSeconds=HUMAN_SWIM_PROPOSALS.breast[0].period*
+ (1-HUMAN_SWIM_PROPOSALS.breast[0].glide);
+for(const [seconds,b1Phase]of [[0,0],[.65,.32],[1.52,.54],
+ [1.66,.69],[1.99,.84],[2.20,1]]){
+ const source=sampleHumanSwimming('swim-breast-1',b1Phase*b1ActiveSeconds);
+ const target=sampleHumanSwimming('swim-breast-3',seconds);
+ for(let joint=0;joint<3;joint++){
+  assert(Math.abs(target.leg[joint]-source.leg[joint])<1e-8,
+   'B3 conserva el recorregut B1 a '+seconds+' s (articulació '+joint+')');
+ }
+}
+assert.equal(HUMAN_SWIM_PROPOSALS.breast[2].period,3.20);
 assert(catchB.head.y>straight.head.y+.045,'Braça: el pit eleva el cap per respirar');
 assert(catchB.pelvis.y<straight.pelvis.y-.006,'Braça: els malucs cauen una mica en inspirar');
 assert(catchB.armL.distanceTo(catchB.armR)<.20,'Braça: les mans s’ajunten sota el pit');
@@ -111,7 +125,7 @@ assert(b.ankleR.rotation.x<-1.15,'Braça: flexió plantar completa durant el lli
 for(const t of [2.2,2.45,2.8,3.05,3.1999]){
  const pose=sampleHumanSwimming('swim-breast-3',t);
  assert(pose.glideActive&&pose.bodyRoll===0,'Braça: un segon sense rotació axial');
- assert(Math.abs(pose.arm[0]-3.06)<1e-9&&Math.abs(pose.leg[1]+.02)<1e-9,'Braça: fletxa estable');
+ assert(Math.abs(pose.arm[0]-3.06)<1e-9&&Math.abs(pose.leg[1]+.08)<1e-9,'Braça: fletxa estable');
  poseHumanProposal(rootB,t,'swim-breast-3');
  for(const joint of ['shoulder','elbow','hip','knee','ankle']){
   const L=b[joint+'L'].rotation,R=b[joint+'R'].rotation;
@@ -228,7 +242,7 @@ for(const phase of [.24,.39,.79,.82]){
   'Crol: colze alt a EVF/tirada i a recobrament, fase '+phase);
 }
 poseHumanProposal(rootC,0,'rest');
-console.log('PASS B3 colzes enfora i puntada ampla; C4 IK 5 fases, roll 40°, colze frontissa, canell <15° i mans sense creuar el cos');
+console.log('PASS B3 recorregut B1 amb temporització i peus B3; C4 IK 5 fases, roll 40°, colze frontissa, canell <15° i mans sense creuar el cos');
 
 assert.equal(positions.size,8,'Les vuit propostes tenen paràmetres realment diferents');
 console.log('PASS 8 variants de natació, cicles, extremitats, visibilitat i retorn al rig original');
