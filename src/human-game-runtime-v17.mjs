@@ -89,8 +89,8 @@ function solveNativeLongGunSupport(T,j,grip,cache){
  const pole=cache.pole.set(-.48,-.72,.30).addScaledVector(axis,
   -cache.pole.dot(axis)).normalize();
  const bend=cache.bend.copy(axis).multiplyScalar(along).addScaledVector(pole,radius);
- shoulder.quaternion.setFromUnitVectors(cache.down,bend.normalize());
- const forearm=cache.forearm.copy(target).sub(cache.bend)
+ shoulder.quaternion.setFromUnitVectors(cache.down,cache.bendDirection.copy(bend).normalize());
+ const forearm=cache.forearm.copy(target).sub(bend)
   .normalize().applyQuaternion(cache.inverse.copy(shoulder.quaternion).invert());
  elbow.quaternion.setFromUnitVectors(cache.down,forearm);
  const end=wrist.getWorldPosition(cache.wrist);
@@ -154,7 +154,8 @@ function installCanonicalPlayer(T,model){
  ],proxies=new Map();
  const supportCache={
   target:new T.Vector3(),axis:new T.Vector3(),pole:new T.Vector3(),
-  bend:new T.Vector3(),forearm:new T.Vector3(),down:new T.Vector3(0,-1,0),
+  bend:new T.Vector3(),bendDirection:new T.Vector3(),forearm:new T.Vector3(),
+  down:new T.Vector3(0,-1,0),
   wrist:new T.Vector3(),worldGrip:new T.Vector3(),inverse:new T.Quaternion()
  };
  const weaponWorld=new T.Quaternion(),handWorld=new T.Quaternion(),
