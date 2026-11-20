@@ -67,11 +67,41 @@ window.HUNTER_RIDER=Object.freeze({
     g.userData.riderFarProxy=riderFar;
     g.userData.riderDetailNodes=riderDetailNodes;
     g.userData.riderFarActive=false;
+    // Mides de cabina consolidades en geometria i pivots: cap escala
+    // sobre l'arrel en temps de joc. El V18 de moto/bici queda exclòs.
+    // Les geometries del rider són pròpies: no compartim bufers amb
+    // els altres personatges ni reconstruïm malles per fotograma.
+    const nativeParts=[...riderDetailNodes,riderFar],ownedGeometry=new WeakSet();
+    let nativeSize=1;
+    const setNativeRiderSize=size=>{
+      if(!(Number.isFinite(size)&&size>0))throw Error('Talla nativa de rider invàlida');
+      const ratio=size/nativeSize;
+      if(Math.abs(ratio-1)<1e-10)return;
+      for(const root of nativeParts)root.traverse(node=>{
+        // Els roots del rider es mouen amb els seients a update().
+        // Els pivots i les peces INTERNES sí tenen les seves
+        // coordenades inicials consolidades a escala nativa.
+        if(node!==root)node.position.multiplyScalar(ratio);
+        if(node.isMesh&&node.geometry){
+          if(!ownedGeometry.has(node)){
+            node.geometry=node.geometry.clone();
+            ownedGeometry.add(node);
+          }
+          node.geometry.scale(ratio,ratio,ratio);
+        }
+      });
+      nativeSize=size;
+      g.userData.riderNativeSize=size;
+      g.userData.riderNativeGeometry=true;
+    };
+    g.userData.riderNativeSize=1;
     g.visible=false;g.traverse(o=>{if(o.isMesh&&!o.userData.noCastShadow)o.castShadow=shadows});scene.add(g);
     const down=new THREE.Vector3(0,-1,0),delta=new THREE.Vector3();
     const limbBetween=(m,a,b)=>{
       delta.copy(b).sub(a);const length=delta.length();m.position.copy(a);
-      m.scale.y=length/m.userData.restLength;
+      // scale.y ací és només la llargada animada del segment, no
+      // una compensació de mida del model complet.
+      m.scale.y=length/(m.userData.restLength*nativeSize);
       if(length>1e-6)m.quaternion.setFromUnitVectors(down,delta.multiplyScalar(1/length));
     };
     const vec=(x,y,z)=>new THREE.Vector3(x,y,z);
@@ -219,7 +249,8 @@ window.HUNTER_RIDER=Object.freeze({
       pistolParts.slide.position.z=Math.exp(-u.shotAge*18)*.055;
       pistolParts.flash.visible=false;
     };
-    const shoulderAt=side=>vec(side*.57,1.17,0).applyQuaternion(torso.quaternion).add(torso.position);
+    const shoulderAt=side=>vec(side*.57*nativeSize,1.17*nativeSize,0)
+      .applyQuaternion(torso.quaternion).add(torso.position);
     const muzzleLocal=new THREE.Vector3(0,.183,-1.47),
           forward=new THREE.Vector3(0,0,-1);
     // Animació superposada després de la postura de conducció: la mà
@@ -252,17 +283,17 @@ window.HUNTER_RIDER=Object.freeze({
       }else torso.rotation.y+=twist*u.shotBlend;
       const shoulder=shoulderAt(1),
             forearm=limbs[3],
-            restingHand=new THREE.Vector3(0,-forearm.userData.restLength*forearm.scale.y,0)
+            restingHand=new THREE.Vector3(0,-forearm.userData.restLength*forearm.scale.y*nativeSize,0)
               .applyQuaternion(forearm.quaternion).add(forearm.position),
             // El braç dret surt del rem amb una extensió curta cap a proa.
             // Evitam que travessi el pit o arribi a l'altre costat del buc.
-            reach=rowing?vec(-.08*sc,-.26,-.48*sc):
+            reach=(rowing?vec(-.08*sc,-.26,-.48*sc):
               v.t==='windsurf'?vec(.17*sc,-.14,-1.02*sc):
-              vec(.25*sc,-.29,-1.13*sc);
+              vec(.25*sc,-.29,-1.13*sc)).multiplyScalar(nativeSize);
       const target=shoulder.clone().add(reach),
             hand=restingHand.lerp(target,u.shotBlend),
             elbow=shoulder.clone().lerp(hand,.57);
-      elbow.y-=.12;elbow.x+=rowing?-.05*sc:.12*sc;
+      elbow.y-=.12*nativeSize;elbow.x+=(rowing?-.05*sc:.12*sc)*nativeSize;
       limbBetween(limbs[2],shoulder,elbow);limbBetween(limbs[3],elbow,hand);
       // La mà esquerra solta el rem durant el gir de cintura i
       // acompanya el tronc, sense estirar el braç a l'altre costat.
@@ -272,7 +303,7 @@ window.HUNTER_RIDER=Object.freeze({
               leftHand=leftShoulder.clone().add(relax),
               leftElbow=leftShoulder.clone().lerp(leftHand,.53);
         leftElbow.y-=.12;
-        const oldHand=vec(0,-limbs[1].userData.restLength*limbs[1].scale.y,0)
+        const oldHand=vec(0,-limbs[1].userData.restLength*limbs[1].scale.y*nativeSize,0)
           .applyQuaternion(limbs[1].quaternion).add(limbs[1].position);
         const oldElbow=limbs[1].position.clone();
         // La mà esquerra continua pràcticament sobre el rem.
@@ -280,7 +311,7 @@ window.HUNTER_RIDER=Object.freeze({
         limbBetween(limbs[0],leftShoulder,oldElbow);
         limbBetween(limbs[1],oldElbow,oldHand);
       }
-      const recoil=Math.exp(-u.shotAge*18)*(rowing ? .045 : .095);
+      const recoil=Math.exp(-u.shotAge*18)*(rowing ? .045 : .095)*nativeSize;
       pistol.position.copy(hand).add(vec(0,0,recoil));
       // La pistola apunta a proa (-Z) quan el remador s'hi gira.
       pistol.quaternion.identity();
@@ -299,7 +330,7 @@ window.HUNTER_RIDER=Object.freeze({
       if(v.t==='bici'||v.t==='moto')aimCanonicalPistol(v,0);
       else aimOneHand(v,0);
       g.updateWorldMatrix(true,true);
-      let origin=pistol.localToWorld(muzzleLocal.clone());
+      let origin=pistol.localToWorld(muzzleLocal.clone().multiplyScalar(nativeSize));
       const initial=forward.clone().applyQuaternion(pistol.getWorldQuaternion(new THREE.Quaternion()));
       const desired=autoAim(origin,initial);
       if(desired){
@@ -309,7 +340,7 @@ window.HUNTER_RIDER=Object.freeze({
         u.pistolAim=localDirection;
         pistol.quaternion.setFromUnitVectors(forward,localDirection);
         g.updateWorldMatrix(true,true);
-        origin=pistol.localToWorld(muzzleLocal.clone());
+        origin=pistol.localToWorld(muzzleLocal.clone().multiplyScalar(nativeSize));
       }
       return {origin,direction:forward.clone().applyQuaternion(
         pistol.getWorldQuaternion(new THREE.Quaternion())).normalize()};
@@ -320,15 +351,15 @@ window.HUNTER_RIDER=Object.freeze({
       const passenger=seatIndex===1,coopSeat=seatIndex===0||passenger;
       const car=!!v&&(v.t==='cotxe_civil'||v.t==='cotxe');
       const open=!!v&&(car||['bici','moto','moto_aquatica','llanxa','llanxa_coets','barca_rems','windsurf','hover'].includes(v.t));g.visible=open;
-      if(!open){g.userData.shotTime=0;g.userData.shotBlend=0;g.userData.pistolAim=null;pistol.visible=false;g.scale.setScalar(1);return}
+      if(!open){g.userData.shotTime=0;g.userData.shotBlend=0;g.userData.pistolAim=null;pistol.visible=false;return}
       const u=g.userData,sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],moving=Math.min(1,Math.abs(v.v)/1.8);u.motion+=(moving-u.motion)*(1-Math.exp(-12*dt));const motion=u.motion,phase=v.t==='barca_rems'&&Math.abs(v.v)<.7&&Math.abs(v.yawRate||0)>.08?-(v.rowSpinPhase||0):(v.t==='bici'||v.t==='barca_rems')?-(v.pedalPhase||0):(v.pedalPhase||0);
-      // En cotxes l'habitacle és més baix que el protagonista dret.
-      // Escalam el mateix model de jugador i preservam l'orientació
-      // tridimensional del xassís en girs i pendents.
+      // La mida pròpia dels ocupants deriva del tipus de cabina.
+      // Les malles i els punts de repòs es consoliden en canviar
+      // de vehicle; l'arrel del rider ja no es redimensiona.
       const twoWheeled=v.t==='moto'||v.t==='bici';
       const gazTigr=car&&v.o?.userData?.gazModel==='Tigr-M';
-      const riderScale=twoWheeled?1:gazTigr?.825:car?.82:v.t==='hover'?.63:1;
-      g.scale.setScalar(riderScale);
+      const cabinSize=twoWheeled?1:gazTigr?.825:car?.82:v.t==='hover'?.63:1;
+      setNativeRiderSize(cabinSize);
       g.position.copy(v.o.position);g.quaternion.copy(v.o.quaternion);
       // La silueta simplificada no pot substituir el model canònic en dues rodes.
       const far=!twoWheeled&&Number.isFinite(viewDistance)&&viewDistance>
@@ -350,9 +381,9 @@ window.HUNTER_RIDER=Object.freeze({
         const visualScale=v.t==='moto'?(v.o?.userData?.motorcycleVisualScale??1):
           (v.o?.userData?.bicycleVisualScale??.70);
         const fit=sc*visualScale;
-        riderFar.position.set(seatX,
-          twoWheel?(v.t==='moto'?.99:1.65)*fit/riderScale:deckY,
-          twoWheel?(v.t==='moto'?.26:.4)*fit/riderScale:0);
+        riderFar.position.set(seatX*nativeSize,
+          (twoWheel?(v.t==='moto'?.99:1.65)*fit/cabinSize:deckY)*nativeSize,
+          (twoWheel?(v.t==='moto'?.26:.4)*fit/cabinSize:0)*nativeSize);
         pistol.visible=false;
         return;
       }
@@ -371,26 +402,25 @@ window.HUNTER_RIDER=Object.freeze({
               seatZ=(civil?-.60:humvee?-.26:.42)*sc*cabinScale,
               steeringX=seatX,
               steeringY=(civil?1.66:humvee?1.60:1.91)*sc*cabinScale,
-              steeringZ=(civil?-.94:humvee?-.87:-.67)*sc*cabinScale,
-              invScale=1/riderScale;
-        torso.position.set(seatX*invScale,seatY*invScale,seatZ*invScale);
+              steeringZ=(civil?-.94:humvee?-.87:-.67)*sc*cabinScale;
+        torso.position.set(seatX,seatY,seatZ);
         torso.rotation.x=-.05;
         for(let i=0;i<2;i++){
           const side=i?1:-1,
                 shoulder=shoulderAt(side),
-                hip=vec((seatX+side*.20*sc)*invScale,
-                  seatY*invScale,seatZ*invScale),
+                hip=vec((seatX+side*.20*sc),
+                  seatY,seatZ),
                 hand=passenger?
-                  vec((seatX+side*.23*sc)*invScale,
-                    (seatY+.16*sc)*invScale,(seatZ-.32*sc)*invScale):
-                  vec((steeringX+side*.22*sc)*invScale,
-                    steeringY*invScale,steeringZ*invScale),
+                  vec((seatX+side*.23*sc),
+                    (seatY+.16*sc),(seatZ-.32*sc)):
+                  vec((steeringX+side*.22*sc),
+                    steeringY,steeringZ),
                 elbow=shoulder.clone().lerp(hand,.50),
-                foot=vec((seatX+side*.20*sc)*invScale,
-                  .87*sc*cabinScale*invScale,(civil?-1.31:humvee?-1.10:-.95)*sc*cabinScale*invScale),
+                foot=vec((seatX+side*.20*sc),
+                  .87*sc*cabinScale,(civil?-1.31:humvee?-1.10:-.95)*sc*cabinScale),
                 knee=hip.clone().lerp(foot,.52);
-          elbow.y-=.10*sc*invScale;
-          knee.y+=.08*sc*invScale;knee.z+=.11*sc*invScale;
+          elbow.y-=.10*sc;
+          knee.y+=.08*sc;knee.z+=.11*sc;
           limbBetween(limbs[i*2],shoulder,elbow);
           limbBetween(limbs[i*2+1],elbow,hand);
           limbBetween(limbs[4+i*2],hip,knee);
@@ -414,27 +444,26 @@ window.HUNTER_RIDER=Object.freeze({
               helm=v.o.userData.hovercraftSteeringPosition,
               seatX=(station?.x??(passenger?.30:-.30))*sc,
               seatY=(station?.y??1.58)*sc,
-              seatZ=(station?.z??-1.08)*sc,
-              invScale=1/riderScale;
-        torso.position.set(seatX*invScale,seatY*invScale,seatZ*invScale);
+              seatZ=(station?.z??-1.08)*sc;
+        torso.position.set(seatX,seatY,seatZ);
         torso.rotation.x=-.07;
         for(let i=0;i<2;i++){
           const side=i?1:-1,
-                hip=vec((seatX+side*.145*sc)*invScale,
-                  seatY*invScale,seatZ*invScale),
+                hip=vec((seatX+side*.145*sc),
+                  seatY,seatZ),
                 shoulder=shoulderAt(side),
                 hand=passenger?
-                  vec((seatX+side*.18*sc)*invScale,
-                    (seatY+.13*sc)*invScale,(seatZ-.16*sc)*invScale):
-                  vec(((helm?.x??-.30)+side*.105)*sc*invScale,
-                    ((helm?.y??1.88)+.012)*sc*invScale,
-                    (helm?.z??-1.98)*sc*invScale),
+                  vec((seatX+side*.18*sc),
+                    (seatY+.13*sc),(seatZ-.16*sc)):
+                  vec(((helm?.x??-.30)+side*.105)*sc,
+                    ((helm?.y??1.88)+.012)*sc,
+                    (helm?.z??-1.98)*sc),
                 elbow=shoulder.clone().lerp(hand,.55),
-                foot=vec((seatX+side*.16*sc)*invScale,
-                  1.42*sc*invScale,(seatZ-.36*sc)*invScale),
+                foot=vec((seatX+side*.16*sc),
+                  1.42*sc,(seatZ-.36*sc)),
                 knee=hip.clone().lerp(foot,.52);
-          elbow.y-=.07*sc*invScale;
-          knee.y+=.12*sc*invScale;
+          elbow.y-=.07*sc;
+          knee.y+=.12*sc;
           limbBetween(limbs[i*2],shoulder,elbow);
           limbBetween(limbs[i*2+1],elbow,hand);
           limbBetween(limbs[4+i*2],hip,knee);
