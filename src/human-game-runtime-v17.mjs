@@ -270,12 +270,27 @@ function installCanonicalPlayer(T,model){
    j.spine.rotation.set(body.spinePitch,body.spineYaw-body.pelvisYaw,body.spineRoll);
    j.spine.position.y=actualSpineY;
    j.head.rotation.set(body.headPitch,body.headYaw,body.headRoll);
-   // Les extremitats continuen sincronitzades temporalment amb els
-   // canals de compatibilitat; les postures B3/C4, aèries i les IK
-   // d'armes V18 els sobreescriuen amb les seves articulacions natives.
-   for(const [id,bone]of Object.entries(control)){
-    if(id==='head')continue;
-    j[id].quaternion.copy(rest[id]).multiply(bone.quaternion);
+   // La locomoció V18 governa ara malucs, genolls, espatlles i colzes.
+   // El controlador ocult només conserva els punts de compatibilitat
+   // d'armes; l'IK i les capes B3/C4/aire van després d'aquesta pose.
+   const locomotion=u.humanGameNativeLimbPose;
+   if(locomotion){
+    for(const id of ['hipL','hipR','kneeL','kneeR',
+                     'shoulderL','shoulderR','elbowL','elbowR']){
+     const channel=locomotion[id];
+     if(!channel||!Number.isFinite(channel.x)||!Number.isFinite(channel.z))
+      throw Error('Canal de locomoció V18 absent: '+id);
+     j[id].rotation.set(channel.x,0,channel.z);
+    }
+    j.ankleL.rotation.set(0,0,0);
+    j.ankleR.rotation.set(0,0,0);
+   }else{
+    // Fallback només abans del primer tick de locomoció i proves
+    // diagnòstiques anteriors a l'entrada al joc.
+    for(const [id,bone]of Object.entries(control)){
+     if(id==='head')continue;
+     j[id].quaternion.copy(rest[id]).multiply(bone.quaternion);
+    }
    }
   }else{
    // Compatibilitat per als tests de patrons antics i les factories
