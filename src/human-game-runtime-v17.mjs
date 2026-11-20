@@ -176,6 +176,17 @@ function installCanonicalPlayer(T,model){
   // fix (nord) quan el protagonista gira sense apuntar.
   gunIdleLocal=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-Math.PI/2),
   gunAimLocal=new T.Quaternion();
+ // Punts de destí del V18: la pistola mai no governa les mans a través
+ // de les espatlles del rig antic. El canó real continua al controlador.
+ const nativePistolGoals={right:new T.Group(),left:new T.Group()};
+ nativePistolGoals.right.name='Pistola V18 · canell dret objectiu';
+ nativePistolGoals.left.name='Pistola V18 · palmell esquerre objectiu';
+ j.spine.add(nativePistolGoals.right,nativePistolGoals.left);
+ const pistolIKRest={
+  shoulderR:new T.Quaternion(),elbowR:new T.Quaternion(),
+  shoulderL:new T.Quaternion(),elbowL:new T.Quaternion(),
+  aimedShoulder:new T.Quaternion(),aimedElbow:new T.Quaternion()
+ };
  const pistolGrips=[];
  for(const side of ['L','R']){
   const hand=j['wrist'+side].children.find(o=>o.userData?.humanHand===side);
@@ -361,6 +372,74 @@ function installCanonicalPlayer(T,model){
     inReach:l.inReach&&r.inReach
    };
    break;
+  }
+  // Passa nativa de pistola. L'antic sistema continua controlant el
+  // tret i el recoil, però NO decideix la posició visible dels braços.
+  // La meta està expressada en distàncies d'espatlla a canell V18,
+  // i el segon braç només es resol després de situar el primer.
+  u.humanGameNativePistolSupport=null;
+  const nativePistol=proxies.get('gun');
+  const pistolBlend=nativePistol?.visible&&u.gun?.visible?
+   Math.max(0,Math.min(1,u.pistolBlend||0)):0;
+  if(pistolBlend>.0001){
+   u.gun.getWorldQuaternion(weaponWorld);
+   j.shoulderR.getWorldPosition(mountCache.shoulder);
+   j.spine.getWorldQuaternion(mountCache.torsoQ);
+   mountCache.up.set(0,1,0).applyQuaternion(mountCache.torsoQ).normalize();
+   mountCache.forward.set(0,0,-1).applyQuaternion(weaponWorld);
+   if(u.visualAimSmoothed?.lengthSq?.()>.1)
+    mountCache.forward.copy(u.visualAimSmoothed);
+   mountCache.forward.normalize();
+   const aimElevation=mountCache.forward.dot(mountCache.up);
+   mountCache.forward.addScaledVector(mountCache.up,-aimElevation);
+   if(mountCache.forward.lengthSq()<.01)
+    mountCache.forward.set(0,0,-1).applyQuaternion(mountCache.torsoQ)
+      .addScaledVector(mountCache.up,0);
+   mountCache.forward.normalize();
+   const reach=j.elbowR.parent.position.length()+j.wristR.parent.position.length();
+   mountCache.desired.copy(mountCache.shoulder)
+    .addScaledVector(mountCache.forward,reach*.57)
+    .addScaledVector(mountCache.up,
+      -reach*.20+Math.max(-reach*.22,Math.min(reach*.18,aimElevation*reach*.46)));
+   nativePistolGoals.right.position.copy(mountCache.desired);
+   j.spine.worldToLocal(nativePistolGoals.right.position);
+   pistolIKRest.shoulderR.copy(j.shoulderR.quaternion);
+   pistolIKRest.elbowR.copy(j.elbowR.quaternion);
+   const right=solveNativeLongGunHand(T,j,nativePistolGoals.right,'R',supportCache);
+   pistolIKRest.aimedShoulder.copy(j.shoulderR.quaternion);
+   pistolIKRest.aimedElbow.copy(j.elbowR.quaternion);
+   j.shoulderR.quaternion.copy(pistolIKRest.shoulderR)
+    .slerp(pistolIKRest.aimedShoulder,pistolBlend);
+   j.elbowR.quaternion.copy(pistolIKRest.elbowR)
+    .slerp(pistolIKRest.aimedElbow,pistolBlend);
+   // El canó visible conserva el quaternion de l'arma real fins i tot
+   // després que l'IK hagi canviat la rotació anatòmica del canell.
+   j.wristR.getWorldQuaternion(handWorld);
+   gunAimLocal.copy(handWorld).invert().multiply(weaponWorld);
+   nativePistol.quaternion.copy(gunIdleLocal).slerp(gunAimLocal,pistolBlend);
+   let left=null;
+   if(pistolBlend>.10){
+    // Punt físic sota la corredora, derivat de l'arma visible ja fixada
+    // al canell dret. La mà esquerra no mou l'arma: no hi ha cicle IK.
+    nativePistol.localToWorld(mountCache.desired.set(-.14,-.06,.10));
+    nativePistolGoals.left.position.copy(mountCache.desired);
+    j.spine.worldToLocal(nativePistolGoals.left.position);
+    pistolIKRest.shoulderL.copy(j.shoulderL.quaternion);
+    pistolIKRest.elbowL.copy(j.elbowL.quaternion);
+    left=solveNativeLongGunHand(T,j,nativePistolGoals.left,'L',supportCache);
+    pistolIKRest.aimedShoulder.copy(j.shoulderL.quaternion);
+    pistolIKRest.aimedElbow.copy(j.elbowL.quaternion);
+    j.shoulderL.quaternion.copy(pistolIKRest.shoulderL)
+     .slerp(pistolIKRest.aimedShoulder,pistolBlend);
+    j.elbowL.quaternion.copy(pistolIKRest.elbowL)
+     .slerp(pistolIKRest.aimedElbow,pistolBlend);
+   }
+   u.humanGameNativePistolSupport={
+    rightDistance:right?.distance??null,
+    leftDistance:left?.distance??null,
+    inReach:!!right?.inReach&&(left===null||left.inReach),
+    rootScale:visual.scale.x
+   };
   }
   // Actualitzar la presa DESPRÉS de moure el model visual de l'arma.
   // Tant el puny dret com el palmell esquerre s'orienten amb la

@@ -175,7 +175,32 @@ for(const role of ['player','soldier','rocket','elite','general']){
    const actualGun=new T.Vector3(0,0,-1).applyQuaternion(gunProxy.getWorldQuaternion(new T.Quaternion()));
    const sourceGun=new T.Vector3(0,0,-1).applyQuaternion(u.gun.getWorldQuaternion(new T.Quaternion()));
    assert(actualGun.dot(sourceGun)>.999,'Canó visible orientat com l’arma real');
+   // En apuntar, els canells V18 han de tenir un destí anatòmic propi:
+   // deformar els braços ocults no els ha de pujar sobre el cap.
+   u.visualAimSmoothed=new T.Vector3(0,0,-1);
+   u.ar.rotation.x=-1.10;u.aer.rotation.x=-.90;
+   updateHuman(g);
+   const nativePistolA=u.humanGameNativePistolSupport;
+   assert(nativePistolA&&nativePistolA.rightDistance<.035,
+    'IK dreta de pistola mesura el canell del V18');
+   const nativeRightA=bones.wristR.getWorldPosition(new T.Vector3());
+   const nativeHead=bones.head.getWorldPosition(new T.Vector3());
+   assert(nativeRightA.y<nativeHead.y-.12,
+    'El puny V18 no puja per sobre del crani en apuntar');
+   u.ar.rotation.x=1.24;u.aer.rotation.x=.85;
+   updateHuman(g);
+   const nativeRightB=bones.wristR.getWorldPosition(new T.Vector3());
+   assert(nativeRightB.distanceTo(nativeRightA)<.035,
+    'El canell visible de pistola no depèn de les rotacions IK del braç ocult');
+   assert(u.humanGameNativePistolSupport?.leftDistance<.16,
+    'El palmell esquerre s’apropa al suport real de la pistola');
+   assert.deepEqual(gunProxy.scale.toArray(),[1,1,1],
+    'L’IK de pistola tampoc introdueix correctors d’escala');
+   u.ar.rotation.x=oldR;u.aer.rotation.x=0;
+   u.visualAimSmoothed=null;
    u.pistolBlend=0;u.gun.quaternion.identity();updateHuman(g);
+   assert.equal(u.humanGameNativePistolSupport,null,
+    'El solver natiu de pistola queda inactiu quan no s’apunta');
    for(const yaw of [0,Math.PI/2,Math.PI,3*Math.PI/2]){
     g.rotation.y=yaw;updateHuman(g);
     const direction=new T.Vector3(0,0,-1).applyQuaternion(g.getWorldQuaternion(new T.Quaternion()));
