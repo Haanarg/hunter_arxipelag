@@ -100,3 +100,11 @@ La segona passada ja usa la dada real `TRUCK_CABIN.enemySeat={x:0.6314,y:1.6728,
 - `src/vehicle-crew-anchors.mjs` declara el seient real i la talla nativa específica de cada cabina (Ka-60 dues places laterals; Mi-24D dues places en tàndem). La conversió del vehicle `VS` ja es consolida en geometria, i `vehicleSeatWorld`/`vehicleOccupantHeadWorld` utilitzen ara els mateixos ancoratges; els punts de cap es calibren en una prova de malla V18 real.
 - `ragdoll-lite.js` ara prioritza `humanGameCanonicalJoints` V18 del protagonista i té una fase de re-aplicació després de l'animació d'un fotograma. `applyNativeFlip` dóna la postura de braços i cames al rig visible; la pelvis de la cabriola continua regida per `player-ejection-pivot.mjs`.
 - **Pendents:** l'anàlisi final del ragdoll dels soldats (encara hi ha un fallback heretat), provar el COOP real de dos dispositius amb pilots d'heli i rampes i retirar el factor 2/3 després de comprovar els consumidors restants.
+
+
+## 0.6.291 — salt i paracaigudes en V18 natiu
+
+- `player-native-air-pose.mjs` defineix les postures de caiguda i descens amb vuit articulacions de l'esquelet V18 visible. `animatePlayerControls` ja no escriu braços/genolls del V17 quan l'actor és a l'aire.
+- El controlador publica estat i pes de transició; `humanGamePose` el mescla després de la locomoció. Es preserven física, velocitat, paracaigudes i prioritat del ragdoll després del render.
+- La rèplica COOP rep les banderes `airborne` i `parachuting` de `other.fall`, que abans no li arribaven. Les proves comproven la independència de l'escala 2/3, el blending i la connexió COOP.
+- **Encara pendent:** el ragdoll dels soldats, els altres consumidors de controls V17, retirar `LEGACY_GAME_RIG_SCALE`, prova WebGL i comprovació COOP en dos dispositius.
