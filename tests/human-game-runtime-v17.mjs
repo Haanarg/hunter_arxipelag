@@ -10,12 +10,62 @@ import {createHumanProposal,sampleHumanGait} from '../src/human-proposals.mjs';
 import {sampleHumanSwimming} from '../src/human-swim-proposals.mjs';
 import {createHumanGameRuntimeV17,GAME_HUMAN_SKIN_VERSION} from '../src/human-game-runtime-v17.mjs';
 import {HUMAN_PLAYER_GAME_NATIVE_HEIGHT,HUMAN_WORLD_UNITS_PER_METER} from '../src/human-model-catalog.mjs';
+import {moveOnFoot} from '../src/player-simulation.mjs';
+import {pushWalls,pushTree} from '../src/world-physics.mjs';
+import {vehicleOccupantHeadWorld,vehicleSeatWorld} from '../src/vehicle-occupant-damage-core.mjs';
 
 globalThis.window=globalThis;
 const runtime=createHumanGameRuntimeV17();
 globalThis.HUNTER_HUMAN_V17=runtime;
 assert.equal(GAME_HUMAN_SKIN_VERSION,'humans-v18');
 assert.equal(HUMAN_PLAYER_GAME_NATIVE_HEIGHT,3.11232,'Alçada nadiua aprovada');
+// Auditoria del límit entre física autoritativa i render V17/V18:
+ // els dos motors de moviment i les parets no consulten cap jerarquia
+ // Three.js ni el grup antic 2/3, també amb dues rèpliques COOP.
+ for(const path of ['../src/player-simulation.mjs','../src/player-vertical.mjs',
+                    '../src/world-physics.mjs','../src/vehicle-occupant-damage-core.mjs']){
+  const text=readFileSync(new URL(path,import.meta.url),'utf8');
+  assert(!/humanGameLegacyRig|LEGACY_GAME_RIG_SCALE|humanGameCanonicalJoints|\.getWorldPosition\(/.test(text),
+   'La física pura no depèn del rig o del render: '+path);
+ }
+ const physicalPoint={x:2,z:-4,hd:.28};
+ const physicalInput={forward:1,strafe:.2,run:true};
+ const runPure=()=>moveOnFoot(physicalPoint,physicalInput,1/60,{limit:1600});
+ const moveA=runPure(),moveB=runPure();
+ assert.deepEqual(moveA,moveB,
+  'Moviment autoritatiu independent de frames de pell, escala i COOP');
+ const physicalWall={x0:2,x1:4,z0:-5,z1:-3,y0:0,y1:4};
+ const bodyA={x:2.2,y:1,z:-4,hd:0},bodyB={...bodyA};
+ pushWalls(bodyA,[physicalWall],.6);
+ pushWalls(bodyB,[physicalWall],.6);
+ assert.deepEqual(bodyA,bodyB,
+  'Col·lisions amb parets pures i deterministes sense malles V17');
+ const deterministicSeat={t:'cotxe',x:4,z:-5,hd:.7,y:1};
+ assert.deepEqual(vehicleOccupantHeadWorld(deterministicSeat,0),
+  vehicleOccupantHeadWorld({...deterministicSeat},0));
+ assert.deepEqual(vehicleSeatWorld(deterministicSeat,1),
+  vehicleSeatWorld({...deterministicSeat},1));
+ // El COOP consumia coordenades del canó ocult fins a aquesta fase.
+ // Els projectils confirmats es dibuixen des de la mateixa boca V18
+ // que SOLO (l'autoritat de dany continua al servidor).
+ const coopSource=readFileSync(
+  new URL('../src/coop-world-runtime.js',import.meta.url),'utf8');
+ const coopMuzzleStart=coopSource.indexOf('function nativeCoopProjectileMuzzle(weapon)');
+ const coopMuzzleEnd=coopSource.indexOf('function updateNativeCoop(dt)',coopMuzzleStart);
+ assert(coopMuzzleStart>=0&&coopMuzzleEnd>coopMuzzleStart,
+  'Contracte de boca de projectil COOP localitzable');
+ const coopMuzzle=coopSource.slice(coopMuzzleStart,coopMuzzleEnd);
+ assert(coopMuzzle.includes("nativeWeaponMuzzleWorld?.(THREE,pl,kind)")&&
+  !coopMuzzle.includes('u.assaultMuzzle')&&
+  !coopMuzzle.includes('u.sniperMuzzle')&&
+  !coopMuzzle.includes('u.gun;point='),
+  'COOP ja no deriva la posició de tret d\'armes V17 ocultes');
+ const pureTreeA={x:1,y:0,z:1,hd:.3},pureTreeB={...pureTreeA},
+       tree={x:1.1,y:0,z:1.0,r:.25};
+ pushTree(pureTreeA,tree);pushTree(pureTreeB,tree);
+ assert.deepEqual(pureTreeA,pureTreeB,
+  'Empentes físiques de vegetació sense consultar la figura humana');
+ console.log('PASS physical audit: pure locomotion, terrain walls and deterministic seat hitboxes are independent from legacy rig');
 const preview=createHumanProposal(T,'player','a',{visualOnly:true});
 let sourceWeapons=0;preview.traverse(n=>{if(n.userData?.humanWeapon)sourceWeapons++});
 assert.equal(sourceWeapons,0,'La geometria del joc no inclou una còpia de les armes del visor');
@@ -423,6 +473,12 @@ assert.equal(rider.userData.boots.length,2);
   },
   createPlayerPistol:(Three,parent)=>{
    const slide=new Three.Group(),flash=new Three.Group();
+   const grip=new Three.Object3D();
+   grip.name='hunter-pistol-grip-center';
+   grip.position.set(0,-.20,.055);parent.add(grip);
+   const muzzle=new Three.Object3D();
+   muzzle.name='hunter-pistol-muzzle';
+   muzzle.position.set(0,.183,-1.47);slide.add(muzzle);
    parent.add(slide,flash);
    return {slide,flash};
   }
@@ -502,9 +558,25 @@ assert.equal(rider.userData.boots.length,2);
  const gazShot=driver.firePistol({t:'cotxe',o:gaz},()=>null);
  assert(gazShot?.origin&&gazShot?.direction,
   'Disparador del conductor GAZ conserva l’origen del canó');
- assert(gazShot.origin.distanceTo(driver.object.userData.pistol.localToWorld(
-   new T.Vector3(0,.183,-1.47).multiplyScalar(.825)))<1e-6,
-  'Origen de la bala al canó real amb la mida nativa del GAZ');
+ const realRiderPistol=driver.object.userData.pistol;
+ const muzzleMarker=realRiderPistol.getObjectByName('hunter-pistol-muzzle'),
+       gripMarker=realRiderPistol.getObjectByName('hunter-pistol-grip-center');
+ assert(muzzleMarker&&gripMarker,
+  'Rider V18 comparteix els dos marcadors de l\'arma aprovada');
+ assert(gazShot.origin.distanceTo(muzzleMarker.getWorldPosition(new T.Vector3()))<1e-8,
+  'El tret GAZ surt del silenciador visible, no del vector antic d\'escala');
+ assert(driver.object.userData.riderNativePistolMounted,
+  'La pistola del GAZ es munta exclusivament des del canell V18');
+ const gazWrist=driver.object.userData.riderSeatCanonicalJoints.wristR;
+ assert(gripMarker.getWorldPosition(new T.Vector3()).distanceTo(
+   gazWrist.getWorldPosition(new T.Vector3()))<1e-7,
+  'Empunyadura sobre el canell V18 del conductor GAZ');
+ const gazShotOrigin=gazShot.origin.clone();
+ driver.object.userData.limbs[2].rotation.set(1.8,.7,-.6);
+ driver.object.userData.limbs[3].rotation.set(-.8,1.1,.9);
+ driver.object.updateWorldMatrix(true,true);
+ assert(muzzleMarker.getWorldPosition(new T.Vector3()).distanceTo(gazShotOrigin)<1e-7,
+  'El tret del rider no depèn de rotacions dels braços ocults V17');
  assert(Math.abs(gazShot.direction.length()-1)<1e-6);
  driver.reset();
  const headBounds=new T.Box3().setFromObject(driver.object.userData.head,true);
@@ -572,9 +644,13 @@ assert.equal(rider.userData.boots.length,2);
  assert(passengerSeat.distanceTo(new T.Vector3(.30*1.3,1.58*1.3,
   -1.08*1.3))<1e-5,'Passatger COOP hover a la segona plaça');
  const hoverShot=driver.firePistol({t:'hover',o:hover},()=>null);
- assert(hoverShot?.origin?.distanceTo(driver.object.userData.pistol.localToWorld(
-  new T.Vector3(0,.183,-1.47).multiplyScalar(.63)))<1e-6,
-  'La pistola del passatger hover conserva canó i dimensions natives');
+ assert(hoverShot?.origin?.distanceTo(
+  muzzleMarker.getWorldPosition(new T.Vector3()))<1e-8,
+  'La pistola del passatger hover surt del marcador geomètric V18');
+ assert(gripMarker.getWorldPosition(new T.Vector3()).distanceTo(
+  driver.object.userData.riderSeatCanonicalJoints.wristR
+   .getWorldPosition(new T.Vector3()))<1e-7,
+  'El passatger COOP de l\'hovercraft té l\'arma ancorada al canell V18');
  // Migració a pell V18 dels cinc vehicles nàutics amb un únic
  // controlador d'IK. La figura V17 es conserva oculta per als tirs.
  driver.reset();
@@ -651,6 +727,13 @@ assert.equal(rider.userData.boots.length,2);
  const rowShot=driver.firePistol(rowing,()=>null);
  assert(rowShot?.origin?.toArray().every(Number.isFinite),
   'Pistola del remador continua disparant des del punt de canó');
+ assert(rowShot.origin.distanceTo(
+  muzzleMarker.getWorldPosition(new T.Vector3()))<1e-8,
+  'La barca de rems fa servir la boca V18 del silenciador');
+ assert(gripMarker.getWorldPosition(new T.Vector3()).distanceTo(
+  driver.object.userData.riderSeatCanonicalJoints.wristR
+   .getWorldPosition(new T.Vector3()))<1e-7,
+  'La presa de pistola del remador és al canell V18, no a l\'antiga extremitat');
  const rowFiringPose=checkMarine(rowing);
  const rowFiringExpectedYaw=Math.PI-.52*driver.object.userData.shotBlend;
  assert(Math.abs(Math.atan2(
@@ -700,6 +783,17 @@ assert.equal(rider.userData.boots.length,2);
  driver.object.updateWorldMatrix(true,true);
  assert(wrist0.distanceTo(marineJoints.wristR.getWorldPosition(new T.Vector3()))<1e-7,
   'La mà V18 de llanxa no rep les rotacions de les extremitats V17');
+ // El canó nadiu és el mateix en SOLO/COOP, també després del gir
+ // i escala d'un pare de presentació que no intervé en la física.
+ driver.update({t:'llanxa',o:marineBoat.o,v:0,pedalPhase:0},1/60,1);
+ const coopMarineShot=driver.firePistol(marineBoat,()=>[.20,.08,-.97]);
+ assert(coopMarineShot?.origin?.distanceTo(
+  muzzleMarker.getWorldPosition(new T.Vector3()))<1e-8,
+  'COOP: el punt del tret de passatger segueix la boca visible V18');
+ assert(gripMarker.getWorldPosition(new T.Vector3()).distanceTo(
+  driver.object.userData.riderSeatCanonicalJoints.wristR
+   .getWorldPosition(new T.Vector3()))<1e-7,
+  'COOP: pistola de llanxa al canell V18, fins i tot amb autoapuntat');
  driver.update({t:'llanxa',o:marineBoat.o,v:0,pedalPhase:0},1/60,0,600);
  assert(!driver.object.userData.riderSeatCanonicalActive&&
   !driver.object.userData.riderSeatCanonicalBody&&

@@ -270,24 +270,22 @@ function nativeCoopProjectileMuzzle(weapon){
    const p=sniperMuzzleWorld(scopeYaw,scopePitch);
    return {x:p.x,y:p.y,z:p.z};
  }
- const u=pl.userData;
- let parent,point;
- if(weapon==='pistol'){parent=u.gun;point=[0,.183,-.84];}
- else if(weapon==='assault'){parent=u.assaultMuzzle;point=[0,0,0];}
- else if(weapon==='sniper'){parent=u.sniperMuzzle;point=[0,0,0];}
- else return null;
- if(!parent)return null;
- // El primer tret pot arribar quan l'animació de la pistola encara
- // és al canell. Fins que acaba d'alçar-la, mantenim el punt físic
- // del mode individual: .7 m davant i a l'altura del canó.
- if(weapon==='pistol'&&(u.pistolBlend||0)<.65){
-   return {x:P.x-Math.sin(P.hd)*.7,
-     y:P.y+1.5-(playerCrouched?.48:0),
-     z:P.z-Math.cos(P.hd)*.7};
- }
+ if(!['pistol','assault','sniper'].includes(weapon))return null;
+ // El COOP no pot tornar a utilitzar la pistola, el fusell o les
+ // espatlles ocultes V17 per situar un projectil confirmat: comparteix
+ // el mateix marcador del canó V18 que el combat SOLO.
+ pl.position.x=P.x;pl.position.z=P.z;pl.rotation.y=P.hd;
  pl.updateMatrixWorld(true);
- const p=parent.localToWorld(new THREE.Vector3(...point));
- return {x:p.x,y:p.y,z:p.z};
+ const kind=weapon==='pistol'?'gun':weapon;
+ const p=window.HUNTER_HUMAN_V17?.nativeWeaponMuzzleWorld?.(THREE,pl,kind);
+ if(p)return {x:p.x,y:p.y,z:p.z};
+ // Només la reserva física preexistent quan encara no hi ha
+ // cap arma visible (canvi d'inventari/fotograma inicial).
+ // Si és fusell, el client pot emprar l'origen autoritatiu del servidor.
+ if(weapon!=='pistol')return null;
+ return {x:P.x-Math.sin(P.hd)*.7,
+   y:P.y+1.5-(playerCrouched?.48:0),
+   z:P.z-Math.cos(P.hd)*.7};
 }
 function updateNativeCoop(dt){
  // Una fallada puntual de material/partícules no ha d'aturar per sempre el

@@ -1531,3 +1531,13 @@
 - [x] **Regressions:** mides, pelvis, longituds constants, seients COOP, girs, pares transformats, LOD, canell V18 independent de la postura antiga, trets del remador.
 - [ ] **Validació gràfica:** motos aquàtiques en marxa, rems sincronitzats, botavara i posicions de les mans, seients de llanxa, tir, contacte i ombres en SOLO i dues sessions COOP.
 - [ ] **Proper bloc:** retirar ancoratges de pistola antics i físics dels riders; avaluar després l'eliminació definitiva del grup V17 `2/3`.
+
+
+### v0.6.286 · pistola V18 dels riders i auditoria física sistemàtica
+- [x] **Pistola dels pilots i passatgers:** l'arma disposa de marcador real de grip i de silenciador; es col·loca sobre el canell dret V18 abans i després del gir d'autoapuntat. El canó s'obté del marcador real `hunter-pistol-muzzle` i no d'un vector fix o de `limbs[3]`.
+- [x] **Moto i bicicleta:** l'arma ja va associada al V18 i ara se centra també a l'empunyadura real, sense desenganxar-la del canell en apuntar.
+- [x] **COOP visual:** la posició inicial local del projectil de pistola, AEK-971 i SV-98 consulta les boques natives V18; reserva determinista només si l'arma encara no és visible.
+- [x] **Auditoria física:** document `docs/physical-v18-dependency-audit.md`: física autoritativa P i moviment, col·lisions amb món, volum de les hitboxes d'ocupants, constants de mar, natació i expulsió. Proves de separació render/física i origen de tir real.
+- [ ] **Proper bloc:** alinear numèricament els volums dels caps i cossos dels ocupants amb V18 en SOLO/COOP sense consultar malles Three.js; revisar `world-physics.mjs` per alçades de cos/palmeres/parets, natació i eix de ragdoll.
+- [ ] **Validació visual:** trets de pistola des de llanxa/GAZ/hovercraft, mans de pilot i passatger, autocàmera COOP, cristalls i trajectòries a totes les distàncies.
+- [ ] **Condició per retirar 2/3:** migrar els estats d'armes i l'animació a peu que encara consulten bones ocultes, no tocar `LEGACY_GAME_RIG_SCALE` abans de completar la matriu de dependències.
