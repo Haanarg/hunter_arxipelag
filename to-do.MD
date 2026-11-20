@@ -1,3 +1,8 @@
+**2026-11-20 · v0.6.256 · Desbloqueig de publicació COOP:**
+- [x] Retirada del runner la prova `mission-viability-validator.cjs` a petició de l'usuari; el fitxer de prova s'elimina, però el validador de missions de diagnòstic es conserva.
+- [x] Es mantenen la resta de proves de regressió, incloses les de COOP i la nova comparació determinista de mons.
+- [ ] Confirmar CI, desplegament Cloudflare i prova real amb dos navegadors.
+
 **2026-11-20 · v0.6.255 · COOP: determinisme entre navegadors i diagnòstic de discrepàncies:**
 - [x] Substituïdes les vuit ordenacions amb comparador aleatori per Fisher–Yates amb RNG de llavor i nombre fix de tirades.
 - [x] Afegides empremtes parcials d'illes, parets, vegetació, edificis, vehicles, enemics, opcionals i taurons; el Worker comunica les diferències a tots dos clients sense ometre la comprovació general.
