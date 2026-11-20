@@ -198,7 +198,43 @@ for(const role of ['player','soldier','rocket','elite','general']){
    'Old 4m crouch is translated to native 2m joints, not -0.72m full drop');
   u.lowerBody.position.y=oldLowerY;u.upperBody.position.y=oldUpperY;
   updateHuman(g);
-  console.log('PASS editor avatar exact rig and meshes, visual height 3.20m, 16 joints');
+  // Fusell i bazuca: mà de suport V18 i geometries visuals nadiues.
+  // Prova sense el sistema d'armes clàssic: només ancoratges geomètrics.
+  const longKinds={
+   assault:'hunter-assault-foregrip',
+   sniper:'hunter-sniper-foregrip',
+   bazooka:'hunter-bazooka-left-support-grip'
+  };
+  u.gun.visible=false;
+  u.ar.rotation.x=1.1;u.aer.rotation.x=.85;
+  for(const [kind,gripName]of Object.entries(longKinds)){
+   const weapon=new T.Group();
+   weapon.scale.setScalar(.84);weapon.visible=true;
+   const skin=new T.Mesh(new T.BoxGeometry(.15,.17,.85),
+    new T.MeshStandardMaterial({color:0x343e32}));
+   weapon.add(skin);
+   const grip=new T.Object3D();
+   grip.name=gripName;grip.position.set(-.35,-.12,-.30);weapon.add(grip);
+   u.upperBody.add(weapon);u[kind]=weapon;
+   updateHuman(g);
+   const proxy=canonical.getObjectByName('Arma canònica · '+kind);
+   assert(proxy&&proxy.userData.humanNativeWeaponScale,'Còpia d’arma nativa '+kind);
+   assert.deepEqual(proxy.scale.toArray(),[1,1,1],
+    'Cap factor visual de fusell al canell V18: '+kind);
+   const pose=u.humanGameNativeLongGunSupport;
+   assert.equal(pose?.weapon,kind,'IK V18 de mà esquerra activa '+kind);
+   assert(pose.distance<.24,'La mà esquerra segueix el guardamà real '+kind+
+    ': error '+pose.distance);
+   assert(bones.shoulderL.quaternion.toArray().every(Number.isFinite),
+    'IK del V18 finita '+kind);
+   weapon.visible=false;
+  }
+  u.gun.visible=true;
+  u.ar.rotation.x=oldR;u.aer.rotation.x=0;
+  updateHuman(g);
+  assert.equal(u.humanGameNativeLongGunSupport,null,
+   'L’IK de suport desapareix quan el jugador ja no sosté arma llarga');
+  console.log('PASS editor avatar exact rig and meshes, native long-gun support and original gait');
  }
  const box=new T.Box3().setFromObject(g);
  assert(box.max.y-box.min.y>2.8&&box.max.y-box.min.y<6.5,'Alçada comparable amb el model antic');

@@ -453,6 +453,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
     assault.position.copy(assault.userData.stockAnchor).add(assault.userData.stockToReceiver);
     assault.add(createHunterLongGunVisual(THREE,'assault'));
     const assaultRightGrip=new THREE.Object3D(),assaultLeftGrip=new THREE.Object3D();
+    assaultRightGrip.name='hunter-assault-trigger-grip';
+    assaultLeftGrip.name='hunter-assault-foregrip';
     assaultRightGrip.position.set(-.04,-.2,.25);
     // Mà esquerra sota el guardamans, per davant del gallet. El punt queda
     // dins del radi anatòmic dels dos segments del braç articulat.
