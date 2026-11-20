@@ -27,7 +27,7 @@ for(const vs of [1,vehicleSpecs.scales.heli,1.35,2.2]){
    .distanceTo(bounds(approved).getSize(new T.Vector3()))<1e-5,
   'El fuselatge conserva el volum aprovat amb VS '+vs);
  assert(Math.abs(variant.userData.rotor.position.y*vs-
-  approved.userData.rotor.position.y)<1e-6,
+  approved.children.find(o=>o.userData?.kamovRotor?.axis==='y').position.y)<1e-6,
   'L’alçada del rotor és nativa i compatible amb VS '+vs);
  assert(Math.abs(variant.userData.cockpitSeatLocalScale*vs-KA60_WORLD_SCALE)<1e-10,
   'El seient es converteix a metres finals, no amb l’escala de la malla');
