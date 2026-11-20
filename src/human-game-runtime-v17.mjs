@@ -996,10 +996,45 @@ export function createHumanGameRuntimeV17(){
      create(options){
       const api=base.create.call(base,options);
       const wrapped={...api};
+      // Les malles V18 del laboratori no comparteixen geometria amb
+      // altres actors: alliberam recursos quan el camp es reinicialitza.
+      const disposeNative=()=>{
+       for(const u of api.entities){
+        const root=u.o?.userData?.humanCivilianCanonicalRig;
+        if(!root)continue;
+        const geometries=new Set(),materials=new Set();
+        root.traverse(node=>{
+         if(!node.isMesh) return;
+         if(node.geometry)geometries.add(node.geometry);
+         for(const material of [node.material].flat())
+          if(material)materials.add(material);
+        });
+        root.removeFromParent();
+        for(const geo of geometries)geo.dispose();
+        for(const mat of materials)mat.dispose();
+        delete u.o.userData.humanCivilianCanonicalRig;
+        delete u.o.userData.humanCivilianCanonicalJoints;
+       }
+      };
       wrapped.configure=function(...args){
+       disposeNative();
        const result=api.configure(...args);
        for(const u of api.entities)if(u.o)runtime.installCivilian(options.THREE,u);
        return result;
+      };
+      if(typeof api.update==='function')wrapped.update=function(...args){
+       const result=api.update(...args);
+       for(const u of api.entities)runtime.poseCivilianV18(u);
+       return result;
+      };
+      if(typeof api.applyCoopState==='function')
+       wrapped.applyCoopState=function(...args){
+        const result=api.applyCoopState(...args);
+        for(const u of api.entities)runtime.poseCivilianV18(u);
+        return result;
+       };
+      if(typeof api.reset==='function')wrapped.reset=function(...args){
+       disposeNative();return api.reset(...args);
       };
       return Object.freeze(wrapped);
      }
