@@ -14,6 +14,24 @@ const assert=require('node:assert/strict');
  assert.equal(JSON.stringify(g.run('captureNativeCoopWorld()')),capturedWorld,
    'els taurons han de ser idèntics amb Math.random diferent');
  delete g.context.Math.random;
+ // Dos navegadors independents amb diferents comparadors d'Array.sort.
+ // El generador no pot canviar les tirades globals en ordenar llistes.
+ const guest=await require('./harness.cjs')();let guestPayload;
+ guest.context.Math.random=()=>.987654321;
+ guest.run(`{
+   const nativeSort=Array.prototype.sort;
+   Array.prototype.sort=function(compare){
+     if(typeof compare!=='function')return nativeSort.call(this,compare);
+     return nativeSort.call(this,(a,b)=>{compare(a,b);return compare(a,b);});
+   };
+ }`);
+ guest.context.HUNTER_ACCOUNT_SERVICE={status:()=>({user:{id:'b'}})};
+ guest.context.HUNTER_NATIVE_COOP_TRANSPORT=()=>({stats:{},start(){},stop(){},prepare(p){guestPayload=p.payload;}});
+ const guestTask=guest.context.HUNTER_NATIVE_COOP.start(room);
+ await guest.flushTasks();await guestTask;
+ assert.equal(JSON.stringify(guestPayload),capturedWorld,
+   'COOP: les dues generacions completes han de coincidir amb altres comparadors JS');
+ guest.run('stopNativeCoop()');
  assert.equal(g.run('generationPromise'),null);
  const {generateNativeMission}=await import('../server/coop-native.mjs'),{restoreRelayMission}=await import('../server/coop-mission.mjs'),generated=generateNativeMission(room,payload.payload,payload.fingerprint),mission=restoreRelayMission(generated.record,generated.geometry);mission.setStatus('running');
  callbacks.onMission({self:'a',meta:mission.meta,state:mission.snapshot()});g.run('update(1/30,0)');assert.equal(g.run('nativeCoopSession.preparing'),false);assert.equal(g.run('cam.isPerspectiveCamera'),true);

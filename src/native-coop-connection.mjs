@@ -80,7 +80,7 @@ export function createNativeCoopConnection({room,getInput,onRoom,onMission,onSta
  function publish(p){
   if(!readyRoom||published)return;published=true;
   if(p.host){const text=JSON.stringify(p.payload),size=45000,total=Math.ceil(text.length/size);if(total>192){onError?.('El món supera el límit de sincronització.');return;}for(let index=0;index<total;index++)socket.send({type:'native-world',protocol:1,revision:room.revision,fingerprint:p.fingerprint,index,total,chunk:text.slice(index*size,(index+1)*size)});}
-  socket.send({type:'native-ready',protocol:1,revision:room.revision,fingerprint:p.fingerprint});
+  socket.send({type:'native-ready',protocol:1,revision:room.revision,fingerprint:p.fingerprint,components:p.components});
  }
  function command(type,extra){if(!epoch||state?.status!=='running')return false;return socket.send({type,protocol:1,epoch,commandId:crypto.randomUUID(),...extra});}
  return {start:socket.start,stop:socket.stop,stats,noteFrame,

@@ -8,6 +8,15 @@ export function createWorldRandom(seed){
   next.setState=value=>{if(!Number.isInteger(value)||value<0||value>4294967295)throw new RangeError('Invalid random state');a=value|0;};
   return next;
 }
+// Consum fix de n-1 tirades: un comparador aleatori d'Array.sort
+// depèn del motor JavaScript i pot desincronitzar el COOP.
+export function shuffleWorldRows(rows,random){
+  for(let i=rows.length-1;i>0;i--){
+    const j=Math.floor(random()*(i+1));
+    [rows[i],rows[j]]=[rows[j],rows[i]];
+  }
+  return rows;
+}
 export function createIslandLayout(seed,mapScale){
   settings(seed,mapScale);
   const random=createWorldRandom(seed),rr=(a,b)=>a+random()*(b-a),q=random()<.5?-1:1,q2=random()<.5?-1:1,

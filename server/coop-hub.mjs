@@ -231,7 +231,7 @@ export class CoopRoomHub {
     const now=Date.now();if(now-(a.nativeWindow||0)>60000){a.nativeWindow=now;a.nativeCount=0;}a.nativeCount=(a.nativeCount||0)+1;ws.serializeAttachment(a);if(a.nativeCount>400){ws.close(1008,'Massa dades de món');return;}
     const room=await this.nativeRoom(a.actorId);
     if(!room?.allReady||room.revision!==body.revision||!(/^[a-f0-9]{64}$/).test(body.fingerprint)){this.send(ws,{type:'error',message:'La sala o el món han canviat.'});return;}
-    const keys=Object.keys(body),allowed=body.type==='native-world'?['type','protocol','revision','fingerprint','index','total','chunk']:['type','protocol','revision','fingerprint'];
+    const keys=Object.keys(body),allowed=body.type==='native-world'?['type','protocol','revision','fingerprint','index','total','chunk']:['type','protocol','revision','fingerprint','components'];
     if(keys.length!==allowed.length||keys.some(k=>!allowed.includes(k))){ws.close(1008,'Ordre de món invàlida');return;}
     const key=room.id+':'+room.revision;
     if(body.type==='native-world'){
@@ -243,9 +243,24 @@ export class CoopRoomHub {
       if(!upload||upload.key!==key||upload.fingerprint!==body.fingerprint||upload.total!==body.total||body.index!==upload.received||upload.expiresAt<Date.now()){this.send(ws,{type:'error',message:'Cal tornar a preparar el món.'});return;}
       upload.received++;await this.ctx.storage.transaction(async storage=>{await storage.put('native-prepare:'+body.index,body.chunk);await storage.put('native-upload',upload);});return;
     }
-    a.nativeKey=key;a.nativeFingerprint=body.fingerprint;ws.serializeAttachment(a);
+    if(!body.components||typeof body.components!=='object'||Array.isArray(body.components)||
+       Object.keys(body.components).length<10||Object.keys(body.components).length>32||
+       Object.entries(body.components).some(([name,digest])=>!(/^[a-zA-Z][a-zA-Z0-9.]{0,39}$/).test(name)||
+         typeof digest!=='string'||!(/^[a-f0-9]{16}$/).test(digest))){
+      ws.close(1008,'Diagnòstic de món invàlid');return;
+    }
+    a.nativeKey=key;a.nativeFingerprint=body.fingerprint;a.nativeComponents=body.components;ws.serializeAttachment(a);
     if(!room.members.every(m=>this.games().some(client=>{const member=client.deserializeAttachment();return member.actorId===m.id&&member.nativeKey===key;})))return;
-    if(!room.members.every(m=>this.games().some(client=>{const member=client.deserializeAttachment();return member.actorId===m.id&&member.nativeKey===key&&member.nativeFingerprint===body.fingerprint;}))){this.send(ws,{type:'error',message:'Els mons generats no coincideixen. Recarregueu tots dos.'});return;}
+    if(!room.members.every(m=>this.games().some(client=>{const member=client.deserializeAttachment();return member.actorId===m.id&&member.nativeKey===key&&member.nativeFingerprint===body.fingerprint;}))){
+      const peers=room.members.map(m=>this.games().find(client=>client.deserializeAttachment()?.actorId===m.id)),
+        first=peers[0]?.deserializeAttachment()?.nativeComponents||{},
+        second=peers[1]?.deserializeAttachment()?.nativeComponents||{},
+        differences=[...new Set([...Object.keys(first),...Object.keys(second)])].filter(name=>first[name]!==second[name]),
+        detail=differences.length?differences.slice(0,4).join(', '):'format o ordre de les dades';
+      console.warn('[COOP] Empremtes diferents en preparar el món:',detail);
+      for(const peer of peers)if(peer)this.send(peer,{type:'error',message:'Els mons generats no coincideixen ('+detail+'). Recarregueu tots dos.'});
+      return;
+    }
 
     if(this.mission?.meta.mode==='native'&&this.matches(room)&&this.mission.meta.fingerprint===body.fingerprint){this.send(ws,this.setupClient(a.actorId));await this.wake();return;}
     const upload=await this.ctx.storage.get('native-upload');if(!upload||upload.key!==key||upload.received!==upload.total||upload.expiresAt<Date.now()){this.send(ws,{type:'error',message:'Esperant el món de l’amfitrió.'});return;}

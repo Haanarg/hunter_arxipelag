@@ -1,3 +1,9 @@
+**2026-11-20 · v0.6.255 · COOP: determinisme entre navegadors i diagnòstic de discrepàncies:**
+- [x] Substituïdes les vuit ordenacions amb comparador aleatori per Fisher–Yates amb RNG de llavor i nombre fix de tirades.
+- [x] Afegides empremtes parcials d'illes, parets, vegetació, edificis, vehicles, enemics, opcionals i taurons; el Worker comunica les diferències a tots dos clients sense ometre la comprovació general.
+- [x] Ampliada la regressió per generar dos mons natius independents amb la mateixa llavor i ordenacions simulades diferents.
+- [ ] Confirmar CI i desplegament Cloudflare; validar visualment en dos dispositius i escales de mapa. La nova barreja canvia la distribució dels objectes respecte a versions anteriors.
+
 **2026-11-20 · v0.6.254 · Mida nadiua del V18 sense scale=1.6:**
 - [x] Protagonista, comparador i pilot moto/bici generats a 3.11232 u des de la fàbrica; pivots i geometries iguals i scale arrel 1.
 - [x] Armes i punys amb coordenades finals pròpies, sense heretar el multiplicador visual del cos.

@@ -1,3 +1,5 @@
+// L'ordre de generació és independent de l'algoritme intern d'Array.sort.
+const shuffleWorldRows=rows=>window.HUNTER_WORLD_GENERATION.shuffleWorldRows(rows,R);
 const countVehicles=(type,sector=null)=>{let count=0;for(const v of V)if(v.t===type&&sectorMatches(v.x,v.z,sector))count++;return count};
 // The planner does not draw from R(): normal play, progressive loading and seed
 // searches reserve the same camp before any optional coast/civil/military site.
@@ -484,7 +486,7 @@ const compound=function* (type,q){let checkpointUnits=0;
   return false;
 };
 const usedPortIslands=new Set();
-const candidateIslands=islands.filter(i=>i!==A&&i!==Bi).slice().sort(()=>R()-.5),usedSpecialIslands=new Set();
+const candidateIslands=shuffleWorldRows(islands.filter(i=>i!==A&&i!==Bi)),usedSpecialIslands=new Set();
 const {reserveCompound,forceReserve}=
   window.HUNTER_COMPOUND_PLANNING.createReservationPlanner({
     candidateIslands,usedSpecialIslands,sectorMatches,landSteps,
@@ -542,7 +544,7 @@ for(const sector of activeSectors){
   (yield* forceReserve('comunicacions',190,sector));
 }
 const reserveHeliportFallback=function* (sector=null){let checkpointUnits=0;
-  const all=islands.filter(i=>i!==Bi&&sectorMatches(i.x,i.z,sector)).slice().sort(()=>R()-.5);
+  const all=shuffleWorldRows(islands.filter(i=>i!==Bi&&sectorMatches(i.x,i.z,sector)));
   for(const i of all){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
     for(let n=0;n<28;n++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
       const q=(yield* landSteps(i,1200,1));if(!q||!sectorMatches(q.x,q.z,sector))continue;
@@ -664,7 +666,7 @@ const sp2=(t,cx,cz,r0,r1)=>{for(let k=0;k<12;k++){const a=rr(0,6.28),d=rr(r0,r1)
 const assaultLootBuildings=rb.filter(b=>!b.civilian&&lootAllowed('fusell_assalt',b));
 for(const sector of activeSectors){
   if(items.some(it=>it.t==='fusell_assalt'&&sectorMatches(it.x,it.z,sector)))continue;
-  const candidates=assaultLootBuildings.filter(b=>sectorMatches(b.x,b.z,sector)).sort(()=>R()-.5);
+  const candidates=shuffleWorldRows(assaultLootBuildings.filter(b=>sectorMatches(b.x,b.z,sector)));
   let placed=false;
   for(const b of candidates){
     if((++checkpointUnits%64)===0)yield {stage:'Garantint fusells d’assalt',completed:null,total:null};
@@ -732,8 +734,7 @@ addIt('franctirador',sniperSites[Math.floor(R()*sniperSites.length)]||B[2]);
 for(const sector of activeSectors){
   for(const [type,count] of [['mapa',3],['mapa_heli',2],['mapa_tanc',2]]){
     if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
-    const buildings=lootBuildings(type).filter(b=>sectorMatches(b.x,b.z,sector))
-      .sort(()=>R()-.5);
+    const buildings=shuffleWorldRows(lootBuildings(type).filter(b=>sectorMatches(b.x,b.z,sector)));
     let placed=0;
     for(const b of buildings){
       if(placed>=count)break;
@@ -982,11 +983,11 @@ if(heliportSites.length){
   if(!V.some(v=>v.t==='heli_combat'))addClearHeliAtPort('heli_combat',Math.min(1,heliportSites.length-1));
 }
 const protectedVehicleSpot=t=>{const r=vehicleRadius(t),ok=(x,z)=>prisonCampCorridorClear(x,z,r+2)&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(let k=0;k<240;k++){const a=rr(0,Math.PI*2),d=rr(30,58),x=pb.x+Math.cos(a)*d,z=pb.z+Math.sin(a)*d;if(ok(x,z))return{x,z,hd:a+Math.PI}}return null};
-const distributedMilitarySpot=function* (t,sector=null){let checkpointUnits=0;const r=vehicleRadius(t),pool=islands.filter(i=>i!==Bi&&sectorMatches(i.x,i.z,sector)).slice().sort(()=>R()-.5),ok=(x,z)=>prisonCampCorridorClear(x,z,r+2)&&Math.hypot(x-pb.x,z-pb.z)>220&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(const i of pool){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};for(let k=0;k<50;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* landSteps(i,900,1));if(q&&sectorMatches(q.x,q.z,sector)&&ok(q.x,q.z))return{x:q.x,z:q.z,hd:rr(0,Math.PI*2)}}}return null};
+const distributedMilitarySpot=function* (t,sector=null){let checkpointUnits=0;const r=vehicleRadius(t),pool=shuffleWorldRows(islands.filter(i=>i!==Bi&&sectorMatches(i.x,i.z,sector))),ok=(x,z)=>prisonCampCorridorClear(x,z,r+2)&&Math.hypot(x-pb.x,z-pb.z)>220&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<3&&!treeHit(x,z,r*.7)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3);for(const i of pool){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};for(let k=0;k<50;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* landSteps(i,900,1));if(q&&sectorMatches(q.x,q.z,sector)&&ok(q.x,q.z))return{x:q.x,z:q.z,hd:rr(0,Math.PI*2)}}}return null};
 const militaryCompoundSpot=function* (t,sector=null){let checkpointUnits=0;
   const r=vehicleRadius(t),sites=world.userData.compounds.filter(c=>
     !c.layout?.friendly&&!c.layout?.civilian&&c.id!=='base'&&c.id!=='port'&&sectorMatches(c.x,c.z,sector));
-  for(const site of sites.slice().sort(()=>R()-.5)){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};for(let k=0;k<75;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
+  for(const site of shuffleWorldRows(sites.slice())){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};for(let k=0;k<75;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};
     const a=rr(0,Math.PI*2),d=site.r+rr(8,65),x=site.x+Math.cos(a)*d,z=site.z+Math.sin(a)*d;
     if(!sectorMatches(x,z,sector)||!prisonCampCorridorClear(x,z,r+2)||Math.abs(x)>=H-r-8||Math.abs(z)>=H-r-8||hAt(x,z)<1.2||
        slope(x,z,hAt(x,z))>=3||treeHit(x,z,r*.7)||
@@ -997,7 +998,7 @@ const militaryCompoundSpot=function* (t,sector=null){let checkpointUnits=0;
   return null;
 };
 const hardLandVehicleSpot=function* (t,sector=null){let checkpointUnits=0;const r=vehicleRadius(t),ok=(x,z)=>sectorMatches(x,z,sector)&&prisonCampCorridorClear(x,z,r+2)&&Math.abs(x)<H-r-8&&Math.abs(z)<H-r-8&&Math.hypot(x-pb.x,z-pb.z)>220&&hAt(x,z)>1.2&&slope(x,z,hAt(x,z))<4&&!treeHit(x,z,r*.65)&&!B.some(b=>Math.abs(x-b.x)<b.hw+r&&Math.abs(z-b.z)<b.hd+r)&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+4);for(let k=0;k<1600;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const x=rr(-H+r+10,H-r-10),z=rr(-H+r+10,H-r-10);if(ok(x,z))return{x,z,hd:rr(0,Math.PI*2)}}for(let k=0;k<72;k++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const a=k*Math.PI/36,d=110+(k%4)*20,x=pa.x+Math.cos(a)*d,z=pa.z+Math.sin(a)*d;if(ok(x,z))return{x,z,hd:a+Math.PI}}return null};
-const waterVehicleSpot=function* (t,sector=null){let checkpointUnits=0;const r=vehicleRadius(t),pool=islands.filter(i=>sectorMatches(i.x,i.z,sector)).slice().sort(()=>R()-.5);for(const i of pool){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};for(let tries=0;tries<3;tries++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* findPortSite(i,18));if(!q||!q.portBest)continue;const a=q.portBest.aa,px=-Math.sin(a),pz=Math.cos(a);for(const side of[-1,1]){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const x=q.portBest.x+px*side*(r+4),z=q.portBest.z+pz*side*(r+4);if(sectorMatches(x,z,sector)&&hAt(x,z)<-2&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3))return{x,z,hd:q.portBest.hd}}}}return null};
+const waterVehicleSpot=function* (t,sector=null){let checkpointUnits=0;const r=vehicleRadius(t),pool=shuffleWorldRows(islands.filter(i=>sectorMatches(i.x,i.z,sector)));for(const i of pool){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};for(let tries=0;tries<3;tries++){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const q=(yield* findPortSite(i,18));if(!q||!q.portBest)continue;const a=q.portBest.aa,px=-Math.sin(a),pz=Math.cos(a);for(const side of[-1,1]){if((++checkpointUnits%64)===0)yield {stage:'Cercant i construint el món',completed:null,total:null};const x=q.portBest.x+px*side*(r+4),z=q.portBest.z+pz*side*(r+4);if(sectorMatches(x,z,sector)&&hAt(x,z)<-2&&!V.some(v=>Math.hypot(v.x-x,v.z-z)<vehicleRadius(v.t)+r+3))return{x,z,hd:q.portBest.hd}}}}return null};
 const ensureVehicleType=function* (t,sector=null){
   if(V.some(v=>v.t===t&&sectorMatches(v.x,v.z,sector)&&(t!=='heli'||!v.heliport)))return;
   let q=null,c=VT[t];
@@ -1074,7 +1075,7 @@ const extraHoverSpot=function* (sector){
   let checkpointUnits=0;
   const type='hover',radius=vehicleRadius(type),
     previous=V.filter(v=>v.t===type),
-    pool=islands.filter(i=>sectorMatches(i.x,i.z,sector)).slice().sort(()=>R()-.5);
+    pool=shuffleWorldRows(islands.filter(i=>sectorMatches(i.x,i.z,sector)));
   let best=null,bestSeparation=-1;
   const consider=q=>{
     if(!q||!sectorMatches(q.x,q.z,sector)||

@@ -135,6 +135,33 @@ function captureNativeCoopWorld(){
   }))};
  return JSON.parse(JSON.stringify(payload,(_,value)=>typeof value==='number'&&Number.isFinite(value)?Math.round(value*1e6)/1e6:value));
 }
+// Empremtes parcials que expliquen quin component no coincideix.
+async function nativeCoopComponentFingerprints(payload){
+ const geometry=payload.geometry,parts={
+  requestedSeed:payload.requestedSeed,
+  'geometry.generatorVersion':geometry.generatorVersion,
+  'geometry.seed':geometry.seed,
+  'geometry.mapScale':geometry.mapScale,
+  'geometry.islands':geometry.islands,
+  'geometry.levels':geometry.levels,
+  'geometry.walls':geometry.walls,
+  'geometry.trees':geometry.trees,
+  'geometry.stairs':geometry.stairs,
+  'geometry.piers':geometry.piers,
+  'geometry.buildings':geometry.buildings,
+  'geometry.bunker':geometry.bunker,
+  'geometry.terminalRamps':geometry.terminalRamps,
+  spawn:payload.spawn,vehicles:payload.vehicles,targets:payload.targets,
+  supplies:payload.supplies,optional:payload.optional,intel:payload.intel,
+  sharks:payload.sharks
+ };
+ const entries=await Promise.all(Object.entries(parts).map(async([key,value])=>{
+  const bytes=new TextEncoder().encode(JSON.stringify(value));
+  const digest=await crypto.subtle.digest('SHA-256',bytes);
+  return [key,[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('').slice(0,16)];
+ }));
+ return Object.fromEntries(entries);
+}
 async function startNativeCoop(room){
  if(nativeCoopSession)throw Error('Ja hi ha una sessió cooperativa.');
  if(started&&!over){try{await saveOperation();}catch(error){msg=error.message;msgT=20;ui.show('coop');throw error;}}
@@ -146,7 +173,7 @@ async function startNativeCoop(room){
  session.previousCheats={...cheats};
  try{
   await startGameProgressively({seed:room.seed,scale:room.mapScale,difficulty:room.difficulty,nativeSession:true});
-  const payload=captureNativeCoopWorld();session.prediction=window.HUNTER_CREATE_NATIVE_PREDICTION?.(payload.geometry);const text=JSON.stringify(payload),hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));session.fingerprint=[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join('');
+  const payload=captureNativeCoopWorld();session.prediction=window.HUNTER_CREATE_NATIVE_PREDICTION?.(payload.geometry);const text=JSON.stringify(payload),hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));session.fingerprint=[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join('');session.components=await nativeCoopComponentFingerprints(payload);
   session.walls=Wl.slice();session.buildings=B.slice();session.palms=PL.slice();session.vehicles=new Map(V.map(v=>[v.saveId,v]));session.enemies=new Map(E.map(e=>[e.saveId,e]));session.items=new Map(items.map(it=>[it.saveId,it]));
   session.channel=window.HUNTER_NATIVE_COOP_TRANSPORT({room,getInput:nativeCoopInput,onInput:message=>session.prediction?.sent(message.sequence),
    onStatus(status){session.connectionStatus=status;if(status!=='open'&&session.state)session.state={...session.state,status:'paused'};const labels={connecting:'Connectant…',retrying:'Reconnectant…',replaced:'Sessió oberta en una altra pestanya.',ended:'Sessió finalitzada.',version:'Cal recarregar el joc.'};msg=status==='open'?'Preparant el mateix món amb el company…':labels[status]||'Connexió interrompuda.';msgT=8;},
@@ -165,7 +192,7 @@ async function startNativeCoop(room){
     session.channel.stats.localPrediction=session.prediction.stats;
   if(session.projectileVisual?.stats)
     session.channel.stats.projectileVisual=session.projectileVisual.stats;
-  session.channel.start();session.channel.prepare({payload,fingerprint:session.fingerprint,host:room.members.find(m=>m.host)?.id===window.HUNTER_ACCOUNT_SERVICE.status().user?.id||room.host===window.HUNTER_ACCOUNT_SERVICE.status().user?.id});
+  session.channel.start();session.channel.prepare({payload,fingerprint:session.fingerprint,components:session.components,host:room.members.find(m=>m.host)?.id===window.HUNTER_ACCOUNT_SERVICE.status().user?.id||room.host===window.HUNTER_ACCOUNT_SERVICE.status().user?.id});
   msg='Esperant el company al món original…';msgT=30;
  }catch(error){stopNativeCoop();paused=true;msg=error.message;msgT=20;ui.show('coop');throw error;}
 }
