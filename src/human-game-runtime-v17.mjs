@@ -443,6 +443,29 @@ export function createHumanGameRuntimeV17(){
    return {root,joints,standingHeight};
   },
   suppress(callback){suppressed++;try{return callback()}finally{suppressed--}},
+  // Consolida una sola vegada la talla final del tripulant enemic.
+  // La postura de braços/genolls, els ancoratges de canó i els
+  // ossos V18 mantenen les mateixes coordenades mundials.
+  // Aquest helper és compartit pels conductors de terra i de mar:
+  // no es modifica el rig del jugador ni l'animació de natació.
+  normalizeEnemyCrew(root,size){
+   if(!root?.isObject3D||!Number.isFinite(size)||size<=0)
+    throw Error('Tripulant V18 o talla invàlida');
+   const previous=root.userData.humanCrewNativeScale;
+   if(previous!==undefined){
+    if(Math.abs(previous-size)>1e-10)throw Error('Tripulant ja normalitzat amb una talla diferent');
+    return root;
+   }
+   if(root.scale.toArray().some(x=>Math.abs(x-1)>1e-10))
+    throw Error('El tripulant ha de néixer amb escala d’arrel 1');
+   root.scale.setScalar(size);
+   bakeFixedModelScales(root);
+   if(root.scale.toArray().some(x=>Math.abs(x-1)>1e-10))
+    throw Error('Tripulant amb correcció d’escala restant');
+   root.userData.humanCrewNativeScale=size;
+   root.userData.humanCrewRootNormalized=true;
+   return root;
+  },
   install(T,model,{role='player'}={}){
    if(suppressed)return model;
    if(model.userData.humanGameV17===role)return model;
