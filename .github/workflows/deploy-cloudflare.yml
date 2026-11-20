@@ -127,6 +127,11 @@ jobs:
           npm run check:build
       - name: Comparar partida real del harness en source i bundle
         run: node tests/runtime-bundle-parity.cjs
+      - name: Diagnosticar arrencada real de partida en Chromium
+        # Temporalment informativa: captura el problema existent sense impedir
+        # desplegaments mentre es repara l'arrencada.
+        continue-on-error: true
+        run: node tests/browser-startup-smoke.cjs
       - name: Comprovar la compilació del Worker
         run: npm run build:worker
       - name: Sincronitzar runtime compilat amb GitHub abans del desplegament
