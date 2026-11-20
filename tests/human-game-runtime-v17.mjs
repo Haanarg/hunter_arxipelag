@@ -12,7 +12,7 @@ import {createHumanGameRuntimeV17,GAME_HUMAN_SKIN_VERSION} from '../src/human-ga
 import {HUMAN_PLAYER_GAME_NATIVE_HEIGHT,HUMAN_WORLD_UNITS_PER_METER} from '../src/human-model-catalog.mjs';
 import {moveOnFoot} from '../src/player-simulation.mjs';
 import {pushWalls,pushTree} from '../src/world-physics.mjs';
-import {vehicleOccupantHeadWorld,vehicleSeatWorld} from '../src/vehicle-occupant-damage-core.mjs';
+import {vehicleOccupantHeadWorld,vehicleSeatWorld,marineCrewHeadWorld} from '../src/vehicle-occupant-damage-core.mjs';
 
 globalThis.window=globalThis;
 const runtime=createHumanGameRuntimeV17();
@@ -1129,6 +1129,13 @@ for(const [seat,crew]of marine.boatWeapons.entries()){
  assert(Math.abs(eye.y-(.89+2.7*.43))<1e-6,
   'Punt de mira geomètric a la mateixa altura que el model anterior');
  assert.equal(crew.rider.position.x,seat===0?-.58:.58);
+  const boatAvatarHead=crew.rider.userData.head.getWorldPosition(new T.Vector3());
+  const boatHitHead=marineCrewHeadWorld({t:'patrulla_marina',x:0,y:0,z:0,hd:0},seat,0);
+  console.log('V18_PHYSICS_AUDIT_MARINE',JSON.stringify({
+    seat,visualHead:boatAvatarHead.toArray(),
+    hitHead:[boatHitHead.x,boatHitHead.y,boatHitHead.z],
+    visualSeat:crew.rider.position.toArray()
+  }));
  const muzzle=crewSandbox.__boatMuzzle(boat,seat);
  assert(muzzle.distanceTo(crew.muzzle.getWorldPosition(new T.Vector3()))<1e-8,
   'Muzzle de patrullera i arma real en el mateix punt');
@@ -1151,6 +1158,16 @@ for(const [type,size]of [['cotxe',.43],['camio',.31],['moto',.52]]){
   enemySeat:{x:.9,y:1.55,z:-.42},gunMount:{x:.9,y:2.36,z:-.53}
  };
  const occupants=attachCarCrew(vehicle,{type});
+ for(const [seat,avatar] of [occupants.driver,occupants.gunner].entries()){
+  if(!avatar)continue;
+  const head=avatar.userData.head.getWorldPosition(new T.Vector3());
+  const center=vehicleOccupantHeadWorld({t:type,x:0,y:0,z:0,hd:0},seat,0);
+  const seatP=vehicleSeatWorld({t:type,x:0,y:0,z:0,hd:0},seat,0);
+  console.log('V18_PHYSICS_AUDIT_VEHICLE',JSON.stringify({
+   type,seat,visualHead:head.toArray(),visualSeat:avatar.position.toArray(),
+   hitHead:[center.x,center.y,center.z],hitSeat:[seatP.x,seatP.y,seatP.z]
+  }));
+ }
  for(const rider of [occupants.driver,occupants.gunner].filter(Boolean)){
   assert.deepEqual(rider.scale.toArray(),[1,1,1],
    'Enemic de vehicle '+type+' amb arrel 1');
