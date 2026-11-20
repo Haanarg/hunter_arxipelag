@@ -30,8 +30,10 @@ export function stepT90Tracks(root,{throttle=0,steer=0}={},dt=0){
  for(const track of rig.tracks){
   // Com al joc: la diferència entre les velocitats dreta/esquerra
   // inverteix les erugues mentre pivota al mateix lloc.
-  const beltSpeed=3.5*Math.max(-1,Math.min(1,throttle))
-   +track.side*2.1*Math.max(-1,Math.min(1,steer));
+  // Velocitat local dels recorreguts amb dimensions aprovades integrades;
+  // el radi i el perímetre ja no depenen d'un multiplicador d'arrel.
+  const beltSpeed=5.25*Math.max(-1,Math.min(1,throttle))
+   +track.side*3.15*Math.max(-1,Math.min(1,steer));
   if(!beltSpeed&&track.renderedPhase===track.phase)continue;
   track.phase=((track.phase+beltSpeed*seconds)%track.perimeter+track.perimeter)%track.perimeter;
   for(const link of track.links){

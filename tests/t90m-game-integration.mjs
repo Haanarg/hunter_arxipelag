@@ -14,7 +14,7 @@ const preview=createReferenceVehicle(THREE,'t90m-v1');
 const gameRoot=new THREE.Group();
 const gameModel=installT90MModel(THREE,gameRoot);
 assert.equal(gameModel.userData.referenceCandidate,preview.userData.referenceCandidate);
-assert.equal(gameModel.scale.x,1.5);
+assert.equal(gameModel.scale.x,1,'L’editor lliura el T-90M ja amb dimensions base definitives');
 assert.equal(gameRoot.userData.tankVisual,gameModel);
 assert.equal(gameRoot.userData.tankModel,T90M_GAME_MODEL_VERSION);
 assert.equal(gameRoot.userData.tracks.length,2);
@@ -25,8 +25,8 @@ for(const track of gameRoot.userData.tracks){
    'Les sabates han de quedar repartides fins i tot amb el tanc aturat');
 }
 assert.equal(vehicleSpecs.scales.tanc,2,'Duplicar el tanc només al joc');
-assert.equal(gameRoot.userData.trackVisualScale,3,'Ritme físic de les erugues sobre escala efectiva x3');
-assert.equal(gameRoot.userData.trackHalfWidth,1.52);
+assert.equal(gameRoot.userData.trackVisualScale,2,'Ritme físic de les erugues sobre geometria nativa i escala física x2');
+assert.equal(gameRoot.userData.trackHalfWidth,2.28);
 assert(gameRoot.userData.wheels.every(w=>Math.abs(w.userData.radius-1.29)<.001),'Rodes del tanc amb radi doblat');
 assert.equal(gameRoot.userData.turretPivot.name,'Torreta giratòria T-90M');
 assert.equal(gameRoot.userData.turretPitch.name,'Canó principal 125 mm');
@@ -50,9 +50,9 @@ const factory=vehicleModels.createFactory(THREE,{
  shadows:false,batching:playerBatching
 });
 const tank=factory('tanc');
-assert.equal(tank.scale.x,2,'Escala addicional ×2 només a la fàbrica del joc');
-assert.equal(tank.scale.y,2);
-assert.equal(tank.scale.z,2);
+assert.equal(tank.scale.x,1,'L’escala física es consolida abans de publicar la malla del tanc');
+assert.equal(tank.scale.y,1);
+assert.equal(tank.scale.z,1);
 assert.equal(tank.userData.tankModel,T90M_GAME_MODEL_VERSION);
 assert.equal(tank.userData.wheels.length,12);
 assert.equal(tank.userData.tracks.length,2);
@@ -63,7 +63,7 @@ assert(Math.abs(scaledHull.x-2*hullSize.x)<1e-4,'Casc real ha de duplicar amplad
 assert(Math.abs(scaledHull.z-2*hullSize.z)<1e-4,'Casc real ha de duplicar longitud al joc');
 assert(scaledHull.x<=width*vehicleSpecs.scales.tanc&&
        scaledHull.z<=depth*vehicleSpecs.scales.tanc,'Hitbox escalada ha de contenir el casc');
-assert.equal(tank.userData.trackVisualScale,3);
+assert.equal(tank.userData.trackVisualScale,2);
 assert(tank.userData.wheels.every(w=>Math.abs(w.userData.radius-1.29)<.001));
 const gun=vehicleModels.turretShot(THREE,tank);
 const authoritative=vehicleGunPose({t:'tanc',x:0,y:0,z:0,hd:0,turretYaw:0,turretPitch:0});

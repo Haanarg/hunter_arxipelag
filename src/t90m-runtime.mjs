@@ -4,6 +4,7 @@ import {createReferenceVehicle} from './vehicle-reference-candidates.mjs?rev=t90
 import {getT90Rig,stepT90Tracks} from './t90m-preview-animation.mjs?rev=t90m-game-1';
 import {turretSpecs} from './vehicle-turret-core.mjs';
 import {vehicleSpecs} from './vehicle-specs.mjs';
+import {T90M_NATIVE_DIMENSION} from './vehicle-reference-candidates.mjs';
 
 export const T90M_GAME_MODEL_VERSION='t90m-studio-v1-300-game';
 
@@ -12,11 +13,10 @@ export function installT90MModel(THREE,vehicle){
  const rig=getT90Rig(model);
  if(!rig||rig.tracks.length!==2||rig.wheels.length!==12)
   throw new Error('El T-90M del laboratori ha perdut la torreta o les erugues');
- // El laboratori conserva el model x1,5. Al joc el grup físic exterior
- // aplica un factor addicional x2: escala efectiva x3 respecte a l'original.
- // El mateix factor regeix col·lisions i boca de foc en SOLO i COOP.
- if(model.scale.x!==1.5||model.scale.y!==1.5||model.scale.z!==1.5)
-  throw new Error('Escala base de T-90M no concordant amb el laboratori');
+ // El candidat ja porta la mida aprovada dins les seves coordenades.
+ // Només resta la conversió explícita de les unitats físiques del món.
+ if(model.scale.x!==1||model.scale.y!==1||model.scale.z!==1)
+  throw new Error('T-90M amb una escala addicional fora de la geometria base');
  if(vehicleSpecs.scales.tanc!==2)
   throw new Error('La mida definitiva del tanc al joc ha de ser x2 sobre la base aprovada');
  vehicle.add(model);
@@ -24,7 +24,7 @@ export function installT90MModel(THREE,vehicle){
  // trajectòria real surten de l'extrem visual del canó i giren junts.
  const muzzle=new THREE.Object3D();
  muzzle.name='Boca de foc T-90M';
- muzzle.position.set(0,0,-4.848);
+ muzzle.position.set(0,0,-4.848*T90M_NATIVE_DIMENSION);
  rig.barrel.add(muzzle);
  // Inicialitzar també quan el tanc està aturat. Sense aquesta passada,
  // totes les sabates quedarien acumulades davant fins a la primera marxa.
@@ -54,8 +54,8 @@ export function installT90MModel(THREE,vehicle){
   cy:track.cy,r:track.r,front:track.front,rear:track.rear,
   straight:track.straight,perimeter:track.perimeter,x:track.x
  }));
- data.trackVisualScale=model.scale.x*vehicleSpecs.scales.tanc;
- data.trackHalfWidth=1.52; // Semiamplada en coordenades locals del candidat.
+ data.trackVisualScale=vehicleSpecs.scales.tanc;
+ data.trackHalfWidth=1.52*T90M_NATIVE_DIMENSION; // Coordenades canòniques del candidat.
  data.wheels=rig.wheels;
  for(const wheel of data.wheels){
   wheel.userData.trackSide=wheel.userData.t90RoadWheel.side;

@@ -1,7 +1,10 @@
+import {bakeFixedModelScales} from './model-scale-normalization.mjs';
 // Hunter: Arxipèlag · candidats ORIGINALS low-poly per al laboratori.
 // Orientació compartida amb el joc: morro cap a -Z, simetria X=0.
 // El T-90M aprovat també és el model del joc; les proves continuen emprant la mateixa geometria.
-export const REFERENCE_CANDIDATE_VERSION='20261113-t90m-animated-150-tigr-door-contours-v4';
+export const REFERENCE_CANDIDATE_VERSION='20261120-native-canonical-scales-tigr-t90-v1';
+export const T90M_NATIVE_DIMENSION=1.5;
+export const GAZ_TIGR_NATIVE_DIMENSION=1.25;
 
 export function createReferenceVehicle(THREE,type){
  if(type!=='t90m-v1'&&type!=='tigr-v1')throw new Error('Candidat desconegut: '+type);
@@ -156,10 +159,9 @@ export function createReferenceVehicle(THREE,type){
   cylinder(gun,'Ànima fosca',.065,.005,0,0,-4.848,T.dark,'z');
   root.userData.candidateParts={hull:chassis.name,turret:turret.name,gun:gun.name,wheelsPerSide:6};
   // L'escala és del model sencer, també canó i animacions. No altera el GAZ.
-  root.scale.setScalar(1.5);
   root.userData.t90Animation={turret:turret.name,pitch:gun.name,
    leftTrack:'Eruga mòbil esquerra',rightTrack:'Eruga mòbil dreta',
-   movement:'differential',scale:1.5};
+   movement:'differential',nativeDimensions:true};
  }else{
   const body=new THREE.Group();body.name='Carrosseria GAZ Tigr-M';root.add(body);
   const rect=(a,b,c,d)=>[[a,c],[b,c],[b,d],[a,d]];
@@ -295,6 +297,29 @@ export function createReferenceVehicle(THREE,type){
   root.userData.candidateParts={body:body.name,wheels:4,doors:4,front:-1,wheelbase:3.3,seats:4,interior:interior.name};
 
  }
+ // Consolidació AL GENERADOR, abans de publicar els Object3D: la mida
+ // aprovada forma part de les coordenades pròpies del candidat. El joc
+ // ja no necessita trobar un root.scale=1.5 al T-90M ni un scale=1.25
+ // afegit al GAZ després de carregar-lo.
+ const canonicalSize=type==='t90m-v1'?T90M_NATIVE_DIMENSION:GAZ_TIGR_NATIVE_DIMENSION;
+ root.scale.setScalar(canonicalSize);
+ bakeFixedModelScales(root);
+ if(type==='t90m-v1'){
+  root.traverse(node=>{
+   if(node.userData.t90RoadWheel)node.userData.t90RoadWheel.radius*=canonicalSize;
+   if(Number.isFinite(node.userData.trackOffset))
+    node.userData.trackOffset*=canonicalSize;
+   const belt=node.userData.t90Belt;
+   if(belt){
+    for(const key of ['x','front','rear','cy','r','straight','perimeter'])
+     belt[key]*=canonicalSize;
+   }
+  });
+ }else if(root.userData.candidateParts){
+  root.userData.candidateParts.wheelbase*=canonicalSize;
+ }
+ if(root.scale.x!==1||root.scale.y!==1||root.scale.z!==1)
+  throw Error('Escala pendent al candidat natiu '+type);
  root.traverse(o=>{if(o.isMesh&&o.geometry?.attributes?.position){
   const positions=o.geometry.getAttribute('position');
   for(let i=0;i<positions.count;i++){
