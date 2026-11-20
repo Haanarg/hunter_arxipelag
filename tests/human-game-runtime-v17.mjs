@@ -205,6 +205,42 @@ for(const role of ['player','soldier','rocket','elite','general']){
   u.head.rotation.set(0,0,0);
   updateHuman(g);
   console.log('PASS V18 native torso/head/crouch independent of V17 control');
+  // Prova explícita dels VUIT canals de braços i cames visibles:
+  // canviar les rotacions del controlador V17 no pot alterar-los.
+  const limbIds=['hipL','hipR','kneeL','kneeR',
+                 'shoulderL','shoulderR','elbowL','elbowR'];
+  u.humanGameNativeBodyPose={
+   pelvisYaw:0,spinePitch:0,spineYaw:0,spineRoll:0,
+   headPitch:0,headYaw:0,headRoll:0,crouchDrop:0
+  };
+  u.humanGameNativeLimbPose=Object.fromEntries(limbIds.map((id,i)=>[
+   id,{x:(i+1)*.055,z:(i%2?1:-1)*.035}
+  ]));
+  u.gameLandMove=0;u.runBlend=0;
+  for(const bone of [u.ll,u.lr,u.lkl,u.lkr,u.al,u.ar,u.ael,u.aer])
+   bone.rotation.set(.82,-.61,1.25);
+  updateHuman(g);
+  for(const id of limbIds){
+   const expected=u.humanGameNativeLimbPose[id],bone=bones[id];
+   assert(Math.abs(bone.rotation.x-expected.x)<1e-9&&
+    Math.abs(bone.rotation.z-expected.z)<1e-9,
+    'Membre V18 sense lectura de rotacions antigues: '+id);
+  }
+  for(const bone of [u.ll,u.lr,u.lkl,u.lkr,u.al,u.ar,u.ael,u.aer])
+   bone.rotation.set(-.9,.3,-1.1);
+  updateHuman(g);
+  for(const id of limbIds){
+   const expected=u.humanGameNativeLimbPose[id],bone=bones[id];
+   assert(Math.abs(bone.rotation.x-expected.x)<1e-9&&
+    Math.abs(bone.rotation.z-expected.z)<1e-9,
+    'Canvi del rig ocult no altera el membre: '+id);
+  }
+  delete u.humanGameNativeLimbPose;
+  delete u.humanGameNativeBodyPose;
+  for(const bone of [u.ll,u.lr,u.lkl,u.lkr,u.al,u.ar,u.ael,u.aer])
+   bone.rotation.set(0,0,0);
+  updateHuman(g);
+  console.log('PASS V18 native locomotion without reading legacy limb transforms');
   // L'explosió del protagonista no pot animar membres ocults V17.
   // El ragdoll V18 es torna a aplicar després de humanGamePose() al RAF.
   const ragdollWindow={window:{}};
