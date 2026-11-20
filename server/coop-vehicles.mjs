@@ -1,4 +1,4 @@
-import {vehicleSpecs,vehicleSeatCount,vehicleCollisionScale,vehicleCollisionFootprint,vehicleCollisionRadius} from '../src/vehicle-specs.mjs';
+import {vehicleSpecs,vehicleSeatCount,vehicleCollisionFootprint,vehicleCollisionRadius} from '../src/vehicle-specs.mjs';
 import {turretControllerId} from '../src/vehicle-turret-core.mjs';
 import {palmImpact,rockImpact} from '../src/vehicle-environment-core.mjs';
 import {firstVehicleContact,vehicleContactDamage} from './coop-vehicle-contacts.mjs';
@@ -24,7 +24,7 @@ export function createRelayVehicles({meta,record={},world,water,players,active,o
   // El GAZ actual és l'únic model del tipus cotxe en mode natiu.
   // Conservam el marcador a l'estat del servidor (sense Object3D).
   if(meta.mode==='native'&&v.t==='cotxe'){
-    v.gazModel='Tigr-M';v.gazVisualScale=1.25;
+    v.gazModel='Tigr-M';
   }
  }
  const mounted=id=>vehicles.find(v=>!v.destroyed&&v.seats.includes(id));

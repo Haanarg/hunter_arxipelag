@@ -26,7 +26,7 @@ for(const track of gameRoot.userData.tracks){
 }
 assert.equal(vehicleSpecs.scales.tanc,2,'Duplicar el tanc només al joc');
 assert.equal(gameRoot.userData.trackVisualScale,2,'Ritme físic de les erugues sobre geometria nativa i escala física x2');
-assert.equal(gameRoot.userData.trackHalfWidth,2.28);
+assert(Math.abs(gameRoot.userData.trackHalfWidth-2.28)<1e-10);
 assert(gameRoot.userData.wheels.every(w=>Math.abs(w.userData.radius-1.29)<.001),'Rodes del tanc amb radi doblat');
 assert.equal(gameRoot.userData.turretPivot.name,'Torreta giratòria T-90M');
 assert.equal(gameRoot.userData.turretPitch.name,'Canó principal 125 mm');
