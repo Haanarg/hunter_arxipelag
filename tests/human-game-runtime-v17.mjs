@@ -335,16 +335,62 @@ assert.equal(rider.userData.boots.length,2);
   scene:new T.Scene(),box(){},material:c=>new T.MeshStandardMaterial({color:c}),
   scales:{cotxe:1.3,cotxe_civil:1.2,hover:1.3,moto:1.2,bici:1.2},heightAt:()=>0,shadows:false
  });
+ const nativePart=driver.object.userData.riderDetailNodes
+   .flatMap(root=>{const found=[];root.traverse(n=>{
+     if(n.isMesh&&n.userData.humanCanonicalOriginalGeometry)found.push(n);
+   });return found}).find(Boolean);
+ assert(nativePart,'Malla anatòmica pròpia per crear la talla de cabina');
+ const partSize=()=>{
+  nativePart.geometry.computeBoundingBox();
+  return nativePart.geometry.boundingBox.getSize(new T.Vector3());
+ };
+ const initialPartSize=partSize();
  const gaz=new T.Group();gaz.userData.gazModel='Tigr-M';
  driver.update({t:'cotxe',o:gaz,v:0,pedalPhase:0},1/60);
- assert(Math.abs(driver.object.scale.x-.825)<1e-9,'Conductor ajustat al GAZ visual un 25% més gran');
- assert.equal(driver.object.scale.x,driver.object.scale.y,'Escala uniforme al GAZ');
+ assert.deepEqual(driver.object.scale.toArray(),[1,1,1],
+  'El conductor GAZ té arrel 1 i geometria de cabina nativa');
+ assert.equal(driver.object.userData.riderNativeSize,.825,
+  'Mida GAZ consolidada en les malles, no en l’arrel');
+ assert(driver.object.userData.riderNativeGeometry,'Rider amb geometria pròpia');
+ assert(partSize().distanceTo(initialPartSize.clone().multiplyScalar(.825))<.0001,
+  'La geometria original ha incorporat el perfil GAZ una sola vegada');
+ const seat=driver.object.userData.torso.getWorldPosition(new T.Vector3());
+ assert(seat.distanceTo(new T.Vector3(-.72*1.3*1.25,
+   1.22*1.3*1.25,.42*1.3*1.25))<1e-5,
+  'L’ancoratge del pilot GAZ té coordenades mundials, sense inversos');
+ const ownGeometry=nativePart.geometry;
+ driver.update({t:'cotxe',o:gaz,v:0,pedalPhase:0},1/60);
+ assert.equal(nativePart.geometry,ownGeometry,
+  'Cap clonació ni multiplicació de geometria dins els ticks de conducció');
  const headBounds=new T.Box3().setFromObject(driver.object.userData.head,true);
  assert(headBounds.max.y<2.37*1.3*1.25,'El cap ha de cabre sota el sostre GAZ ampliat');
  driver.update({t:'cotxe_civil',o:new T.Group(),v:0,pedalPhase:0},1/60);
- assert(Math.abs(driver.object.scale.x-.82)<1e-9,'Escala del cotxe civil intacta');
+ assert.equal(driver.object.scale.x,1,'Cotxe civil: escala d’arrel 1');
+ assert.equal(driver.object.userData.riderNativeSize,.82,'Mida final civil nativa');
+ assert(partSize().distanceTo(initialPartSize.clone().multiplyScalar(.82))<.0001,
+  'El model civil només canvia la talla intrínseca');
  driver.update({t:'cotxe',o:new T.Group(),v:0,pedalPhase:0},1/60);
- assert(Math.abs(driver.object.scale.x-.82)<1e-9,'Altres cotxes mantenen l’escala');
+ assert.equal(driver.object.scale.x,1,'Cotxe estàndard: escala d’arrel 1');
+ assert.equal(driver.object.userData.riderNativeSize,.82,
+  'Altres cotxes tenen la mateixa talla final de cabina');
+ const hover=new T.Group();
+ hover.userData.hovercraftSeatPositions=[
+  new T.Vector3(-.30,1.58,-1.08),new T.Vector3(.30,1.58,-1.08)
+ ];
+ hover.userData.hovercraftSteeringPosition=new T.Vector3(-.30,1.88,-1.98);
+ driver.update({t:'hover',o:hover,v:0,pedalPhase:0},1/60,0);
+ assert.equal(driver.object.scale.x,1,'Hover: arrel nativa sense .63');
+ assert.equal(driver.object.userData.riderNativeSize,.63,
+  'L’hovercraft incorpora la talla .63 al rig');
+ assert(partSize().distanceTo(initialPartSize.clone().multiplyScalar(.63))<.0001,
+  'La geometria del pilot hover té les dimensions originals aprovades');
+ const hoverSeat=driver.object.userData.torso.getWorldPosition(new T.Vector3());
+ assert(hoverSeat.distanceTo(new T.Vector3(-.30*1.3,1.58*1.3,
+  -1.08*1.3))<1e-5,'Pilot hover sobre el seient real');
+ driver.update({t:'hover',o:hover,v:0,pedalPhase:0},1/60,1);
+ const passengerSeat=driver.object.userData.torso.getWorldPosition(new T.Vector3());
+ assert(passengerSeat.distanceTo(new T.Vector3(.30*1.3,1.58*1.3,
+  -1.08*1.3))<1e-5,'Passatger COOP hover a la segona plaça');
   // Els pilots de dues rodes fan servir EXACTAMENT la pell del jugador
   // a peu; cap bone scale ha de variar amb la posició del pedal.
   const anatomicalBody=driver.object.children.find(o=>o.userData.twoWheelCanonical);
@@ -419,6 +465,10 @@ assert.equal(rider.userData.boots.length,2);
   const motorcycle={t:'moto',o:moto,v:0,pedalPhase:0};
   driver.update(motorcycle,1/60);
   assert.equal(driver.object.scale.x,1,'Escala global neutra per al pilot anatòmic');
+  assert.equal(driver.object.userData.riderNativeSize,1,
+   'El pas de l’hover a la moto recupera les mides nadiues del V18');
+  assert(partSize().distanceTo(initialPartSize)<.0001,
+   'La malla del rider recupera la mida original, sense factors acumulats');
   assert(anatomicalBody.visible,'La malla de la moto ha de ser visible');
   const stoppedLegLength=point('hipL').distanceTo(point('kneeL'))+
     point('kneeL').distanceTo(point('ankleL'));
