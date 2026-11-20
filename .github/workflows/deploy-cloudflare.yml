@@ -63,7 +63,9 @@ on:
       - 'tests/vehicle-candidate-studio.cjs'
       - '.github/workflows/deploy-cloudflare.yml'
 permissions:
-  contents: read
+  # El bundle de codi generat ha de quedar també a GitHub: el segon
+  # sistema de desplegament pot reconstruir els assets des del checkout.
+  contents: write
 concurrency:
   group: hunter-cloudflare-production
   cancel-in-progress: false
@@ -127,6 +129,26 @@ jobs:
         run: node tests/runtime-bundle-parity.cjs
       - name: Comprovar la compilació del Worker
         run: npm run build:worker
+      - name: Sincronitzar runtime compilat amb GitHub abans del desplegament
+        # Quan el bundle nou només existia al runner, un segon desplegament
+        # automàtic des de GitHub restaurava el manifest antic i el JS 404.
+        # Comprovació de paritat i tests s'han completat abans d'aquest punt.
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- src/runtime-bundle.mjs dist/
+          if ! git diff --cached --quiet; then
+            git commit -m "build: persist generated runtime for ${GITHUB_SHA:0:12}"
+            git fetch origin main
+            git rebase origin/main
+            # Si algú ha modificat les fonts mentre es compilava, no
+            # publicam un bundle desactualitzat ni forçam el push.
+            npm run check:build
+            git push origin HEAD:main
+          else
+            echo "Manifest i runtime ja coincideixen amb el checkout GitHub"
+          fi
       - name: Desplegar Worker i assets a Cloudflare
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
