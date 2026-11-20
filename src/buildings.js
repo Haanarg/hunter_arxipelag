@@ -177,7 +177,12 @@ window.HUNTER_BUILDINGS??=Object.freeze({
       const frameClearance=.02,frameDepth=T*.24;
       // El cantell posterior del marc queda per davant de la cara exterior
       // del vidre; així tampoc no hi ha intersecció entre vidre i marc.
-      const frameCenter=-(faceOffset+depth/2+.022+frameDepth/2);
+      // La normal exterior depèn del costat de l'edifici: no totes les
+      // façanes miren cap a -X o -Z. Manté el mateix criteri en edificis
+      // girats perquè els desplaçaments són locals al grup del model.
+      const exteriorSign=Math.sign(alongX?lz:lx)||-1;
+      const glassOffset=exteriorSign*faceOffset;
+      const frameCenter=exteriorSign*(faceOffset+depth/2+.022+frameDepth/2);
       for(const c of centers){
         const wx=alongX?lx+c:lx,wz=alongX?lz:lz+c;
         const glass=new THREE.Mesh(
@@ -185,9 +190,9 @@ window.HUNTER_BUILDINGS??=Object.freeze({
           glassMat
         );
         glass.position.set(
-          alongX?wx:lx-faceOffset,
+          alongX?wx:lx+glassOffset,
           bottom+winH/2,
-          alongX?lz-faceOffset:wz
+          alongX?lz+glassOffset:wz
         );
         glass.userData.windowPane=parts.filter(p=>p.userData.windowPane!==undefined).length;
         glass.name='hunter-breakable-window';group.add(glass);parts.push(glass);
