@@ -1,3 +1,9 @@
+**2026-11-20 · v0.6.270 · Marcs i vidres orientats a l'exterior a totes les façanes:**
+- [x] `src/buildings.js`: calcular la normal exterior segons `lx`/`lz` de cada façana i aplicar el mateix signe a marcs i vidres. Corregeix els costats amb la decoració cap a l'interior, sense canviar col·lisions ni les obertures.
+- [x] Mantenir els 2 cm de separació del mur i els 2,2 cm entre marc i vidre. Prova ampliada a `tests/window-frame-zfighting.mjs`: quatre orientacions, finestres simples/dobles i marc persistent en trencar vidre.
+- [x] Versió `0.6.270` amb claus de memòria cau sincronitzades; bundle generat `dist/hunter-runtime.25d92a527e33b0b9.js` i manifest actualitzat.
+- [ ] Executar `npm test`, `npm run check:build`, proves visuals WebGL en les quatre façanes (i edificis girats) i confirmar desplegament Cloudflare; cap d'aquests darrers punts no s'ha verificat en aquesta sessió.
+
 **2026-11-20 · v0.6.268 · Marcs de finestra i z-fighting (correcció 2):**
 - [x] `src/buildings.js`: separar 2 cm els quatre travessers/muntants de totes les cares de mur, sense intersecció; separar 2,2 cm el pla posterior del marc de la cara anterior del vidre, mantenint els vidres independents i destructibles.
 - [x] Prova `tests/window-frame-zfighting.mjs` ampliada perquè verifiqui murs, vidres i ambdós eixos (una i dues finestres), no només el contacte entre peces del mateix marc; inclosa a `npm test`.
