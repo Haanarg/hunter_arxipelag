@@ -28,6 +28,12 @@ Les dues mans V18 del fusell AEK-971, el rifle SV-98 i el bazuca ara fan IK dire
 
 El controlador físic antic `2/3`, la balística, l'IK invisible de compatibilitat i els sistemes de seient continuen **no migrats**. Els trets surten exactament dels mateixos punts que a la versió anterior; no es reivindica encara paritat visual del canó en moviment.
 
+## Consolidació de les armes visibles · v0.6.260
+
+La pistola, els fusells, el bazuca, el ganivet, la granada i les cisalles del protagonista V18 fan el bake dels factors fixes sobre les geometries, els pivots i les preses originals quan es clonen per primera vegada, deixant **totes les arrels visuals a escala 1**. La cisalla conserva la seva mida final 0.864 a la geometria, ja no canvia l'escala a `sync()` en cada fotograma. La pistola declara `hunter-pistol-grip-center` com a punt de presa geomètric real per evitar coordenades de prova que només funcionaven amb una escala d'arrel antiga.
+
+Aquesta consolidació NO elimina encara el `legacyRig.scale=2/3` dels controls físics antics, ni normalitza riders o pilots. Les mides finals es mantenen, no s'han redissenyat les armes.
+
 ## Referències trobades, NO eliminades encara perquè alteren altres contractes
 
 | Codi | Situació | Migració necessària |
@@ -41,7 +47,7 @@ El controlador físic antic `2/3`, la balística, l'IK invisible de compatibilit
 | `characters.js` i `general-model.js`: `fit*0.8` en comandos i general | Factor de generació de personatges antics vinculat als pivots i als enemics | Produir els soldats/generals amb el rig anatòmic V18 final, conservant dany, ragdoll, COOP i presa d'armes |
 | `enemy-ai.js`: models de tripulants `scale=.31/.43/.52` | Figures enemigues dependents del vehicle; la geometria de la tripulació encara canvia després de la creació | Fàbriques natives per tipus de vehicle i IK de passatger sense escalats de l'arrel |
 | `vehicle-model-core.mjs`: models llunyans GAZ ×1,25 | La malla proxy, no el vehicle complet, encara es retoca a posteriori | Fer un LOD natiu de les dimensions del GAZ i comparar-ne el contorn amb el model complet |
-| `human-game-runtime-v17.mjs` / `human-weapon-preview.mjs`: proxies d'armes escalats | Proxies muntats a canells d'escales diferents | Compartir geometria i punts d'ancoratge real entre partida i editor |
+| `human-game-runtime-v17.mjs` / `human-weapon-preview.mjs`: proxies d'armes escalats | **Consolidat al joc v0.6.260:** les 7 còpies visibles tenen `scale=1`; la mida de l'editor encara és independent | Unificar en una fàbrica compartida els ancoratges natius d'arma de joc i editor, sense eliminar els controls antics abans de migrar-los |
 
 ## Variacions legítimes no candidates a eliminació
 

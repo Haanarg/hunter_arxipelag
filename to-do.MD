@@ -1,3 +1,8 @@
+**2026-11-20 · v0.6.260 · Normalització de totes les armes visibles del V18:**
+- [x] Pistola, fusell d'assalt, rifle SV-98, bazuca, ganivet, granada i cisalles amb escales fixes incorporades a les geometries i els ancoratges; totes les còpies visibles tenen arrel d'escala 1.
+- [x] Retirat el canvi d'escala per fotograma de les cisalles. Punt real `hunter-pistol-grip-center` a la pistola, també a les proves.
+- [ ] Confirmació CI/Cloudflare de v0.6.260, comprovació visual de pistola/cisalles/mans; continua pendent suprimir el controlador antic 2/3, l'IK físic, els riders i la resta de models.
+
 **2026-11-20 · 0.6.259 · IK nativa V18 de la mà de suport en armes llargues:**
 - [x] L'AEK-971, SV-98 i bazuca visibles estan ancorats al tors V18, independentment dels canells; les dues mans fan IK fins als seus grips, amb llargades d'ossos natius i sense corregir l'escala.
 - [x] Les còpies visuals de les tres armes incorporen els factors fixos a la geometria i als ancoratges, amb escala d'arrel 1. Punts de guardamà del fusell explicitats i regressions ampliades.
