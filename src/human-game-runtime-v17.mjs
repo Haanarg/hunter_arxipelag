@@ -145,7 +145,7 @@ function installCanonicalPlayer(T,model){
  // Adaptam el moviment al maluc real de la geometria nativa, mai a 2 m.
  // Les mides de referència provenen del maluc V18 REAL, no d'una
  // segona instància del model de l'editor sense la mida del joc.
- const nativePelvisMeters=j.pelvis.position.y/HUMAN_WORLD_UNITS_PER_METER;
+ const nativePelvisMeters=j.pelvis.parent.position.y/HUMAN_WORLD_UNITS_PER_METER;
  const crouchRatio=Math.min(1,nativePelvisMeters/pelvisY);
  // La conversió de l'animació vella a les coordenades mundials del V18
  // és una transformació entre dos Object3D, no un corrector numèric 2/3.

@@ -231,7 +231,7 @@ for(const role of ['player','soldier','rocket','elite','general']){
   updateHuman(g);
   assert(canonical.position.y<-.19&&canonical.position.y>-.35,
    'Ajupiment V18 amb mateixa profunditat aprovada');
-  const nativePelvisMeters=bones.pelvis.position.y/HUMAN_WORLD_UNITS_PER_METER;
+  const nativePelvisMeters=bones.pelvis.parent.position.y/HUMAN_WORLD_UNITS_PER_METER;
   const expectedCrouch=(u.lowerBody.position.y-u.hipHeight)*
    u.humanGameLegacyRig.scale.y*Math.min(1,nativePelvisMeters/u.hipHeight);
   assert(Math.abs(canonical.position.y-expectedCrouch)<1e-8,
