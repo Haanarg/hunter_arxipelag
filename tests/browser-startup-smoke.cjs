@@ -61,7 +61,7 @@ async function main(){
   await sleep(100);
  }
  if(!await evalPage('Boolean(window.HUNTER_MENU_READY)'))throw Error('Portada no inicialitzada');
- await evalPage('document.querySelector("#ini button[data-d=\"1\"]").click(); true');
+ await evalPage('document.querySelector("#ini button[data-d]").click(); true');
  let state=null;
  for(let i=0;i<700;i++){
   state=await evalPage('JSON.stringify({ready:!!window.HUNTER_READY,gen:window.HUNTER_GENERATION_STATE?.status||null,error:window.HUNTER_GENERATION_STATE?.error||null,loading:document.getElementById("startLoading")?.textContent||"",alert:[...document.querySelectorAll("[role=alert]")].map(x=>x.textContent).join(" "),started:document.body.classList.contains("game-started")})');
