@@ -7,6 +7,7 @@ import {palette as gamePalette} from '../src/palette-core.mjs';
 import {vehicleModels} from '../src/vehicle-model-core.mjs';
 import {playerBatching} from '../src/player-batching-core.mjs';
 import {createHumanProposal,sampleHumanGait} from '../src/human-proposals.mjs';
+import {sampleHumanSwimming} from '../src/human-swim-proposals.mjs';
 import {createHumanGameRuntimeV17,GAME_HUMAN_SKIN_VERSION} from '../src/human-game-runtime-v17.mjs';
 import {HUMAN_PLAYER_GAME_NATIVE_HEIGHT,HUMAN_WORLD_UNITS_PER_METER} from '../src/human-model-catalog.mjs';
 
@@ -268,8 +269,10 @@ for(const role of ['player','soldier','rocket','elite','general']){
     const p=swimAt(mode,second);
     assert(Math.abs(p.z-.61)<1e-8,
      'Natació V18 '+mode+': centre horitzontal definit per la postura nativa');
-    assert(p.y>.34&&p.y<.47,
-     'Natació V18 '+mode+': alçada final sense transformació 2/3');
+    const swimSample=sampleHumanSwimming(
+     mode==='breast'?'swim-breast-3':'swim-crawl-4',second);
+    assert(Math.abs(p.y-(.35+swimSample.bob))<1e-8,
+     'Natació V18 '+mode+': alçada de la postura B3/C4 sense transformació 2/3');
     assert.deepEqual(canonical.scale.toArray(),[1,1,1],
      'Natació V18 no modifica l’escala del model '+mode);
    }
