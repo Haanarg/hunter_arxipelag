@@ -7,6 +7,8 @@ import {vehicleSpecs} from '../src/vehicle-specs.mjs';
 import {playerBatching} from '../src/player-batching-core.mjs';
 import {createTruckModel} from '../src/truck-model.mjs';
 import {createCivilianCarModel} from '../src/civilian-car-model.mjs';
+import {createNativeStreetfighter25,finalizeNativeBicycle,TWO_WHEEL_APPROVED_SIZE} from '../src/two-wheel-native-models.mjs';
+import {createStreetfighter25} from '../src/streetfighter-25-geometry.mjs';
 
 // La conversió és conservativa, no una heurística de dimensions:
  // la forma dibuixada, les unions i la seva animació han de quedar igual.
@@ -120,4 +122,112 @@ for(const type of ['bici','moto']){
  const h=new T.Box3().setFromObject(model).getSize(new T.Vector3()).y;
  assert(h>.5,'Alçada física significativa: '+type);
 }
+
+// Comparam l'última maqueta de la moto (amb corrector exterior 1.24)
+// amb la nova geometria creada ja a dimensions definitives.
+const bikeMat=color=>new T.MeshStandardMaterial({color});
+const oldMoto=createStreetfighter25(T,{color:0x228fef,material:bikeMat});
+const oldMotoSteer=oldMoto.userData.steeringPivots[0];
+const oldMark=(parent,name,x,y,z)=>{
+ const n=new T.Object3D();n.name=name;n.position.set(x,y,z);parent.add(n);
+ return n;
+};
+const oldMotoAnchors={
+ seat:oldMark(oldMoto,'Moto · centre del seient',0,.88,.54),
+ gripL:oldMark(oldMotoSteer,'Moto · puny esquerre',-.36,.015,-.075),
+ gripR:oldMark(oldMotoSteer,'Moto · puny dret',.36,.015,-.075),
+ pedalL:oldMark(oldMoto,'Moto · reposapeu esquerre',-.24,.42,.16),
+ pedalR:oldMark(oldMoto,'Moto · reposapeu dret',.24,.42,.16)
+};
+const nativeMoto=createNativeStreetfighter25(T,{color:0x228fef,material:bikeMat});
+assert.deepEqual(nativeMoto.scale.toArray(),[1,1,1]);
+assert.equal(nativeMoto.userData.twoWheelGeometryNative,true);
+assert.equal(nativeMoto.userData.twoWheelApprovedSize,TWO_WHEEL_APPROVED_SIZE.motorcycle);
+for(const [i,w]of nativeMoto.userData.wheels.entries())
+ assert(Math.abs(w.userData.radius-
+   oldMoto.userData.wheels[i].userData.radius*1.24)<1e-8,
+  'Radi natiu de roda de moto '+i);
+for(const yaw of [0,.37,-.40]){
+ oldMotoSteer.rotation.y=yaw;
+ nativeMoto.userData.steeringPivots[0].rotation.y=yaw;
+ oldMoto.userData.wheels[0].rotation.x=yaw*.44;
+ nativeMoto.userData.wheels[0].rotation.x=yaw*.44;
+ oldMoto.scale.setScalar(1.24*vehicleSpecs.scales.moto);
+ nativeMoto.scale.setScalar(vehicleSpecs.scales.moto);
+ const oldBox=new T.Box3().setFromObject(oldMoto,true),
+       newBox=new T.Box3().setFromObject(nativeMoto,true);
+ assert(oldBox.min.distanceTo(newBox.min)<2e-5&&
+  oldBox.max.distanceTo(newBox.max)<2e-5,
+  'Moto 1.24: volum igual amb la direcció i la roda girant');
+ for(const key of Object.keys(oldMotoAnchors)){
+  const a=oldMotoAnchors[key].getWorldPosition(new T.Vector3()),
+        b=nativeMoto.userData.twoWheelAnchors[key].getWorldPosition(new T.Vector3());
+  assert(a.distanceTo(b)<2e-6,'Punt '+key+' de moto sense cap pegat');
+ }
+ for(let i=0;i<2;i++){
+  const a=oldMoto.userData.wheels[i].getWorldPosition(new T.Vector3()),
+   b=nativeMoto.userData.wheels[i].getWorldPosition(new T.Vector3());
+  assert(a.distanceTo(b)<2e-6,'Eix de la roda '+i+' conserva la posició');
+ }
+}
+nativeMoto.scale.setScalar(1);
+
+// Regressió separada del quadre procedural: inclou roda de direcció,
+// canvis de fase del pedalier, rodes i els cinc ancoratges reals.
+const bicycleFixture=()=>{
+ const root=new T.Group();
+ const body=new T.Mesh(new T.BoxGeometry(.35,1.45,2.35),new T.MeshBasicMaterial());
+ body.position.set(0,1.1,.2);root.add(body);
+ const steering=new T.Group();steering.position.set(0,1.68,-1.22);root.add(steering);
+ const rear=new T.Group();rear.position.set(0,.62,1.22);root.add(rear);
+ const front=new T.Group();front.position.set(0,.62-1.68,0);steering.add(front);
+ for(const w of [rear,front]){
+  w.userData.radius=.62;
+  w.add(new T.Mesh(new T.TorusGeometry(.58,.04,6,12),new T.MeshBasicMaterial()));
+ }
+ const crank=new T.Group();crank.position.set(0,.62,0);root.add(crank);
+ crank.add(new T.Mesh(new T.BoxGeometry(.32,.14,.65),new T.MeshBasicMaterial()));
+ const a={
+  seat:oldMark(root,'Bicicleta · superfície selló',0,1.905,.33),
+  gripL:oldMark(steering,'Bicicleta · puny esquerre',-.42,.29,.44),
+  gripR:oldMark(steering,'Bicicleta · puny dret',.42,.29,.44),
+  pedalL:oldMark(crank,'Bicicleta · pedal esquerre',-.24,0,-.30),
+  pedalR:oldMark(crank,'Bicicleta · pedal dret',.24,0,.30)
+ };
+ root.userData.wheels=[rear,front];root.userData.crank=crank;
+ root.userData.twoWheelAnchors=a;root.userData.bicycleSaddleTop=1.905;
+ return {root,steering,crank,anchors:a};
+};
+const oldBike=bicycleFixture(),nativeBike=bicycleFixture();
+const legacyVisual=new T.Group();
+for(const child of [...oldBike.root.children])legacyVisual.add(child);
+legacyVisual.scale.setScalar(.74);oldBike.root.add(legacyVisual);
+const nativeVisual=finalizeNativeBicycle(T,nativeBike.root);
+assert.deepEqual(nativeVisual.scale.toArray(),[1,1,1]);
+assert.equal(nativeVisual.userData.twoWheelGeometryNative,true);
+assert(Math.abs(nativeBike.root.userData.bicycleSaddleTop-1.905*.74)<1e-10);
+for(const [i,w]of nativeBike.root.userData.wheels.entries())
+ assert(Math.abs(w.userData.radius-.62*.74)<1e-10,
+  'Radi geomètric de bicicleta '+i);
+for(const [steering,phase]of [[.0,0],[.3,.65],[-.45,1.6]]){
+ oldBike.steering.rotation.y=steering;
+ nativeBike.steering.rotation.y=steering;
+ oldBike.crank.rotation.x=phase;
+ nativeBike.crank.rotation.x=phase;
+ oldBike.root.scale.setScalar(vehicleSpecs.scales.bici);
+ nativeBike.root.scale.setScalar(vehicleSpecs.scales.bici);
+ const a=new T.Box3().setFromObject(oldBike.root,true),
+       b=new T.Box3().setFromObject(nativeBike.root,true);
+ assert(a.min.distanceTo(b.min)<2e-6&&a.max.distanceTo(b.max)<2e-6,
+  'Bicicleta nativa: contorn amb manillar i pedalier girats');
+ for(const name of Object.keys(oldBike.anchors)){
+  const p=oldBike.anchors[name].getWorldPosition(new T.Vector3()),
+        q=nativeBike.anchors[name].getWorldPosition(new T.Vector3());
+  assert(p.distanceTo(q)<2e-6,
+   'Bicicleta: ancoratge '+name+' idèntic amb pedals en marxa');
+ }
+}
+oldBike.root.scale.setScalar(1);nativeBike.root.scale.setScalar(1);
+console.log('PASS bici i moto natives: ancoratges, rodes, direcció i pedalier sense factors tardans');
+
 console.log('PASS normalització: conservació de geometria, girs, ancoratges i '+types.length+' vehicles sense escala d’arrel');
