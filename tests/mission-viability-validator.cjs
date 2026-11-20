@@ -57,7 +57,12 @@ const {captureMissionData,validateMission}=require('../tools/mission-viability.c
   // floor. A two-dimensional object/count check would falsely accept this world.
   const st=b.basement.stair,missingStair=report({groundAt:(x,z,previous)=>{
     const p=data.toLocal(b,x,z);
-    if(Math.abs(p.x-st.x)<=st.width/2&&p.z>=Math.min(st.zTop,st.zBottom)&&p.z<=Math.max(st.zTop,st.zBottom))return b.fy+.22;
+    // La nova escala del búnquer descendeix en l'eix X, no en Z.
+    // La prova antiga comparava st.x/st.zTop inexistents i mai eliminava
+    // la superfície de suport: un fals negatiu del validador.
+    if(st.axis==='x'&&p.x>=Math.min(st.xTop,st.xBottom)-.2&&
+       p.x<=Math.max(st.xTop,st.xBottom)+.2&&Math.abs(p.z-st.z)<=st.width/2+.2)
+      return b.fy+.22;
     return data.groundAt(x,z,previous);
   }});
   assert(has(missingStair,'bunker.access-blocked'),'No cellar route without descending support');
