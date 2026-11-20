@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - v18-total-legacy-rig-bake
+concurrency:
+  group: v18-experimental-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
