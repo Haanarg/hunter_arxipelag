@@ -675,7 +675,10 @@ for(const size of [.31,.43,.52]){
   const muzzle=new T.Object3D();muzzle.name='crew-test-muzzle';
   muzzle.position.set(0,0,-1.08);root.userData.gun.add(muzzle);
  }
+ // Els comandos militars reals neixen amb fit 0.8: la talla de
+ // cabina històrica el reemplaçava, no feia 0.8 * mida de vehicle.
  old.scale.setScalar(size);
+ actual.scale.setScalar(.8);
  old.updateWorldMatrix(true,true);
  const expectedBox=new T.Box3().setFromObject(old,true);
  const expectedHead=old.userData.head.getWorldPosition(new T.Vector3());
@@ -687,6 +690,8 @@ for(const size of [.31,.43,.52]){
  assert.deepEqual(actual.scale.toArray(),[1,1,1],
   'Arrel de tripulant enemic V18 unitària: '+size);
  assert.equal(actual.userData.humanCrewNativeScale,size);
+ assert.equal(actual.userData.humanCrewFactoryScale,.8,
+  'La talla V18 de la fàbrica militar és substituïda, no multiplicada');
  actual.updateWorldMatrix(true,true);
  const actualBox=new T.Box3().setFromObject(actual,true);
  assert(actualBox.min.distanceTo(expectedBox.min)<1e-5&&
