@@ -581,6 +581,7 @@ function updateNativeCoopFrame(dt){
      forward:other.swimming?Math.max(-1,Math.min(1,swimForward/5)):Math.min(1,speed/6),
      strafe:other.swimming?Math.max(-1,Math.min(1,swimSide/4.5)):0,
      dt,swimming:other.swimming,
+     airborne:!!other.fall,parachuting:!!other.fall?.parachute,
      crouching:!!other.crouched,inVehicle:!!remoteVehicle,
      ammo:remoteBag?.bullets??1,running:other.swimming?swimForward>6.8:speed>7,
      bazookaEquipped:weapon==='bazooka',sniperEquipped:weapon==='sniper',
