@@ -47,9 +47,11 @@ for(const u of game.entities){
  u.pose='standing';u.cheering=false;
  runtime.poseCivilianV18(u);
  const b=new T.Box3().setFromObject(g,true),
-       height=b.getSize(new T.Vector3()).y/u.modelScale;
+       height=b.getSize(new T.Vector3()).y;
  u.pose=initialPose;
  runtime.poseCivilianV18(u);
+ assert(Math.abs(g.userData.humanNativeHeight-(u.role==='mechanic'?1.75:1.7175))<1e-9,
+  'La talla del civil V18 es construeix des de la mesura canònica');
  assert(height>1.65&&height<1.85,
   'Alçada anatòmica local dreta del rol '+u.role+' = '+height);
 }
