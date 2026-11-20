@@ -2,6 +2,7 @@
 // seat, IK, collision, physics, weapon anchor or AI state is replaced.
 import {createHumanProposal,HUMAN_VERSION,sampleHumanGait} from './human-proposals.mjs?rev=natacio-final-b3-c4-20261120';
 import {createGameSwimBridge} from './human-game-swim-bridge.mjs?rev=natacio-final-b3-c4-20261120';
+import {applyNativeV18AirPose} from './player-native-air-pose.mjs';
 import {HUMAN_PLAYER_GAME_NATIVE_HEIGHT,HUMAN_WORLD_UNITS_PER_METER} from './human-model-catalog.mjs';
 import {bakeFixedModelScales} from './model-scale-normalization.mjs';
 
@@ -283,6 +284,10 @@ function installCanonicalPlayer(T,model){
      j[joint+side].quaternion.slerp(runTarget.setFromAxisAngle(runAxis,angle),landMove);
    }
   }
+  // Salt i paracaigudes: posturem les articulacions V18 visibles,
+  // no les rotacions de braços i cames del controlador ocult.
+  const airPose=u.humanGameNativeAirPose;
+  if(airPose)applyNativeV18AirPose(j,airPose.mode,airPose.blend);
   // Ganivet 3B/4B i granada: angles calculats directament en el tick
   // d'acció i NO llegits dels quaternions u.ar/u.aer del V17.
   // El render/COOP consumeix l'estat natiu sense tornar a avançar el temps.
