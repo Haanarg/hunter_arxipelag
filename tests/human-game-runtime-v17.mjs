@@ -1247,4 +1247,82 @@ updateHuman(gameAvatar);
 assert.equal(runtime.nativeWeaponMuzzleWorld(T,gameAvatar,'knife'),null,
  'El contracte V18 no inventa una boca per a armes sense canó');
 console.log('PASS pistol silencer + bazooka muzzle on native V18; hidden guards, no legacy translation, COOP');
+// Animacions d'acció nadiues: el tick clàssic transmet OBJECTIUS
+// anatòmics i el V18 guarda la seva interpolació pròpia. No pot llegir
+// els angles dels braços ocults ni recalcular-la en cada render.
+const actionAvatar=gameAvatar,actionU=actionAvatar.userData,
+ actionJ=actionU.humanGameCanonicalJoints;
+actionU.pistolAimTime=0;actionU.firePose=0;actionU.meleePose=.48;
+controls.animatePlayerControls(actionAvatar,{
+ ...controlOptions,dt:.08,forward:1,running:true,knifeEquipped:true
+});
+assert.equal(actionU.humanGameNativeAction?.kind,'knife',
+ 'El ganivet 3B/4B crea un estat d\'acció propi al V18');
+updateHuman(actionAvatar);
+const knifeArmPose=actionJ.shoulderR.quaternion.clone(),
+ knifeLeftPose=actionJ.elbowL.quaternion.clone();
+const knifeNative=actionU.humanGameCanonicalRig.getObjectByName('Arma canònica · knife');
+assert(knifeNative?.visible&&knifeNative.parent===actionJ.wristR&&
+ knifeNative.userData.humanActionNativeOriented,
+ 'El ganivet es munta al canell V18 sense quaternion de l\'avantbraç antic');
+assert.deepEqual(knifeNative.scale.toArray(),[1,1,1]);
+const knifeWorldQ=knifeNative.getWorldQuaternion(new T.Quaternion()).clone();
+actionU.ar.rotation.set(2.3,-1.1,-1.5);
+actionU.aer.rotation.set(-1.8,.3,.9);
+actionU.al.rotation.set(-.8,1.3,-.4);
+actionU.ael.rotation.set(1.9,-.5,.7);
+updateHuman(actionAvatar);
+assert(knifeArmPose.angleTo(actionJ.shoulderR.quaternion)<1e-8&&
+ knifeLeftPose.angleTo(actionJ.elbowL.quaternion)<1e-8,
+ 'Els braços V18 del ganivet no copien les rotacions alterades del V17');
+assert(knifeWorldQ.angleTo(knifeNative.getWorldQuaternion(new T.Quaternion()))<1e-8,
+ 'La fulla V18 manté direcció tot i girar els ossos ocults');
+updateHuman(actionAvatar);
+assert(knifeArmPose.angleTo(actionJ.shoulderR.quaternion)<1e-8,
+ 'Dos renders consecutius no avancen la interpolació del ganivet');
+
+// La granada té fases de preparació, impuls i contrapès; el canell dret
+// natiu determina el punt de sortida que utilitza el combat.
+actionU.meleePose=0;actionU.grenadeThrow=.55;actionU.grenadeThrowPower=1;
+actionU.grenadeReleased=false;
+controls.animatePlayerControls(actionAvatar,{
+ ...controlOptions,dt:.07,forward:0,grenadeEquipped:true,grenadeChargePower:.85
+});
+assert.equal(actionU.humanGameNativeAction?.kind,'grenade',
+ 'La granada crea el seu propi estat d\'acció V18');
+updateHuman(actionAvatar);
+const grenadeNative=actionU.humanGameCanonicalRig.getObjectByName('Arma canònica · grenade');
+assert(grenadeNative?.visible&&grenadeNative.parent===actionJ.wristR&&
+ grenadeNative.userData.humanActionNativeOriented,
+ 'La granada es recolza al canell V18 i té orientació nativa');
+assert.deepEqual(grenadeNative.scale.toArray(),[1,1,1]);
+const grenadeArm=actionJ.shoulderR.quaternion.clone(),
+ grenadeLeft=actionJ.shoulderL.quaternion.clone(),
+ grenadeWrist=actionJ.wristR.getWorldPosition(new T.Vector3()),
+ grenadeWeaponQ=grenadeNative.getWorldQuaternion(new T.Quaternion()).clone();
+actionU.ar.rotation.set(-2,1.5,.9);
+actionU.aer.rotation.set(1.8,-.8,-1.1);
+actionU.al.rotation.set(2.4,-.8,1);
+actionU.ael.rotation.set(-1.1,.6,1.2);
+updateHuman(actionAvatar);
+assert(grenadeArm.angleTo(actionJ.shoulderR.quaternion)<1e-8&&
+ grenadeLeft.angleTo(actionJ.shoulderL.quaternion)<1e-8,
+ 'La granada no hereta la postura manipulada del V17');
+assert(grenadeWrist.distanceTo(actionJ.wristR.getWorldPosition(new T.Vector3()))<1e-8,
+ 'El punt real de llançament depèn del canell V18, no dels braços antics');
+assert(grenadeWeaponQ.angleTo(grenadeNative.getWorldQuaternion(new T.Quaternion()))<1e-8,
+ 'La granada visible conserva l\'orientació pròpia');
+
+// L'activació i la desactivació es fan al tick, mai al renderer.
+controls.animatePlayerControls(actionAvatar,{
+ ...controlOptions,dt:.05,forward:0,ammo:12
+});
+assert.equal(actionU.humanGameNativeAction,null,
+ 'Sortida del mode granada: cap estat especial enganxat als braços');
+controls.animatePlayerControls(actionAvatar,{
+ ...controlOptions,dt:.05,forward:0,swimming:true
+});
+assert.equal(actionU.humanGameNativeAction,null,
+ 'Natació desactiva les postures de ganivet i granada');
+console.log('PASS V18 knife 3B/4B and grenade action arms, blade/grenade attachment and legacy independence');
 console.log('PASS native crouch translation + V18 pistol fallback without legacy coordinates');

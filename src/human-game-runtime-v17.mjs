@@ -284,6 +284,19 @@ function installCanonicalPlayer(T,model){
      j[joint+side].quaternion.slerp(runTarget.setFromAxisAngle(runAxis,angle),landMove);
    }
   }
+  // Ganivet 3B/4B i granada: angles calculats directament en el tick
+  // d'acció i NO llegits dels quaternions u.ar/u.aer del V17.
+  // El render/COOP consumeix l'estat natiu sense tornar a avançar el temps.
+  const nativeAction=u.humanGameNativeAction;
+  if(nativeAction&&
+     (nativeAction.kind==='knife'||nativeAction.kind==='grenade')){
+   for(const id of ['shoulderR','elbowR','shoulderL','elbowL']){
+    const angles=nativeAction.joints?.[id],joint=j[id];
+    if(!angles||!joint||!['x','y','z'].every(axis=>Number.isFinite(angles[axis])))
+     throw Error('Acció V18 sense articulació nativa: '+nativeAction.kind+'/'+id);
+    joint.rotation.set(angles.x,angles.y,angles.z);
+   }
+  }
   for(const [kind,scale,y,z]of weapons){
    const source=u[kind];if(!source||!source.visible) {
     if(proxies.has(kind))proxies.get(kind).visible=false;
@@ -309,17 +322,24 @@ function installCanonicalPlayer(T,model){
     source.traverse(o=>{if(o.isMesh)o.visible=false});
    }
    const proxy=proxies.get(kind);proxy.visible=true;
-   // El canó visible segueix el quaternion de l'arma real i no un angle fix.
-   source.getWorldQuaternion(weaponWorld);
-   (kind==='cisalla'||NATIVE_LONG_GUN_GRIPS[kind]?j.spine:j.wristR)
-    .getWorldQuaternion(handWorld);
-   gunAimLocal.copy(handWorld).invert().multiply(weaponWorld);
-   if(kind==='gun'){
-    // Repos local fix al canell i apuntat local de l'arma: cap referència
-    // a nord o a un quaternion mundial durant l'animació de repòs.
-    const blend=Math.max(0,Math.min(1,u.pistolBlend||0));
-    proxy.quaternion.copy(gunIdleLocal).slerp(gunAimLocal,blend);
-   }else proxy.quaternion.copy(gunAimLocal);
+   if(kind==='knife'||kind==='grenade'){
+    // Accessori orientat exclusivament en el canell V18. No consulta
+    // el quaternion mundial dels braços ocults que encara controlen
+    // les col·lisions i certs estats de l'animació clàssica.
+    proxy.quaternion.copy(source.quaternion);
+    proxy.userData.humanActionNativeOriented=true;
+   }else{
+    // Fusells, bazuca i pistola: l'orientació balística actual
+    // continua governant l'arma real fins a migrar tot el controlador.
+    source.getWorldQuaternion(weaponWorld);
+    (kind==='cisalla'||NATIVE_LONG_GUN_GRIPS[kind]?j.spine:j.wristR)
+     .getWorldQuaternion(handWorld);
+    gunAimLocal.copy(handWorld).invert().multiply(weaponWorld);
+    if(kind==='gun'){
+     const blend=Math.max(0,Math.min(1,u.pistolBlend||0));
+     proxy.quaternion.copy(gunIdleLocal).slerp(gunAimLocal,blend);
+    }else proxy.quaternion.copy(gunAimLocal);
+   }
    if(kind==='gun'){
     // Mai separar la malla visible de la mà que la sosté:
     // l'arma és sempre filla del canell dret i la culata queda

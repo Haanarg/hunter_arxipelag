@@ -1498,3 +1498,11 @@
 - [x] **Regressions Node:** transformacions de pare COOP, ancoratge d'arma desequipada, no dependència de translació del controlador ocult i escala 1.
 - [ ] **Prova WebGL/COOP:** veure projectils de pistola/bazuca des de la boca visible, incloent ajupir-se, autoaim alt/baix, apropar-se a parets i entrar/sortir de vehicles.
 - [ ] **Retirada del controlador antic:** migrar les postures que falten (ganivet, granada, cisalla i seients), els punts físics associats i les dependències de la física abans d'eliminar el grup ocult `2/3`.
+
+
+### v0.6.282 · postures d'acció V18
+- [x] **Implementació:** ganivet 3B/4B i granada (càrrega, llançament i contrapès) amb angle d'espatlles/colzes i interpolació pròpia del V18, independent de les rotacions dels braços invisibles V17.
+- [x] **Implementació:** ganivet i granada visibles orientats localment al canell V18, sense llegir l'orientació mundial de l'accessori antic; restablir l'estat en canviar d'arma, natació o paracaigudes.
+- [x] **Regressió:** proves sobre la fàbrica de joc real, canell V18, accions i no dependència dels quaternions invisibles, idempotència de render i transicions.
+- [ ] **Validació WebGL/COOP:** ganivet al puny i recorregut d'estocada, granada a la mà i sortida real, transicions en córrer, ajupit, entrar/sortir d'aigua i vehicles.
+- [ ] **Proper bloc:** cisalla i altres accessoris V18 encara lligats al món del control ocult; després ancoratges de seients i física abans de retirar definitivament `LEGACY_GAME_RIG_SCALE=2/3`.
