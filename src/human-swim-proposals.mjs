@@ -54,6 +54,21 @@ export function samplePeriodicHumanTrack(keys,phase,{angularIndex=-1,tension=.76
 }
 const b3Seconds=3.20;
 const normalizeSeconds=rows=>rows.map(([sec,...values])=>[sec/b3Seconds,...values]);
+// Postures originals B1: maluc, genoll, obertura i turmell per fase activa.
+const B1_LEG_STROKE=[
+ [0,.035,-.08,.015,.02],
+ [.32,.10,-.20,.05,.04],
+ [.54,.49,-1.44,.23,.25],
+ [.69,.29,-.86,.29,.48],
+ [.84,-.10,-.17,.10,.30],
+ [1,.035,-.08,.015,.02]
+];
+// Recorrer les mateixes posicions de maluc i genoll que la B1, però
+// amb les fases de puntada de la B3, interpolació Hermite i 1 s de lliscament.
+const B3_LEG_STROKE=normalizeSeconds([
+ ...B1_LEG_STROKE.map((key,i)=>[[0,.65,1.52,1.66,1.99,2.20][i],...key.slice(1,4)]),
+ [b3Seconds,...B1_LEG_STROKE[0].slice(1,4)]
+]);
 // L'últim segon queda en fletxa perfecta. Les mans no passen darrere la
 // línia de l'espatlla: braç elevat >= 2.02 rad i colze en flexió <= PI/2.
 const B3_ARM=normalizeSeconds([
@@ -69,18 +84,18 @@ const B3_ARM=normalizeSeconds([
  [2.20,3.06,-.04,-.29,0,0],
  [3.20,3.06,-.04,-.29,0,0]
 ]);
-const B3_LEG=normalizeSeconds([
- // t, flexió maluc (X), flexió genoll, obertura lateral, turmell (X),
- // rotació externa del peu, eversió.
- [0,0,-.02,0,-1.27,0,0],
- [.65,.04,-.06,.025,-.9,0,0],
- [1.23,.37,-1.10,.13,-.18,.13,.03],
- [1.52,.60,-1.90,.26,.40,.34,.075], // talons cap als glutis, peus de martell
- [1.66,.36,-1.57,.33,.39,.40,.085], // obertura i pressió cap enfora
- [1.82,-.18,-.94,.22,.13,.26,.05], // empenta enèrgica cap enrere
- [1.99,-.20,-.33,.08,-.25,.12,.025],
- [2.20,0,-.02,0,-1.27,0,0],
- [3.20,0,-.02,0,-1.27,0,0]
+// Flexió i orientació dels peus originals de la B3, sense canviar-ne el ritme.
+const B3_FEET=normalizeSeconds([
+ // t, turmell (X), rotació externa del peu, eversió.
+ [0,-1.27,0,0],
+ [.65,-.9,0,0],
+ [1.23,-.18,.13,.03],
+ [1.52,.40,.34,.075],
+ [1.66,.39,.40,.085],
+ [1.82,.13,.26,.05],
+ [1.99,-.25,.12,.025],
+ [2.20,-1.27,0,0],
+ [3.20,-1.27,0,0]
 ]);
 // Trajectòria 3D d'una mà de braça en coordenades de l'espatlla:
 // x signat cap enfora, y cap al cap i z cap a la cara dorsal/superfície.
@@ -201,7 +216,7 @@ const bell=(x,start,peak,end)=>{
 function sampleBreast3(phase,config){
  const arm=samplePeriodicHumanTrack(B3_ARM,phase);
  const hand=samplePeriodicHumanTrack(B3_HAND,phase);
- const leg=samplePeriodicHumanTrack(B3_LEG,phase);
+ const leg=[...samplePeriodicHumanTrack(B3_LEG_STROKE,phase),...samplePeriodicHumanTrack(B3_FEET,phase)];
  const inhale=samplePeriodicHumanTrack(B3_BREATH,phase)[0];
  return {kind:'breast',variant:2,refined:true,phase,config,arm,hand,leg,inhale,
   bodyPitch:-Math.PI/2 + .018*inhale,bodyRoll:0,bob:-.020*inhale,
@@ -273,9 +288,9 @@ export function sampleHumanSwimming(mode,time){
   const arm=track([[0,3.06,.08,.02],[s*.16,2.77,.16,.35*a],
    [s*.39,2.07,1.12,.53*a],[s*.60,1.25,1.45,.18*a],
    [s*.82,2.66,.25,.06*a],[s,3.06,.08,.02],[1,3.06,.08,.02]],phase);
-  const leg=track([[0,.035,-.08,.015,.02],[s*.32,.10,-.20,.05,.04],
-   [s*.54,.49,-1.44,.23*k,.25],[s*.69,.29,-.86,.29*k,.48],
-   [s*.84,-.10,-.17,.10*k,.30],[s,.035,-.08,.015,.02],[1,.035,-.08,.015,.02]],phase);
+  const leg=track(B1_LEG_STROKE.map(([t,hip,knee,spread,ankle],i)=>
+   [s*t,hip,knee,i>=2&&i<=4?spread*k:spread,ankle])
+   .concat([[1,.035,-.08,.015,.02]]),phase);
   const inhale=track([[0,0],[s*.2,.20],[s*.42,1],[s*.62,.55],[s*.84,0],[1,0]],phase)[0];
   return {kind,variant,phase,config,arm,leg,inhale,
    bodyPitch:-Math.PI/2+config.undulation*Math.sin(phase*TAU-.6),
