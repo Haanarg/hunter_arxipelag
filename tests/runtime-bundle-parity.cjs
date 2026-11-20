@@ -28,8 +28,16 @@ assert.equal(source.breast.swim,'B3','Braça B3 activada');
 assert.equal(source.crawl.swim,'C4','Crol C4 activat');
 assert(source.breast.swimBlend>.7&&source.crawl.swimBlend>.9,
  'Natació V18 activa, no només el selector textual');
+assert(source.pistolAim.blend>.95,
+ 'La pistola entra en autoapuntat després de l’adquisició de l’objectiu');
+assert(source.pistolAim.targetError<.005,
+ 'La pistola ha d’usar el punt 3.10 LOCAL DEL RIG ANTIC, no de player');
+assert(source.pistolAim.wristRY<source.pistolAim.headY-.04&&
+       source.pistolAim.wristLY<source.pistolAim.headY-.04,
+ 'Amb autoapuntat, les mans V18 han de continuar per sota del cap');
 assert.deepStrictEqual(bundle,source,
  'DIVERGÈNCIA: el bundle NO és equivalent als 70 scripts originals per al V18, caminar, braça, crol i ombres');
 console.log('PASS paritat SOURCE/BUNDLE: dues partides isolades, rig V18, caminar, B3, C4 i ombres');
 console.log(JSON.stringify({meshCount:source.idle.meshes,casters:source.idle.casters,
-walkHipL:source.walking.hipL,breast:source.breast.swim,crawl:source.crawl.swim}));
+walkHipL:source.walking.hipL,breast:source.breast.swim,crawl:source.crawl.swim,
+pistolAim:source.pistolAim}));

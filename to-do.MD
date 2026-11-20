@@ -1,3 +1,10 @@
+**2026-11-20 · v0.6.252 · Reparació de pistola amb mans per sobre del cap:**
+- [x] Detectat desajust d'espai de coordenades després de consolidar el rig físic antic amb escala 2/3: `characters.js` feia `player.localToWorld(0,3.10,-1.13)` i convertia a `upperBody`, augmentant el target d'IK de la pistola més d'una unitat local (en lloc de situar-lo al pit).
+- [x] Els dos punts d'apuntat del canell i de l'arma es transformen ara des de `u.humanGameLegacyRig||player`, mai des de l'arrel sense escala quan existeix el rig antic; no es toquen l'autoaim balístic, les animacions V18, la natació ni l'editor.
+- [x] Prova de regressió afegida a `runtime-bundle-parity`: disparador d'autoapuntat de la pistola, angle/cota real dels canells i error del target en coordenades del rig. Executada en SOURCE i BUNDLE.
+- [ ] Verificar totes les proves CI i publicació Cloudflare.
+- [ ] Confirmar visualment a la partida les postures de pistola amb autoapuntat elevat i lateral.
+
 **2026-11-19 · v0.6.251 · Recuperació de les armes al laboratori HUMANS V18:**
 - [x] Causa: `human-proposals.mjs` necessita `HUNTER_CHARACTERS` i `HUNTER_BOLT_CUTTERS` per clonar les armes reals. L’editor no inicialitzava aquestes fàbriques en obrir Personatges i la fallada de `createHumanProposal` activava el fallback `visualOnly:true`.
 - [x] `prepareGameWeaponPreview()` carrega `src/characters.js` i `src/bolt-cutters.js` abans de crear el V18 al laboratori; sense iniciar la partida ni tocar el motor source.

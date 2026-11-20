@@ -879,12 +879,19 @@ window.HUNTER_CHARACTERS=Object.freeze({
     }
     // Les mans apunten al món seguint la direcció del jugador, no la
     // nova rotació local de cintura. Després l'IK treballa en el tors.
+    // La pistola i els seus braços IK viuen dins el control rig històric.
+    // Abans, l'arrel del jugador i aquest rig eren el mateix espai; ara el
+    // rig ocult és fill de player i té escala consolidada 2/3. Si usam
+    // player.localToWorld(3.10), upperBody interpreta un objectiu massa
+    // alt i el V18 visible aixeca els dos canells damunt del cap.
+    // El punt nominal 3.10 pertany a l'espai del rig antic, NO a player.
+    const pistolAimSpace=u.humanGameLegacyRig||player;
     if(blend>.001){
       player.updateMatrixWorld(true);
       // Les dues mans orbiten suaument amb el canó; no romanen fixes
       // al davant quan l'autoaim segueix una diana lateral o elevada.
       rig.aim.set(0,3.10+up,-1.13+back);
-      player.localToWorld(rig.aim);u.upperBody.worldToLocal(rig.aim);
+      pistolAimSpace.localToWorld(rig.aim);u.upperBody.worldToLocal(rig.aim);
       rig.q3.copy(u.visualAimQuaternion);
       rig.right.set(.045,-.15,.06).applyQuaternion(rig.q3).add(rig.aim);
       rig.left.set(-.095,-.14,.015).applyQuaternion(rig.q3).add(rig.aim);
@@ -897,7 +904,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     rig.idleQ.copy(u.ar.quaternion).multiply(u.aer.quaternion).multiply(u.pistolIdleMount.quaternion);
     rig.aim.set(0,3.10+up,-1.13+back);
     player.updateMatrixWorld(true);
-    player.localToWorld(rig.aim);u.upperBody.worldToLocal(rig.aim);
+    pistolAimSpace.localToWorld(rig.aim);u.upperBody.worldToLocal(rig.aim);
     // El quaternion local ja converteix el vector real de l'autoaim
     // al marc del tors. No hi afegim una compensació antiga de cintura,
     // perquè desalineava el musell de la retícula.

@@ -40,6 +40,41 @@ const path=require('node:path');
   const breast=capture();
   game.run('for(let i=0;i<24;i++){animPl(1,1/60,true,0);pl.userData.humanGamePose?.()}');
   const crawl=capture();
-  const snapshot={idle,walking,breast,crawl};
+  // Prova de la mateixa ruta de l'autoapuntat que usa combat.js:
+  // la pistola té un objectiu actiu i el controlador respon durant 36 ticks.
+  // L'objectiu 3.10 és en l'espai antic. Si es transforma des de player
+  // després de reparentar a un rig 2/3, es desplaça damunt del cap.
+  const pistolAim=JSON.parse(game.run(`JSON.stringify((()=>{
+    swimming=false;
+    const u=pl.userData;
+    u.visualAimTargetLocked=true;
+    u.visualAimDirection=new THREE.Vector3(0,0,-1).applyQuaternion(
+      pl.getWorldQuaternion(new THREE.Quaternion()));
+    u.pistolAimTime=2;
+    u.pistolShotAge=10;
+    for(let i=0;i<36;i++){
+      animPl(0,1/60,false,0);
+      u.humanGamePose?.();
+    }
+    pl.updateMatrixWorld(true);
+    const joints=u.humanGameCanonicalJoints;
+    const head=joints.head.getWorldPosition(new THREE.Vector3());
+    const right=joints.wristR.getWorldPosition(new THREE.Vector3());
+    const left=joints.wristL.getWorldPosition(new THREE.Vector3());
+    const expected=new THREE.Vector3(0,3.10,-1.13);
+    (u.humanGameLegacyRig||pl).localToWorld(expected);
+    u.upperBody.worldToLocal(expected);
+    return {
+      blend:Number(u.pistolBlend.toFixed(3)),
+      targetError:Number(u.pistolRig.aim.distanceTo(expected).toFixed(5)),
+      headY:Number(head.y.toFixed(4)),
+      wristRY:Number(right.y.toFixed(4)),
+      wristLY:Number(left.y.toFixed(4)),
+      aimLocalY:Number(u.pistolRig.aim.y.toFixed(4)),
+      shoulderR:Number(joints.shoulderR.rotation.x.toFixed(4)),
+      shoulderL:Number(joints.shoulderL.rotation.x.toFixed(4))
+    };
+  })())`));
+  const snapshot={idle,walking,breast,crawl,pistolAim};
   console.log('HUNTER_PARITY_SNAPSHOT '+JSON.stringify(snapshot));
 })().catch(error=>{console.error(error);process.exitCode=1});

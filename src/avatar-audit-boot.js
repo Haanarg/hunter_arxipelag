@@ -16,7 +16,7 @@
    'font:12px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;'+
    'pointer-events:auto!important';
  const title=document.createElement('strong');
- title.textContent='DIAGNÒSTIC V18 · 0.6.251';
+ title.textContent='DIAGNÒSTIC V18 · 0.6.252';
  const readout=document.createElement('pre');
  readout.id='hunterAvatarAuditReadout';
  readout.style.cssText='margin:8px 0;white-space:pre-wrap;word-break:break-word;font:inherit';
