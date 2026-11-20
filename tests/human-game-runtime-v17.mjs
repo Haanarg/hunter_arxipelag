@@ -430,7 +430,9 @@ assert.equal(rider.userData.boots.length,2);
  runInNewContext(readFileSync(new URL('../src/rider.js',import.meta.url),'utf8'),riderSandbox);
  const driver=riderSandbox.window.HUNTER_RIDER.create(T,{
   scene:new T.Scene(),box(){},material:c=>new T.MeshStandardMaterial({color:c}),
-  scales:{cotxe:1.3,cotxe_civil:1.2,hover:1.3,moto:1.2,bici:1.2},heightAt:()=>0,shadows:false
+  scales:{cotxe:1.3,cotxe_civil:1.2,hover:1.3,moto:1.2,bici:1.2,
+   llanxa:1.95,llanxa_coets:1.95,barca_rems:1.2,moto_aquatica:1.2,
+   windsurf:1.2},heightAt:()=>0,shadows:false
  });
  const nativePart=driver.object.userData.riderDetailNodes
    .flatMap(root=>{const found=[];root.traverse(n=>{
@@ -573,7 +575,123 @@ assert.equal(rider.userData.boots.length,2);
  assert(hoverShot?.origin?.distanceTo(driver.object.userData.pistol.localToWorld(
   new T.Vector3(0,.183,-1.47).multiplyScalar(.63)))<1e-6,
   'La pistola del passatger hover conserva canó i dimensions natives');
+ // Migració a pell V18 dels cinc vehicles nàutics amb un únic
+ // controlador d'IK. La figura V17 es conserva oculta per als tirs.
  driver.reset();
+ const seaBodies=new Map();
+ const checkMarine=(vehicle,seatIndex=null,expectedYaw=null)=>{
+  driver.update(vehicle,1/60,seatIndex);
+  const d=driver.object.userData,body=d.riderSeatCanonicalBody,
+    joints=d.riderSeatCanonicalJoints;
+  assert(d.riderSeatCanonicalActive&&body?.visible&&joints?.pelvis,
+   'Model V18 visible del '+vehicle.t);
+  assert(body.userData.humanSeatCanonical&&
+   body.userData.humanSeatNativeSize===1&&
+   Math.abs(body.userData.humanSeatNativeHeight-HUMAN_PLAYER_GAME_NATIVE_HEIGHT)<.03,
+   'Talla natural sense reduccions ocultes: '+vehicle.t);
+  assert.deepEqual(body.scale.toArray(),[1,1,1],
+   'Sense escalar l\'arrel del '+vehicle.t);
+  assert(d.riderDetailNodes.every(node=>
+   node===d.pistol||!node.visible),
+   'Sense duplicats V17 sota la figura V18: '+vehicle.t);
+  const hip=joints.pelvis.getWorldPosition(new T.Vector3()),
+    oldSeat=d.torso.getWorldPosition(new T.Vector3());
+  assert(hip.distanceTo(oldSeat)<1e-7,
+   'La pelvis V18 segueix el seient autoritatiu: '+vehicle.t+
+   ' '+hip.distanceTo(oldSeat));
+  const lengths=seatJointLengths();
+  assert(lengths.every(n=>n>.3&&n<1.0&&Number.isFinite(n)),
+   'Segments V18 finits i anatomics: '+vehicle.t);
+  for(const side of ['L','R'])for(const bone of ['hip','knee','ankle','shoulder','elbow','wrist'])
+   assert(joints[bone+side].getWorldPosition(new T.Vector3())
+      .toArray().every(Number.isFinite),'Pose V18 finita de '+vehicle.t+'/'+bone+side);
+  if(expectedYaw!==null)
+   assert(Math.abs(body.rotation.y-expectedYaw)<.0001,
+    'L\'orientació V18 respecta el rumb anatòmic del '+vehicle.t);
+  const baseline=seaBodies.get(vehicle.t);
+  if(baseline){
+   assert(baseline.root===body,'Cap regeneració de malles quan canvia seient: '+vehicle.t);
+   assert(lengths.every((n,i)=>Math.abs(n-baseline.lengths[i])<1e-6),
+    'Bones de longitud constant: '+vehicle.t);
+  }else seaBodies.set(vehicle.t,{root:body,lengths});
+  return {body,joints,hip,pose:d.riderSeatCanonicalPose};
+ };
+ const jetski={t:'moto_aquatica',o:new T.Group(),v:2,pedalPhase:0};
+ checkMarine(jetski);
+ jetski.v=7;
+ const movingJet=checkMarine(jetski);
+ assert(movingJet.pose.wholeBody&&movingJet.pose.hands.length===2,
+  'Moto aquàtica: tors inclinat i dues mans sobre el manillar V18');
+ assert(movingJet.body.rotation.x>.18,
+  'Moto aquàtica: inclinació cap endavant pròpia del pilot');
+ const rowHull=new T.Group();
+ rowHull.userData.rowingSeat={y:1.1,z:.4};
+ rowHull.userData.oars=[new T.Group(),new T.Group()];
+ rowHull.userData.oars.forEach((o,i)=>{
+  o.position.set(i===0?-.55:.55,1.6,-.15);
+  o.userData.grip=new T.Vector3(0,0,-.25);
+  rowHull.add(o);
+ });
+ const rowing={t:'barca_rems',o:rowHull,v:2,pedalPhase:.6,yawRate:0};
+ const rowPose=checkMarine(rowing,null,Math.PI);
+ assert(rowPose.pose.hands[0].distanceTo(rowPose.pose.hands[1])>.2,
+  'Rems independents: la mà esquerra i dreta segueixen cada pala');
+ rowing.pedalPhase=1.8;
+ checkMarine(rowing,null,Math.PI);
+ // El remador dispara amb la pistola pròpia, sense modificar el
+ // contracte d'origen físic, però la mà V18 continua el gest.
+ const rowShot=driver.firePistol(rowing,()=>null);
+ assert(rowShot?.origin?.toArray().every(Number.isFinite),
+  'Pistola del remador continua disparant des del punt de canó');
+ checkMarine(rowing,null,Math.PI-.52*driver.object.userData.shotBlend);
+ const sailBoard=new T.Group(),sailBoom=new T.Group();
+ sailBoard.add(sailBoom);
+ sailBoard.userData.windsurfRig=sailBoom;
+ sailBoard.userData.windsurfGrips=[
+  new T.Vector3(-.5,2.5,-.18),new T.Vector3(.5,2.4,-.16)
+ ];
+ const windsurf={t:'windsurf',o:sailBoard,v:7,pedalPhase:0};
+ driver.reset();
+ checkMarine(windsurf,null,1.13);
+ // Sense el tir, el cos gira 1.13 rad cap a la vela i el turmell
+ // manté longitud exacta sota rotació i inclincació.
+ driver.reset();
+ checkMarine(windsurf,null,1.13);
+ const boat={t:'llanxa',o:new T.Group(),v:6,pedalPhase:0};
+ const boatCaptain=checkMarine(boat,0);
+ assert(boatCaptain.pose.hands.length===2&&
+  boatCaptain.pose.feet.length===2,'Llanxa: els quatre destins IK arriben al V18');
+ const boatGuest=checkMarine(boat,1);
+ assert(boatGuest.hip.x>boatCaptain.hip.x+.5,
+  'COOP llanxa: passatger es desplaça al seient dret');
+ checkMarine(boat,0);
+ const rocketBoat={t:'llanxa_coets',o:new T.Group(),v:4,pedalPhase:0};
+ checkMarine(rocketBoat,0);
+ const rocketGuest=checkMarine(rocketBoat,1);
+ assert(rocketGuest.hip.x>0,'COOP llanxa de coets: passatger a estribord');
+ const marineParent=new T.Group();marineParent.position.set(9,3,-7);
+ marineParent.rotation.y=.48;marineParent.scale.setScalar(1.25);
+ marineParent.add(driver.object);driver.object.updateWorldMatrix(true,true);
+ assert(driver.object.userData.riderSeatCanonicalJoints.pelvis
+    .getWorldPosition(new T.Vector3()).distanceTo(
+      driver.object.userData.torso.getWorldPosition(new T.Vector3()))<1e-7,
+  'COOP amb pare girat/escalat: pelvis marítima coincideix amb el seient');
+ marineParent.remove(driver.object);
+ // La postura nova no depèn de les rotacions dels segments antics.
+ const marineJoints=driver.object.userData.riderSeatCanonicalJoints;
+ const wrist0=marineJoints.wristR.getWorldPosition(new T.Vector3());
+ driver.object.userData.limbs[2].rotation.set(1.4,-.6,.8);
+ driver.object.userData.limbs[3].rotation.set(-1.2,.7,-.3);
+ driver.object.updateWorldMatrix(true,true);
+ assert(wrist0.distanceTo(marineJoints.wristR.getWorldPosition(new T.Vector3()))<1e-7,
+  'La mà V18 de llanxa no rep les rotacions de les extremitats V17');
+ driver.update({t:'llanxa',o:boat.o,v:0,pedalPhase:0},1/60,0,600);
+ assert(!driver.object.userData.riderSeatCanonicalActive&&
+  !driver.object.userData.riderSeatCanonicalBody&&
+  driver.object.userData.riderFarProxy.visible,
+  'LOD llunyà: només figura econòmica, el V18 nàutic s\'oculta');
+ driver.reset();
+ console.log('PASS V18 native marine riders: jetski, rowboat, windsurf, boats (driver/COOP passenger), fixed lengths, yaw and LOD');
   // Els pilots de dues rodes fan servir EXACTAMENT la pell del jugador
   // a peu; cap bone scale ha de variar amb la posició del pedal.
   const anatomicalBody=driver.object.children.find(o=>o.userData.twoWheelCanonical);

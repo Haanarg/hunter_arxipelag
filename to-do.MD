@@ -1522,3 +1522,12 @@
 - [x] **Regressió:** talla .825/.82/.63, bones V18 de llargada constant, seient pilot/passatger COOP, figura sense duplicats, pare girat/escalat, resta de variants conservades.
 - [ ] **Validació WebGL:** mans realment tocant volant/comandament, genolls sota salpicader, cap sota sostre, pistola al puny de rider V18, llunyania LOD, dos jugadors en COOP i rendiment.
 - [ ] **Proper bloc:** migrar models/poses dels ocupants de llanxes, rems, moto aquàtica i windsurf, posteriorment desacoblar el tir del rider i la física abans d'eliminar els controladors antics V17.
+
+
+### v0.6.285 · pilots i passatgers nàutics V18
+- [x] **Models:** llanxes, llanxes de coets, barca de rems, moto aquàtica i windsurf amb la figura V18 original de talla nativa, sense extensió de segments ni escala per fotograma.
+- [x] **Orientacions:** gir de 180° remador, gir de windsurf envers la vela, balanceig moto aquàtica i gir del tors en disparar, compensats al pivot de pelvis del V18.
+- [x] **Interaccions:** mans a rems, botavara, manillars i comandaments, peus als objectius aprovats; pilot/passatge COOP en llanxes i reserva de tir sense alterar física.
+- [x] **Regressions:** mides, pelvis, longituds constants, seients COOP, girs, pares transformats, LOD, canell V18 independent de la postura antiga, trets del remador.
+- [ ] **Validació gràfica:** motos aquàtiques en marxa, rems sincronitzats, botavara i posicions de les mans, seients de llanxa, tir, contacte i ombres en SOLO i dues sessions COOP.
+- [ ] **Proper bloc:** retirar ancoratges de pistola antics i físics dels riders; avaluar després l'eliminació definitiva del grup V17 `2/3`.
