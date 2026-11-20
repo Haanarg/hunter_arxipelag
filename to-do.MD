@@ -2,7 +2,8 @@
 - [x] Soldiers a peu V18 amb escala d'arrel 1 després de crear els tres LOD; mides de pell i pivots 0,8 integrades en geometria, també cuirassa i metralladora d'elit.
 - [x] Bazuca afegit després de la creació nativa: tub, preses de dues mans, IK i marcadors de LOD convertits sense alterar el canó. LOD compartits amb memòria cau de geometries entre soldats.
 - [x] Proves de mides, articulacions, bazuca tardà, guardamans, canó, LOD i factories de soldats normals/elit/general, preservant els comandos de vehicle.
-- [ ] Validació CI i desplegament; comprovació visual WebGL/COOP d'armes, animacions i rendiment amb moltes patrulles. Resta la migració del controlador antic 2/3 i vehicles interns.
+- [x] GitHub Actions 44732125355: suite de models V18, regressions SOLO/COOP i rendiment, paritat SOURCE/BUNDLE, compilació, Cloudflare i verificació HTTP de Paradoxa aprovades per a v0.6.271.
+- [ ] Comprovació visual WebGL/COOP d'armes, animacions i rendiment amb moltes patrulles. Resta la migració del controlador antic 2/3 i vehicles interns.
 
 **2026-11-20 · v0.6.270 · Marcs i vidres orientats a l'exterior a totes les façanes:**
 - [x] `src/buildings.js`: calcular la normal exterior segons `lx`/`lz` de cada façana i aplicar el mateix signe a marcs i vidres. Corregeix els costats amb la decoració cap a l'interior, sense canviar col·lisions ni les obertures.
