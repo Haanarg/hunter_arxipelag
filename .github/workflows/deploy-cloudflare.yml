@@ -16,6 +16,16 @@ on:
       - 'src/model-scale-normalization.mjs'
       - 'src/two-wheel-lab-comparison.mjs'
       - 'tests/model-scale-normalization.mjs'
+      - 'src/truck-model.mjs'
+      - 'src/t90m-runtime.mjs'
+      - 'src/t90m-preview-animation.mjs'
+      - 'src/vehicle-reference-candidates.mjs'
+      - 'src/gaz-tigr-runtime.mjs'
+      - 'src/vehicle-specs.mjs'
+      - 'src/coop-vehicle-contacts-core.mjs'
+      - 'src/enemy-ai.js'
+      - 'tests/canonical-model-sizes.mjs'
+      - 'tools/audit-model-scales.cjs'
       - 'tests/two-wheel-lab-comparison.mjs'
       - 'src/human-game-runtime-v17.mjs'
       - 'src/human-game-swim-bridge.mjs'
@@ -87,6 +97,14 @@ jobs:
         run: node tests/account-submenus.mjs
       - name: Validar normalització de les escales estàtiques dels vehicles
         run: node tests/model-scale-normalization.mjs
+      - name: Verificar dimensions natives de GAZ, T-90M, camió i pilots
+        run: |
+          node tests/canonical-model-sizes.mjs
+          node tests/gaz-tigr-approved.mjs
+          node tests/gaz-tigr-door-contours.mjs
+          node tests/t90m-game-integration.mjs
+      - name: Escanejar totes les fonts per correccions d'escala
+        run: node tools/audit-model-scales.cjs
       - name: Validar comparador V18 peu, bicicleta i moto
         run: node tests/two-wheel-lab-comparison.mjs
       - name: Validar HUMANS V17 al joc i als conductors
