@@ -51,7 +51,12 @@ export const HELICOPTER_CREW_PROFILES=Object.freeze({
 // Calibrated fraction of the actual V18 soldier head JOINT above the native
 // model root, not the top of the cap or a guessed legacy seat coordinate.
 // Geometry integration tests verify this against the real pilot Object3D.
-export const HELICOPTER_HEAD_JOINT_FRACTION=.87;
+// The V18 soldier joint is not exactly on the model's vertical axis.
+// Calibrated in the THREE unit integration test from the Ka-60 cockpit's
+// real joint after geometry bake: y/height=.8772628800234769,
+// z/height=.02873792193180351 in the pilot's own upright coordinates.
+export const HELICOPTER_HEAD_JOINT_Y_FRACTION=.8772628800234769;
+export const HELICOPTER_HEAD_JOINT_Z_FRACTION=.02873792193180351;
 export const HELICOPTER_PILOT_LEAN_X=-.08;
 export function helicopterCrewLocalSeat(type,seat=0){
  const p=HELICOPTER_CREW_PROFILES[type];
@@ -63,7 +68,10 @@ export function helicopterCrewLocalSeat(type,seat=0){
 export function helicopterCrewLocalHead(type,seat=0){
  const p=HELICOPTER_CREW_PROFILES[type],q=helicopterCrewLocalSeat(type,seat);
  if(!p)return null;
- const height=p.pilotHeight*HELICOPTER_HEAD_JOINT_FRACTION;
- return {...q,y:q.y+height*Math.cos(HELICOPTER_PILOT_LEAN_X),
-   z:q.z+height*Math.sin(HELICOPTER_PILOT_LEAN_X)};
+ const localY=p.pilotHeight*HELICOPTER_HEAD_JOINT_Y_FRACTION,
+       localZ=p.pilotHeight*HELICOPTER_HEAD_JOINT_Z_FRACTION,
+       c=Math.cos(HELICOPTER_PILOT_LEAN_X),
+       sn=Math.sin(HELICOPTER_PILOT_LEAN_X);
+ return {...q,y:q.y+localY*c-localZ*sn,
+   z:q.z+localY*sn+localZ*c};
 }
