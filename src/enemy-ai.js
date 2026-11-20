@@ -1191,7 +1191,6 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
         scale=truck?.31:type==='moto'?.52:.43;
   // Seient de moto: malucs sobre la sella, no el model gegant de la cabina.
   driver.position.set(type==='moto'?0:-x,type==='moto'?.87:height,type==='moto'?.34:z);
-  driver.scale.setScalar(scale);
   driver.userData.ar.rotation.x=1.18;driver.userData.al.rotation.x=1.12;
   driver.userData.gun.visible=type==='moto';
   // Amb una moto cal veure les dues cames: genolls flexionats i peus
@@ -1209,6 +1208,10 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
     motorcycleMuzzle.position.set(0,0,-1.08);
     rig.gun.add(motorcycleMuzzle);
   }
+  // La mida aprovada entra a la geometria i als pivots originals.
+  // El marcador del canó de la moto s'ha de crear ABANS de consolidar
+  // l'escala per mantenir l'origen físic del projectil.
+  window.HUNTER_HUMAN_V17.normalizeEnemyCrew(driver,scale);
   // Els ocupants resten al detall complet. El proxy distant en dibuixa
   // una silueta mínima sense alterar el model ni els punts de tir.
   const detailParent=car.userData.distantVehicleLOD?.full||car;
@@ -1216,7 +1219,6 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
   let mount=null,pitch=null,muzzle=null;
   if(gunner){
     gunner.position.set(x,height,z);
-    gunner.scale.setScalar(scale);
     gunner.userData.ar.rotation.x=1.25;gunner.userData.aer.rotation.x=.35;
     gunner.rotation.y=.26;
     const rifle=gunner.userData.gun;rifle.parent.remove(rifle);
@@ -1229,6 +1231,9 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
     pitch.add(rifle);
     bx(rifle,.075,.075,.42,0x252d2c,0,0,-.97,'metal');
     muzzle=new THREE.Object3D();muzzle.position.set(0,0,-1.18);rifle.add(muzzle);
+    // L'arma muntada a la torre ja és externa al tripulant: només
+    // consolidam el soldat, no el canó del vehicle.
+    window.HUNTER_HUMAN_V17.normalizeEnemyCrew(gunner,scale);
     detailParent.add(gunner);
   }
   if(initiallyHidden){driver.visible=false;if(gunner)gunner.visible=false;if(mount)mount.visible=false;}

@@ -649,6 +649,118 @@ for(const path of ['src/rider.js','src/marine-patrol.js','src/enemy-ai.js','src/
  const source=readFileSync(new URL('../'+path,import.meta.url),'utf8');
  assert(source.includes('HUNTER_PLAYER_MODEL.create')||source.includes('createCommando')||source.includes('makeSoldier')||source.includes('createPlayer'),path+' factory/driver contract');
 }
+// Les talles aprovades dels tripulants passen a geometria i pivots, sense
+// reescalar arrels cada cop que giren les armes o canvien de vehicle.
+const nativeSoldier=()=>{
+ const root=runtime.suppress(()=>playerModel.create(T,{headVariant:'compactD'}));
+ runtime.install(T,root,{role:'soldier'});
+ return root;
+};
+for(const size of [.31,.43,.52]){
+ const old=nativeSoldier(),actual=nativeSoldier();
+ for(const root of [old,actual]){
+  root.position.set(1.4,.7,-2.3);
+  root.rotation.y=.38;
+  root.userData.ll.rotation.x=.74;
+  root.userData.lkl.rotation.x=-1.16;
+  root.userData.ar.rotation.x=1.18;
+  root.userData.aer.rotation.x=.48;
+  const muzzle=new T.Object3D();muzzle.name='crew-test-muzzle';
+  muzzle.position.set(0,0,-1.08);root.userData.gun.add(muzzle);
+ }
+ old.scale.setScalar(size);
+ old.updateWorldMatrix(true,true);
+ const expectedBox=new T.Box3().setFromObject(old,true);
+ const expectedHead=old.userData.head.getWorldPosition(new T.Vector3());
+ const expectedMuzzle=old.getObjectByName('crew-test-muzzle')
+  .getWorldPosition(new T.Vector3());
+ const originalAngles=[actual.userData.ll.rotation.x,
+  actual.userData.lkl.rotation.x,actual.userData.ar.rotation.x];
+ assert.equal(runtime.normalizeEnemyCrew(actual,size),actual);
+ assert.deepEqual(actual.scale.toArray(),[1,1,1],
+  'Arrel de tripulant enemic V18 unitària: '+size);
+ assert.equal(actual.userData.humanCrewNativeScale,size);
+ actual.updateWorldMatrix(true,true);
+ const actualBox=new T.Box3().setFromObject(actual,true);
+ assert(actualBox.min.distanceTo(expectedBox.min)<1e-5&&
+  actualBox.max.distanceTo(expectedBox.max)<1e-5,
+  'Model complet de tripulant amb dimensions idèntiques: '+size);
+ assert(actual.userData.head.getWorldPosition(new T.Vector3())
+  .distanceTo(expectedHead)<1e-6,
+  'Punt anatòmic de cap en la mateixa posició mundial: '+size);
+ assert(actual.getObjectByName('crew-test-muzzle')
+  .getWorldPosition(new T.Vector3()).distanceTo(expectedMuzzle)<1e-6,
+  'Canó/arma antiga en la mateixa posició mundial: '+size);
+ assert.deepEqual([actual.userData.ll.rotation.x,
+  actual.userData.lkl.rotation.x,actual.userData.ar.rotation.x],originalAngles,
+  'Postura nativa preservada: '+size);
+ assert.equal(runtime.normalizeEnemyCrew(actual,size),actual,
+  'La normalització és idempotent');
+ assert.throws(()=>runtime.normalizeEnemyCrew(actual,size+.01),
+  /talla diferent/,'No es reescala un tripulant ja normalitzat');
+}
+const crewSandbox={
+ THREE:T,
+ window:{
+  HUNTER_HUMAN_V17:runtime,
+  HUNTER_CHARACTERS:{
+   createCommando:nativeSoldier,
+   createSoldier:nativeSoldier
+  }
+ }
+};
+const marineSource=readFileSync(new URL('../src/marine-patrol.js',import.meta.url),'utf8');
+runInNewContext(marineSource+
+ '\nthis.__attachBoatCrew=attachEnemyBoatCrew;this.__aimBoatCrew=aimEnemyBoatCrew;'+
+ 'this.__boatMuzzle=enemyBoatCrewMuzzle;',crewSandbox);
+const boat=new T.Group();
+const marine=crewSandbox.__attachBoatCrew(boat,{type:'patrulla_marina'});
+assert.equal(marine.boatWeapons.length,2);
+for(const [seat,crew]of marine.boatWeapons.entries()){
+ assert.deepEqual(crew.rider.scale.toArray(),[1,1,1],
+  'Patrullera: soldat V18 amb arrel 1');
+ assert.equal(crew.rider.userData.humanCrewNativeScale,.43);
+ const eye=boat.worldToLocal(crew.aimEye.getWorldPosition(new T.Vector3()));
+ assert(Math.abs(eye.y-(.89+2.7*.43))<1e-6,
+  'Punt de mira geomètric a la mateixa altura que el model anterior');
+ assert.equal(crew.rider.position.x,seat===0?-.58:.58);
+ const muzzle=crewSandbox.__boatMuzzle(boat,seat);
+ assert(muzzle.distanceTo(crew.muzzle.getWorldPosition(new T.Vector3()))<1e-8,
+  'Muzzle de patrullera i arma real en el mateix punt');
+}
+assert.equal(typeof crewSandbox.__aimBoatCrew(boat,0,new T.Vector3(5,4,-35),.1),'boolean');
+const carSource=readFileSync(new URL('../src/enemy-ai.js',import.meta.url),'utf8');
+const start=carSource.indexOf('function attachEnemyCarCrew('),
+ end=carSource.indexOf('// L\'única font visual de les tripulacions',start);
+assert(start>0&&end>start,'El factory de soldats enemics continua disponible');
+const attachCarCrew=new Function('THREE','window','bx','M','attachEnemyBoatCrew',
+ carSource.slice(start,end)+';return attachEnemyCarCrew;')(
+ T,crewSandbox.window,(parent,w,h,d,color,x=0,y=0,z=0)=>{
+  const part=new T.Mesh(new T.BoxGeometry(w,h,d),
+   new T.MeshStandardMaterial({color}));
+  part.position.set(x,y,z);parent.add(part);return part;
+ },()=>new T.MeshStandardMaterial(),crewSandbox.__attachBoatCrew);
+for(const [type,size]of [['cotxe',.43],['camio',.31],['moto',.52]]){
+ const vehicle=new T.Group();
+ if(type==='camio')vehicle.userData.truckCabin={
+  enemySeat:{x:.9,y:1.55,z:-.42},gunMount:{x:.9,y:2.36,z:-.53}
+ };
+ const occupants=attachCarCrew(vehicle,{type});
+ for(const rider of [occupants.driver,occupants.gunner].filter(Boolean)){
+  assert.deepEqual(rider.scale.toArray(),[1,1,1],
+   'Enemic de vehicle '+type+' amb arrel 1');
+  assert.equal(rider.userData.humanCrewNativeScale,size,
+   'Talla nativa del vehicle '+type);
+ }
+ assert(occupants.motorcycleMuzzle?.getWorldPosition(new T.Vector3())
+  .toArray().every(Number.isFinite)??true,
+  'La boca de foc del motorista segueix el rig V18');
+ if(occupants.gunner)assert(occupants.muzzle?.getWorldPosition(
+  new T.Vector3()).toArray().every(Number.isFinite),
+  'Boca de foc del tirador a la torreta sense doble escala');
+}
+console.log('PASS tripulants V18 nadius: GAZ/camió/moto, patrulleres, dos seients, malles i canons');
+
 // Test interception of classic global factories, both bundled and source.
 runtime.installHooks();
 globalThis.HUNTER_CHARACTERS=Object.freeze({
