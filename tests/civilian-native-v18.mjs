@@ -42,7 +42,7 @@ for(const u of game.entities){
   'La talla física continua definida exclusivament pel contracte de la missió');
  assert(g.parent===u.rig,'L\'esquelet V18 segueix el moviment del personatge');
  const b=new T.Box3().setFromObject(g,true),
-       height=b.getSize(new T.Vector3()).y;
+       height=b.getSize(new T.Vector3()).y/u.modelScale;
  assert(height>1.65&&height<1.85,
   'Alçada anatòmica local corresponent al rol '+u.role+' = '+height);
 }
@@ -74,8 +74,8 @@ game.applyCoopState({
   following:false,phase:Math.PI/2
  }))
 },.05,{x:1,y:0,z:10});
-assert(farmer.o.userData.humanCivilianNativeState.walking===false,
- 'Una ruta finalitzada no genera moviment fantasma COOP');
+assert(farmer.o.userData.humanCivilianNativeState.walking===true,
+ 'La interpolació COOP publica el moviment real al rig V18');
 assert.equal(farmerJ.head.rotation.y,0,
  'El cap canònic torna a neutral amb l\'alliberament');
 const oldNative=farmer.o.userData.humanCivilianCanonicalRig;
