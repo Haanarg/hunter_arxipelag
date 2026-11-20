@@ -51,6 +51,8 @@ on:
       - 'src/vehicles-externs-proves.mjs'
       - 'tests/human-game-runtime-v17.mjs'
       - 'tests/vehicle-lab-player-reference.mjs'
+      - 'src/vehicle-lab-player-reference.mjs'
+      - 'tests/vehicle-lab-player-reference.mjs'
       - 'tests/harness.cjs'
       - 'tests/runtime-parity-snapshot.cjs'
       - 'tests/runtime-bundle-parity.cjs'
