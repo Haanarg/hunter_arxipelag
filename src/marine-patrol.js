@@ -13,7 +13,10 @@ function attachEnemyBoatCrew(boat,{initiallyHidden=false,type='llanxa'}={}){
     // A les patrulleres tots dos comandos porten fusell. Les llanxes
     // requisades conserven el seu armament especial independent.
     const rocket=type!=='patrulla_marina'&&(seat===1||type==='llanxa_coets'),rig=rider.userData;
-    rider.position.set(seat===0?-.58:.58,.89,seat===0?.88:1.14);
+    // Mateix seient numèric que el càlcul balístic del Worker.
+    const mount=window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.enemyCrewLocalSeat(type,seat);
+    if(!mount)throw Error('Muntatge de tripulant nàutic V18 absent');
+    rider.position.set(mount.x,mount.y,mount.z);
     rig.ll.rotation.x=-1.10;rig.lr.rotation.x=-1.10;
     rig.ar.rotation.x=1.12;rig.al.rotation.x=1.14;
     rig.aer.rotation.x=.18;rig.ael.rotation.x=.14;
@@ -30,7 +33,7 @@ function attachEnemyBoatCrew(boat,{initiallyHidden=false,type='llanxa'}={}){
     aimEye.name='hunter-native-boat-crew-aim-eye';
     aimEye.position.set(0,2.7,0);
     rider.add(aimEye);
-    window.HUNTER_HUMAN_V17.normalizeEnemyCrew(rider,.43);
+    window.HUNTER_HUMAN_V17.normalizeEnemyCrew(rider,mount.size);
     rider.visible=!initiallyHidden;
     (boat.userData.distantVehicleLOD?.full||boat).add(rider);
     crew.push({rider,weapon,muzzle,aimEye,rocket,seat,basePitch:weapon.rotation.x});

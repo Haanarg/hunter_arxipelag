@@ -1189,12 +1189,17 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
   // Mai recuperam l'antic .82 ni refem l'ajust en els enemics.
   const truckCabin=truck?car.userData.truckCabin:null;
   if(truck&&!truckCabin)throw Error('Camió A4.3 sense ancoratges canònics de cabina');
-  const x=truck?truckCabin.enemySeat.x:civil?.613:.73,
-        z=truck?truckCabin.enemySeat.z:civil?-.60:-.43,
-        height=truck?truckCabin.enemySeat.y:.94,
-        scale=truck?.31:type==='moto'?.52:.43;
-  // Seient de moto: malucs sobre la sella, no el model gegant de la cabina.
-  driver.position.set(type==='moto'?0:-x,type==='moto'?.87:height,type==='moto'?.34:z);
+  // Les hitboxes SOLO/COOP fan servir EXACTAMENT la mateixa definició
+  // numèrica de seient, sense VS multiplicat un altre cop.
+  const localDriver=window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.enemyCrewLocalSeat(type,0),
+        localGunner=window.HUNTER_VEHICLE_OCCUPANT_DAMAGE.enemyCrewLocalSeat(type,1),
+        scale=localDriver.size;
+  if(!localDriver||!localGunner)throw Error('Places de comando no definides: '+type);
+  const cabinCheck={x:-localDriver.x,y:localDriver.y,z:localDriver.z};
+  if(truck&&['x','y','z'].some(k=>
+    Math.abs(truckCabin.enemySeat[k]-cabinCheck[k])>1e-6))
+    throw Error('El camió visual i la hitbox de seient no coincideixen');
+  driver.position.set(localDriver.x,localDriver.y,localDriver.z);
   driver.userData.ar.rotation.x=1.18;driver.userData.al.rotation.x=1.12;
   driver.userData.gun.visible=type==='moto';
   // Amb una moto cal veure les dues cames: genolls flexionats i peus
@@ -1222,7 +1227,7 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
   detailParent.add(driver);
   let mount=null,pitch=null,muzzle=null;
   if(gunner){
-    gunner.position.set(x,height,z);
+    gunner.position.set(localGunner.x,localGunner.y,localGunner.z);
     gunner.userData.ar.rotation.x=1.25;gunner.userData.aer.rotation.x=.35;
     gunner.rotation.y=.26;
     const rifle=gunner.userData.gun;rifle.parent.remove(rifle);

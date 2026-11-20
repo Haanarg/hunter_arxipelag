@@ -12,7 +12,10 @@ import {createHumanGameRuntimeV17,GAME_HUMAN_SKIN_VERSION} from '../src/human-ga
 import {HUMAN_PLAYER_GAME_NATIVE_HEIGHT,HUMAN_WORLD_UNITS_PER_METER} from '../src/human-model-catalog.mjs';
 import {moveOnFoot} from '../src/player-simulation.mjs';
 import {pushWalls,pushTree} from '../src/world-physics.mjs';
-import {vehicleOccupantHeadWorld,vehicleSeatWorld,marineCrewHeadWorld} from '../src/vehicle-occupant-damage-core.mjs';
+import * as crewPhysics from '../src/vehicle-occupant-damage-core.mjs';
+import {vehicleOccupantHeadWorld,vehicleSeatWorld,marineCrewHeadWorld,
+ vehicleSeatProjectileContact,marineCrewProjectileContact} from '../src/vehicle-occupant-damage-core.mjs';
+import {TRUCK_CABIN,COMMANDO_HEAD_PIVOT_HEIGHT,enemyCrewLocalSeat} from '../src/vehicle-crew-anchors.mjs';
 
 globalThis.window=globalThis;
 const runtime=createHumanGameRuntimeV17();
@@ -1107,6 +1110,7 @@ for(const size of [.31,.43,.52]){
 const crewSandbox={
  THREE:T,
  window:{
+  HUNTER_VEHICLE_OCCUPANT_DAMAGE:crewPhysics,
   HUNTER_HUMAN_V17:runtime,
   HUNTER_CHARACTERS:{
    createCommando:nativeSoldier,
@@ -1129,17 +1133,34 @@ for(const [seat,crew]of marine.boatWeapons.entries()){
  assert(Math.abs(eye.y-(.89+2.7*.43))<1e-6,
   'Punt de mira geomètric a la mateixa altura que el model anterior');
  assert.equal(crew.rider.position.x,seat===0?-.58:.58);
-  const boatAvatarHead=crew.rider.userData.head.getWorldPosition(new T.Vector3());
-  const boatHitHead=marineCrewHeadWorld({t:'patrulla_marina',x:0,y:0,z:0,hd:0},seat,0);
-  console.log('V18_PHYSICS_AUDIT_MARINE',JSON.stringify({
-    seat,visualHead:boatAvatarHead.toArray(),
-    hitHead:[boatHitHead.x,boatHitHead.y,boatHitHead.z],
-    visualSeat:crew.rider.position.toArray()
-  }));
+  const boatAvatarHead=crew.rider.userData.head.getWorldPosition(new T.Vector3()),
+    boatState={t:'patrulla_marina',x:0,y:0,z:0,hd:0,
+      marineCrewHp:[4,4],marineBrokenWindshield:[0,1,2]},
+    boatHitHead=marineCrewHeadWorld(boatState,seat,0),
+    mount=enemyCrewLocalSeat('patrulla_marina',seat);
+  assert(boatAvatarHead.distanceTo(new T.Vector3(
+    boatHitHead.x,boatHitHead.y,boatHitHead.z))<1e-5,
+    'Cap del patruller V18 i hitbox coincidents: '+seat);
+  assert(crew.rider.position.distanceTo(new T.Vector3(
+    mount.x,mount.y,mount.z))<1e-8,
+    'El muntatge de patrullera comparteix coordenades amb el Worker');
+  const headContact=marineCrewProjectileContact(
+    {x:boatHitHead.x,y:boatHitHead.y,z:boatHitHead.z-5},
+    {x:boatHitHead.x,y:boatHitHead.y,z:boatHitHead.z+3},boatState);
+  assert(headContact?.kind==='marine-crew'&&headContact.seat===seat,
+    'Una bala a l\'altura del cap real arriba al patruller '+seat);
  const muzzle=crewSandbox.__boatMuzzle(boat,seat);
  assert(muzzle.distanceTo(crew.muzzle.getWorldPosition(new T.Vector3()))<1e-8,
   'Muzzle de patrullera i arma real en el mateix punt');
 }
+const rotatedMarineActor=marine.boatWeapons[0].rider;
+boat.position.set(7,2,-4);boat.rotation.y=.57;boat.updateWorldMatrix(true,true);
+const rotatedMarineHead=marineCrewHeadWorld(
+ {t:'patrulla_marina',x:7,z:-4,y:2,hd:.57},0,2);
+assert(rotatedMarineActor.userData.head.getWorldPosition(new T.Vector3()).distanceTo(
+ new T.Vector3(rotatedMarineHead.x,rotatedMarineHead.y,rotatedMarineHead.z))<1e-5,
+ 'El centre del cap de patrullera segueix el gir i trasllat real');
+boat.position.set(0,0,0);boat.rotation.y=0;boat.updateWorldMatrix(true,true);
 assert.equal(typeof crewSandbox.__aimBoatCrew(boat,0,new T.Vector3(5,4,-35),.1),'boolean');
 const carSource=readFileSync(new URL('../src/enemy-ai.js',import.meta.url),'utf8');
 const start=carSource.indexOf('function attachEnemyCarCrew('),
@@ -1152,21 +1173,29 @@ const attachCarCrew=new Function('THREE','window','bx','M','attachEnemyBoatCrew'
    new T.MeshStandardMaterial({color}));
   part.position.set(x,y,z);parent.add(part);return part;
  },()=>new T.MeshStandardMaterial(),crewSandbox.__attachBoatCrew);
-for(const [type,size]of [['cotxe',.43],['camio',.31],['moto',.52]]){
+for(const [type,size]of [['cotxe',.43],['cotxe_civil',.43],
+ ['camio',.31],['moto',.52]]){
  const vehicle=new T.Group();
- if(type==='camio')vehicle.userData.truckCabin={
-  enemySeat:{x:.9,y:1.55,z:-.42},gunMount:{x:.9,y:2.36,z:-.53}
- };
+ if(type==='camio')vehicle.userData.truckCabin=TRUCK_CABIN;
  const occupants=attachCarCrew(vehicle,{type});
  for(const [seat,avatar] of [occupants.driver,occupants.gunner].entries()){
   if(!avatar)continue;
-  const head=avatar.userData.head.getWorldPosition(new T.Vector3());
-  const center=vehicleOccupantHeadWorld({t:type,x:0,y:0,z:0,hd:0},seat,0);
-  const seatP=vehicleSeatWorld({t:type,x:0,y:0,z:0,hd:0},seat,0);
-  console.log('V18_PHYSICS_AUDIT_VEHICLE',JSON.stringify({
-   type,seat,visualHead:head.toArray(),visualSeat:avatar.position.toArray(),
-   hitHead:[center.x,center.y,center.z],hitSeat:[seatP.x,seatP.y,seatP.z]
-  }));
+  const head=avatar.userData.head.getWorldPosition(new T.Vector3()),
+    state={t:type,x:0,y:0,z:0,hd:0,
+      brokenVehicleWindows:[0,1]},
+    center=vehicleOccupantHeadWorld(state,seat,0),
+    mount=vehicleSeatWorld(state,seat,0);
+  assert(head.distanceTo(new T.Vector3(center.x,center.y,center.z))<1e-5,
+    'Cap V18 coincident amb la hitbox: '+type+'/'+seat);
+  assert(avatar.position.distanceTo(
+    new T.Vector3(mount.x,mount.y,mount.z))<1e-8,
+    'Seient real coincideix amb la hitbox: '+type+'/'+seat);
+  const contact=vehicleSeatProjectileContact(
+    {x:center.x,y:center.y,z:center.z-4},
+    {x:center.x,y:center.y,z:center.z+3},state,
+    seat===0?[{hp:4}]:[{hp:0},{hp:4}]);
+  assert(contact?.kind==='vehicle-occupant'&&contact.seat===seat,
+    'Tret al cap V18 efectiu: '+type+'/'+seat);
  }
  for(const rider of [occupants.driver,occupants.gunner].filter(Boolean)){
   assert.deepEqual(rider.scale.toArray(),[1,1,1],
@@ -1181,6 +1210,38 @@ for(const [type,size]of [['cotxe',.43],['camio',.31],['moto',.52]]){
   new T.Vector3()).toArray().every(Number.isFinite),
   'Boca de foc del tirador a la torreta sense doble escala');
 }
+// El solc físic i la figura d'un vehicle girat han de coincidir,
+ // sense escalar la distància al centre en canviar el rumb o la Y.
+ const rotatedBoat={t:'patrulla_marina',x:0,y:0,z:0,hd:0,
+   marineCrewHp:[4,4],marineBrokenWindshield:[]};
+ const windshieldHead=marineCrewHeadWorld(rotatedBoat,0,0);
+ const windshieldFrom={x:windshieldHead.x,y:windshieldHead.y,z:-5};
+ const windshieldTo={x:windshieldHead.x,y:windshieldHead.y,z:4};
+ const glassFirst=marineCrewProjectileContact(
+   windshieldFrom,windshieldTo,rotatedBoat);
+ assert(glassFirst?.kind==='marine-glass',
+   'El vidre real cobreix primer el cap V18 del patruller');
+ rotatedBoat.marineBrokenWindshield=[0,1,2];
+ const riderAfterGlass=marineCrewProjectileContact(
+   windshieldFrom,windshieldTo,rotatedBoat);
+ assert(riderAfterGlass?.kind==='marine-crew'&&riderAfterGlass.seat===0,
+   'Després de trencar el vidre, la bala arriba al cap V18');
+ const vehicleGlass={t:'cotxe',x:0,y:0,z:0,hd:0},
+   driverHit=vehicleOccupantHeadWorld(vehicleGlass,0,0),
+   fromWindow={x:driverHit.x,y:driverHit.y,z:driverHit.z-4},
+   toWindow={x:driverHit.x,y:driverHit.y,z:driverHit.z+4};
+ const firstWindow=vehicleSeatProjectileContact(fromWindow,toWindow,
+   vehicleGlass,[{hp:4},{hp:0}]);
+ assert(firstWindow?.kind==='vehicle-glass'&&firstWindow.seat===0,
+   'Cotxe: primer el vidre davant la cara V18');
+ vehicleGlass.brokenVehicleWindows=[0];
+ const afterWindow=vehicleSeatProjectileContact(fromWindow,toWindow,
+   vehicleGlass,[{hp:4},{hp:0}]);
+ assert(afterWindow?.kind==='vehicle-occupant'&&afterWindow.seat===0,
+   'Cotxe: després del vidre, la bala arriba al soldat V18');
+assert.equal(COMMANDO_HEAD_PIVOT_HEIGHT,3.26,
+ 'Alçada geomètrica del cap V18 fixa, no 2.65*VS');
+console.log('PASS hitboxes V18 nadiues: cap, malucs, projectils, girs i seients dels comandaments');
 console.log('PASS tripulants V18 nadius: GAZ/camió/moto, patrulleres, dos seients, malles i canons');
 
 // El general manté EXACTAMENT la seva mida, postura i LOD després

@@ -1,5 +1,7 @@
 // Shared, deterministic protection and occupant hit resolution for both game modes.
 // Pure rules: the host runtime owns physics, visual glass shards and state replication.
+import {enemyCrewLocalSeat,enemyCrewLocalHead} from './vehicle-crew-anchors.mjs';
+export {enemyCrewLocalSeat,enemyCrewLocalHead};
 const OPEN_TYPES=new Set(['bici','moto','windsurf','barca_rems','moto_aquatica','llanxa','llanxa_coets','hover']);
 export function isOpenVehicle(type){return OPEN_TYPES.has(type);}
 export function createVehicleOccupantDamageState(type,seatIds=[]){
@@ -39,7 +41,17 @@ export function selectReplacementDriver(state,driverSeatId='driver',otherSeatIds
 // Seat-sized glass zones are cheap analytic volumes (no mesh raycasts).
 // Only the window on the actually intersected seat is shattered.
 const COVERED=new Set(['cotxe','jeep','cotxe_civil','camio','heli','heli_combat']);
+// The same numeric anchor is used by enemy-ai.js and marine-patrol.js
+// when attaching the approved V18 soldier. No Three.js or VS scales.
+const ENEMY_LAND_SEATS=new Set(['cotxe','jeep','cotxe_civil','camio','moto']);
+function localCrewToWorld(v,offset,baseY){
+ const h=v.hd??v.heading??0,c=Math.cos(h),s=Math.sin(h);
+ return {x:v.x+c*offset.x+s*offset.z,y:baseY+offset.y,
+   z:v.z-s*offset.x+c*offset.z};
+}
 export function vehicleSeatWorld(v,seat=0,baseY=v.y??0){
+ if(ENEMY_LAND_SEATS.has(v.t))
+  return localCrewToWorld(v,enemyCrewLocalSeat(v.t,seat),baseY);
  const scale=({camio:1.8125,cotxe:1.3,jeep:1.3,cotxe_civil:1.2,heli:1.75,heli_combat:1.82})[v.t]||1;
  const lx=v.t==='moto'?0:(seat===0?-1:1)*(v.t==='camio'?.62:.72)*scale;
  const lz=(v.t==='moto'?.4:v.t==='camio'?-.62:-.43)*scale;
@@ -51,6 +63,8 @@ export function vehicleSeatWorld(v,seat=0,baseY=v.y??0){
 // Punt visual del cap dels occupants asseguts. La retícula segueix
 // la posició del rider reutilitzat i no el centre baix del seient.
 export function vehicleOccupantHeadWorld(v,seat=0,baseY=v.y??0){
+ if(ENEMY_LAND_SEATS.has(v.t))
+  return localCrewToWorld(v,enemyCrewLocalHead(v.t,seat),baseY);
  const scale=({camio:1.8125,cotxe:1.3,jeep:1.3,cotxe_civil:1.2,moto:1.2})[v.t]||1;
  const truck=v.t==='camio',motorbike=v.t==='moto',civil=v.t==='cotxe_civil';
  const fit=truck?.82:1;
@@ -135,11 +149,11 @@ const MARINE_SCALE=1.95;
 const MARINE_GLASS_X=[-.72*(2.75*.43),0,.72*(2.75*.43)];
 const MARINE_GLASS_W=[2.75*.25,2.75*.34,2.75*.25];
 export function marineCrewHeadWorld(boat,seat=0,baseY=boat.y??0){
-  const h=boat.hd??boat.heading??0,s=MARINE_SCALE,
-    x=(seat? .58:-.58)*s,z=(seat?1.14:.88)*s,
-    y=(.89+2.65*.43)*s;
-  return {x:boat.x+Math.cos(h)*x+Math.sin(h)*z,
-    y:baseY+y,z:boat.z-Math.sin(h)*x+Math.cos(h)*z};
+  // El comando ja és fill d'un vaixell de geometria escalada i arrel
+  // unitària. L'escala VS=1.95 NO s'aplica al soldat incorporat després.
+  const type=boat.t==='llanxa_coets'?'llanxa_coets':
+    boat.t==='patrulla_marina'?'patrulla_marina':'llanxa';
+  return localCrewToWorld(boat,enemyCrewLocalHead(type,seat),baseY);
 }
 export function marineCrewProjectileContact(from,to,boat,{baseY=boat.y??0}={}){
   if(!boat||boat.destroyed||boat.hp===0)return null;
@@ -155,7 +169,10 @@ export function marineCrewProjectileContact(from,to,boat,{baseY=boat.y??0}={}){
   const dz=b.z-a.z;
   if(Math.abs(dz)>1e-8&&((a.z<=-.65&&b.z>=-.65)||(a.z>=-.65&&b.z<=-.65))){
     const t=(-.65-a.z)/dz,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;
-    if(y>=1.34&&y<=2.15)for(let pane=0;pane<3;pane++){
+    // El límit inferior cobria només la posició FICTÍCIA del cap.
+    // Ampliam la franja davant del cap V18 real fins a y=1.06*VS,
+    // mantenint els tres panells i l'ordre vidre -> tripulant.
+    if(y>=1.06&&y<=2.15)for(let pane=0;pane<3;pane++){
       if(broken.includes(pane)||Math.abs(x-MARINE_GLASS_X[pane])>MARINE_GLASS_W[pane]*.5)continue;
       choose({kind:'marine-glass',pane,t});
     }
@@ -163,9 +180,14 @@ export function marineCrewProjectileContact(from,to,boat,{baseY=boat.y??0}={}){
   for(let seat=0;seat<2;seat++){
     if(!(hp[seat]>0))continue;
     const head=marineCrewHeadWorld(boat,seat,baseY),
-      body={x:head.x,y:baseY+(.89+1.25*.43)*s,z:head.z};
-    const tHead=segmentSeatSphere(from,to,head,.63*s),
-      tBody=segmentSeatSphere(from,to,body,.51*s);
+      type=boat.t==='llanxa_coets'?'llanxa_coets':
+        boat.t==='patrulla_marina'?'patrulla_marina':'llanxa',
+      mount=enemyCrewLocalSeat(type,seat),
+      body={x:head.x,y:baseY+mount.y+1.25*mount.size,z:head.z};
+    // Les esferes ocupen el mateix espai que la figura aprovada: el
+    // 1.95 de l'antic casc no amplifica ni altura ni radi de l'actor.
+    const tHead=segmentSeatSphere(from,to,head,.63),
+      tBody=segmentSeatSphere(from,to,body,.51);
     const t=tHead===null?tBody:tBody===null?tHead:Math.min(tHead,tBody);
     if(t!==null)choose({kind:'marine-crew',seat,t});
   }

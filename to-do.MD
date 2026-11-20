@@ -1541,3 +1541,13 @@
 - [ ] **Proper bloc:** alinear numèricament els volums dels caps i cossos dels ocupants amb V18 en SOLO/COOP sense consultar malles Three.js; revisar `world-physics.mjs` per alçades de cos/palmeres/parets, natació i eix de ragdoll.
 - [ ] **Validació visual:** trets de pistola des de llanxa/GAZ/hovercraft, mans de pilot i passatger, autocàmera COOP, cristalls i trajectòries a totes les distàncies.
 - [ ] **Condició per retirar 2/3:** migrar els estats d'armes i l'animació a peu que encara consulten bones ocultes, no tocar `LEGACY_GAME_RIG_SCALE` abans de completar la matriu de dependències.
+
+
+### v0.6.287 · hitboxes V18 i alçades reals
+- [x] **Mesures d'evidència:** comparar caps i seients de soldats normalitzats V18 (cotxes, camió, moto i patrulleres) amb els punts numèrics físics; documentar desalineacions originals (inclòs el fixture de camió obsolet).
+- [x] **Ancoratges únics:** `vehicle-crew-anchors.mjs` ara alimenta el muntatge dels tripulants de `enemy-ai.js`/`marine-patrol.js` i els volums balístics del Worker; camió A4.3 comparteix `TRUCK_CABIN`.
+- [x] **Cap, cos i vidres:** centres V18 de land/marine alineats, radis de mar sense el segon VS1.95, manteniment de la seqüència vidre → ocupant i dels tres panells.
+- [x] **Física vertical:** un únic `PLAYER_COLLISION_HEIGHT=3.11232` de `human-model-catalog`; palmeres, parets, roques elevades i portes usen el cos real, sense mostres a 3.8–4.2 m.
+- [x] **Regressions noves:** posició de cap real i hitbox, impacte sobre el cap, canvi de rumb, ordre dels impactes a vidre, cap sobre col·lisions fantasma i roca elevada.
+- [ ] **Comprovació WebGL/COOP:** provar en una partida de dos dispositius els caps dels soldats a l'interior de vidres, balística, roques elevades, palmeres altes, portes i impactes de vehicles.
+- [ ] **Proper bloc físic:** helicòpters, ajupiment sota obstacles, natació `surface-2.1`, expulsions `waistLocal=2.05`, volum de contactes amb vehicles, confirmació amb malles aprovades abans de suprimir el rig 2/3.

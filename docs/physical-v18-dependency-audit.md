@@ -39,3 +39,31 @@ Data: 20/11/2026. Abast: física autoritativa del jugador, col·lisions, ocupant
 - Un cop migrats tots els consumidors del controlador ocult, retirar `LEGACY_GAME_RIG_SCALE` i fer proves específiques de física i armes abans de desplegar.
 
 Nota: els tests de geometria i física ofereixen cobertura de regressions, però no substitueixen la comparació visual manual.
+
+
+## 0.6.287 — correcció mesurada de hitboxes i alçades (20/11/2026)
+
+### Mesures abans del canvi, extretes dels Object3D V18 reals
+| Soldat | Cap visible (X,Y,Z) | Hitbox antiga (X,Y,Z) | Resultat |
+| --- | --- | --- | --- |
+| Cotxe enemic, pilot | (-0.73, 2.3418, -0.43) | (-0.949, 2.70335, -0.559) | Separació ~0.44 |
+| Moto enemiga | (0, 2.5652, 0.34) | (0, 2.592, 0.336) | ~0.027 |
+| Patrullera, pilot | (-0.58, 2.2918, 0.88) | (-1.131, 3.957525, 1.716) | ~1.95 |
+| Patrullera, passatger | (0.58, 2.2918, 1.14) | (1.131, 3.957525, 2.223) | ~2.07 |
+| Camió de prova (antic fixture artificial) | (-0.9, 2.5606, -0.42) | (-1.1444, 4.5209, -2.8685) | ~3.15, però **no** representa el seient A4.3 aprovat |
+
+La segona passada ja usa la dada real `TRUCK_CABIN.enemySeat={x:0.6314,y:1.6728,z:-1.5826}` de l'A4.3, no la posició inventada del fixture antic.
+
+### Correccions en codi
+
+1. **Ancoratge compartit i determinista**: `src/vehicle-crew-anchors.mjs` exporta la ubicació local de cada tripulant de cotxe, jeep, civil, camió A4.3, moto i patrulleres/llanxes, més l'alçada d'os del cap V18 mesurada `3.26 × talla nativa`. `truck-model.mjs` reexporta `TRUCK_CABIN` des d'aquest mateix mòdul. `enemy-ai.js` i `marine-patrol.js` ara col·loquen la malla des d'aquests ancoratges, no de constants duplicades.
+2. **Hitboxes de terra**: `vehicleSeatWorld` i `vehicleOccupantHeadWorld` fan exactament la mateixa transformació de vehicle i gir que les figures nascudes després del *bake* de VS. No tornen a multiplicar per 1.3, 1.8125 o 1.2 els seients de combat. Per helicòpters i tipus no auditats es conserva la fórmula anterior fins a mesurar els models reals.
+3. **Tripulants marins**: `marineCrewHeadWorld` coincideix amb el centre del cap; `marineCrewProjectileContact` calcula un cos amb talla .43 i radis físics no multiplicats pel VS del buc 1.95. La protecció del parabrisa s'estén una mica cap avall per interceptar trets a l'alçada del cap real; conserva els tres panells i la seqüència vidre → soldat.
+4. **Alçada física del protagonista**: `src/world-physics.mjs` defineix `PLAYER_COLLISION_HEIGHT=HUMAN_PLAYER_GAME_NATIVE_HEIGHT=3.11232`, importada del catàleg únic. Les sis mostres de col·lisió amb palmeres passen a ser fraccions de l'alçada real, sense les mostres fantasma a 3.8/4.2 m. Les parets, les roques elevades i la selecció/ocupació de portes usen aquest mateix límit; cap coll o malla V18 es consulta durant el tick físic.
+
+### Invariants i límits de la intervenció
+
+- Les funcions de física compartida continuen pures i reproduïbles a client i Worker. Proves geomètriques sobre soldats i patrons reals, gir de la patrullera, col·lisions de cap, ordre vidre → ocupant, palmera per damunt del cap, parets, roques elevades i volum de portes.
+- **Sense canvi de dany, PV ni munició**. Hi ha canvi real en les zones on les bales poden tocar un ocupant, que ara concorden amb la figura aprovada.
+- **Pendent** comprovació WebGL de vidres, parets i obstacles a altures intermèdies; comprovació COOP real amb dos dispositius. Revisar l'aparença del soldat enemic dins la cabina i el buc respecte del vidre visual.
+- **Encara pendents** les hitboxes de cabina dels helicòpters, els volums de col·lisió per ajupiment i pis superior, el suport d'aigua a `surface-2.1`, el pivot visual d'expulsió `waistLocal=2.05`, el volum de col·lisions vehicle-persona i els consumidors visuals restants del controlador ocult `LEGACY_GAME_RIG_SCALE=2/3`.

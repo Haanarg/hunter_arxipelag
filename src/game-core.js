@@ -1576,12 +1576,12 @@ function playerDoorLabel(d){return (d.desiredOpen??d.open)?'Tancar porta':'Obrir
 function nearestPlayerDoor(){
   if(cv||playerFall||playerEject||swimming)return null;
   let best=null,range=4.5;
-  for(const d of Dr){if(d.hp<=0||d.alwaysOpen||d.locked&&!d.bunkerGate||P.y+3.1<=d.y0||P.y+.15>=d.y1)continue;
+  for(const d of Dr){if(d.hp<=0||d.alwaysOpen||d.locked&&!d.bunkerGate||P.y+window.HUNTER_WORLD_PHYSICS.PLAYER_COLLISION_HEIGHT<=d.y0||P.y+.15>=d.y1)continue;
     const distance=Math.hypot(P.x-d.cx,P.z-d.cz);if(distance<range){best=d;range=distance;}}
   return best;
 }
 function doorOccupied(d){
-  const inside=(x,y,z)=>x>d.x0-.8&&x<d.x1+.8&&z>d.z0-.8&&z<d.z1+.8&&y+3.1>d.y0&&y+.15<d.y1;
+  const inside=(x,y,z)=>x>d.x0-.8&&x<d.x1+.8&&z>d.z0-.8&&z<d.z1+.8&&y+window.HUNTER_WORLD_PHYSICS.PLAYER_COLLISION_HEIGHT>d.y0&&y+.15<d.y1;
   if(!cv&&inside(P.x,P.y,P.z))return true;
   if(enemyCandidatesAt(d.cx,d.cz,6).some(u=>u.hp>0&&inside(u.x,u.gy??u.o?.position?.y??hAt(u.x,u.z),u.z)))return true;
   return V.some(v=>!v.sunk&&Math.abs((v.o?.position?.y??hAt(v.x,v.z))-(d.y0+1))<5&&circleVehicleOverlap(d.cx,d.cz,.8,v));
