@@ -175,6 +175,36 @@ for(const role of ['player','soldier','rocket','elite','general']){
   g.position.copy(originalTranslation);g.rotation.copy(originalOrientation);
   g.updateWorldMatrix(true,true);
   console.log('PASS ejection: native V18 pelvis pivot and COOP transformed-parent invariance');
+  // La rotació i l'ajupiment visibles no poden dependre ja de l'estat
+  // d'un maluc, coll o tors ocult quan hi ha hagut un tick del joc.
+  const nativeBodyState={
+   pelvisYaw:-.24,spinePitch:-.19,spineYaw:.35,spineRoll:0,
+   headPitch:.19,headYaw:0,headRoll:-.07,crouchDrop:-.30
+  };
+  u.humanGameNativeBodyPose=nativeBodyState;
+  u.lowerBody.rotation.y=.95;u.upperBody.rotation.x=.88;
+  u.upperBody.rotation.y=-.75;u.head.rotation.set(.70,.40,.63);
+  updateHuman(g);
+  assert(Math.abs(canonical.position.y+.30)<1e-9,
+    'Ajupiment V18 exacte sense factor del rig ocult');
+  assert(Math.abs(bones.pelvis.rotation.y+.24)<1e-9,
+    'Lateralitat de la pelvis numèrica V18');
+  assert(Math.abs(bones.spine.rotation.y-(.35+.24))<1e-9,
+    'El tors V18 mira al vector global i compensa el gir de malucs');
+  assert(Math.abs(bones.head.rotation.z+.07)<1e-9,
+    'El cap V18 ignora rotacions ocultes del controlador');
+  u.lowerBody.rotation.y=-1.27;u.upperBody.rotation.x=-.93;
+  u.upperBody.rotation.y=1.26;u.head.rotation.set(-.8,-.9,-.7);
+  updateHuman(g);
+  assert(Math.abs(canonical.position.y+.30)<1e-9&&
+    Math.abs(bones.spine.rotation.y-(.35+.24))<1e-9&&
+    Math.abs(bones.head.rotation.z+.07)<1e-9,
+    'Controlador ocult perturbar no canvia la postura corporal canònica');
+  delete u.humanGameNativeBodyPose;
+  u.lowerBody.rotation.y=0;u.upperBody.rotation.set(0,0,0);
+  u.head.rotation.set(0,0,0);
+  updateHuman(g);
+  console.log('PASS V18 native torso/head/crouch independent of V17 control');
   // L'explosió del protagonista no pot animar membres ocults V17.
   // El ragdoll V18 es torna a aplicar després de humanGamePose() al RAF.
   const ragdollWindow={window:{}};
