@@ -1181,13 +1181,13 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
         truck=type==='camio',civil=type==='cotxe_civil';
   // Aquests són exactament els ocupants procedimentals del Humvee de patrulla.
   // No reparentam el soldat de combat, que continuaria en postura dreta.
-  // El camió A4.3 construeix els seients a z=-1.93, abans del
-  // fit visual .82: z=-.62 corresponia a darrere de la cabina.
-  // Mateixa escala del grup exterior i els mateixos pivots que el model A4.3.
-  const truckFit=car.userData.truckVisualFit||.82,
-        x=truck?.77*truckFit:civil?.613:.73,
-        z=truck?-1.93*truckFit:civil?-.60:-.43,
-        height=truck?2.04*truckFit:.94,
+  // A4.3 exporta la posició REAL dels seients ja dimensionats.
+  // Mai recuperam l'antic .82 ni refem l'ajust en els enemics.
+  const truckCabin=truck?car.userData.truckCabin:null;
+  if(truck&&!truckCabin)throw Error('Camió A4.3 sense ancoratges canònics de cabina');
+  const x=truck?truckCabin.enemySeat.x:civil?.613:.73,
+        z=truck?truckCabin.enemySeat.z:civil?-.60:-.43,
+        height=truck?truckCabin.enemySeat.y:.94,
         scale=truck?.31:type==='moto'?.52:.43;
   // Seient de moto: malucs sobre la sella, no el model gegant de la cabina.
   driver.position.set(type==='moto'?0:-x,type==='moto'?.87:height,type==='moto'?.34:z);
@@ -1221,9 +1221,9 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
     gunner.rotation.y=.26;
     const rifle=gunner.userData.gun;rifle.parent.remove(rifle);
     mount=new THREE.Group();pitch=new THREE.Group();
-    mount.position.set(truck?1.98*truckFit:civil?1.30:1.46,
-      truck?3.07*truckFit:2.07,
-      truck?-2.03*truckFit:civil?-.6:-.30);
+    mount.position.set(truck?truckCabin.gunMount.x:civil?1.30:1.46,
+      truck?truckCabin.gunMount.y:2.07,
+      truck?truckCabin.gunMount.z:civil?-.6:-.30);
     mount.add(pitch);detailParent.add(mount);
     rifle.position.set(0,-.035,-.14);rifle.rotation.set(0,0,0);rifle.scale.setScalar(.94);
     pitch.add(rifle);

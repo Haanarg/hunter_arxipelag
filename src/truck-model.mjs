@@ -1,4 +1,13 @@
+import {bakeFixedModelScales} from './model-scale-normalization.mjs';
 // Shared A4 chassis; alternative armor belongs to the preview.
+// Les dimensions del camió aprovat són intrínseques al model: cap
+// ajust x.82 posterior a la fàbrica del joc o als ocupants.
+export const TRUCK_CANONICAL_SIZE=.82;
+export const TRUCK_CABIN=Object.freeze({
+ driverVisual:Object.freeze([-0.6314,1.4514,-1.5826]),
+ enemySeat:Object.freeze({x:.6314,y:1.6728,z:-1.5826}),
+ gunMount:Object.freeze({x:1.6236,y:2.5174,z:-1.6646})
+});
 const A43={id:'C',name:'A4.3 · Faldons modulars',tag:'Mòduls separats',description:'Faldons modulars alts amb retalls per a les rodes, parafangs perfilats i posterior amb placa central.',
   cab:0x59654a,roof:0x45543e,canvas:0x527c4b,trim:0x303930,top:3.90,style:'a4_modular',armor:4};
 export function createTruckModel(T,cfg=A43,decorate=null){
@@ -279,5 +288,12 @@ export function createTruckModel(T,cfg=A43,decorate=null){
  g.userData.cabinHollow=true;
  g.userData.frontGlazingTransparent=true;
  g.userData.cabin='cab-over 6x6';
+ g.userData.truckCabin=TRUCK_CABIN;
+ // Les malles, rodes i pivots surten JA dimensionats de la fàbrica
+ // d'A4.3. El factor numèric només s'empra durant la generació.
+ g.scale.setScalar(TRUCK_CANONICAL_SIZE);
+ bakeFixedModelScales(g);
+ for(const w of g.userData.wheels||[])w.userData.radius*=TRUCK_CANONICAL_SIZE;
+ if(g.scale.x!==1)throw Error('Camió A4.3 amb escala d’arrel residual');
  return g;
 }

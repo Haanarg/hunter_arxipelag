@@ -189,7 +189,7 @@ export const vehicleModels=Object.freeze({
         // caixa de col·lisió física existent (3.6 × 7.8, abans de VS).
         const factory=truckFactory;
         if(typeof factory!=='function')throw new Error('Falta el model A4.3');
-        const truck=factory(THREE),fit=.82;
+        const truck=factory(THREE);
         // Les sis rodes són animades; fusionam només malles estàtiques.
         // Una malla per material evita 140+ draw calls per camió.
         const groups=new Map();
@@ -221,20 +221,18 @@ export const vehicleModels=Object.freeze({
         }
         // Conductor visible per la lluna del camió A4.3, que fins ara
         // mostrava dos seients buits. Mides del mateix model humà de l'editor.
-        const driver=createHumanProposal(THREE,'soldier','a',{visualOnly:true});
+        const driver=createHumanProposal(THREE,'soldier','a',{visualOnly:true,nativeHeight:1.30});
         driver.name='Conductor del camió';
-        driver.scale.multiplyScalar(1.30/(driver.userData.humanHeight||2));
-        driver.position.set(-.77,1.77,-1.93);
+        driver.position.set(...truck.userData.truckCabin.driverVisual);
         truck.add(driver);
         g.userData.cockpitCrew=[driver];
-        truck.scale.setScalar(fit);
         g.add(truck);
         g.userData.wheels=truck.userData.wheels||[];
         g.userData.steeringPivots=truck.userData.steeringPivots||[];
-        for(const w of g.userData.wheels)w.userData.radius=.80*fit*VS.camio;
+        for(const w of g.userData.wheels)w.userData.radius*=VS.camio;
         g.userData.truckModel='A4.3';
         g.userData.truckStaticBatches=batches;
-        g.userData.truckVisualFit=fit;
+        g.userData.truckCabin=truck.userData.truckCabin;
       }
       if(t==='moto'){
         // Naked streetfighter CC0 (candidat 2), versió 25% del banc de
@@ -767,9 +765,8 @@ export const vehicleModels=Object.freeze({
         const seats=combat?[[0,1.98,-3.08],[0,1.32,-4.96]]:
           [[-.49,1.34,-2.65],[.49,1.34,-2.65]];
         const crew=seats.map(([x,y,z],i)=>{
-          const pilot=createHumanProposal(THREE,'soldier','a',{visualOnly:true});
+          const pilot=createHumanProposal(THREE,'soldier','a',{visualOnly:true,nativeHeight:1.30});
           pilot.name='Pilot de cabina '+(i+1);
-          pilot.scale.multiplyScalar(1.30/(pilot.userData.humanHeight||2));
           pilot.position.set(x,y-.27,z);
           pilot.rotation.x=-.08;
           approvedModel.add(pilot);

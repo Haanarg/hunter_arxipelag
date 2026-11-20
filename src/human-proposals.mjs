@@ -91,7 +91,7 @@ export function createHumanHandGeometry(T,side){
 }
 // Native articulated mesh assemblies, facing -Z. Motion pivots are separate
 // from editable rest pivots, so playing a clip never overwrites a body edit.
-export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
+export function createHumanProposal(T,role,style='a',{visualOnly=false,nativeHeight=null}={}){
  const p=HUMAN_PROFILES[role],s=HUMAN_STYLES[style];if(!p||!s)throw Error('Proposta humana desconeguda');
  const root=new T.Group();root.name=p.name+' · '+s.name;
  const materials=new Map(),dark=0x26302d,shoe=0x303631,hair=role==='general'?0x42352f:0x443b30,gold=0xd0b46b;
@@ -581,6 +581,26 @@ export function createHumanProposal(T,role,style='a',{visualOnly=false}={}){
  if(!(height>0))throw Error('Geometria humana sense alçada: '+role);
  root.userData={humanProposal:{role,style,version:HUMAN_VERSION,iteration:18},
   humanHeight:height,humanNativeHeight:height,labAssemblies:true};
+ if(nativeHeight!==null){
+  // Variant de CABINA amb dimensions físiques pròpies: canviam les
+  // coordenades de base abans de lliurar-la, sense escala al rig animat.
+  if(!(Number.isFinite(nativeHeight)&&nativeHeight>0))
+   throw Error('Alçada nativa invàlida del model humà');
+  const ratio=nativeHeight/height;
+  // Les articulacions i les malles comparteixen una sola transformació,
+  // consolidada al model: no hi ha ajusts a la fàbrica de vehicles.
+  root.traverse(node=>{
+   if(node!==root)node.position.multiplyScalar(ratio);
+   if(node.isMesh){
+    node.geometry=node.geometry.clone();
+    node.geometry.scale(ratio,ratio,ratio);
+   }
+  });
+  root.updateMatrixWorld(true);
+  root.userData.humanHeight=nativeHeight;
+  root.userData.humanNativeHeight=nativeHeight;
+  root.userData.humanCabinNative=true;
+ }
  if(role==='player'&&!visualOnly)setHumanPreviewWeapon(T,root,'pistol');
  return root;
 }
