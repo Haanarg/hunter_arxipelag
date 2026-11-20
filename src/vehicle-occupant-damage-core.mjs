@@ -1,6 +1,7 @@
 // Shared, deterministic protection and occupant hit resolution for both game modes.
 // Pure rules: the host runtime owns physics, visual glass shards and state replication.
-import {enemyCrewLocalSeat,enemyCrewLocalHead} from './vehicle-crew-anchors.mjs';
+import {enemyCrewLocalSeat,enemyCrewLocalHead,
+  COMMANDO_HEAD_PIVOT_HEIGHT} from './vehicle-crew-anchors.mjs';
 export {enemyCrewLocalSeat,enemyCrewLocalHead};
 const OPEN_TYPES=new Set(['bici','moto','windsurf','barca_rems','moto_aquatica','llanxa','llanxa_coets','hover']);
 export function isOpenVehicle(type){return OPEN_TYPES.has(type);}
@@ -65,6 +66,14 @@ export function vehicleSeatWorld(v,seat=0,baseY=v.y??0){
 export function vehicleOccupantHeadWorld(v,seat=0,baseY=v.y??0){
  if(ENEMY_LAND_SEATS.has(v.t))
   return localCrewToWorld(v,enemyCrewLocalHead(v.t,seat),baseY);
+ if(v.t==='heli'||v.t==='heli_combat'){
+  // La plaça de la cabina ja es troba transformada a escala definitiva.
+  // La hitbox antiga del cap quedava per SOTA el seient: es calculava
+  // sense l'escala de l'helicòpter. Conservam l'amplada/posició de
+  // cabina aprovada i aixecam només el cap amb l'anatomia numèrica.
+  const seatPoint=vehicleSeatWorld(v,seat,baseY);
+  return {...seatPoint,y:seatPoint.y+COMMANDO_HEAD_PIVOT_HEIGHT*.43};
+ }
  const scale=({camio:1.8125,cotxe:1.3,jeep:1.3,cotxe_civil:1.2,moto:1.2})[v.t]||1;
  const truck=v.t==='camio',motorbike=v.t==='moto',civil=v.t==='cotxe_civil';
  const fit=truck?.82:1;

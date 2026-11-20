@@ -4,6 +4,11 @@ import {PLAYER_STANDING_HEIGHT,PLAYER_CROUCHED_HEIGHT,PLAYER_SWIM_DRAFT,
  playerHitSpheres,playerProjectileContactT,playerBodyHeight} from '../src/player-physical-profile.mjs';
 import {pushPalm,pushWalls,pushTree} from '../src/world-physics.mjs';
 import {segmentSphereT} from '../src/combat-rules.mjs';
+import {pedestrianVehicleHeightCompatible} from '../src/vehicle-specs.mjs';
+import {resolveCoopPlayerVehicleContact} from '../src/coop-vehicle-contacts-core.mjs';
+import {vehicleSeatWorld,vehicleOccupantHeadWorld,vehicleSeatProjectileContact} from '../src/vehicle-occupant-damage-core.mjs';
+import {ferrySurfaceY,ferryLocal} from '../src/ferry-deck-core.mjs';
+import {COMMANDO_HEAD_PIVOT_HEIGHT} from '../src/vehicle-crew-anchors.mjs';
 assert.equal(PLAYER_MAX_HEALTH,25);
 const clamp=(v,l)=>Math.max(-l,Math.min(l,v));
 // Independent copy of the previous runtime equations, across its actual modes.
@@ -180,3 +185,61 @@ assert(seenSwimmers.every(p=>p.swimming&&!p.crouched),
  'El COOP només presenta el perfil físic horitzontal dins l\'aigua');
 assert(Math.abs(seaSim.snapshot().players[0].y+PLAYER_SWIM_DRAFT)<1e-8);
 console.log('PASS COOP authoritative crouch and swimming pose is shared with world collision adapter');
+
+
+// Helis: la hitbox històrica del cap quedava per sota de la plaça.
+for(const type of ['heli','heli_combat'])for(const seat of [0,1]){
+ const craft={t:type,x:10,y:5,z:-13,hd:.84,
+   brokenVehicleWindows:[]};
+ const hip=vehicleSeatWorld(craft,seat,craft.y),
+       head=vehicleOccupantHeadWorld(craft,seat,craft.y);
+ assert(Math.abs(head.y-hip.y-COMMANDO_HEAD_PIVOT_HEIGHT*.43)<1e-10,
+   'Cap de pilot real damunt el seient: '+type+'/'+seat);
+ assert(Math.abs(head.x-hip.x)<1e-10&&Math.abs(head.z-hip.z)<1e-10,
+   'La cabina girada comparteix eixos per al cap i el seient');
+ const shotFrom={x:head.x,y:head.y,z:head.z-5},
+       shotTo={x:head.x,y:head.y,z:head.z+5};
+ const glass=vehicleSeatProjectileContact(shotFrom,shotTo,craft,
+   seat===0?[{hp:4}]:[{hp:0},{hp:4}],{baseY:craft.y});
+ assert.equal(glass?.kind,'vehicle-glass',
+   'Cabina heli intacta: un tret frontal trenca primer el vidre');
+ craft.brokenVehicleWindows=[0,1];
+ const crew=vehicleSeatProjectileContact(shotFrom,shotTo,craft,
+   seat===0?[{hp:4}]:[{hp:0},{hp:4}],{baseY:craft.y});
+ assert.equal(crew?.kind,'vehicle-occupant',
+   'Cabina heli trencada: el tret arriba al pilot/copilot');
+}
+
+// SOLO i COOP han de compartir les mateixes bandes verticals físiques.
+const highRotorcraft={t:'heli',x:0,y:14,z:0,hd:0,seats:[]};
+assert.equal(pedestrianVehicleHeightCompatible(0,highRotorcraft.y,highRotorcraft),false,
+ 'Un helicòpter a gran altitud mai no atropella una persona a terra');
+const closeRotorcraft={...highRotorcraft,y:1.5};
+assert(pedestrianVehicleHeightCompatible(0,closeRotorcraft.y,closeRotorcraft),
+ 'Un helicòpter molt baix pot empènyer el jugador');
+const pedestrian={x:0,y:0,z:0,hd:0};
+assert.deepEqual(resolveCoopPlayerVehicleContact(pedestrian,pedestrian,
+ [highRotorcraft],'p1'),pedestrian,
+ 'El COOP no empenta el jugador per un helicòpter que vola molt alt');
+const lowContact=resolveCoopPlayerVehicleContact(pedestrian,pedestrian,
+ [closeRotorcraft],'p1');
+assert(Math.hypot(lowContact.x,lowContact.z)>1,
+ 'L\'helicòpter baix conserva l\'empenta lateral');
+const ferry={id:'ferry1',t:'ferry',x:0,y:0,z:0,hd:.4,seats:[],rampAngles:{'-1':0,'1':0}};
+const spot={x:0,z:0};
+const deckY=ferrySurfaceY(ferry,ferryLocal(ferry,spot.x,spot.z).z);
+const onDeck={x:spot.x,y:deckY+.12,z:spot.z,hd:0};
+const stable=resolveCoopPlayerVehicleContact(onDeck,onDeck,[ferry],'p1');
+assert(Math.hypot(stable.x-onDeck.x,stable.z-onDeck.z)<1e-9,
+ 'El passadís de la coberta del ferri no és un atropellament');
+const cabinWorld={
+ x:ferry.x+11.5*Math.cos(ferry.hd)+1.8*Math.sin(ferry.hd),
+ z:ferry.z-11.5*Math.sin(ferry.hd)+1.8*Math.cos(ferry.hd)
+};
+const inCabin={x:cabinWorld.x,y:deckY+.12,z:cabinWorld.z,hd:0};
+const excluded=resolveCoopPlayerVehicleContact(inCabin,inCabin,[ferry],'p1');
+assert(Math.hypot(excluded.x-inCabin.x,excluded.z-inCabin.z)>.1,
+ 'La cabina del ferri continua sòlida mentre el jugador camina per coberta');
+assert.equal(pedestrianVehicleHeightCompatible(15,ferry.y,ferry),false,
+ 'El ferri no empeny vianants situats molt per sobre de la coberta');
+console.log('PASS helicopter head/seat glass, flyover and ferry deck/cabin pedestrian contacts');

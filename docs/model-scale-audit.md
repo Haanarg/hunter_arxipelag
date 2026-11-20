@@ -214,3 +214,8 @@ Les posicions dels soldats visibles i les hitboxes de cap/seient ara surten del 
 ## 0.6.288 · perfil físic canònic del jugador V18
 
 Un mateix `player-physical-profile.mjs` governa els tres volums solapats de dany a peu i ajupit, els dos punts del nedador i la cota de flotació, utilitzat per `combat.js`, `server/coop-combat.mjs`, `world-physics.mjs` i `player-vertical.mjs`. Ajupiment: altura física en baixada conservadora de .30 m respecte l'alçada nativa real 3.11232. Natació: suport `surface - PLAYER_SWIM_DRAFT` amb `PLAYER_SWIM_DRAFT=alçada × .675`, conservant gairebé exactament la immersió visual original. Aquests contractes són dades deterministes i no interroguen cap os V17 en el servidor. L'escala oculta `2/3` continua existent només per compatibilitat d'algunes postures.
+
+
+## 0.6.289 — expulsió nativa V18 i helicòpters
+
+La volta del protagonista ja pivota exclusivament sobre `humanGameCanonicalJoints.pelvis`: `player-ejection-pivot.mjs` compensa l'orientació de la malla sense `2.05 * pl.scale.y`, també sota pares COOP transformats. Els caps numèrics dels tripulants de `heli/heli_combat` no reutilitzen les antigues coordenades incomparables de seient i cap. Proves de vidre i trajectòria. Les bandes verticals de contacte amb vehicles són ara una única funció comuna de SOLO i COOP, inclosa la geometria del GAZ aprovat. L'escala residual `LEGACY_GAME_RIG_SCALE=2/3` encara existeix en altres controladors i no es pot retirar sense migrar-los.

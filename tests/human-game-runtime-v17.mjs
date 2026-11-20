@@ -8,6 +8,7 @@ import {vehicleModels} from '../src/vehicle-model-core.mjs';
 import {playerBatching} from '../src/player-batching-core.mjs';
 import {createHumanProposal,sampleHumanGait} from '../src/human-proposals.mjs';
 import {sampleHumanSwimming} from '../src/human-swim-proposals.mjs';
+import {rotateModelAroundNativePelvis} from '../src/player-ejection-pivot.mjs';
 import {createHumanGameRuntimeV17,GAME_HUMAN_SKIN_VERSION} from '../src/human-game-runtime-v17.mjs';
 import {HUMAN_PLAYER_GAME_NATIVE_HEIGHT,HUMAN_WORLD_UNITS_PER_METER} from '../src/human-model-catalog.mjs';
 import {moveOnFoot} from '../src/player-simulation.mjs';
@@ -149,6 +150,30 @@ for(const role of ['player','soldier','rocket','elite','general']){
   assert(canonical?.userData.humanProposal?.role==='player','Game uses editor native root as actual render body');
   const bones=g.userData.humanGameCanonicalJoints;
   assert.equal(Object.keys(bones).length,16,'All 16 canonical editor joints have been retained');
+  // La cabriola es calcula amb la pelvis real del rig aprovat.
+  // Després de canviar el pare en COOP, el punt mundial continua fix.
+  const originalTranslation=g.position.clone(),originalOrientation=g.rotation.clone();
+  for(const angle of [-Math.PI/3,-Math.PI,Math.PI*2]){
+   g.position.copy(originalTranslation);g.rotation.copy(originalOrientation);
+   g.updateWorldMatrix(true,true);
+   const pivotBefore=bones.pelvis.getWorldPosition(new T.Vector3());
+   const pivotAfter=rotateModelAroundNativePelvis(g,angle);
+   assert(pivotAfter.distanceTo(pivotBefore)<1e-7,
+    'La cabriola V18 conserva exactament la pelvis sense cintura 2.05: '+angle);
+  }
+  g.position.copy(originalTranslation);g.rotation.copy(originalOrientation);
+  const ejectionParent=new T.Group();
+  ejectionParent.position.set(9,4,-7);
+  ejectionParent.rotation.y=.56;ejectionParent.scale.setScalar(1.25);
+  ejectionParent.add(g);g.updateWorldMatrix(true,true);
+  const coopPivotBefore=bones.pelvis.getWorldPosition(new T.Vector3());
+  const coopPivotAfter=rotateModelAroundNativePelvis(g,-Math.PI*.72);
+  assert(coopPivotAfter.distanceTo(coopPivotBefore)<1e-7,
+   'COOP: el gir d\'expulsió respecta la pelvis V18 amb pare escalat i girat');
+  ejectionParent.remove(g);
+  g.position.copy(originalTranslation);g.rotation.copy(originalOrientation);
+  g.updateWorldMatrix(true,true);
+  console.log('PASS ejection: native V18 pelvis pivot and COOP transformed-parent invariance');
   const reference=createHumanProposal(T,'player','a',{visualOnly:true,nativeHeight:HUMAN_PLAYER_GAME_NATIVE_HEIGHT});
   const source=[],actual=[];
   reference.traverse(n=>{if(n.isMesh)source.push(n)});

@@ -1,6 +1,7 @@
 import {palmCrushRadius,rockVerticalBand} from './vehicle-environment-core.mjs';
 import {fenceVehicleContact,obbOverlap,relativeVehicleImpactSpeed,impactDamage} from './combat-rules.mjs';
-import {vehicleSpecs,vehicleCollisionTop,vehicleCollisionPlayerBand,vehicleCollisionFootprint,vehicleCollisionRadius} from './vehicle-specs.mjs';
+import {vehicleSpecs,vehicleCollisionTop,vehicleCollisionFootprint,vehicleCollisionRadius,
+  pedestrianVehicleHeightCompatible} from './vehicle-specs.mjs';
 import {vehicleDynamics} from './vehicle-dynamics-core.mjs';
 import {ferryPedestrianAt,ferryForVehicle,ferryCabinBox,ferrySurfaceY,ferryLocal,ferryCabinPush} from './ferry-deck-core.mjs';
 export function contactBox(v,proving=true){
@@ -56,7 +57,7 @@ export function resolveCoopPlayerVehicleContact(previous,candidate,vehicles,acto
      ({x,z}=ferryCabinPush(v,x,z,radius));continue;
    }
   const scale=vehicleSpecs.scales[v.t]||1,box=vehicleSpecs.hitboxes[v.t];
-  if(!box||Math.abs((previous.y??0)-v.y)>Math.max(2.8,vehicleCollisionPlayerBand(v,scale)))continue;
+  if(!box||!pedestrianVehicleHeightCompatible(previous.y??0,v.y,v,scale))continue;
   const size=vehicleCollisionFootprint(v,box,scale),hw=size.w/2,hd=size.d/2;
   if(Math.abs(x-v.x)>hw+hd+radius||Math.abs(z-v.z)>hw+hd+radius)continue;
   const c=Math.cos(v.hd),sn=Math.sin(v.hd),dx=x-v.x,dz=z-v.z;

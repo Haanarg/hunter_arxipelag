@@ -1019,7 +1019,9 @@ function vehiclePushPlayer(){
   // Els vaixells patrulla també tenen un casc físic en mode enemic.
   // Quan la tripulació mor i el casc passa a V, no es duplica el contacte.
   for(const v of [...V,...E.filter(u=>['jeep','tanqueta','tanc','patrulla_marina'].includes(u.t))]){
-    if(v.destroyed)continue;
+    if(v.destroyed||
+      !window.HUNTER_VEHICLE_COLLISION.pedestrianVehicleHeightCompatible(
+        P.y,vehicleY(v),v,VS[vehicleHitType(v.t)]||1))continue;
     const overlap=circleVehicleOverlap(P.x,P.z,.62,v),
           sweep=runoverSweepHit(v.impactFromX??v.x,v.impactFromZ??v.z,
             v.x,v.z,P.x,P.z,vehicleRadius(v)*.68+.62*.45);
@@ -4285,12 +4287,12 @@ else if(!cv&&playerEject&&playerEject.t>=0){
   const dur=playerEject.dur||.5,p=Math.max(0,Math.min(1,1-playerEject.t/dur)),u=pl.userData;
   if(playerEject.kind==='flip'){
     // Una sola volta completa. L'últim frame és exactament dret, sense correcció posterior.
-    const turn=p>=1?0:-Math.PI*2*p,waistLocal=2.05,waistScaled=waistLocal*pl.scale.y;
-    pl.rotation.x=turn;pl.rotation.z=0;
-    const waistOffset=new THREE.Vector3(0,waistScaled,0).applyQuaternion(pl.quaternion);
-    pl.position.x-=waistOffset.x;
-    pl.position.y+=waistScaled-waistOffset.y+Math.sin(Math.PI*p)*(playerEject.height||.68);
-    pl.position.z-=waistOffset.z;
+    const turn=p>=1?0:-Math.PI*2*p;
+    // La volta gira al voltant de la PELVIS anatòmica del V18. Tant el
+    // punt abans com el de després són la mateixa articulació real; no
+    // hi ha 2.05, escala del grup ni un segon centre de cintura fictici.
+    window.HUNTER_PLAYER_EJECTION.rotateModelAroundNativePelvis(pl,turn);
+    pl.position.y+=Math.sin(Math.PI*p)*(playerEject.height||.68);
     const compact=1-Math.pow(p,8);
     if(u.al)u.al.rotation.x=.58*compact;if(u.ar)u.ar.rotation.x=.58*compact;
     if(u.ael)u.ael.rotation.x=.5*compact;if(u.aer)u.aer.rotation.x=.5*compact;

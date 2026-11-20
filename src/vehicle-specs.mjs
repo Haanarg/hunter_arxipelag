@@ -36,3 +36,11 @@ export function vehicleCollisionTop(v,nominalHeight,scale){
 export function vehicleCollisionPlayerBand(v,scale){
  return (isGazTigr(v)?GAZ_TIGR_COLLISION.playerVerticalBand:2.2)*scale;
 }
+// A contact in the horizontal footprint is not a runover if the vehicle
+// passes vertically above the actor (notably aircraft and ferry decks).
+// Both SOLO and authoritative COOP use this exact vertical band.
+export function pedestrianVehicleHeightCompatible(playerY,vehicleY,v,
+ scale=vehicleSpecs.scales[v?.t]||1){
+ return Number.isFinite(playerY)&&Number.isFinite(vehicleY)&&!!v&&
+   Math.abs(playerY-vehicleY)<Math.max(2.8,vehicleCollisionPlayerBand(v,scale));
+}

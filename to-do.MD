@@ -1562,3 +1562,13 @@
 - [ ] **Verificació visual en dos clients:** impactes contra jugadors ajupits, dany a nedadors, entrada/sortida d'aigua, pas sota llindes i recuperació de postura.
 - [ ] **Proper bloc físic:** helicòpters, expulsions/caigudes, contacte jugador-ferri/vehicles i mesura del punt visual de crani al crouch màxim.
 - [ ] **Desacoblament final V17:** últims estats de postures/armes encara llegits del rig de compatibilitat 2/3.
+
+
+### v0.6.289 · helicòpters, expulsió V18 i contactes de vehicles (20/11/2026)
+- [x] **Helicòpters Ka-60 i Mi-24D:** els volums de cap tenen ara el mateix centre X/Z que el seient, en lloc de quedar per davall. La separació vertical del cap deriva del desplaçament anatòmic numèric del V18 (`COMMANDO_HEAD_PIVOT_HEIGHT × .43`) sense factors extra ni escales de l'helicòpter després del seient.
+- [x] **Cabriola d'expulsió:** s'ha eliminat `waistLocal=2.05` i `waistScaled=waistLocal*pl.scale.y`. `player-ejection-pivot.mjs` conserva el punt mundial de la pelvis V18 durant cada volta, fins i tot amb pare COOP girat i escalat. Trajectòria/inèrcia, durada i dany d'aterratge inalterats.
+- [x] **Atropellaments/vehicles que sobrevolen:** `vehicle-specs.mjs` exposa la banda vertical única `pedestrianVehicleHeightCompatible`; la utilitzen `game-core.js` en SOLO i `coop-vehicle-contacts-core.mjs` al Worker. Els helicòpters que volen molt per damunt ja no empenyen ni atropellen per una coincidència 2D; els que volen molt baixos mantenen el contacte.
+- [x] **Ferri i rampes:** cobertura de regressió de vianants sobre coberta, cabina sòlida, distància vertical i separació d'impacte. Es conserva `ferryPedestrianAt` com a excepció al buc quan el jugador camina per la coberta.
+- [x] **Proves de les dues cabines:** dues places, girs, parabrisa abans del cap i contacte després de trencar-lo, model V18 de pelvis sota transformacions COOP i bandes verticals de vehicles.
+- [ ] **Verificació visual manual:** comprovar encaix real de pilots Ka-60/Mi-24D, parabrises i hitboxes; la caixa física ara és geomètricament coherent però el seient de pilot de l'helicòpter no té encara una pell V18 comparable en l'editor. Verificar també amb dos dispositius COOP, ferri ocupat i sortides de vehicles en marxa.
+- [ ] **Blocs pendents:** col·lisions amb els vehicles durant les transicions de plataforma/rampa, enllaç del rider visible dins helicòpters si s'aprova, cap V18 en ajupiment extrem i finalitzar la retirada dels consumidors del rig ocult 2/3.
