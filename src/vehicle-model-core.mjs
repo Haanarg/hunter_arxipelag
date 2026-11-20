@@ -8,7 +8,8 @@ import {installT90MModel} from './t90m-runtime.mjs?rev=t90m-game-double-1';
 import {vehicleSpecs} from './vehicle-specs.mjs?rev=two-wheel-20261119-footprint-1';
 import {createKa60Runtime,KA60_RUNTIME_ID} from './ka60-runtime.mjs?rev=ka60-native-20261120-1';
 import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs?rev=vivid-engine-cover-2';
-import {createStreetfighter25,STREETFIGHTER_25_META} from './streetfighter-25-geometry.mjs';
+import {STREETFIGHTER_25_META} from './streetfighter-25-geometry.mjs';
+import {createNativeStreetfighter25,finalizeNativeBicycle} from './two-wheel-native-models.mjs';
 import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?rev=lod-native-20261120-1';
 import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.mjs?v=0.6.81';
 import {bakeFixedModelScales} from './model-scale-normalization.mjs';
@@ -76,12 +77,9 @@ export const vehicleModels=Object.freeze({
   },
   createFactory(THREE,{box,material,shadows,resources=null,civilianCar=null,gaz:gazFactory=null,truck:truckFactory=null,batching=null}){
     const VS=this.scales,templates=new Map(),distant=createDistantVehicleFactory(THREE,resources);
-    // Proporcions reals respecte al protagonista de 2 m (3,2 unitats):
-    // bicicleta 700C: pneumàtic exterior ~0,69 m (ETRTO 622 + coberta);
-    // streetfighter: distància entre eixos ~1,45 m, selló ~0,81 m.
-    // En aquest motor 1 metre físic correspon a 1,6 unitats visuals.
-    // No augmentar el pilot ni compensar-ho estirant el rig.
-    const BICYCLE_VISUAL_SCALE=.74,MOTORCYCLE_VISUAL_SCALE=1.24;
+    // La mida física aprovada de les dues rodes és intrínseca als
+    // models natius (incloent ancoratges i rotors), no a un grup escalat.
+    // vehicleSpecs.scales encara converteix legítimament les unitats de món.
     const markAnchor=(parent,name,x,y,z)=>{
       const anchor=new THREE.Object3D();anchor.name=name;
       anchor.position.set(x,y,z);parent.add(anchor);return anchor;
@@ -239,28 +237,19 @@ export const vehicleModels=Object.freeze({
         // proves: rodes amb radis intactes, forquilla i manillar units.
         // Malla precompilada; sense GLB ni meshoptimizer en temps de joc.
         const color=appearance.color??0x228fef;
-        const bike=createStreetfighter25(THREE,{color,material});
-        // 1.24: wheelbase 1,563 × 1,24 × 1,2 / 1,6 = 1,45 m reals.
-        // L'antic factor 1,70 l'allargava a 1,99 m i elevava el selló.
-        const visualScale=MOTORCYCLE_VISUAL_SCALE;
-        bike.scale.setScalar(visualScale);
+        // El model es lliura a la fàbrica amb la mida 700/rodes aprovada
+        // ja integrada en malles, pivots i punts reals de subjecció.
+        const bike=createNativeStreetfighter25(THREE,{color,material});
         g.add(bike);
         g.userData.wheels=bike.userData.wheels;
         g.userData.steeringPivots=bike.userData.steeringPivots;
-        // El radi físic de rodament ha d'incloure també el nou factor
-        // visual; els pivots de direcció continuen compartint el mateix gir.
-        for(const w of g.userData.wheels)w.userData.radius*=visualScale*VS.moto;
-        g.userData.motorcycleVisualScale=visualScale;
-        // Preses solidàries amb la forquilla: segueixen el gir del manillar.
-        // El seient i els reposapeus són locals del mateix xassís 3D.
-        const steer=bike.userData.steeringPivots[0];
-        g.userData.twoWheelAnchors={
-          seat:markAnchor(bike,'Moto · centre del seient',0,.88,.54),
-          gripL:markAnchor(steer,'Moto · puny esquerre',-.36,.015,-.075),
-          gripR:markAnchor(steer,'Moto · puny dret',.36,.015,-.075),
-          pedalL:markAnchor(bike,'Moto · reposapeu esquerre',-.24,.42,.16),
-          pedalR:markAnchor(bike,'Moto · reposapeu dret',.24,.42,.16)
-        };
+        // El radi aprovat del model ja és intrínsec; només resta la
+        // conversió VS de les unitats de món, també per a l'animació.
+        for(const w of g.userData.wheels)w.userData.radius*=VS.moto;
+        // Metadada històrica de mida (NO transform de l'Object3D).
+        g.userData.motorcycleVisualScale=1.24;
+        g.userData.motorcycleNativeDimensions=true;
+        g.userData.twoWheelAnchors=bike.userData.twoWheelAnchors;
         g.userData.motorcycleModel='naked-streetfighter-25';
         g.userData.motorcycleColor=color;
         g.userData.motorcycleTriangles=STREETFIGHTER_25_META.triangles;
@@ -801,14 +790,13 @@ export const vehicleModels=Object.freeze({
           markAnchor(crank,'Bicicleta · pedal dret',.24,0,.30);
       }
       if(t==='bici'){
-        // 0,74: diàmetre de la roda ~0,688 m reals per al pilot de 2 m.
-        // La col·lisió de la bicicleta manté marge per a la nova roda.
-        const visual=new THREE.Group();
-        for(const child of [...g.children])visual.add(child);
-        visual.scale.setScalar(BICYCLE_VISUAL_SCALE);
-        g.add(visual);
-        for(const w of g.userData.wheels||[])w.userData.radius*=BICYCLE_VISUAL_SCALE*VS.bici;
-        g.userData.bicycleVisualScale=BICYCLE_VISUAL_SCALE;
+        // La bicicleta 700C ja surt amb el diàmetre adult aprovat:
+        // malles del quadre, direcció, pedalier i preses en unitats natives.
+        // No s'hi deixa cap escala de grup abans del VS de món.
+        finalizeNativeBicycle(THREE,g);
+        for(const w of g.userData.wheels||[])w.userData.radius*=VS.bici;
+        g.userData.bicycleVisualScale=.74; // proporció de referència
+        g.userData.bicycleNativeDimensions=true;
       }
       // La coordenada Y de l'origen no és l'altura dels patins.
       // Les dues barres inferiors estan centrades a y=.48 i tenen radi .075.
