@@ -108,3 +108,13 @@ La segona passada ja usa la dada real `TRUCK_CABIN.enemySeat={x:0.6314,y:1.6728,
 - El controlador publica estat i pes de transició; `humanGamePose` el mescla després de la locomoció. Es preserven física, velocitat, paracaigudes i prioritat del ragdoll després del render.
 - La rèplica COOP rep les banderes `airborne` i `parachuting` de `other.fall`, que abans no li arribaven. Les proves comproven la independència de l'escala 2/3, el blending i la connexió COOP.
 - **Encara pendent:** el ragdoll dels soldats, els altres consumidors de controls V17, retirar `LEGACY_GAME_RIG_SCALE`, prova WebGL i comprovació COOP en dos dispositius.
+
+
+## 0.6.292 — tors, cap i ajupiment V18 autòctons
+
+- `animatePlayerControls` publica un estat numèric V18 propi (yaw de pelvis per a strafe, pitch/yaw de tors, compensació de cap i descens de l'ajupiment). Les interpolacions es calculen des de l'entrada i els mateixos vectors de mira, no llegint `u.lowerBody/u.upperBody/u.head`.
+- La postura visible consumeix les dades en el mateix `humanGamePose()` d'abans, amb el descens extret del perfil físic compartit SOLO/COOP (`PLAYER_STANDING_HEIGHT-PLAYER_CROUCHED_HEIGHT`). El tors compensa el gir Y lateral de la pelvis per conservar la punteria global.
+- El camí de compatibilitat només queda per als estats encara no inicialitzats, els tests històrics i les extremitats/armes que es migraran a continuació. Regres­sió amb torçaments deliberats dels controls antics: cap, tors i descens visibles han de ser invariants.
+- **Pendent:** extreure braços/genolls i muntatges de les armes del controlador antic, després suprimir `LEGACY_GAME_RIG_SCALE`; soldats i civils encara utilitzen adaptadors, i cal validació real WebGL/COOP.
+
+La mateixa 0.6.292 també genera directament els vuit canals V18 de locomoció (malucs, genolls, espatlles i colzes) a partir del moviment, fase, velocitat, gir i ajupiment. Després d'inicialitzar la locomoció, el render deixa de llegir els quaternions de `u.ll/u.lr/u.lkl/u.lkr/u.al/u.ar/u.ael/u.aer`. Els controls encara existeixen per muntatges d'armes i l'antic `createCommando`; aquestes darreres dependències no estan migrades. Prova d'invariància amb les vuit articulacions antigues alterades.

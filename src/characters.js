@@ -152,6 +152,38 @@ const knifePulse=(p,a,m,b)=>p<=a||p>=b?0:
   p<m?knifeEase((p-a)/(m-a)):1-knifeEase((p-m)/(b-m));
 const knifeHeldTurn=(p,a,m,r,b)=>p<=a||p>=b?0:
   p<m?knifeEase((p-a)/(m-a)):p<=r?1:1-knifeEase((p-r)/(b-r));
+// Cinemàtica terrestre V18: els valors que rep la pell són numèrics
+// i no es llegeixen mai de u.ll/u.ar/... del controlador ocult.
+// Els grips de les armes tenen una capa IK canònica posterior.
+function updateNativePlayerLimbPose(u,{phase,move,run,crouch,forward,breath,turnStep,dt}){
+ if(!u.humanGameCanonicalJoints)return;
+ const dir=forward<-.02?-1:1,walk=Math.sin(phase)*move*dir,
+       walk2=Math.cos(phase)*move,
+       armSwing=(.46+.46*run)*walk,
+       spread=.14-.06*move;
+ const hip=(.62+.50*run)*(1-.6*crouch)*walk;
+ const kneeL=-(.08+Math.max(0,-Math.sin(phase)*dir)*(.92+.38*run)*move);
+ const kneeR=-(.08+Math.max(0,Math.sin(phase)*dir)*(.92+.38*run)*move);
+ const targets={
+  hipL:[hip+crouch+.20*turnStep,-(.025+.02*run)*walk2],
+  hipR:[-hip+crouch-.20*turnStep,(.025+.02*run)*walk2],
+  kneeL:[kneeL-1.5*crouch-.22*Math.max(0,turnStep),0],
+  kneeR:[kneeR-1.5*crouch-.22*Math.max(0,-turnStep),0],
+  shoulderL:[-armSwing+.018*breath+.045*(1-move),.06-spread-.018*run],
+  shoulderR:[armSwing-.018*breath+.06*(1-move)+.40*crouch,-.06+spread+.018*run],
+  elbowL:[.20+.60*run+Math.max(0,Math.cos(phase))*.2*move,.075*(1-move)],
+  elbowR:[.23+.60*run+.11*crouch+Math.max(0,-Math.cos(phase))*.2*move,-.065*(1-move)]
+ };
+ const pose=u.humanGameNativeLimbPose??={};
+ const alpha=1-Math.exp(-15*Math.max(0,Number.isFinite(dt)?dt:0));
+ for(const [name,[x,z]]of Object.entries(targets)){
+  if(!Number.isFinite(x)||!Number.isFinite(z))throw Error('Angle V18 invàlid: '+name);
+  const channel=pose[name]??(pose[name]={x:0,z:0});
+  channel.x+=(x-channel.x)*alpha;
+  channel.z+=(z-channel.z)*alpha;
+ }
+ return pose;
+}
 // Estat de braços V18 independent de les rotacions del controlador antic.
 // S'actualitza únicament en animatePlayerControls(), una vegada per tick;
 // la pose visible posterior només consumeix els angles interpolats.
@@ -628,6 +660,30 @@ window.HUNTER_CHARACTERS=Object.freeze({
      // Els braços es relaxen progressivament després d'una passa o carrera.
      const restArmRate=move<.08&&!swimming&&!inVehicle?1-Math.exp(-5.5*dt):limbK;
     u.crouchBlend=(u.crouchBlend||0)+((crouching&&!swimming&&!inVehicle&&!airborne&&!parachuting?1:0)-(u.crouchBlend||0))*(1-Math.exp(-10*dt));
+    // Estat propi V18: el model V17 ocult no governa ni la pelvis,
+    // ni la rotació del tors, ni el coll/cap, ni la cota d'ajupiment.
+    // Comparteix el volum d'ajupiment amb les hitboxes SOLO/COOP.
+    const nativeBody=u.humanGameNativeBodyPose??={
+      pelvisYaw:0,spinePitch:0,spineYaw:0,spineRoll:0,
+      headPitch:0,headYaw:0,headRoll:0,crouchDrop:0
+    };
+    const blendBody=(name,target,rate)=>{
+      if(!Number.isFinite(target))throw Error('Postura V18 invàlida: '+name);
+      nativeBody[name]+=(target-nativeBody[name])*(1-Math.exp(-rate*dt));
+    };
+    const physicalProfile=window.HUNTER_PLAYER_PHYSICAL_PROFILE;
+    const nativeCrouchDelta=physicalProfile
+      ?physicalProfile.PLAYER_STANDING_HEIGHT-physicalProfile.PLAYER_CROUCHED_HEIGHT
+      :.30;
+    blendBody('pelvisYaw',strafeAngle,13);
+    blendBody('crouchDrop',-nativeCrouchDelta*u.crouchBlend,11);
+    // A l'aigua i a l'aire el pont B3/C4 o la postura de paracaigudes
+    // tornen a governar les articulacions; no acumulam la pose terrestre.
+    if(swimming||airborne||parachuting){
+      for(const key of ['spinePitch','spineYaw','spineRoll',
+                         'headPitch','headYaw','headRoll'])
+        blendBody(key,0,11);
+    }
     // ÚNIC selector de natació per al rig de l'editor.
     // Braça B3: qualsevol avanç frontal. Crol C4: avanç ràpid.
     // Quiet, lateral o enrere: moviment antic RECUPERAT SOBRE EL RIG NOU.
@@ -759,6 +815,14 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // amb una inclinació lateral de 10°. Tornada gradual a neutre.
     const assaultHeadTilt=assaultRifleEquipped&&!inVehicle?-Math.PI/18:0;
     u.head.rotation.z+=(assaultHeadTilt-u.head.rotation.z)*k;
+    // El yaw del tors és absolut respecte a la direcció del jugador;
+    // a la pell canònica se li resta el gir lateral de la pelvis.
+    blendBody('spinePitch',-.145*run-.18*crouch,11);
+    blendBody('spineYaw',waistAim,17);
+    blendBody('spineRoll',0,11);
+    blendBody('headPitch',-nativeBody.spinePitch,11);
+    blendBody('headYaw',0,11);
+    blendBody('headRoll',assaultHeadTilt,11);
     player.rotation.x+=(0-player.rotation.x)*k;
     const walk=Math.sin(ph)*move*dir,walk2=Math.cos(ph)*move;
     const hip=(.62+.50*run)*(1-.6*crouch)*walk,
@@ -1041,6 +1105,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.gun.quaternion.copy(rig.idleQ).slerp(rig.aimQ,blend);
     u.pistolSlide.position.z=kick*.065;
     u.pistolFlash.visible=false; // Pistola silenciada.
+    // La caminada/cursa/esquiva/ajupiment V18 es calcula íntegrament
+    // des del moviment i el temps de la simulació, no dels ossos V17.
+    updateNativePlayerLimbPose(u,{
+      phase:ph,move,run,crouch,forward,breath,
+      turnStep:Math.sin(u.turnFootPhase)*u.turnFootMotion,dt
+    });
     // La cursa no afegeix saltets artificials a la posició visual.
     if(move<=.02)player.position.y+=breath*.012;
   }
