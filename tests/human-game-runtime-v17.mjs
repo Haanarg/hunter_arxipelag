@@ -1326,8 +1326,14 @@ assert(actionQuaternionGap(grenadeWeaponQ,grenadeNative.getWorldQuaternion(new T
 controls.animatePlayerControls(actionAvatar,{
  ...controlOptions,dt:.05,forward:0,ammo:12
 });
+assert.equal(actionU.humanGameNativeAction?.kind,'grenade',
+ 'Llançament en curs: la granada completa el seguiment dels braços V18 encara que es desequipi');
+actionU.grenadeThrow=0;
+controls.animatePlayerControls(actionAvatar,{
+ ...controlOptions,dt:.05,forward:0,ammo:12
+});
 assert.equal(actionU.humanGameNativeAction,null,
- 'Sortida del mode granada: cap estat especial enganxat als braços');
+ 'Final del llançament: cap estat especial enganxat als braços');
 controls.animatePlayerControls(actionAvatar,{
  ...controlOptions,dt:.05,forward:0,swimming:true
 });
