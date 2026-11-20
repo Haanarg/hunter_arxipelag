@@ -1,3 +1,8 @@
+**2026-11-20 · v0.6.261 · Normalització Ka-60 i pilots:**
+- [x] Variant A amb dimensió aprovada x2 integrada a geometria i rotors del generador, escala d'arrel 1 al laboratori i al joc; conversió de VS consolidada abans de crear seients.
+- [x] Dos pilots V18 i posicions de cabina generats en unitats natives, sense escala heretada del pare; regressions de contorns, rotors, altures, pilot i canvis VS.
+- [ ] Validació CI, desplegament Cloudflare, prova visual d'helicòpter (rotors, pilots, LOD) i verificació de contactes amb terreny/teulades. El rig antic 2/3, els riders i les altres mides heretades continuen pendents.
+
 **2026-11-20 · v0.6.260 · Normalització de totes les armes visibles del V18:**
 - [x] Pistola, fusell d'assalt, rifle SV-98, bazuca, ganivet, granada i cisalles amb escales fixes incorporades a les geometries i els ancoratges; totes les còpies visibles tenen arrel d'escala 1.
 - [x] Retirat el canvi d'escala per fotograma de les cisalles. Punt real `hunter-pistol-grip-center` a la pistola, també a les proves.
