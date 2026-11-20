@@ -657,14 +657,14 @@ assert.equal(rider.userData.boots.length,2);
  // manté longitud exacta sota rotació i inclincació.
  driver.reset();
  checkMarine(windsurf,null,1.13);
- const boat={t:'llanxa',o:new T.Group(),v:6,pedalPhase:0};
- const boatCaptain=checkMarine(boat,0);
+ const marineBoat={t:'llanxa',o:new T.Group(),v:6,pedalPhase:0};
+ const boatCaptain=checkMarine(marineBoat,0);
  assert(boatCaptain.pose.hands.length===2&&
   boatCaptain.pose.feet.length===2,'Llanxa: els quatre destins IK arriben al V18');
- const boatGuest=checkMarine(boat,1);
+ const boatGuest=checkMarine(marineBoat,1);
  assert(boatGuest.hip.x>boatCaptain.hip.x+.5,
   'COOP llanxa: passatger es desplaça al seient dret');
- checkMarine(boat,0);
+ checkMarine(marineBoat,0);
  const rocketBoat={t:'llanxa_coets',o:new T.Group(),v:4,pedalPhase:0};
  checkMarine(rocketBoat,0);
  const rocketGuest=checkMarine(rocketBoat,1);
@@ -685,7 +685,7 @@ assert.equal(rider.userData.boots.length,2);
  driver.object.updateWorldMatrix(true,true);
  assert(wrist0.distanceTo(marineJoints.wristR.getWorldPosition(new T.Vector3()))<1e-7,
   'La mà V18 de llanxa no rep les rotacions de les extremitats V17');
- driver.update({t:'llanxa',o:boat.o,v:0,pedalPhase:0},1/60,0,600);
+ driver.update({t:'llanxa',o:marineBoat.o,v:0,pedalPhase:0},1/60,0,600);
  assert(!driver.object.userData.riderSeatCanonicalActive&&
   !driver.object.userData.riderSeatCanonicalBody&&
   driver.object.userData.riderFarProxy.visible,
