@@ -13,6 +13,7 @@ import {createNativeStreetfighter25,finalizeNativeBicycle} from './two-wheel-nat
 import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?rev=lod-native-20261120-1';
 import {createNativeHovercraftD} from './hovercraft-native-model.mjs?rev=round-fan-native-20261120-1';
 import {bakeFixedModelScales} from './model-scale-normalization.mjs';
+import {deriveAircraftContactEnvelope,aircraftContactInWorld} from './aircraft-contact-envelope.mjs';
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 export const vehicleModels=Object.freeze({
   ...vehicleSpecs,
@@ -748,6 +749,9 @@ export const vehicleModels=Object.freeze({
         const combat=t==='heli_combat';
         const approvedModel=combat?createMi24Runtime(THREE):createKa60Runtime(THREE,{vehicleScale:VS[t]});
         resources?.retainModel(approvedModel);
+        // Geometria aprovada abans dels pilots i de la conversió mundial VS.
+        const nativeContactEnvelope=deriveAircraftContactEnvelope(THREE,approvedModel);
+        g.userData.aircraftCollisionEnvelope=aircraftContactInWorld(nativeContactEnvelope,VS[t]);
         g.add(approvedModel);
         // Dos pilots del mateix model anatòmic canònic que l'editor,
         // dins els habitacles envidrats. Són figures visuals assegudes;

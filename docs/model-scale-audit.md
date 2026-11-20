@@ -121,3 +121,10 @@ Les regressions comparen totes les malles no circulars de l'hovercraft antic i e
 - Escala física dependent de dany o desintegració de models, si forma part de l'efecte.
 
 **La migració pendent no es pot fer amb un cercar/substituir de multiplicadors:** desalinearia animacions i col·lisions. L'auditoria es manté oberta fins que els casos de la taula tinguin mides natives i regressions verificades visualment.
+
+
+## Contactes natius dels helicòpters · v0.6.275
+
+Els contactes dels Ka-60 i Mi-24 amb sostres, pendents i palmeres passen a utilitzar una envolupant derivada dels vèrtexs del model aprovat **una sola vegada** quan es crea el vehicle, abans de crear-hi els pilots. El disc principal defineix el radi del rotor; les malles estàtiques de la secció central defineixen el radi i la cota superior del fuselatge; el contacte inferior i l'eix de rotor provenen del tren i de l'objecte rotor. El factor VS legítim de conversió a unitats del món només s'aplica en construir les metadades, mai en els bucles de física.
+
+S'han retirat els valors històrics `visualScale=1.5/1.1` dels tres camins de contacte, substituïts pel mateix perfil físic. La nova regressió comprova que les dues variants tenen disc, volum i altures coherents, sense alteracions d'escala sobre les arrels dels vehicles. **Queda pendent** la validació visual de contactes a baixa altura, aterratges en teulades i col·lisions de cua, així com una sessió COOP real.

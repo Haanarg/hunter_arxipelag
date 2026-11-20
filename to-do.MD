@@ -1,3 +1,4 @@
+- [x] **v0.6.275 · Contactes d'helicòpter natius:** El Ka-60 i el Mi-24 deriven l'envolupant de fuselatge i rotor de les geometries aprovades, sense multiplicadors de col·lisió 1,1/1,5; regressió de models afegida. Pendent validar-ho visualment en WebGL amb teulades, pendents, palmeres i COOP.
 **2026-11-20 · v0.6.274 · COOP: traspàs de la sala a la generació del món:**
 - [x] Causa identificada: tancar el WebSocket del lobby marcava `last_seen` 60 segons enrere immediatament, convertia `allReady` en fals i feia descartar `native-start` durant la generació.
 - [x] El canal de sala manté heartbeats mentre el HOST i el GUEST generen el món; només es tanca després d'inicialitzar el transport natiu.

@@ -53,6 +53,7 @@ const suites={
     "btr82-distant-lod.mjs",
     "ferry-proposals.mjs",
     "ka60-game-integration.mjs",
+    "aircraft-contact-envelope.mjs",
     "mi24-proposals.mjs",
     "jet-ski-final.mjs",
     "jet-ski-color-distribution.cjs",

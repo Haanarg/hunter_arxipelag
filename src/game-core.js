@@ -3225,13 +3225,11 @@ function roofNearXZ(b,x,z,r=0){
   return solidRoofAt(b,safeX,zz);
 }
 function helicopterRoofCollision(v,x,z,alt){
-  const scale=VS[v.t]||1,visualScale=v.t==='heli_combat'?1.5:1.1,
-        skid=v.o.userData.skidContactHeight||0,
-        rotor=v.o.userData.rotorContactHeight||((v.t==='heli_combat'?3.3:3.9)*scale),
-        bodyTop=alt+(v.t==='heli_combat'?3.0:3.45)*scale*visualScale,
-        bodyBottom=alt+skid,rotorY=alt+rotor,
-        bodyRadius=(v.t==='heli_combat'?1.45:1.65)*scale*visualScale,
-        rotorRadius=v.t==='heli_combat'?8.65*scale:7.4*scale*visualScale;
+  const contact=v.o.userData.aircraftCollisionEnvelope;
+  if(!contact)throw Error('Helicòpter sense envolupant nativa de col·lisió');
+  const skid=contact.skidHeight,rotor=contact.rotorHeight,
+        bodyTop=alt+contact.bodyTop,bodyBottom=alt+skid,rotorY=alt+rotor,
+        bodyRadius=contact.bodyRadius,rotorRadius=contact.rotorRadius;
   for(const b of buildingCandidates(x,z,rotorRadius+2)){
     const hull=roofNearXZ(b,x,z,bodyRadius);
     if(hull&&bodyBottom<hull.top+.08&&bodyTop>hull.bottom-.08)return hull;
@@ -3241,16 +3239,14 @@ function helicopterRoofCollision(v,x,z,alt){
   return null;
 }
 function helicopterRoofAltitude(v,x,z,fromAlt,toAlt){
-  const skid=v.o.userData.skidContactHeight||0,
-        rotor=v.o.userData.rotorContactHeight||((v.t==='heli_combat'?3.3:3.9)*(VS[v.t]||1)),
-        radius=(v.t==='heli_combat'?1.45:1.65)*(VS[v.t]||1)*(v.t==='heli_combat'?1.5:1.1);
+  const contact=v.o.userData.aircraftCollisionEnvelope;
+  if(!contact)throw Error('Helicòpter sense envolupant nativa de col·lisió');
+  const skid=contact.skidHeight,rotor=contact.rotorHeight,radius=contact.bodyRadius;
   for(const b of buildingCandidates(x,z,radius+2)){
     const roof=roofNearXZ(b,x,z,radius);
     if(!roof)continue;
-    // Descens des de sobre: patins sobre la coberta.
     if(toAlt<fromAlt&&fromAlt+skid>=roof.top-.12&&toAlt+skid<roof.top+.12)
       toAlt=Math.max(toAlt,roof.top-skid+.1);
-    // Ascens des de l'interior: el rotor no travessa la volta.
     else if(toAlt>fromAlt&&fromAlt+rotor<=roof.bottom+.12&&toAlt+rotor>roof.bottom-.12)
       toAlt=Math.min(toAlt,roof.bottom-rotor-.12);
   }
@@ -3259,12 +3255,11 @@ function helicopterRoofAltitude(v,x,z,fromAlt,toAlt){
 // Volum escombrat de l'helicòpter: fuselatge, patins i disc complet
 // de les aspes. La Y evita que una palmera bloquegi un aparell molt alt.
 function helicopterEnvironmentContact(v,from,to){
-  const scale=VS[v.t]||1,visualScale=v.t==='heli_combat'?1.5:1.1,
-    skid=v.o.userData.skidContactHeight||0,
-    rotor=v.o.userData.rotorContactHeight||3.9*scale,
-    rotorRadius=v.t==='heli_combat'?8.65*scale:7.4*scale*visualScale,
-    bodyRadius=(v.t==='heli_combat'?1.45:1.65)*scale*visualScale,
-    bodyTop=(v.t==='heli_combat'?3:3.45)*scale*visualScale,
+  const contact=v.o.userData.aircraftCollisionEnvelope;
+  if(!contact)throw Error('Helicòpter sense envolupant nativa de col·lisió');
+  const skid=contact.skidHeight,rotor=contact.rotorHeight,
+    rotorRadius=contact.rotorRadius,bodyRadius=contact.bodyRadius,
+    bodyTop=contact.bodyTop,
     steps=Math.min(12,Math.max(1,Math.ceil(Math.hypot(to.x-from.x,to.z-from.z)/2.5+Math.abs(to.alt-from.alt)/2.5)));
   for(let i=1;i<=steps;i++){
     const q=i/steps,x=from.x+(to.x-from.x)*q,z=from.z+(to.z-from.z)*q,
