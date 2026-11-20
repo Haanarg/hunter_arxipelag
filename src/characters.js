@@ -611,25 +611,30 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // ha de tenir les dades V18, sense cap fotograma en què el render
     // hagi de copiar la pose del controlador ocult 2/3.
     const joints=u.humanGameCanonicalJoints;
-    if(!joints?.pelvis||!joints?.spine||!joints?.head)
+    const native=!!(joints?.pelvis&&joints?.spine&&joints?.head);
+    // El motor de la partida instal·la l'adaptador V18 abans de crear
+    // el jugador. Els conceptes 3D autònoms, en canvi, només carreguen
+    // characters.js i player-model-core.mjs per dibuixar un marcador:
+    // no necessiten ni poden exigir el rig natiu.
+    if(!native&&window.HUNTER_HUMAN_V17)
       throw Error('Protagonista V18: articulacions canòniques absents');
-    u.humanGameNativeBodyPose={
-      pelvisYaw:0,spinePitch:0,spineYaw:0,spineRoll:0,
-      headPitch:0,headYaw:0,headRoll:0,crouchDrop:0
-    };
-    u.humanGameNativeLimbPose=Object.fromEntries(
-      ['hipL','hipR','kneeL','kneeR','shoulderL','shoulderR','elbowL','elbowR']
-       .map(id=>{
-        if(!joints[id])throw Error('Protagonista V18: falta '+id);
-        return [id,{x:joints[id].rotation.x,z:joints[id].rotation.z}];
-       }));
-    // Fusionam primer les malles originals, abans de muntar les
-    // còpies visibles de les armes al canell i al tors V18.
-    // Així no augmenta el cost de la fase de batching del protagonista.
+    if(native){
+      u.humanGameNativeBodyPose={
+        pelvisYaw:0,spinePitch:0,spineYaw:0,spineRoll:0,
+        headPitch:0,headYaw:0,headRoll:0,crouchDrop:0
+      };
+      u.humanGameNativeLimbPose=Object.fromEntries(
+        ['hipL','hipR','kneeL','kneeR','shoulderL','shoulderR','elbowL','elbowR']
+         .map(id=>{
+          if(!joints[id])throw Error('Protagonista V18: falta '+id);
+          return [id,{x:joints[id].rotation.x,z:joints[id].rotation.z}];
+         }));
+    }
+    // Batching de les malles originals abans dels muntatges d'armes.
     u.batchStats=window.HUNTER_PLAYER_BATCH.optimize(THREE,player);
-    // La creació a peu i la del jugador remot comparteixen la pose,
-    // i mai no entren pel fallback del primer fotograma.
-    u.humanGamePose();
+    // A la partida real la pose V18 sempre queda preparada abans
+    // del primer fotograma. Els marcadors de laboratori no fan IK.
+    if(native)u.humanGamePose();
     return player;
   },
   // Posicionament visual independent de la física: el cap respira
