@@ -628,6 +628,30 @@ window.HUNTER_CHARACTERS=Object.freeze({
      // Els braços es relaxen progressivament després d'una passa o carrera.
      const restArmRate=move<.08&&!swimming&&!inVehicle?1-Math.exp(-5.5*dt):limbK;
     u.crouchBlend=(u.crouchBlend||0)+((crouching&&!swimming&&!inVehicle&&!airborne&&!parachuting?1:0)-(u.crouchBlend||0))*(1-Math.exp(-10*dt));
+    // Estat propi V18: el model V17 ocult no governa ni la pelvis,
+    // ni la rotació del tors, ni el coll/cap, ni la cota d'ajupiment.
+    // Comparteix el volum d'ajupiment amb les hitboxes SOLO/COOP.
+    const nativeBody=u.humanGameNativeBodyPose??={
+      pelvisYaw:0,spinePitch:0,spineYaw:0,spineRoll:0,
+      headPitch:0,headYaw:0,headRoll:0,crouchDrop:0
+    };
+    const blendBody=(name,target,rate)=>{
+      if(!Number.isFinite(target))throw Error('Postura V18 invàlida: '+name);
+      nativeBody[name]+=(target-nativeBody[name])*(1-Math.exp(-rate*dt));
+    };
+    const physicalProfile=window.HUNTER_PLAYER_PHYSICAL_PROFILE;
+    const nativeCrouchDelta=physicalProfile
+      ?physicalProfile.PLAYER_STANDING_HEIGHT-physicalProfile.PLAYER_CROUCHED_HEIGHT
+      :.30;
+    blendBody('pelvisYaw',strafeAngle,13);
+    blendBody('crouchDrop',-nativeCrouchDelta*u.crouchBlend,11);
+    // A l'aigua i a l'aire el pont B3/C4 o la postura de paracaigudes
+    // tornen a governar les articulacions; no acumulam la pose terrestre.
+    if(swimming||airborne||parachuting){
+      for(const key of ['spinePitch','spineYaw','spineRoll',
+                         'headPitch','headYaw','headRoll'])
+        blendBody(key,0,11);
+    }
     // ÚNIC selector de natació per al rig de l'editor.
     // Braça B3: qualsevol avanç frontal. Crol C4: avanç ràpid.
     // Quiet, lateral o enrere: moviment antic RECUPERAT SOBRE EL RIG NOU.
@@ -759,6 +783,14 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // amb una inclinació lateral de 10°. Tornada gradual a neutre.
     const assaultHeadTilt=assaultRifleEquipped&&!inVehicle?-Math.PI/18:0;
     u.head.rotation.z+=(assaultHeadTilt-u.head.rotation.z)*k;
+    // El yaw del tors és absolut respecte a la direcció del jugador;
+    // a la pell canònica se li resta el gir lateral de la pelvis.
+    blendBody('spinePitch',-.145*run-.18*crouch,11);
+    blendBody('spineYaw',waistAim,17);
+    blendBody('spineRoll',0,11);
+    blendBody('headPitch',-nativeBody.spinePitch,11);
+    blendBody('headYaw',0,11);
+    blendBody('headRoll',assaultHeadTilt,11);
     player.rotation.x+=(0-player.rotation.x)*k;
     const walk=Math.sin(ph)*move*dir,walk2=Math.cos(ph)*move;
     const hip=(.62+.50*run)*(1-.6*crouch)*walk,
