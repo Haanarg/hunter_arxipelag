@@ -57,6 +57,14 @@ Els objectius de mans, peus, espatlles i tors es calculen en coordenades mundial
 
 Encara existeixen les talles de cabina aprovades `.825/.82/.63` com a **paràmetres de creació de variants**, no factors sobre el model en execució. Això NO modifica els models enemics ni elimina el controlador ocult `2/3`; cal validació WebGL, animacions de trets i COOP real.
 
+## Tripulants enemics en geometria nativa · v0.6.265
+
+Els ocupants enemics de **cotxe, camió A4.3, moto, patrullera marina i llanxes requisades** ja no reben `root.scale=.31/.43/.52` després de ser creats. El mateix adaptador V18 exposa `normalizeEnemyCrew(root,size)`: consolida la talla aprovada **una única vegada** dins les malles, els pivots, els punts de canó i la cadena articulada. Les arrels es lliuren a escala `(1,1,1)` amb postures i dimensions mundials invariants. La funció és idempotent i rebutja reutilitzar una figura amb una talla diferent.
+
+A `marine-patrol.js`, l'altura d'apuntat ja no consulta `rider.scale.y`: un punt d'apuntat fill de la figura es transforma conjuntament amb ella i després es llegeix en coordenades de la barca. Això manté exactament la cota històrica però elimina la dependència d'un factor aplicat tard. Les armes muntades del cotxe i camió queden fora de la normalització del soldat: no es reescala la boca de foc de la torreta.
+
+Les regressions creen figures reals V18 i comparen silueta, coll/cap, longituds de membres, punts de trets i postures per a les tres talles; també fan exercir les fàbriques reals de **dos tripulants marins i tres vehicles terrestres**, incloent l'origen del canó de moto i l'altura de mira de la patrullera. Aquest tall **no migra** el general, les escales anatòmiques fixes del soldat de combat ni el controlador ocult `2/3`. La verificació WebGL i dues sessions COOP continua pendent.
+
 ## Referències trobades, NO eliminades encara perquè alteren altres contractes
 
 | Codi | Situació | Migració necessària |
@@ -68,7 +76,7 @@ Encara existeixen les talles de cabina aprovades `.825/.82/.63` com a **paràmet
 | `ka60-runtime.mjs`: `KA60_WORLD_SCALE/vehicleScale` | **Consolidat v0.6.261:** cap malla, rotor o pilot hereta escala d'arrel; el ×2 aprovat és intrínsec, i `1/vehicleScale` només converteix les unitats del vehicle abans de crear la tripulació | La col·lisió dinàmica de `game-core.js` continua fent servir altures/factors independents; auditar-la contra la geometria nativa |
 | `game-core.js`: `visualScale=1.5/1.1` pels helicòpters | Contacte amb terreny/teulades obtingut per factors històrics, no per malles | Derivar volum de col·lisió de fuselatge i rotor del model aprovat |
 | `characters.js` i `general-model.js`: `fit*0.8` en comandos i general | Factor de generació de personatges antics vinculat als pivots i als enemics | Produir els soldats/generals amb el rig anatòmic V18 final, conservant dany, ragdoll, COOP i presa d'armes |
-| `enemy-ai.js`: models de tripulants `scale=.31/.43/.52` | Figures enemigues dependents del vehicle; la geometria de la tripulació encara canvia després de la creació | Fàbriques natives per tipus de vehicle i IK de passatger sense escalats de l'arrel |
+| `enemy-ai.js`, `marine-patrol.js`: tripulants `.31/.43/.52` | **Consolidat v0.6.265:** les talles es couen una vegada a malles i punts d'ancoratge V18, arrel 1, i la mira marina llegeix l'ancoratge real | Encara cal validar visualment en WebGL la postura, la punteria, els seients i COOP i migrar, separadament, el general i els combatents a peu |
 | `vehicle-model-core.mjs`: models llunyans GAZ ×1,25 | **Consolidat v0.6.262:** la silueta distant neix de les caixes aprovades del GAZ; no hi ha factor posterior al proxy | La comparació visual de contorns entre el GAZ complet i el LOD en WebGL encara és pendent |
 | `human-game-runtime-v17.mjs` / `human-weapon-preview.mjs`: proxies d'armes escalats | **Consolidat al joc v0.6.260:** les 7 còpies visibles tenen `scale=1`; la mida de l'editor encara és independent | Unificar en una fàbrica compartida els ancoratges natius d'arma de joc i editor, sense eliminar els controls antics abans de migrar-los |
 
