@@ -22,6 +22,12 @@ L'objectiu de l'IK de pistola de `characters.js` ara neix de les articulacions r
 
 **No s'ha retirat encara** el grup de control `2/3` ni les IK de fusells i bazuca: necessiten migrar els grips, boques de foc, física i cinemàtiques abans de suprimir-lo. Això és el primer tall de la fase 1, no la fase completa.
 
+## Migració parcial de suport d'armes llargues · v0.6.259
+
+La mà esquerra V18 del fusell AEK-971, el rifle SV-98 i el bazuca ara utilitza l'IK anatòmica sobre **el punt real de subjecció del model visible** (no els braços del rig antic), amb abast limitat pels ossos natius. Les còpies visuals d'aquestes tres armes tenen l'escala fixa integrada a geometria i pivots (`scale=1` a l'arrel de cada còpia), sense modificar-ne la mida, la rotació, el canó ni la balística. El fusell d'assalt té ara un ancoratge identificable per al guardamà. Les proves d'HUMANS V18 comproven les tres armes i els seus punts de suport.
+
+El braç dret, el controlador físic antic `2/3`, els punts d'origen dels trets i els sistemes de seient continuen compatibles però **no migrats**. Els trets surten exactament dels mateixos punts que a la versió anterior; no es reivindica encara paritat visual del canó en moviment.
+
 ## Referències trobades, NO eliminades encara perquè alteren altres contractes
 
 | Codi | Situació | Migració necessària |

@@ -1,3 +1,8 @@
+**2026-11-20 · 0.6.259 · IK nativa V18 de la mà de suport en armes llargues:**
+- [x] El suport esquerre de fusell AEK-971, SV-98 i bazuca es resol des del punt real del model visible amb les longituds òssies V18 i sense transformar-lo al rig antic.
+- [x] Les còpies visuals de les tres armes incorporen els factors fixos a la geometria i als ancoratges, amb escala d'arrel 1. Punts de guardamà del fusell explicitats i regressions ampliades.
+- [ ] Verificar CI/desplegament i prova gràfica real: subjecció de mà en girs de mira, autoapuntat i angles extrems; encara cal migrar l'IK dreta i els punts balístics abans de retirar el rig 2/3.
+
 **2026-11-20 · 0.6.258 · Normalització d'escales: primera migració d'IK de pistola al V18:**
 - [x] La meta de pistola del protagonista es calcula amb l'espatlla, tors i llargades reals del V18, en coordenades mundials, i només després es converteix a l'espai del controlador antic. Eliminat el target fix 3.10/-1.13 del recorregut habitual del V18.
 - [x] Regressió SOURCE/BUNDLE adaptada per verificar que es fa servir una meta nativa i que queda per sota del cap.
