@@ -1202,4 +1202,49 @@ updateHuman(gameAvatar);
 assert.equal(runtime.nativeRifleMuzzleWorld(T,gameAvatar,'bazooka'),null,
  'El contracte rebutja armes sense boca V18 migrada');
 console.log('PASS native V18 rifle muzzles assault/SV-98 and COOP transforms');
+// Les boques dels canons de pistola silenciada i bazuca són del V18 real,
+// no del controlador ocult ni de la posició provisional del jugador.
+const weaponMuzzleActors=gameAvatar.userData;
+const realCombatSource=readFileSync(new URL('../src/combat.js',import.meta.url),'utf8');
+assert(realCombatSource.includes("nativeWeaponMuzzleWorld?.(THREE,pl,'gun')")&&
+       realCombatSource.includes("nativeWeaponMuzzleWorld?.(THREE,pl,'bazooka')"),
+ 'El combat SOLO consulta les dues boques V18 reals');
+for(const [kind,anchorName] of [['gun','hunter-pistol-muzzle'],
+                                ['bazooka','hunter-bazooka-muzzle']]){
+ for(const other of ['gun','bazooka','assault','sniper'])if(weaponMuzzleActors[other])
+  weaponMuzzleActors[other].visible=other===kind;
+ gameAvatar.position.set(2.3,1.2,-8.5);gameAvatar.rotation.y=.62;
+ updateHuman(gameAvatar);
+ const source=weaponMuzzleActors[kind],visual=weaponMuzzleActors.humanGameCanonicalRig
+  .getObjectByName('Arma canònica · '+kind);
+ const anchor=visual?.getObjectByName(anchorName);
+ assert(visual?.visible&&anchor,'La boca V18 del '+kind+' està definida al generador');
+ assert.deepEqual(visual.scale.toArray(),[1,1,1],
+  'La pistola i el bazuca V18 conserven l\'escala unitària: '+kind);
+ const before=runtime.nativeWeaponMuzzleWorld(T,gameAvatar,kind);
+ assert(before?.distanceTo(anchor.getWorldPosition(new T.Vector3()))<1e-8,
+  'El punt de tret de '+kind+' és l\'extrem del canó visible');
+ source.position.add(new T.Vector3(4,.6,-1));
+ updateHuman(gameAvatar);
+ assert(runtime.nativeWeaponMuzzleWorld(T,gameAvatar,kind).distanceTo(before)<1e-6,
+  'El punt de tret de '+kind+' no depèn de traslladar el controlador ocult');
+ source.position.sub(new T.Vector3(4,.6,-1));
+ const coopParent=new T.Group();
+ coopParent.position.set(-12,3,17);coopParent.rotation.y=-.45;
+ coopParent.scale.setScalar(1.25);coopParent.add(gameAvatar);
+ updateHuman(gameAvatar);
+ assert(runtime.nativeWeaponMuzzleWorld(T,gameAvatar,kind).distanceTo(
+   anchor.getWorldPosition(new T.Vector3()))<1e-7,
+  'La boca de '+kind+' segueix el pare transformat COOP');
+ coopParent.remove(gameAvatar);
+ source.visible=false;updateHuman(gameAvatar);
+ assert.equal(runtime.nativeWeaponMuzzleWorld(T,gameAvatar,kind),null,
+  'El contracte de '+kind+' no pot usar una arma desequipada');
+}
+weaponMuzzleActors.gun.visible=true;
+gameAvatar.position.set(0,0,0);gameAvatar.rotation.y=0;
+updateHuman(gameAvatar);
+assert.equal(runtime.nativeWeaponMuzzleWorld(T,gameAvatar,'knife'),null,
+ 'El contracte V18 no inventa una boca per a armes sense canó');
+console.log('PASS pistol silencer + bazooka muzzle on native V18; hidden guards, no legacy translation, COOP');
 console.log('PASS native crouch translation + V18 pistol fallback without legacy coordinates');

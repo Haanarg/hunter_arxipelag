@@ -1597,8 +1597,31 @@ else if(!cv&&sniperEquipped&&inv.franctirador){
   msg='Rifle: '+sniperAmmo+' cartutxos.';msgT=1.5;
 }
 else if(!cv&&grenadeEquipped&&inv.granada){throwGrenade();return}
-else if(!cv&&bazookaEquipped){if(!inv.bazooka||bazookaAmmo<=0){msg='El bazuca no té coets.';msgT=1.5;return}bazookaAmmo--;fcd=1.05;pl.userData.firePose=.42;const x=P.x+fx_*1.35,y=P.y+1.9-(playerCrouched?.48:0),z=P.z+fz*1.35,base=Math.hypot(1,.01),[ax,ay,az]=window.HUNTER_SHARED_AIMING.limitBazookaHorizontalAim(autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,BAZOOKA_AIM_RANGE,BAZOOKA_AIM_CONE,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR,BAZOOKA_AIM_VERTICAL),fx_,fz);shoot(x,y,z,ax,ay,az,72,COMBAT_BALANCE.weapons.bazooka,18,'pb',mS,3);Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon='bazooka';msg='Bazooka: '+bazookaAmmo+' coets restants.';msgT=2;setDis(false)}
-else if(!cv&&ammo>0){ammo--;fcd=window.HUNTER_SHARED_WEAPONS.weaponCatalog.pistol.cooldown;pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;const x=P.x+fx_*.7,y=P.y+1.5-(playerCrouched?.48:0),z=P.z+fz*.7,[ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,SMALL_ARMS_RANGE.pistol,SMALL_ARMS_AIM_CONE,'pistol',null,130,SMALL_ARMS_AIM_VERTICAL);shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)}
+else if(!cv&&bazookaEquipped){
+ if(!inv.bazooka||bazookaAmmo<=0){msg='El bazuca no té coets.';msgT=1.5;return}
+ bazookaAmmo--;fcd=1.05;pl.userData.firePose=.42;
+ pl.position.x=P.x;pl.position.z=P.z;pl.rotation.y=P.hd;pl.updateMatrixWorld(true);
+ const mouth=window.HUNTER_HUMAN_V17?.nativeWeaponMuzzleWorld?.(THREE,pl,'bazooka');
+ const x=mouth?.x??P.x+fx_*1.35,y=mouth?.y??P.y+1.9-(playerCrouched?.48:0),
+       z=mouth?.z??P.z+fz*1.35,base=Math.hypot(1,.01),
+       [ax,ay,az]=window.HUNTER_SHARED_AIMING.limitBazookaHorizontalAim(
+         autoAimWeaponShot(x,y,z,fx_/base,.01/base,fz/base,BAZOOKA_AIM_RANGE,
+           BAZOOKA_AIM_CONE,'heavy',null,72*HEAVY_SHOT_SPEED_FACTOR,BAZOOKA_AIM_VERTICAL),fx_,fz);
+ shoot(x,y,z,ax,ay,az,72,COMBAT_BALANCE.weapons.bazooka,18,'pb',mS,3);
+ Pj[Pj.length-1].life=3.8;Pj[Pj.length-1].weapon='bazooka';
+ msg='Bazooka: '+bazookaAmmo+' coets restants.';msgT=2;setDis(false)
+}
+else if(!cv&&ammo>0){
+ ammo--;fcd=window.HUNTER_SHARED_WEAPONS.weaponCatalog.pistol.cooldown;
+ pl.userData.firePose=.32;pl.userData.pistolAimTime=.32;pl.userData.pistolShotAge=0;
+ pl.position.x=P.x;pl.position.z=P.z;pl.rotation.y=P.hd;pl.updateMatrixWorld(true);
+ const mouth=window.HUNTER_HUMAN_V17?.nativeWeaponMuzzleWorld?.(THREE,pl,'gun');
+ const x=mouth?.x??P.x+fx_*.7,y=mouth?.y??P.y+1.5-(playerCrouched?.48:0),
+       z=mouth?.z??P.z+fz*.7,
+       [ax,ay,az]=autoAimWeaponShot(x,y,z,fx_,0,fz,SMALL_ARMS_RANGE.pistol,
+         SMALL_ARMS_AIM_CONE,'pistol',null,130,SMALL_ARMS_AIM_VERTICAL);
+ shoot(x,y,z,ax,ay,az,130,COMBAT_BALANCE.weapons.pistol,0,'p',mW,SMALL_ARMS_SCALE)
+}
 else if(!cv&&ammo<=0){melee();return}else return;setDis(false)}
 function segmentAabbT(...args){return window.HUNTER_SHARED_COMBAT.segmentAabbT(...args)}
 function segmentSphereT(...args){return window.HUNTER_SHARED_COMBAT.segmentSphereT(...args)}

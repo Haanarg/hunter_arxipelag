@@ -1491,3 +1491,10 @@
 - [x] **Implementació**: boca visible V18 compartida per al fusell d'assalt i el franctirador (en lloc del canó de control ocult de la SV-98), amb fallback de compatibilitat quan manca l'arma canònica.
 - [ ] **Validació visual**: comprovar projectils, mira x8, ràfegues, objectius elevats i pares COOP en WebGL real; les regressions Node només comproven transformacions.
 - [ ] **Implementació pendent**: pistola, bazuca i altres efectes/trets que encara utilitzen orígens físics aproximats o controlador V17, i després eliminar aquest controlador amb paritat de física, seients i animacions.
+
+
+### v0.6.281 · orígens natius de pistola i bazuca
+- [x] **Codi:** canó real de la pistola amb silenciador i extrem geomètric del bazuca com a ancoratges V18, compartits amb AEK-971/SV-98; fallback únicament quan manca el V18 visible.
+- [x] **Regressions Node:** transformacions de pare COOP, ancoratge d'arma desequipada, no dependència de translació del controlador ocult i escala 1.
+- [ ] **Prova WebGL/COOP:** veure projectils de pistola/bazuca des de la boca visible, incloent ajupir-se, autoaim alt/baix, apropar-se a parets i entrar/sortir de vehicles.
+- [ ] **Retirada del controlador antic:** migrar les postures que falten (ganivet, granada, cisalla i seients), els punts físics associats i les dependències de la física abans d'eliminar el grup ocult `2/3`.

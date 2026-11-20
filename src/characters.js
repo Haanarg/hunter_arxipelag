@@ -100,6 +100,11 @@ function createPlayerPistol(T,gun){
   cap.rotation.x=Math.PI/2;cap.position.set(0,.183,-1.43);slide.add(cap);
   const boreSuppressed=new T.Mesh(new T.CylinderGeometry(.035,.035,.007,12),black);
   boreSuppressed.rotation.x=Math.PI/2;boreSuppressed.position.set(0,.183,-1.46);slide.add(boreSuppressed);
+  // Boca real del silenciador: l'àncora segueix la corredora, no el tors.
+  const pistolMuzzle=new T.Object3D();
+  pistolMuzzle.name='hunter-pistol-muzzle';
+  pistolMuzzle.position.set(0,.183,-1.47);
+  slide.add(pistolMuzzle);
 
   const flash=new T.Group(),flashMat=new T.MeshBasicMaterial({color:0xffd76d,depthWrite:false});
   const cone=new T.Mesh(new T.ConeGeometry(.13,.41,6),flashMat);
@@ -232,6 +237,11 @@ function createSharedBazooka(T,box){
  rear.rotation.x=Math.PI/2;rear.position.z=1.34;bazooka.add(rear);
  const muzzle=new T.Mesh(new T.CylinderGeometry(.3,.24,.24,10),bazDark);
  muzzle.rotation.x=Math.PI/2;muzzle.position.z=-1.52;bazooka.add(muzzle);
+ // Llavis davanters del tub: la geometria aprovada acaba a z=-1.64.
+ const rocketMuzzle=new T.Object3D();
+ rocketMuzzle.name='hunter-bazooka-muzzle';
+ rocketMuzzle.position.set(0,0,-1.65);
+ bazooka.add(rocketMuzzle);
  box(bazooka,.18,.35,.38,0x252b27,0,-.3,.25);
  box(bazooka,.12,.18,.42,0x707873,-.12,.26,-.48);
  box(bazooka,.16,.12,.5,0x707873,.18,.22,.28);

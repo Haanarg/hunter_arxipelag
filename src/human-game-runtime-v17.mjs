@@ -101,21 +101,24 @@ function solveNativeLongGunHand(T,j,grip,side,cache){
  return {distance:end.distanceTo(grip.getWorldPosition(cache.worldGrip)),
   inReach:distance<=upper+lower+.0001};
 }
-// Les coordenades de sortida de projectils pertanyen a la malla V18
-// visible, no al fusell fantasma del controlador que conserva l'autoaim.
-// Retorna null mentre la pell o l'arma no estan preparades; el combat
-// encara té el fallback anterior per a partides en migració.
-const V18_RIFLE_MUZZLES=Object.freeze({
+// Boca balística única per a les quatre armes V18. Mai pren la posició
+// dels controls invisibles: les malles visibles declaren la seva pròpia
+// sortida després de consolidar-ne les dimensions i punts anatòmics.
+// En absència d'arma preparada es conserva la reserva de compatibilitat.
+export const V18_WEAPON_MUZZLES=Object.freeze({
+ gun:'hunter-pistol-muzzle',bazooka:'hunter-bazooka-muzzle',
  assault:'hunter-assault-muzzle',sniper:'hunter-sniper-muzzle'
 });
-export function nativeV18RifleMuzzleWorld(T,player,kind){
- const name=V18_RIFLE_MUZZLES[kind],u=player?.userData;
+export function nativeV18WeaponMuzzleWorld(T,player,kind){
+ const name=V18_WEAPON_MUZZLES[kind],u=player?.userData;
  if(!name||!u?.[kind]?.visible||!u.humanGameCanonicalRig)return null;
  const visual=u.humanGameCanonicalRig.getObjectByName('Arma canònica · '+kind);
  if(!visual?.visible)return null;
  const muzzle=visual.getObjectByName(name);
  return muzzle?muzzle.getWorldPosition(new T.Vector3()):null;
 }
+// Nom antic conservat per als consumidors i les proves dels dos fusells.
+export const nativeV18RifleMuzzleWorld=nativeV18WeaponMuzzleWorld;
 function removeOldMeshes(root,keep=()=>false){
  const removed=[];
  root.traverse(node=>{
@@ -526,8 +529,11 @@ export function createHumanGameRuntimeV17(){
   // Object.freeze(runtime) al final: el valor mesurat s'emmagatzema al
   // tancament i s'exposa amb un getter només lectura.
   get footVisualHeight(){return nativeVisualHeight},
+  nativeWeaponMuzzleWorld(T,player,kind){
+   return nativeV18WeaponMuzzleWorld(T,player,kind);
+  },
   nativeRifleMuzzleWorld(T,player,kind){
-   return nativeV18RifleMuzzleWorld(T,player,kind);
+   return nativeV18WeaponMuzzleWorld(T,player,kind);
   },
   // La malla del pilot de dues rodes és literalment la del jugador a peu.
   // Cap os s'estira per encaixar mans o peus a manillars i pedals.
