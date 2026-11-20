@@ -27,8 +27,8 @@ assert(solo.includes("' · +12 bales, +3 rifle, +2 coets'"),'El missatge de reco
 assert(solo.includes("else if(it.t==='bazooka'){inv.bazooka=1;bazookaAmmo+=3}"));
 assert(solo.includes('bazookaAmmo,scopeActive,'));
 // L'origen de sortida V18 separa el bloc en diverses línies;
- // comprovar la condició real de munició sense exigir minificació.
-assert.match(fire,/else if\\(!cv&&bazookaEquipped\\)\\{\\s*if\\(!inv\\.bazooka\\|\\|bazookaAmmo<=0\\)/);
+// comprovar la condició real de munició sense exigir minificació.
+assert.match(fire,/else if\(!cv&&bazookaEquipped\)\{\s*if\(!inv\.bazooka\|\|bazookaAmmo<=0\)/);
 assert(fire.includes('bazookaAmmo--;'));
 assert(!fire.includes('delete inv.bazooka;bazookaEquipped=false'));
 
