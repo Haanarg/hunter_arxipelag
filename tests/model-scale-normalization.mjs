@@ -9,6 +9,8 @@ import {createTruckModel} from '../src/truck-model.mjs';
 import {createCivilianCarModel} from '../src/civilian-car-model.mjs';
 import {createNativeStreetfighter25,finalizeNativeBicycle,TWO_WHEEL_APPROVED_SIZE} from '../src/two-wheel-native-models.mjs';
 import {createStreetfighter25} from '../src/streetfighter-25-geometry.mjs';
+import {createHovercraftConcept,hovercraftConcepts} from '../src/hovercraft-concepts.mjs';
+import {createNativeHovercraftD,HOVERCRAFT_D_NATIVE_AXES} from '../src/hovercraft-native-model.mjs';
 
 // La conversió és conservativa, no una heurística de dimensions:
  // la forma dibuixada, les unions i la seva animació han de quedar igual.
@@ -229,5 +231,133 @@ for(const [steering,phase]of [[.0,0],[.3,.65],[-.45,1.6]]){
 }
 oldBike.root.scale.setScalar(1);nativeBike.root.scale.setScalar(1);
 console.log('PASS bici i moto natives: ancoratges, rodes, direcció i pedalier sense factors tardans');
+
+// Hovercraft D: la cabina i el casc continuen exactament igual de
+// grans que abans, però el ventilador/ducte/gàbia NO són ovals.
+// El rotor ha de continuar rodó durant TOTA la rotació.
+const legacyHover=createHovercraftConcept(T,hovercraftConcepts[3]);
+legacyHover.scale.set(
+ HOVERCRAFT_D_NATIVE_AXES.x,1,HOVERCRAFT_D_NATIVE_AXES.z);
+const roundHover=createNativeHovercraftD(T);
+assert.deepEqual(roundHover.scale.toArray(),[1,1,1],
+ 'Hovercraft D sense escala global ni corrector no uniforme');
+assert.equal(roundHover.userData.hovercraftNativeDimensions,true);
+assert.equal(roundHover.userData.hovercraftRoundFan,true);
+assert(roundHover.userData.hovercraftRoundMeshCount>=10);
+assert.equal(legacyHover.userData.rotors.length,1);
+const referenceMeshes=[],normalizedMeshes=[];
+legacyHover.traverse(o=>{if(o.isMesh)referenceMeshes.push(o)});
+roundHover.traverse(o=>{if(o.isMesh)normalizedMeshes.push(o)});
+assert.equal(referenceMeshes.length,normalizedMeshes.length,
+ 'El bake natiu no substitueix la geometria artística del D');
+legacyHover.updateWorldMatrix(true,true);
+roundHover.updateWorldMatrix(true,true);
+let comparedHull=0,comparedCircular=0;
+for(let i=0;i<referenceMeshes.length;i++){
+ const old=referenceMeshes[i],fresh=normalizedMeshes[i];
+ assert.equal(old.userData.windowPane,fresh.userData.windowPane,
+  'Vidres i panells es mantenen en el mateix ordre del D');
+ const circular=Boolean(fresh.userData.hoverFanCircular);
+ let insideRotor=false;
+ for(let parent=fresh.parent;parent;parent=parent.parent)
+  if(parent.userData.hoverFanRotor)insideRotor=true;
+ if(circular||insideRotor){++comparedCircular;continue}
+ const a=new T.Box3().setFromObject(old,true),
+       b=new T.Box3().setFromObject(fresh,true);
+ assert(a.min.distanceTo(b.min)<2e-5&&a.max.distanceTo(b.max)<2e-5,
+  'Casc, seients, vidres i antenes mantenen el contorn aprovat: peça '+i);
+ ++comparedHull;
+}
+assert(comparedHull>70&&comparedCircular>12,
+ 'Comparats el casc complet i totes les peces circulars del ventilador');
+const fanDuct=normalizedMeshes.find(o=>o.userData.hoverFanCircular==='duct');
+const originalDuct=referenceMeshes.find(o=>o.userData.hoverFanCircular==='duct');
+assert(fanDuct&&originalDuct,'Ducte circular visible dins el model');
+const nativeDuctSize=new T.Box3().setFromObject(fanDuct,true).getSize(new T.Vector3());
+const oldDuctSize=new T.Box3().setFromObject(originalDuct,true).getSize(new T.Vector3());
+assert(oldDuctSize.x>oldDuctSize.y*1.25,
+ 'La prova reprodueix el ventilador ovalat de la versió antiga');
+assert(Math.abs(nativeDuctSize.x-nativeDuctSize.y)<1e-5,
+ 'Ducte nou amb diàmetre X=Y: ha de ser rodó');
+const circleNames=['rim','cage-ring'];
+for(const name of circleNames){
+ const ring=normalizedMeshes.find(o=>o.userData.hoverFanCircular===name);
+ assert(ring,'Anella protegida: '+name);
+ const d=new T.Box3().setFromObject(ring,true).getSize(new T.Vector3());
+ assert(Math.abs(d.x-d.y)<1e-5,'Anella '+name+' sense ovalització');
+}
+for(const [i,old]of legacyHover.userData.windowPanes.entries()){
+ const current=roundHover.userData.windowPanes[i];
+ assert(current,
+  'Els vidres de l’hovercraft continuen accessibles per impactes: '+i);
+ const a=new T.Box3().setFromObject(old,true),
+       b=new T.Box3().setFromObject(current,true);
+ assert(a.min.distanceTo(b.min)<2e-5&&a.max.distanceTo(b.max)<2e-5,
+  'Vidres col·lisionables del hover en el mateix lloc: '+i);
+}
+for(const [i,old]of legacyHover.userData.seatStations.entries()){
+ const e=old.clone().multiply(new T.Vector3(1.28,1,1.20)),
+       n=roundHover.userData.seatStations[i];
+ assert(n.distanceTo(e)<1e-10,'Seient '+i+' a la posició aprovada');
+}
+assert(roundHover.userData.steeringStation.distanceTo(
+ legacyHover.userData.steeringStation.clone()
+  .multiply(new T.Vector3(1.28,1,1.20)))<1e-10,
+ 'Timó de l’hovercraft a la posició anterior');
+const spinRotor=roundHover.userData.rotors[0],
+      legacyRotor=legacyHover.userData.rotors[0];
+assert(spinRotor.getWorldPosition(new T.Vector3())
+ .distanceTo(legacyRotor.getWorldPosition(new T.Vector3()))<1e-6,
+ 'Centre del ventilador no desplaçat');
+const fanBlades=[];
+spinRotor.traverse(o=>{if(o.isMesh&&o.userData.hoverFanBlade)fanBlades.push(o)});
+assert.equal(fanBlades.length,6,'Sis pales originals del ventilador conservades');
+const radii=()=>{
+ roundHover.updateWorldMatrix(true,true);
+ const center=spinRotor.getWorldPosition(new T.Vector3());
+ const values=[];
+ for(const blade of fanBlades){
+  const pos=blade.geometry.getAttribute('position');
+  for(let i=0;i<pos.count;i++){
+   const world=blade.localToWorld(new T.Vector3().fromBufferAttribute(pos,i));
+   values.push(Math.hypot(world.x-center.x,world.y-center.y));
+  }
+ }
+ return values.sort((a,b)=>a-b);
+};
+roundHover.userData.animate(0);
+const originalRadii=radii();
+for(const time of [.04,.16,.55,1.3]){
+ roundHover.userData.animate(time);
+ const currentRadii=radii();
+ assert.equal(currentRadii.length,originalRadii.length);
+ for(let i=0;i<currentRadii.length;i++)
+  assert(Math.abs(currentRadii[i]-originalRadii[i])<1e-6,
+   'La rotació no deforma ni ovalitza les pales de l’hovercraft');
+ assert(Math.abs(spinRotor.rotation.z-time*19)<1e-8,
+  'Animació original del ventilador conservada');
+}
+const gameHover=make('hover');
+assert.equal(gameHover.userData.hovercraftRoundFan,true);
+assert.equal(gameHover.userData.hovercraftNativeDimensions,true);
+assert.deepEqual(gameHover.scale.toArray(),[1,1,1]);
+assert(!gameHover.userData.modelNonUniformScaleCount,
+ 'Cap escala no uniforme pendent al model que entra al joc');
+assert.equal(gameHover.userData.hovercraftSeatPositions.length,2);
+const worldScale=vehicleSpecs.scales.hover;
+const gameRotor=gameHover.userData.fan;
+const expectedRotor=spinRotor.getWorldPosition(new T.Vector3()).multiplyScalar(worldScale);
+assert(gameRotor.getWorldPosition(new T.Vector3()).distanceTo(expectedRotor)<1e-5,
+ 'Rotor instal·lat al joc en les coordenades aprovades');
+let gameDuctMesh=null;
+gameHover.traverse(o=>{
+ if(o.isMesh&&o.userData.hoverFanCircular==='duct')gameDuctMesh=o;
+});
+assert(gameDuctMesh,'Ducte conservat dins el model del joc');
+const gameDuctSize=new T.Box3().setFromObject(gameDuctMesh,true)
+ .getSize(new T.Vector3());
+assert(Math.abs(gameDuctSize.x-gameDuctSize.y)<1e-5,
+ 'El ventilador del joc continua rodó després de la conversió mundial');
+console.log('PASS hovercraft D natiu: casc, vidres i seients idèntics, ducte circular, anelles i ventilador rodó en girar');
 
 console.log('PASS normalització: conservació de geometria, girs, ancoratges i '+types.length+' vehicles sense escala d’arrel');
