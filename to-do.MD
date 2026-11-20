@@ -1,3 +1,9 @@
+**2026-11-20 · v0.6.272 · Bicicleta i moto amb dimensions de geometria nativa:**
+- [x] Streetfighter 25: el factor aprovat 1,24 queda consolidat a geometria, rodes, direcció i cinc ancoratges abans d'instanciar-lo. Escala d'arrel 1, radi de rodament en unitats del model i VS únicament com a conversió mundial.
+- [x] Bicicleta 700C: quadre, selló, direcció, bieles i pedals finalitzen en geometria nativa 0,74, sense wrapper escalat; radi i altura del selló declarats en unitats pròpies.
+- [x] Proves de regressió: comparació geomètrica amb el model antic, gir de manillar i rodes, fases de pedalier i els cinc punts de subjecció, a més del comparador V18 existent.
+- [ ] Validació GitHub Actions, desplegament Cloudflare i comprovació visual WebGL de les dues rodes. Resten hovercraft no uniforme, col·lisions dels helicòpters i controlador del protagonista 2/3.
+
 **2026-11-20 · v0.6.271 · Normalització de soldats normals, elit i antitanc:**
 - [x] Soldiers a peu V18 amb escala d'arrel 1 després de crear els tres LOD; mides de pell i pivots 0,8 integrades en geometria, també cuirassa i metralladora d'elit.
 - [x] Bazuca afegit després de la creació nativa: tub, preses de dues mans, IK i marcadors de LOD convertits sense alterar el canó. LOD compartits amb memòria cau de geometries entre soldats.
