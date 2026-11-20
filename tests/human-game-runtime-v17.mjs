@@ -939,8 +939,27 @@ assert.equal(rider.userData.boots.length,2);
       }));
       assert(seatError<.012,
        'Ancoratge pilot V18 i hitbox de seient: '+type+'/'+seat+' error '+seatError);
-      assert(headError<.055,
+      assert(headError<.012,
        'Cap del pilot V18 i hitbox balística: '+type+'/'+seat+' error '+headError);
+    }
+    // Tant la fabricació visual com el Worker transformen els ancoratges
+    // amb el mateix sistema de coordenades de vehicle en gir i alçada.
+    craft.position.set(7,3,-8);craft.rotation.y=.73;
+    craft.updateWorldMatrix(true,true);
+    for(let seat=0;seat<2;seat++){
+      const actor=crew[seat],joints={};
+      actor.traverse(o=>{
+        if(o.userData?.humanMotionJoint)joints[o.userData.humanMotionJoint]=o;
+      });
+      const state={t:type,x:7,y:3,z:-8,hd:.73},
+            p=vehicleSeatWorld(state,seat,3),
+            h=vehicleOccupantHeadWorld(state,seat,3);
+      assert(actor.getWorldPosition(new T.Vector3()).distanceTo(
+        new T.Vector3(p.x,p.y,p.z))<.012,
+        'Seient V18 de l\'helicòpter girat '+type+'/'+seat);
+      assert(joints.head.getWorldPosition(new T.Vector3()).distanceTo(
+        new T.Vector3(h.x,h.y,h.z))<.012,
+        'Head hitbox V18 de l\'helicòpter girat '+type+'/'+seat);
     }
   }
   console.log('PASS V18 helicopter cockpit pilots and shared SOLO/COOP hitbox anchors');
