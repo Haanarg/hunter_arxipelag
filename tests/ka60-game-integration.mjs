@@ -23,7 +23,10 @@ assert.deepEqual(game.scale.toArray(),[1,1,1],
 assert.equal(game.userData.ka60Model,KA60_RUNTIME_ID);
 const full=game.userData.distantVehicleLOD.full;
 game.updateMatrixWorld(true);
-assert.equal(count(full),count(approved),'Sense triangles addicionals al model A pròxim');
+const pilots=game.userData.cockpitCrew.reduce((n,p)=>n+count(p),0);
+assert.equal(count(full)-pilots,count(approved),
+ 'El model Ka-60 no guanya triangles; els pilots anatòmics V18 són malles legítimes de cabina');
+assert.equal(game.userData.cockpitCrew.length,2);
 assert(bounds(full).getSize(new T.Vector3()).distanceTo(bounds(approved).getSize(new T.Vector3()))<1e-5,'Escala mundial x2 sense duplicar factor extern');
 assert(Math.abs(game.userData.skidContactHeight-bounds(full).min.y)<1e-5);
 assert(Math.abs(game.userData.rotorContactHeight-game.userData.rotor.getWorldPosition(new T.Vector3()).y)<1e-5);

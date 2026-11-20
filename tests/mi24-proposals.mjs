@@ -33,7 +33,12 @@ assert.equal(game.userData.mi24Model,MI24_RUNTIME_ID);
 assert(!game.userData.apacheModel&&ka60.userData.ka60Model);
 assert.deepEqual(game.scale.toArray(),[1,1,1],
  'El Mi-24 final ja té la mida mundial integrada a la geometria');
-assert.deepEqual(count(game.userData.distantVehicleLOD.full),count(base));
+const cabinCrew=game.userData.cockpitCrew.reduce((a,p)=>{
+ const c=count(p);return {meshes:a.meshes+c.meshes,triangles:a.triangles+c.triangles};
+},{meshes:0,triangles:0});
+const full=count(game.userData.distantVehicleLOD.full);
+assert.deepEqual({meshes:full.meshes-cabinCrew.meshes,triangles:full.triangles-cabinCrew.triangles},
+ count(base),'Només les dues figures de cabina afegeixen malles al Mi-24');
 game.updateMatrixWorld(true);
 assert(Math.abs(game.userData.rotorContactHeight-game.userData.rotor.getWorldPosition(new T.Vector3()).y)<1e-6);
 game.userData.rotor.rotation.y=.7;

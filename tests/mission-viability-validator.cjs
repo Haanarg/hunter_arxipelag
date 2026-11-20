@@ -7,6 +7,9 @@ const {captureMissionData,validateMission}=require('../tools/mission-viability.c
   const data=captureMissionData(game),report=options=>validateMission({...data,...options}),
     has=(r,code,severity='error')=>r.issues.some(i=>i.code===code&&i.severity===severity),
     baseline=report();
+  if(!baseline.ok)console.error('MISSION_REFERENCE_BASELINE',JSON.stringify({
+    seed:data.seed,issues:baseline.issues,checks:baseline.checks.filter(c=>c.status==='failed'||c.ok===false)
+   }).slice(0,12000));
   assert.equal(baseline.ok,true,'The real reference world satisfies the contract');
   const hq=data.compounds.find(c=>c.id==='hq'),b=hq.general.basement;
 
