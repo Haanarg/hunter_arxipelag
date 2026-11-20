@@ -18,6 +18,7 @@ const server=http.createServer((req,res)=>{
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'hunter-browser-'));
 let browser,ws,serial=0;
 const awaiting=new Map(),exceptions=[],consoleErrors=[];
+const cdpTimeoutMs=Number(process.env.HUNTER_SMOKE_CDP_TIMEOUT_MS||150000);
 async function chromePage(){
  for(let i=0;i<160;i++){
   try{
@@ -32,7 +33,7 @@ async function chromePage(){
 function send(method,params={}){
  const id=++serial;
  return new Promise((ok,fail)=>{
-  const timer=setTimeout(()=>{awaiting.delete(id);fail(Error('Timeout '+method))},30000);
+  const timer=setTimeout(()=>{awaiting.delete(id);fail(Error('Timeout '+method+' ('+cdpTimeoutMs+' ms)'))},cdpTimeoutMs);
   awaiting.set(id,result=>{clearTimeout(timer);result.error?fail(Error(JSON.stringify(result.error))):ok(result.result)});
   ws.send(JSON.stringify({id,method,params}));
  });
@@ -46,7 +47,7 @@ async function main(){
  await new Promise(ok=>server.listen(port,'127.0.0.1',ok));
  const chrome=process.env.CHROME_BIN||['/usr/bin/google-chrome','/usr/bin/chromium','/usr/bin/chromium-browser'].find(fs.existsSync);
  if(!chrome)throw Error('Chromium absent');
- browser=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader','--disable-gpu-sandbox','--user-data-dir='+tmp,'--remote-debugging-port='+cdpPort,'--no-first-run',(process.env.HUNTER_SMOKE_URL||'http://127.0.0.1:'+port+'/?quality=desktop&runtime=source')],{stdio:'ignore'});
+ browser=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader','--disable-gpu-sandbox','--disable-background-timer-throttling','--user-data-dir='+tmp,'--remote-debugging-port='+cdpPort,'--no-first-run',(process.env.HUNTER_SMOKE_URL||'http://127.0.0.1:'+port+'/?quality=mobile&runtime=source')],{stdio:'ignore'});
  ws=new WebSocket(await chromePage());
  await new Promise((ok,fail)=>{ws.addEventListener('open',ok,{once:true});ws.addEventListener('error',fail,{once:true})});
  ws.addEventListener('message',event=>{
@@ -63,7 +64,7 @@ async function main(){
  if(!await evalPage('Boolean(window.HUNTER_MENU_READY)'))throw Error('Portada no inicialitzada');
  await evalPage('(()=>{const random=document.getElementById("seedRandom");random.checked=false;random.dispatchEvent(new Event("change",{bubbles:true}));document.getElementById("seedInput").value="148";const map=Array.from(document.getElementsByName("mapSize")).find(el=>el.value==="2");if(map)map.checked=true;document.querySelector("#ini button[data-d]").click();return true})()');
  let state=null;
- for(let i=0;i<700;i++){
+ for(let i=0;i<1800;i++){
   state=await evalPage('JSON.stringify({ready:!!window.HUNTER_READY,gen:window.HUNTER_GENERATION_STATE?.status||null,error:window.HUNTER_GENERATION_STATE?.error||null,loading:document.getElementById("startLoading")?.textContent||"",alert:[...document.querySelectorAll("[role=alert]")].map(x=>x.textContent).join(" "),started:document.body.classList.contains("game-started")})');
   const d=JSON.parse(state);
   if(d.started||d.gen==='error'||/Error de càrrega|Error en iniciar Húnter/.test(d.loading+' '+d.alert))break;
@@ -78,5 +79,7 @@ async function main(){
 main().catch(e=>{console.error('HUNTER_BROWSER_FAILURE',e.stack||e);process.exitCode=1}).finally(()=>{
  for(const fn of awaiting.values())fn({error:{message:'closing'}});
  try{ws?.close()}catch{}
- browser?.kill('SIGKILL');server.close();fs.rmSync(tmp,{recursive:true,force:true});
+ browser?.kill('SIGKILL');server.close();
+ try{fs.rmSync(tmp,{recursive:true,force:true,maxRetries:10,retryDelay:250})}
+ catch(e){console.warn('La carpeta temporal de Chromium no es pot netejar completament:',e.message)}
 });
