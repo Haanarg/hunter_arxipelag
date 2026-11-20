@@ -4,7 +4,7 @@
 - [x] Camió A4.3: mida base .82 integrada al generador; ancoratges de cabina explícits que consumeixen jugador, soldats i enemics, sense truckVisualFit.
 - [x] Figures visuals del camió i helicòpters: versió anatòmica a 1.30 unitats generada amb geometria unitària, sense scale.multiplyScalar en crear-les.
 - [x] Escàner exhaustiu d'operacions de mida a src i inventari raonat a docs/model-scale-audit.md; prevenció de reintroducció dels pegats ja eliminats.
-- [ ] CI i desplegament 0.6.253. Test de la geometria nativa i paritat source/bundle.
+- [x] CI i Cloudflare v0.6.253: GitHub Actions 44693712903, PASS de dimensions natives, GAZ, T-90M, camió, pilots, escaneig de 221 fitxers (184 expressions, 43 fitxers), paritat source/bundle i publicació estable de l'asset dist/hunter-runtime.26a7d5c2418d0ca7.js (commit ff7f7b731a2276b21f1256aacdf2dc330aecceb7).
 - [ ] Continuar migració de rig antic 2/3, riders, bicicletes/motos, hovercraft no uniforme, Ka-60 i col·lisions d'helicòpters (vegeu docs/model-scale-audit.md). No suprimir-los sense adaptar física, seients i IK.
 
 **2026-11-20 · v0.6.252 · Reparació de pistola amb mans per sobre del cap:**
