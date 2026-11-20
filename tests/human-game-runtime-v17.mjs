@@ -341,9 +341,9 @@ assert.equal(rider.userData.boots.length,2);
  });
  const nativePart=driver.object.userData.riderDetailNodes
    .flatMap(root=>{const found=[];root.traverse(n=>{
-     if(n.isMesh&&n.userData.humanCanonicalOriginalGeometry)found.push(n);
+     if(n.isMesh&&n.geometry?.getAttribute?.('position'))found.push(n);
    });return found}).find(Boolean);
- assert(nativePart,'Malla anatòmica pròpia per crear la talla de cabina');
+ assert(nativePart,'El rider disposa de geometria pròpia per a la talla de cabina');
  const partSize=()=>{
   nativePart.geometry.computeBoundingBox();
   return nativePart.geometry.boundingBox.getSize(new T.Vector3());
