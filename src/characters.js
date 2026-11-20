@@ -607,9 +607,29 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.gameSwimSeconds=0;u.gameSwimBlend=0;u.gameSwimActive=false;
     u.gameSwimMode='idle';u.gameSwimPreviousMode='idle';
     u.gameSwimTransition=1;u.gameSwimStyle='lateral-idle';
-    // Fusionam peces rígides germanes sense tocar les articulacions,
-    // els pivots de les armes ni les malles referenciades per l'animació.
+    // Des de la PRIMERA creació el protagonista (inclòs el remot COOP)
+    // ha de tenir les dades V18, sense cap fotograma en què el render
+    // hagi de copiar la pose del controlador ocult 2/3.
+    const joints=u.humanGameCanonicalJoints;
+    if(!joints?.pelvis||!joints?.spine||!joints?.head)
+      throw Error('Protagonista V18: articulacions canòniques absents');
+    u.humanGameNativeBodyPose={
+      pelvisYaw:0,spinePitch:0,spineYaw:0,spineRoll:0,
+      headPitch:0,headYaw:0,headRoll:0,crouchDrop:0
+    };
+    u.humanGameNativeLimbPose=Object.fromEntries(
+      ['hipL','hipR','kneeL','kneeR','shoulderL','shoulderR','elbowL','elbowR']
+       .map(id=>{
+        if(!joints[id])throw Error('Protagonista V18: falta '+id);
+        return [id,{x:joints[id].rotation.x,z:joints[id].rotation.z}];
+       }));
+    // Fusionam primer les malles originals, abans de muntar les
+    // còpies visibles de les armes al canell i al tors V18.
+    // Així no augmenta el cost de la fase de batching del protagonista.
     u.batchStats=window.HUNTER_PLAYER_BATCH.optimize(THREE,player);
+    // La creació a peu i la del jugador remot comparteixen la pose,
+    // i mai no entren pel fallback del primer fotograma.
+    u.humanGamePose();
     return player;
   },
   // Posicionament visual independent de la física: el cap respira
@@ -1079,13 +1099,10 @@ window.HUNTER_CHARACTERS=Object.freeze({
       rig.nativeGoal.y+=up-Math.min(.18,reach*.23);
     }
     const positionPistolIKTarget=()=>{
-      if(nativeAim)rig.aim.copy(rig.nativeGoal);
-      else{
-        // Compatibilitat per a models NO V18. No es fa servir
-        // en cap protagonista amb la pell canònica activa.
-        rig.aim.set(0,3.10+up,-1.13+back);
-        (u.humanGameLegacyRig||player).localToWorld(rig.aim);
-      }
+      // Tota la punteria del protagonista surt de l'espatlla V18 real.
+      // Cap coordenada fixa 3.10/-1.13 ni cap transform del rig ocult.
+      if(!nativeAim)throw Error('Pistola: falten espatlla i canell V18');
+      rig.aim.copy(rig.nativeGoal);
       u.upperBody.worldToLocal(rig.aim);
     };
     if(blend>.001){
