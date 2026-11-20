@@ -2,7 +2,7 @@
 - [x] Detectat desajust d'espai de coordenades després de consolidar el rig físic antic amb escala 2/3: `characters.js` feia `player.localToWorld(0,3.10,-1.13)` i convertia a `upperBody`, augmentant el target d'IK de la pistola més d'una unitat local (en lloc de situar-lo al pit).
 - [x] Els dos punts d'apuntat del canell i de l'arma es transformen ara des de `u.humanGameLegacyRig||player`, mai des de l'arrel sense escala quan existeix el rig antic; no es toquen l'autoaim balístic, les animacions V18, la natació ni l'editor.
 - [x] Prova de regressió afegida a `runtime-bundle-parity`: disparador d'autoapuntat de la pistola, angle/cota real dels canells i error del target en coordenades del rig. Executada en SOURCE i BUNDLE.
-- [ ] Verificar totes les proves CI i publicació Cloudflare.
+- [x] GitHub Actions 44689717316 (segon intent): PASS comparació source/bundle amb autoapuntat pistola; error de target = 0, canells V18 0.57 m sota pivot del cap, i Cloudflare v0.6.252 amb assets estables verificats (commit ecb2fcc4a50268a8e03065c72e280e09f38641c5).
 - [ ] Confirmar visualment a la partida les postures de pistola amb autoapuntat elevat i lateral.
 
 **2026-11-19 · v0.6.251 · Recuperació de les armes al laboratori HUMANS V18:**
