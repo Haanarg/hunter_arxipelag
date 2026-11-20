@@ -192,8 +192,7 @@ function installCanonicalPlayer(T,model){
   torsoQ:new T.Quaternion()
  };
  const weaponWorld=new T.Quaternion(),handWorld=new T.Quaternion(),
-  cutterGrip=new T.Vector3(),runAxis=new T.Vector3(1,0,0),runTarget=new T.Quaternion(),
-  cutterTarget=new T.Vector3(),cutterAxis=new T.Vector3(),cutterDown=new T.Vector3(0,-1,0),
+  runAxis=new T.Vector3(1,0,0),runTarget=new T.Quaternion(),
   gunAim=new T.Vector3(),
   // Orientació LOCAL al canell: evita que la pistola es quedi en un eix mundial
   // fix (nord) quan el protagonista gira sense apuntar.
@@ -297,6 +296,7 @@ function installCanonicalPlayer(T,model){
     joint.rotation.set(angles.x,angles.y,angles.z);
    }
   }
+  u.humanGameNativeCutterSupport=null;
   for(const [kind,scale,y,z]of weapons){
    const source=u[kind];if(!source||!source.visible) {
     if(proxies.has(kind))proxies.get(kind).visible=false;
@@ -323,11 +323,16 @@ function installCanonicalPlayer(T,model){
    }
    const proxy=proxies.get(kind);proxy.visible=true;
    if(kind==='knife'||kind==='grenade'){
-    // Accessori orientat exclusivament en el canell V18. No consulta
-    // el quaternion mundial dels braços ocults que encara controlen
-    // les col·lisions i certs estats de l'animació clàssica.
+    // Accessori orientat exclusivament en el canell V18.
     proxy.quaternion.copy(source.quaternion);
     proxy.userData.humanActionNativeOriented=true;
+   }else if(kind==='cisalla'){
+    // El muntatge local de la cisalla és part de la geometria aprovada,
+    // no una transformació mundial de u.upperBody ni del V17 ocult.
+    const mount=source.userData.nativeV18Mount;
+    if(!mount&&u.cisallaGripL)throw Error('Muntatge V18 cisalla absent');
+    proxy.rotation.set(mount?.rotationX??1.05,0,0);
+    proxy.userData.humanCutterNativeOriented=true;
    }else{
     // Fusells, bazuca i pistola: l'orientació balística actual
     // continua governant l'arma real fins a migrar tot el controlador.
@@ -378,32 +383,30 @@ function installCanonicalPlayer(T,model){
     proxy.position.copy(mountCache.localDesired.sub(mountCache.localBefore));
     proxy.userData.humanLongGunNativeMounted=true;
    }else if(kind==='cisalla'){
-    // La cisalla viu en el tors: mai entre les dues mans.
-    // La mida 0.864 de les cisalles ja s'ha integrat una sola vegada
-    // a la geometria; aquest pivot només determina posició i gir.
-    proxy.position.set(0,.24,-.528);
-    const arms=source.userData.bladeArms;
-    if(arms)for(let i=0;i<2;i++)if(proxy.children[i]&&arms[i])
-     proxy.children[i].rotation.copy(arms[i].rotation);
-    const grasp=(side)=>{
-     const grip=proxy.getObjectByName('hunter-cutter-handle-'+(side==='L'?'left':'right')+'-end');
-     const shoulder=j['shoulder'+side],elbow=j['elbow'+side],wrist=j['wrist'+side];
-     if(!grip||!shoulder||!elbow||!wrist)return;
-     const target=grip.getWorldPosition(cutterTarget);
-     shoulder.parent.worldToLocal(target);
-     const upper=elbow.parent.position.length(),lower=wrist.parent.position.length()+.068;
-     const d=Math.min(upper+lower-.001,Math.max(.001,target.length()));
-     cutterAxis.copy(target).normalize();
-     const along=(upper*upper+d*d-lower*lower)/(2*d);
-     const radius=Math.sqrt(Math.max(0,upper*upper-along*along));
-     const pole=new T.Vector3(side==='R'?.40:-.40,-.7,.12);
-     pole.addScaledVector(cutterAxis,-pole.dot(cutterAxis)).normalize();
-     const bend=cutterAxis.clone().multiplyScalar(along).addScaledVector(pole,radius);
-     shoulder.quaternion.setFromUnitVectors(cutterDown,bend.clone().normalize());
-     const forearm=target.clone().sub(bend).normalize().applyQuaternion(shoulder.quaternion.clone().invert());
-     elbow.quaternion.setFromUnitVectors(cutterDown,forearm);
-    };
-    grasp('L');grasp('R');
+    // El pivot i l'angle són metadades natives del model aprovat;
+    // les mans segueixen els extrems reals amb la IK compartida
+    // de les armes V18. Cap lectura de la pose del controlador ocult.
+    const mount=source.userData.nativeV18Mount;
+    proxy.position.set(mount?.x??0,mount?.y??.24,mount?.z??-.528);
+    const closing=Math.max(0,Math.min(1,u.humanGameNativeCutterClosing||0));
+    for(let i=0;i<2;i++){
+     const blade=proxy.children[i];
+     if(blade)blade.rotation.z=(i?1:-1)*(.16-.24*closing);
+    }
+    const right=proxy.getObjectByName('hunter-cutter-handle-right-end'),
+          left=proxy.getObjectByName('hunter-cutter-handle-left-end');
+    if((!right||!left)&&u.cisallaGripL)
+     throw Error('Mànecs V18 de cisalla absents');
+    if(right&&left){
+     const r=solveNativeLongGunHand(T,j,right,'R',supportCache);
+     const l=solveNativeLongGunHand(T,j,left,'L',supportCache);
+     u.humanGameNativeCutterSupport={
+      rightDistance:r?.distance??null,leftDistance:l?.distance??null,
+      inReach:!!r?.inReach&&!!l?.inReach,
+      closing,rootScale:proxy.scale.x
+     };
+    }
+    proxy.userData.humanCutterNativeMounted=true;
    }else proxy.position.set(0,y,z);
   }
   // Els dos braços V18 es resolen amb el mateix referent geomètric:

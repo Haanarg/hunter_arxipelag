@@ -463,6 +463,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // Eix central al pit, amb les fulles avançades i amunt.
     cisalla.position.set(0,.24,-.42);cisalla.rotation.x=1.05; // Fulles per davant, perpendiculars a la mà.
     cisalla.scale.setScalar(.7);u.upperBody.add(cisalla);cisalla.visible=false;
+    // Muntatge aprovat del V18: dades pròpies del generador, fixades una
+    // sola vegada. Ni l'orientació de les fulles ni la presa visible
+    // han de consultar els quaternions mundials del tors ocult V17.
+    cisalla.userData.nativeV18Mount={
+      x:0,y:.24,z:-.528,rotationX:1.05
+    };
     // Les mans van a les puntes inferiors dels dos mànecs.
     const leftCutGrip=new THREE.Object3D(),rightCutGrip=new THREE.Object3D();
     leftCutGrip.name='hunter-cutter-handle-left-end';
@@ -810,8 +816,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
     }
     u.bazooka.visible=bazooka;u.sniper.visible=sniper;u.assault.visible=assault;u.grenade.visible=(grenade||throwing)&&!u.grenadeReleased;
     u.cisalla.visible=cisalla;
-    window.HUNTER_BOLT_CUTTERS.pose(u.cisalla,
-      cisalla&&u.cisallaCut>0?Math.sin(Math.PI*(1-u.cisallaCut/.46)):0);
+    // Un únic estat numèric de tall alimenta els controls antics i
+    // les dues fulles visibles del V18, sense copiar rotacions del V17.
+    const cutterClosing=cisalla&&u.cisallaCut>0?
+      Math.sin(Math.PI*(1-u.cisallaCut/.46)):0;
+    u.humanGameNativeCutterClosing=cutterClosing;
+    window.HUNTER_BOLT_CUTTERS.pose(u.cisalla,cutterClosing);
     u.gun.visible=!bazooka&&!sniper&&!assault&&!grenade&&!cisalla&&!knifeEquipped&&!melee&&(ammo>0||aiming);
     // Deixem acabar el retrocés de l'última bala: mai es veuen
     // pistola i ganivet superposats durant la transició.

@@ -1506,3 +1506,11 @@
 - [x] **Regressió:** proves sobre la fàbrica de joc real, canell V18, accions i no dependència dels quaternions invisibles, idempotència de render i transicions.
 - [ ] **Validació WebGL/COOP:** ganivet al puny i recorregut d'estocada, granada a la mà i sortida real, transicions en córrer, ajupit, entrar/sortir d'aigua i vehicles.
 - [ ] **Proper bloc:** cisalla i altres accessoris V18 encara lligats al món del control ocult; després ancoratges de seients i física abans de retirar definitivament `LEGACY_GAME_RIG_SCALE=2/3`.
+
+
+### v0.6.283 · cisalla V18 nativa
+- [x] **Implementació:** angle i posicionament de cisalla definits al generador del model i consumits directament pel V18 (sense quaternion mundial V17).
+- [x] **Implementació:** obertura/tancament de les dues fulles al V18 des del valor de tall del tick i dues mans agafant mànecs amb la IK compartida dels fusells.
+- [x] **Regressions:** arma real, escala 1, grips, obertura/tancament, trasllat/rotació artificial del controlador antic, pare transformat COOP i desequipament.
+- [ ] **Validació WebGL/COOP:** comprovar mans agafant les nanses, visualització d'obertura/tall en filferrades, transicions i dos dispositius.
+- [ ] **Proper bloc:** eliminar dependències de postura V17 per a seients, conductors i física abans de retirar `LEGACY_GAME_RIG_SCALE=2/3` i suprimir l'adaptador de compatibilitat.

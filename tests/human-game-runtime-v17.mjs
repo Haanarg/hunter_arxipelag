@@ -1119,12 +1119,15 @@ console.log('PASS game V17 player, enemy soldiers, officer, 2 civilian roles, bo
 // La fàbrica de joc (no un doble de codi) comprova que una direcció
 // temporalment nul·la no envia la pistola cap a l'antic y=3.10.
 // La meta s'ha de derivar del V18 fins i tot el primer fotograma COOP.
+// Cisalla geomètrica real: els marcadors i les dues fulles formen part
+// de la mateixa fàbrica que fa servir el joc, no d'un stub de proves.
+const cuttersTestWindow={};
+runInNewContext(readFileSync(new URL('../src/bolt-cutters.js',import.meta.url),'utf8'),
+ {window:cuttersTestWindow});
 const characterWindow={
  HUNTER_PLAYER_MODEL:playerModel,
  HUNTER_PALETTE:gamePalette,
- HUNTER_BOLT_CUTTERS:{
-  create:()=>new T.Group(),pose:()=>{}
- },
+ HUNTER_BOLT_CUTTERS:cuttersTestWindow.HUNTER_BOLT_CUTTERS,
  HUNTER_PLAYER_BATCH:{optimize:()=>({before:0,after:0})}
 };
 const characterContext={window:characterWindow,THREE:T};
@@ -1340,4 +1343,65 @@ controls.animatePlayerControls(actionAvatar,{
 assert.equal(actionU.humanGameNativeAction,null,
  'Natació desactiva les postures de ganivet i granada');
 console.log('PASS V18 knife 3B/4B and grenade action arms, blade/grenade attachment and legacy independence');
+// La cisalla deixa d'utilitzar la rotació del controlador ocult per
+// orientar el model visible, i deixa de copiar els angles de fulles V17.
+// Les dues mans són resoltes per la mateixa IK dels fusells V18.
+actionU.gameSwimBlend=0;actionU.gameSwimActive=false;
+actionU.grenadeThrow=0;actionU.cisallaCut=.34;
+controls.animatePlayerControls(actionAvatar,{
+ ...controlOptions,dt:.016,forward:0,cisallaEquipped:true
+});
+updateHuman(actionAvatar);
+const cutterSource=actionU.cisalla;
+const cutterVisual=actionU.humanGameCanonicalRig.getObjectByName('Arma canònica · cisalla');
+const cutterPose=actionU.humanGameNativeCutterSupport;
+assert(cutterVisual?.visible&&cutterVisual.parent===actionJ.spine&&
+ cutterVisual.userData.humanCutterNativeMounted&&
+ cutterVisual.userData.humanCutterNativeOriented,
+ 'La cisalla real s\'ancora i s\'orienta al tors V18');
+assert.deepEqual(cutterVisual.scale.toArray(),[1,1,1],
+ 'La cisalla visible conserva escala nativa 1 sense correccions per frame');
+assert(cutterPose&&Number.isFinite(cutterPose.leftDistance)&&
+ Number.isFinite(cutterPose.rightDistance)&&cutterPose.rootScale===1,
+ 'La cisalla comparteix IK nativa en totes dues mans');
+const closing=actionU.humanGameNativeCutterClosing;
+assert(Math.abs(cutterPose.closing-closing)<1e-10,
+ 'El V18 llegeix l\'estat de tall, no els quaternions de fulla antics');
+assert(Math.abs(cutterVisual.children[0].rotation.z-(-.16+.24*closing))<1e-10&&
+ Math.abs(cutterVisual.children[1].rotation.z-(.16-.24*closing))<1e-10,
+ 'Les fulles V18 obren i tanquen directament amb el valor natiu');
+const cutterOrientation=cutterVisual.quaternion.clone();
+const cutterR=actionJ.shoulderR.quaternion.clone(),
+ cutterL=actionJ.shoulderL.quaternion.clone();
+const cutterTipR=cutterVisual.getObjectByName('hunter-cutter-handle-right-end');
+assert(cutterTipR,'La presa de la cisalla V18 existeix al model geomètric');
+const cutterTipWorld=cutterTipR.getWorldPosition(new T.Vector3()).clone();
+cutterSource.rotation.set(-1.7,.7,1.1);
+cutterSource.position.set(10,-3,6);
+cutterSource.userData.bladeArms[0].rotation.z=.88;
+cutterSource.userData.bladeArms[1].rotation.z=-.92;
+actionU.ar.rotation.set(-1.4,1.1,.9);
+actionU.al.rotation.set(.3,-1.2,1.5);
+updateHuman(actionAvatar);
+assert(actionQuaternionGap(cutterOrientation,cutterVisual.quaternion)<1e-10,
+ 'El gir de la cisalla antiga no modifica el muntatge natiu V18');
+assert(actionQuaternionGap(cutterR,actionJ.shoulderR.quaternion)<1e-10&&
+ actionQuaternionGap(cutterL,actionJ.shoulderL.quaternion)<1e-10,
+ 'Ni el control de braços V17 ni la seva orientació mouen la presa de la cisalla');
+assert(cutterTipWorld.distanceTo(cutterTipR.getWorldPosition(new T.Vector3()))<1e-8,
+ 'Els marcadors de mànec V18 no depenen de la translació de la cisalla oculta');
+assert(Math.abs(cutterVisual.children[0].rotation.z-(-.16+.24*closing))<1e-10,
+ 'Modificar les fulles antigues no altera les fulles V18');
+const cutterParent=new T.Group();
+cutterParent.position.set(8,2,-5);
+cutterParent.rotation.y=.66;cutterParent.scale.setScalar(1.2);
+cutterParent.add(actionAvatar);updateHuman(actionAvatar);
+assert(actionU.humanGameNativeCutterSupport?.rootScale===1&&
+ cutterTipR.getWorldPosition(new T.Vector3()).toArray().every(Number.isFinite),
+ 'La cisalla V18 resta estable en un pare COOP girat i escalat');
+cutterParent.remove(actionAvatar);
+cutterSource.visible=false;updateHuman(actionAvatar);
+assert.equal(actionU.humanGameNativeCutterSupport,null,
+ 'Sense cisalla equipada, no queden mans ni suport natiu de cisalla');
+console.log('PASS V18 cutter mount, blade state, two hands IK, legacy independence and COOP');
 console.log('PASS native crouch translation + V18 pistol fallback without legacy coordinates');
