@@ -4504,16 +4504,7 @@ if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
       model,wy(target.x,target.z,elapsed),target.y);
   }
  }
-
- // La B3 ja s'anima sobre el model de l'editor, però l'oceà opac
- // ocultava gairebé tota la tracció (mans 25-50 cm sota superfície).
- // Un petit disc de transparència suau mostra les braçades reals.
- // Es calcula JUST abans de renderitzar: funciona en SOLO i COOP i
- // no toca ni la simulació de l'aigua ni les col·lisions.
- waterUniforms.swimmerPosition.value.set(P.x,P.z);
- waterUniforms.swimmerVisibility.value=started&&swimming&&!cv&&
-   pl.visible&&!deathCinematic?.active&&!victoryCinematic?.active?
-   Math.max(0,Math.min(1,pl.userData.gameSwimBlend||0)):0;
+ // El mar resta opac durant la natació; no es dibuixa cap disc translúcid.
 // El focus de la càmera de la llum es mou en salts petits i coherents;
 // evitam regeneracions per centímetres sense descentrar el shadow map.
 const sunFocusX=victoryCinematic?cam.position.x:P.x,
