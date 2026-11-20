@@ -2,14 +2,14 @@
 // Les posicions i angles s'actualitzen des de animatePlayer(), no en
 // updateMatrixWorld(), càmera, ombres ni render. L'estat es calcula per
 // avatar: el cooperatiu no comparteix rellotge ni quaternions mutables.
-import {poseHumanSwimming,restoreHumanSwimming,HUMAN_SWIM_PROPOSALS} from './human-swim-proposals.mjs?rev=game-swim-v18-native-20261120-1';
+import {poseHumanSwimming,restoreHumanSwimming,HUMAN_SWIM_PROPOSALS} from './human-swim-proposals.mjs?rev=natacio-final-b3-c4-20261120';
 
 export const GAME_SWIM_MODES=Object.freeze({
  idle:'swim-idle',breast:'swim-breast-3',crawl:'swim-crawl-4'
 });
 export const GAME_SWIM_PERIODS=Object.freeze({
- idle:3,breast:HUMAN_SWIM_PROPOSALS.breast[2].period,
- crawl:HUMAN_SWIM_PROPOSALS.crawl[3].period
+ idle:3,breast:HUMAN_SWIM_PROPOSALS.breast.period,
+ crawl:HUMAN_SWIM_PROPOSALS.crawl.period
 });
 const JOINTS=['pelvis','spine','neck','head','hipL','hipR','kneeL','kneeR',
  'ankleL','ankleR','shoulderL','shoulderR','elbowL','elbowR','wristL','wristR'];
