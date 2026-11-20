@@ -71,6 +71,16 @@ assert.equal(HUMAN_PLAYER_GAME_NATIVE_HEIGHT,3.11232,'Alçada nadiua aprovada');
  assert.deepEqual(pureTreeA,pureTreeB,
   'Empentes físiques de vegetació sense consultar la figura humana');
  console.log('PASS physical audit: pure locomotion, terrain walls and deterministic seat hitboxes are independent from legacy rig');
+// En partida real, la fàbrica createPlayer inicialitza el controlador V18
+// abans d'animar, sense deixar entrar per la compatibilitat antiga.
+const liveCharactersSource=readFileSync(new URL('../src/characters.js',import.meta.url),'utf8');
+assert(liveCharactersSource.includes('u.humanGameNativeBodyPose={')&&
+ liveCharactersSource.includes('u.humanGameNativeLimbPose=Object.fromEntries(')&&
+ liveCharactersSource.includes('u.humanGamePose();'),
+ 'La fàbrica del protagonista inicialitza cos i extremitats V18 al primer frame');
+assert(!liveCharactersSource.includes('(u.humanGameLegacyRig||player).localToWorld(rig.aim)')&&
+ !liveCharactersSource.includes('rig.aim.set(0,3.10+up,-1.13+back)'),
+ 'No es pot apuntar amb el punt fix ni amb les coordenades del rig ocult');
 const preview=createHumanProposal(T,'player','a',{visualOnly:true});
 let sourceWeapons=0;preview.traverse(n=>{if(n.userData?.humanWeapon)sourceWeapons++});
 assert.equal(sourceWeapons,0,'La geometria del joc no inclou una còpia de les armes del visor');
