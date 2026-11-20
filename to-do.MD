@@ -7,7 +7,8 @@
 **2026-11-20 · v0.6.269 · Normalització del general a peu i els tres LOD:**
 - [x] L'escala 0,8 del general s'integra en la geometria i als pivots anatòmics DESPRÉS de generar els nivells full/mid/far, sense tocar el seu model artístic, arma, física ni ragdoll.
 - [x] Regressions V18: posicions i mida de cos, cap, braços, genolls, boca de foc, postures alternatives i contorns LOD idèntics a la versió anterior. Verificada la crida a la fàbrica de general; no altera el comando.
-- [ ] Confirmar CI i desplegament Cloudflare de v0.6.269. Inspecció WebGL/COOP del general i variants de LOD; continuar amb soldats ordinaris, elit i bazuca, que s'equipen després de crear el LOD.
+- [x] GitHub Actions 44730492890: models humans V18, proves d'articulacions/LOD, regressions SOLO/COOP, rendiment, compilació, paritat SOURCE/BUNDLE i verificació del desplegament Cloudflare/Paradoxa aprovades (v0.6.269).
+- [ ] Inspecció WebGL/COOP del general i variants de LOD; continuar amb soldats ordinaris, elit i bazuca, que s'equipen després de crear el LOD.
 
 **2026-11-20 · v0.6.267 · Opció per mostrar FPS en pantalla:**
 - [x] Interruptor «Mostrar FPS en pantalla» a Opcions de la portada i de la pausa, separat del diagnòstic complet.
