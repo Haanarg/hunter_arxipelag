@@ -455,6 +455,44 @@ assert.equal(rider.userData.boots.length,2);
  assert(seat.distanceTo(new T.Vector3(-.72*1.3*1.25,
    1.22*1.3*1.25,.42*1.3*1.25))<1e-5,
   'L’ancoratge del pilot GAZ té coordenades mundials, sense inversos');
+ // Cotxes: el PILOT visible és ara la geometria i les articulacions
+ // aprovades del V18, no els vuit segments de braç/cama extensibles.
+ const carSeatBody=driver.object.userData.riderSeatCanonicalBody,
+       carSeatJoints=driver.object.userData.riderSeatCanonicalJoints;
+ assert(driver.object.userData.riderSeatCanonicalActive&&
+  carSeatBody?.userData.humanSeatCanonical&&carSeatJoints?.pelvis,
+  'El conductor del GAZ és un model V18 complet');
+ assert(carSeatBody.visible&&carSeatBody.scale.toArray().every(x=>x===1),
+  'El conductor GAZ conserva arrel nativa i visibilitat V18');
+ assert(Math.abs(carSeatBody.userData.humanSeatNativeHeight-
+  HUMAN_PLAYER_GAME_NATIVE_HEIGHT*.825)<.03,
+  'El V18 del GAZ integra talla de cabina .825 a la geometria');
+ assert(driver.object.userData.riderDetailNodes.every(n=>
+  n===driver.object.userData.pistol||n.visible===false),
+  'Cap segment ni tros de figura V17 visible a la cabina GAZ');
+ assert(carSeatJoints.pelvis.getWorldPosition(new T.Vector3()).distanceTo(
+  driver.object.userData.torso.getWorldPosition(new T.Vector3()))<1e-7,
+  'La pelvis V18 se situa sobre el seient real del GAZ');
+ const seatJointLengths=()=>{
+  const joints=driver.object.userData.riderSeatCanonicalJoints;
+  return ['L','R'].flatMap(side=>[['hip','knee'],['knee','ankle'],
+   ['shoulder','elbow'],['elbow','wrist']].map(([a,b])=>
+    joints[a+side].getWorldPosition(new T.Vector3()).distanceTo(
+     joints[b+side].getWorldPosition(new T.Vector3()))));
+ };
+ const carLengths=seatJointLengths();
+ assert(carLengths.every(x=>x>.2&&x<.8),
+  'El V18 GAZ conserva braços i cames anatòmics sense segments extensibles');
+ const gazPassenger={t:'cotxe',o:gaz,v:0,pedalPhase:0};
+ driver.update(gazPassenger,1/60,1);
+ const gazGuestSeat=driver.object.userData.riderSeatCanonicalHip.clone();
+ assert(gazGuestSeat.x>0&&
+  carSeatJoints.pelvis.getWorldPosition(new T.Vector3()).distanceTo(
+   driver.object.userData.torso.getWorldPosition(new T.Vector3()))<1e-7,
+  'El passatger COOP ocupa seient dret amb V18 i ancoratge correcte');
+ assert(carLengths.every((len,i)=>Math.abs(seatJointLengths()[i]-len)<1e-5),
+  'Conductor i passatger comparteixen longituds nadiues del V18');
+ driver.update(gazPassenger,1/60,0);
  const ownGeometry=nativePart.geometry;
  driver.update({t:'cotxe',o:gaz,v:0,pedalPhase:0},1/60);
  assert.equal(nativePart.geometry,ownGeometry,
@@ -489,11 +527,46 @@ assert.equal(rider.userData.boots.length,2);
   'L’hovercraft incorpora la talla .63 al rig');
  assert(partSize().distanceTo(initialPartSize.clone().multiplyScalar(.63))<.0001,
   'La geometria del pilot hover té les dimensions originals aprovades');
+ const hoverNative=driver.object.userData.riderSeatCanonicalBody,
+       hoverJoints=driver.object.userData.riderSeatCanonicalJoints;
+ assert(hoverNative?.visible&&hoverNative.scale.toArray().every(x=>x===1),
+  'El pilot de l\'hovercraft utilitza únicament la pell canònica V18');
+ assert(Math.abs(hoverNative.userData.humanSeatNativeHeight-
+  HUMAN_PLAYER_GAME_NATIVE_HEIGHT*.63)<.03,
+  'La talla .63 de l\'hovercraft es cuina a la geometria');
+ assert(driver.object.userData.riderDetailNodes.every(n=>
+  n===driver.object.userData.pistol||n.visible===false),
+  'Les peces extensibles V17 queden ocultes a l\'hovercraft');
+ assert(hoverJoints.pelvis.getWorldPosition(new T.Vector3()).distanceTo(
+  driver.object.userData.torso.getWorldPosition(new T.Vector3()))<1e-7,
+  'La pelvis del pilot V18 coincideix amb el seient de l\'hovercraft');
  const hoverSeat=driver.object.userData.torso.getWorldPosition(new T.Vector3());
  assert(hoverSeat.distanceTo(new T.Vector3(-.30*1.3,1.58*1.3,
   -1.08*1.3))<1e-5,'Pilot hover sobre el seient real');
  driver.update({t:'hover',o:hover,v:0,pedalPhase:0},1/60,1);
  const passengerSeat=driver.object.userData.torso.getWorldPosition(new T.Vector3());
+ const hoverGuestJoints=driver.object.userData.riderSeatCanonicalJoints;
+ assert(hoverGuestJoints===hoverJoints&&
+  hoverGuestJoints.pelvis.getWorldPosition(new T.Vector3()).distanceTo(
+    passengerSeat)<1e-7,
+  'El COOP guest de l\'hovercraft manté el mateix rig i cambia només de seient');
+ assert(driver.object.userData.riderSeatCanonicalPose.hands.length===2&&
+  driver.object.userData.riderSeatCanonicalPose.feet.length===2,
+  'La IK de pilot i passatger rep dues mans i dos peus natius');
+ const hoverNativeLengths=seatJointLengths();
+ driver.update({t:'hover',o:hover,v:0,pedalPhase:0},1/60,0);
+ assert(hoverNativeLengths.every((len,i)=>
+  Math.abs(seatJointLengths()[i]-len)<1e-5),
+  'Els ossos V18 mantenen longitud sota canvi COOP pilot/pass');
+ const seatParent=new T.Group();
+ seatParent.position.set(-8,3,6);seatParent.rotation.y=.65;
+ seatParent.scale.setScalar(1.2);seatParent.add(driver.object);
+ driver.object.updateWorldMatrix(true,true);
+ assert(hoverJoints.pelvis.getWorldPosition(new T.Vector3()).distanceTo(
+  driver.object.userData.torso.getWorldPosition(new T.Vector3()))<1e-7,
+  'Un pare COOP transformat no desencaixa la pelvis V18 del seient');
+ seatParent.remove(driver.object);
+
  assert(passengerSeat.distanceTo(new T.Vector3(.30*1.3,1.58*1.3,
   -1.08*1.3))<1e-5,'Passatger COOP hover a la segona plaça');
  const hoverShot=driver.firePistol({t:'hover',o:hover},()=>null);

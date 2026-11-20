@@ -558,6 +558,33 @@ export function createHumanGameRuntimeV17(){
   nativeRifleMuzzleWorld(T,player,kind){
    return nativeV18WeaponMuzzleWorld(T,player,kind);
   },
+  // Figura V18 per a conductor i passatger de cabina. La talla
+  // definitiva es cuina en generar geometria i pivots; cap escala sobre
+  // l'arrel ni transform del rig antic. Una variant immutable per cabina,
+  // instanciada només quan es necessita i reutilitzada als fotogrames.
+  createSeatRider(T,size=1){
+   if(!Number.isFinite(size)||size<=0)throw Error('Talla nativa de seient invàlida');
+   const nativeHeight=HUMAN_PLAYER_GAME_NATIVE_HEIGHT*size;
+   const root=createHumanProposal(T,'player','a',{visualOnly:true,nativeHeight}),joints={};
+   root.traverse(node=>{
+    if(node.userData?.humanMotionJoint)joints[node.userData.humanMotionJoint]=node;
+   });
+   for(const id of ['pelvis','spine','neck','head','hipL','hipR',
+     'kneeL','kneeR','ankleL','ankleR','shoulderL','shoulderR',
+     'elbowL','elbowR','wristL','wristR'])
+    if(!joints[id])throw Error('Rider de cabina V18: falta '+id);
+   if(root.scale.toArray().some(x=>Math.abs(x-1)>1e-12))
+    throw Error('Rider de cabina amb escala d’arrel');
+   root.updateWorldMatrix(true,true);
+   const height=new T.Box3().setFromObject(root).getSize(new T.Vector3()).y;
+   if(Math.abs(height-nativeHeight)>.03)
+    throw Error('Rider de cabina no conserva talla nativa: '+height);
+   const pelvisRestY=joints.pelvis.getWorldPosition(new T.Vector3()).y;
+   root.userData.humanSeatCanonical=true;
+   root.userData.humanSeatNativeHeight=height;
+   root.userData.humanSeatNativeSize=size;
+   return {root,joints,height,pelvisRestY};
+  },
   // La malla del pilot de dues rodes és literalment la del jugador a peu.
   // Cap os s'estira per encaixar mans o peus a manillars i pedals.
   createTwoWheelRider(T){

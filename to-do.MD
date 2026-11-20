@@ -1514,3 +1514,11 @@
 - [x] **Regressions:** arma real, escala 1, grips, obertura/tancament, trasllat/rotació artificial del controlador antic, pare transformat COOP i desequipament.
 - [ ] **Validació WebGL/COOP:** comprovar mans agafant les nanses, visualització d'obertura/tall en filferrades, transicions i dos dispositius.
 - [ ] **Proper bloc:** eliminar dependències de postura V17 per a seients, conductors i física abans de retirar `LEGACY_GAME_RIG_SCALE=2/3` i suprimir l'adaptador de compatibilitat.
+
+
+### v0.6.284 · pilots i passatgers V18 de cabina
+- [x] **Implementació:** cotxes, GAZ Tigr-M i hovercraft amb malla de personatge canònica V18 per a tots dos seients SOLO/COOP, talla cuinada al generador sense escala d'arrel ni d'extremitats.
+- [x] **Implementació:** IK nativa de quatre extremitats cap als objectius de volant, seients i pedals; reposicionament de pelvis a l'ancoratge autoritatiu de seient. Segments V17 ocults, amb reserva exclusivament per als tirs i compatibilitat.
+- [x] **Regressió:** talla .825/.82/.63, bones V18 de llargada constant, seient pilot/passatger COOP, figura sense duplicats, pare girat/escalat, resta de variants conservades.
+- [ ] **Validació WebGL:** mans realment tocant volant/comandament, genolls sota salpicader, cap sota sostre, pistola al puny de rider V18, llunyania LOD, dos jugadors en COOP i rendiment.
+- [ ] **Proper bloc:** migrar models/poses dels ocupants de llanxes, rems, moto aquàtica i windsurf, posteriorment desacoblar el tir del rider i la física abans d'eliminar els controladors antics V17.
