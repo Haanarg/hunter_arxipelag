@@ -201,13 +201,14 @@ for(const role of ['player','soldier','rocket','elite','general']){
   // Fusell i bazuca: mà de suport V18 i geometries visuals nadiues.
   // Prova sense el sistema d'armes clàssic: només ancoratges geomètrics.
   const longKinds={
-   assault:'hunter-assault-foregrip',
-   sniper:'hunter-sniper-foregrip',
-   bazooka:'hunter-bazooka-left-support-grip'
+   assault:['hunter-assault-trigger-grip','hunter-assault-foregrip'],
+   sniper:['hunter-sniper-trigger-grip','hunter-sniper-foregrip'],
+   bazooka:['hunter-bazooka-right-underbarrel-grip',
+    'hunter-bazooka-left-support-grip']
   };
   u.gun.visible=false;
   u.ar.rotation.x=1.1;u.aer.rotation.x=.85;
-  for(const [kind,gripName]of Object.entries(longKinds)){
+  for(const [kind,[rightName,gripName]]of Object.entries(longKinds)){
    const weapon=new T.Group();
    weapon.scale.setScalar(.84);weapon.visible=true;
    const skin=new T.Mesh(new T.BoxGeometry(.15,.17,.85),
@@ -215,18 +216,27 @@ for(const role of ['player','soldier','rocket','elite','general']){
    weapon.add(skin);
    const grip=new T.Object3D();
    grip.name=gripName;grip.position.set(-.35,-.12,-.30);weapon.add(grip);
+   const right=new T.Object3D();
+   right.name=rightName;right.position.set(.03,-.10,.24);weapon.add(right);
    u.upperBody.add(weapon);u[kind]=weapon;
    updateHuman(g);
    const proxy=canonical.getObjectByName('Arma canònica · '+kind);
    assert(proxy&&proxy.userData.humanNativeWeaponScale,'Còpia d’arma nativa '+kind);
    assert.deepEqual(proxy.scale.toArray(),[1,1,1],
-    'Cap factor visual de fusell al canell V18: '+kind);
+    'Cap factor visual de fusell al V18: '+kind);
+   assert.equal(proxy.parent,bones.spine,
+    'La còpia de l’arma és filla del tors, mai del canell: '+kind);
+   assert(proxy.userData.humanLongGunNativeMounted,
+    'El punt de subjecció dret es deriva de l’espatlla V18: '+kind);
    const pose=u.humanGameNativeLongGunSupport;
    assert.equal(pose?.weapon,kind,'IK V18 de mà esquerra activa '+kind);
-   assert(pose.distance<.24,'La mà esquerra segueix el guardamà real '+kind+
+   assert(pose.distance<.13,'La mà esquerra segueix el guardamà real '+kind+
     ': error '+pose.distance);
-   assert(bones.shoulderL.quaternion.toArray().every(Number.isFinite),
-    'IK del V18 finita '+kind);
+   assert(pose.rightDistance<.13,'La mà dreta segueix el gallet real '+kind+
+    ': error '+pose.rightDistance);
+   for(const side of ['L','R'])
+    assert(bones['shoulder'+side].quaternion.toArray().every(Number.isFinite),
+     'IK de les dues mans V18 finita '+side+' '+kind);
    weapon.visible=false;
   }
   u.gun.visible=true;
