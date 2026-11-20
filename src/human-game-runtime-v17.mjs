@@ -257,21 +257,43 @@ function installCanonicalPlayer(T,model){
   // La geometria visual està escalada UN sol cop quan es crea.
   // El transform de compatibilitat dels controls antics queda separat
   // i mai altera l'escala del model animat.
-  const dy=u.lowerBody.position.y-pelvisY;
-  // Projectam el desplaçament real del control ocult dins l'espai
-  // propi del V18. Això respecta transformacions de pare, girs i VS
-  // sense cap escala correctora explícita a la pell visible.
-  if(Math.abs(dy)>1e-9){
-   controlCrouchWorld.set(0,dy,0);
-   u.lowerBody.parent.localToWorld(controlCrouchWorld);
-   model.worldToLocal(controlCrouchWorld);
-   visual.position.y=controlCrouchWorld.y*crouchRatio;
+  const body=u.humanGameNativeBodyPose;
+  if(body){
+   // Les animacions reals de partida (incloses les rèpliques COOP) ja
+   // publiquen la postura V18 en unitats natives, sense lectura del
+   // controlador ocult ni projecció de la seva escala 2/3.
+   for(const key of ['pelvisYaw','spinePitch','spineYaw','spineRoll',
+                     'headPitch','headYaw','headRoll','crouchDrop'])
+    if(!Number.isFinite(body[key]))throw Error('Postura corporal V18 invàlida: '+key);
+   visual.position.y=body.crouchDrop;
+   j.pelvis.rotation.set(0,body.pelvisYaw,0);
+   j.spine.rotation.set(body.spinePitch,body.spineYaw-body.pelvisYaw,body.spineRoll);
+   j.spine.position.y=actualSpineY;
+   j.head.rotation.set(body.headPitch,body.headYaw,body.headRoll);
+   // Les extremitats continuen sincronitzades temporalment amb els
+   // canals de compatibilitat; les postures B3/C4, aèries i les IK
+   // d'armes V18 els sobreescriuen amb les seves articulacions natives.
+   for(const [id,bone]of Object.entries(control)){
+    if(id==='head')continue;
+    j[id].quaternion.copy(rest[id]).multiply(bone.quaternion);
+   }
+  }else{
+   // Compatibilitat per als tests de patrons antics i les factories
+   // que encara alimenten controls sense haver avançat un tick.
+   const dy=u.lowerBody.position.y-pelvisY;
+   if(Math.abs(dy)>1e-9){
+    controlCrouchWorld.set(0,dy,0);
+    u.lowerBody.parent.localToWorld(controlCrouchWorld);
+    model.worldToLocal(controlCrouchWorld);
+    visual.position.y=controlCrouchWorld.y*crouchRatio;
+   }
+   j.pelvis.quaternion.copy(lowerRest).multiply(u.lowerBody.quaternion);
+   j.spine.quaternion.copy(j.pelvis.quaternion).invert()
+    .multiply(upperRest).multiply(u.upperBody.quaternion);
+   j.spine.position.y=actualSpineY+((u.upperBody.position.y-spineY)-dy)*crouchRatio;
+   for(const [id,bone]of Object.entries(control))
+    j[id].quaternion.copy(rest[id]).multiply(bone.quaternion);
   }
-  j.pelvis.quaternion.copy(lowerRest).multiply(u.lowerBody.quaternion);
-  j.spine.quaternion.copy(j.pelvis.quaternion).invert()
-   .multiply(upperRest).multiply(u.upperBody.quaternion);
-  j.spine.position.y=actualSpineY+((u.upperBody.position.y-spineY)-dy)*crouchRatio;
-  for(const [id,bone]of Object.entries(control))j[id].quaternion.copy(rest[id]).multiply(bone.quaternion);
   // Caminar i córrer pertanyen al mateix motor visible que l'editor.
   // Els pivots antics resten com a controls de física, armes i vehicles.
   const run=Math.max(0,Math.min(1,u.runBlend||0));
