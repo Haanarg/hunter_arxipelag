@@ -73,6 +73,14 @@ Es conserven els mateixos objectes articulats, els valors de gir/animació, les 
 
 **No hem migrat encara els soldats a peu:** `equipBazooka` pot afegir el tub i els punts d'IK després que s'hagi creat el LOD. Normalitzar-ne l'arrel sense adaptar aquesta ruta alteraria la posició del bazuca. Així mateix queden pendents el rig ocult del protagonista, els volums dels helicòpters i la validació visual WebGL/COOP.
 
+## Infanteria normal, elit i antitanc amb escala nativa · v0.6.271
+
+Els soldats a peu del joc tenen ara **l'arrel a escala 1**. La mida aprovada 0,8 es consolida en la geometria, els pivots anatòmics i les tres variants LOD *després* de crear el soldat, inclosa la cuirassa i la metralladora d'elit. Els comandos que encara s'utilitzen com a figures de tripulació mantenen el contracte de la fàbrica original; en entrar al vehicle la conversió de cabina és independent.
+
+El bazuca de les torres pot equipar-se després d'aquesta normalització: la seva posició, llargada, preses de les dues mans, longitud del solver IK i tubs visibles als LOD s'expressen ja en coordenades natives. La boca de foc i les mides mundials són les mateixes que a la versió anterior. Les geometries comunes fusionades i els models llunyans comparteixen una memòria cau de peces normalitzades per no multiplicar els bufers de cada patrulla.
+
+Les proves realitzen una comparació geomètrica del soldat antic i el nou, inclòs el bazuca equipat tard, el seu canó, les preses i els tres LOD; validen el cache de geometries i les fàbriques de soldat, elit i general. **No es canvia** la física, la IA, els PV, la requisició ni el controlador ocult V18 ×2/3. Queden per revisar visualment els canvis de LOD i les animacions de disparar.
+
 ## Referències trobades, NO eliminades encara perquè alteren altres contractes
 
 | Codi | Situació | Migració necessària |
@@ -83,7 +91,7 @@ Es conserven els mateixos objectes articulats, els valors de gir/animació, les 
 | `vehicle-model-core.mjs`: `hover.scale=(1.28,1,1.20)` | Escala no uniforme i cabina amb posicions compensades; no commuta amb rotació del ventilador | Generar nativament un hovercraft amb l'amplada/llargada aprovades, incloent les aspes animades i els ancoratges, sense shear |
 | `ka60-runtime.mjs`: `KA60_WORLD_SCALE/vehicleScale` | **Consolidat v0.6.261:** cap malla, rotor o pilot hereta escala d'arrel; el ×2 aprovat és intrínsec, i `1/vehicleScale` només converteix les unitats del vehicle abans de crear la tripulació | La col·lisió dinàmica de `game-core.js` continua fent servir altures/factors independents; auditar-la contra la geometria nativa |
 | `game-core.js`: `visualScale=1.5/1.1` pels helicòpters | Contacte amb terreny/teulades obtingut per factors històrics, no per malles | Derivar volum de col·lisió de fuselatge i rotor del model aprovat |
-| `characters.js` i `general-model.js`: `fit*0.8` en comandos i general | **General consolidat al joc v0.6.269:** escala 0,8 integrada al cos i als tres LOD amb arrel 1; el comando encara utilitza el factor en crear-se | Migrar soldats ordinaris, elit i soldats amb bazuca, incloent armes equipades després del LOD i comparador d'editor |
+| `characters.js` i `general-model.js`: `fit*0.8` dels comandos i del general | **Consolidat en soldats a peu i general v0.6.271:** arrel 1 i geometries finals dels tres LOD, incloent equipament antitanc afegit després | El comando de la fàbrica de tripulació manté l'ajust previ fins a convertir-se a cabina; validació visual WebGL/COOP pendent |
 | `enemy-ai.js`, `marine-patrol.js`: tripulants `.31/.43/.52` | **Consolidat v0.6.266:** les talles es couen una vegada a malles i punts d'ancoratge V18, arrel 1, i la mira marina llegeix l'ancoratge real | Encara cal validar visualment en WebGL la postura, la punteria, els seients i COOP i migrar, separadament, el general i els combatents a peu |
 | `vehicle-model-core.mjs`: models llunyans GAZ ×1,25 | **Consolidat v0.6.262:** la silueta distant neix de les caixes aprovades del GAZ; no hi ha factor posterior al proxy | La comparació visual de contorns entre el GAZ complet i el LOD en WebGL encara és pendent |
 | `human-game-runtime-v17.mjs` / `human-weapon-preview.mjs`: proxies d'armes escalats | **Consolidat al joc v0.6.260:** les 7 còpies visibles tenen `scale=1`; la mida de l'editor encara és independent | Unificar en una fàbrica compartida els ancoratges natius d'arma de joc i editor, sense eliminar els controls antics abans de migrar-los |

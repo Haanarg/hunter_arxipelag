@@ -842,6 +842,95 @@ assert.throws(()=>runtime.normalizeOnFootEnemy(officerNative,{role:'soldier'}),
  /Rol d’enemic a peu canviat/);
 console.log('PASS general V18 natiu: escala, cap, braços, genolls, arma i LOD sense canvis');
 
+// Soldats normals/elit: arrel 0.8 eliminada DESPRÉS del LOD i sense
+// clonar repetidament les geometries compartides de malles fusionades.
+const sharedInfantryMid=new T.BoxGeometry(.76,2.58,.53),
+      sharedInfantryFar=new T.BoxGeometry(.61,2.27,.48);
+function infantryFixture(){
+ const g=nativeSoldier(),u=g.userData;
+ const full=new T.Group();full.name='hunter-enemy-full';
+ for(const child of [...g.children])full.add(child);
+ g.add(full);
+ const mat=new T.MeshStandardMaterial({color:0x52664c});
+ const mid=new T.Mesh(sharedInfantryMid,mat),
+       far=new T.Mesh(sharedInfantryFar,mat);
+ mid.position.y=1.45;far.position.y=1.30;
+ g.add(mid,far);
+ u.enemyFullRoot=full;u.enemyMidMesh=mid;u.enemyFarMesh=far;
+ u.profile='enemy-commando-approved';
+ g.position.set(2,.6,-9);g.rotation.y=.27;g.scale.setScalar(.8);
+ u.ar.rotation.x=1.18;u.aer.rotation.x=.52;
+ u.ll.rotation.x=.76;u.lkl.rotation.x=-1.18;
+ return g;
+}
+const infantryLegacy=infantryFixture(),infantryNative=infantryFixture();
+const expectedInfantry=new T.Box3().setFromObject(infantryLegacy,true);
+runtime.normalizeOnFootEnemy(infantryNative,{role:'soldier'});
+assert.deepEqual(infantryNative.scale.toArray(),[1,1,1],
+ 'Infanteria V18: no cal escala d’arrel');
+assert.equal(infantryNative.userData.humanOnFootNativeScale,.8);
+let intrinsicInfantry=new T.Box3().setFromObject(infantryNative,true);
+assert(intrinsicInfantry.min.distanceTo(expectedInfantry.min)<1e-5&&
+ intrinsicInfantry.max.distanceTo(expectedInfantry.max)<1e-5,
+ 'La infanteria normal preserva el contorn, amb els mateixos LOD');
+for(const joint of ['head','ar','aer','ll','lkl']){
+ assert(infantryLegacy.userData[joint].getWorldPosition(new T.Vector3())
+  .distanceTo(infantryNative.userData[joint].getWorldPosition(new T.Vector3()))<1e-6,
+  'Ossos V18 de soldat al mateix lloc: '+joint);
+}
+const secondInfantry=infantryFixture();
+runtime.normalizeOnFootEnemy(secondInfantry,{role:'soldier'});
+assert.equal(secondInfantry.userData.enemyMidMesh.geometry,
+ infantryNative.userData.enemyMidMesh.geometry,
+ 'La geometria de LOD es comparteix i no es multiplica per soldat');
+assert.equal(secondInfantry.userData.enemyFarMesh.geometry,
+ infantryNative.userData.enemyFarMesh.geometry,
+ 'Cache de nivell llunyà per a totes les unitats');
+const elfGeometry=()=>new T.MeshStandardMaterial({color:0x3c4435});
+const boxInfantry=(parent,w,h,d,color,x=0,y=0,z=0)=>{
+ const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),elfGeometry());
+ mesh.position.set(x,y,z);parent.add(mesh);return mesh;
+};
+const rocketWindow={HUNTER_HUMAN_V17:runtime,HUNTER_PALETTE:{}};
+const rocketSandbox={window:rocketWindow};
+runInNewContext(readFileSync(new URL('../src/characters.js',import.meta.url),'utf8'),
+ rocketSandbox);
+const bazookaFactory=rocketWindow.HUNTER_CHARACTERS.equipBazooka;
+bazookaFactory(T,infantryLegacy,{box:boxInfantry});
+bazookaFactory(T,infantryNative,{box:boxInfantry});
+const oldRocket=infantryLegacy.userData.bazooka,
+      newRocket=infantryNative.userData.bazooka;
+assert.deepEqual(newRocket.scale.toArray(),[1,1,1],
+ 'Bazuca del soldat a peu en geometria nativa, sense corrector');
+assert.equal(newRocket.userData.humanEnemyAttachmentScale,.8,
+ 'Talla del bazuca incorporada a la geometria una sola vegada');
+for(const hand of ['rightGrip','leftGrip']){
+ const a=infantryLegacy.userData.enemyBazookaIK[hand]
+  .getWorldPosition(new T.Vector3());
+ const b=infantryNative.userData.enemyBazookaIK[hand]
+  .getWorldPosition(new T.Vector3());
+ assert(a.distanceTo(b)<1e-5,'Presa del bazuca '+hand+' sense desplaçar');
+}
+const oldTip=oldRocket.localToWorld(new T.Vector3(0,0,-1.66)),
+ newTip=newRocket.localToWorld(new T.Vector3(0,0,-1.66*.8));
+assert(oldTip.distanceTo(newTip)<1e-5,
+ 'El canó del bazuca conserva el punt d’impacte directe');
+for(const kind of ['enemyMidMesh','enemyFarMesh']){
+ const a=infantryLegacy.userData[kind],b=infantryNative.userData[kind];
+ const boxA=new T.Box3().setFromObject(a,true),boxB=new T.Box3().setFromObject(b,true);
+ assert(boxA.min.distanceTo(boxB.min)<1e-5&&
+ boxA.max.distanceTo(boxB.max)<1e-5,
+  'Tub del bazuca visible al LOD '+kind+' a la mida original');
+}
+const afterRocketA=new T.Box3().setFromObject(infantryLegacy,true),
+      afterRocketB=new T.Box3().setFromObject(infantryNative,true);
+assert(afterRocketA.min.distanceTo(afterRocketB.min)<1e-5&&
+ afterRocketA.max.distanceTo(afterRocketB.max)<1e-5,
+ 'El soldat antitanc i els seus tres LOD tenen el mateix volum');
+assert.equal(infantryNative.userData.enemyBazookaIK.forearmLength,.62*.8,
+ 'Longitud nativa del braç de suport del bazuca');
+console.log('PASS soldat V18 natiu: normal, bazuca tardà, mans, canó, LOD i geometries compartides');
+
 // Test interception of classic global factories, both bundled and source.
 runtime.installHooks();
 globalThis.HUNTER_CHARACTERS=Object.freeze({
@@ -857,18 +946,24 @@ assert.equal(globalThis.HUNTER_GENERAL_MODEL.create(T).userData.humanGameV17,'ge
 // perquè els requisadors i soldats amb bazuca encara tenen altres mounts.
 globalThis.HUNTER_CHARACTERS=Object.freeze({
  createCommando(T){return playerModel.create(T)},
- createSoldier(T,{general=false}={}){
+ createSoldier(T,{general=false,elite=false}={}){
   const o=general?globalThis.HUNTER_GENERAL_MODEL.create(T):this.createCommando(T);
-  if(general){
-   o.scale.setScalar(.8);o.userData.profile='general-approved-thick-epaulettes';
-   o.userData.enemyFullRoot=new T.Group();
-   o.userData.enemyMidMesh=new T.Mesh(new T.BoxGeometry(.4,1,.4),
-    new T.MeshStandardMaterial());
-   o.userData.enemyFarMesh=new T.Mesh(new T.BoxGeometry(.3,.8,.3),
-    new T.MeshStandardMaterial());
-   o.add(o.userData.enemyFullRoot,o.userData.enemyMidMesh,
-    o.userData.enemyFarMesh);
+  if(elite&&!general){
+   o.userData.eliteSoldier=true;
+   const plate=new T.Mesh(new T.BoxGeometry(1.16,.62,.44),
+    new T.MeshStandardMaterial({color:0x303f37}));
+   plate.position.set(0,2.63,-.37);o.add(plate);
   }
+  o.scale.setScalar(.8);
+  o.userData.profile=general?'general-approved-thick-epaulettes':
+   'enemy-commando-approved';
+  o.userData.enemyFullRoot=new T.Group();
+  o.userData.enemyMidMesh=new T.Mesh(new T.BoxGeometry(.4,1,.4),
+   new T.MeshStandardMaterial());
+  o.userData.enemyFarMesh=new T.Mesh(new T.BoxGeometry(.3,.8,.3),
+   new T.MeshStandardMaterial());
+  o.add(o.userData.enemyFullRoot,o.userData.enemyMidMesh,
+   o.userData.enemyFarMesh);
   return o;
  }
 });
@@ -877,8 +972,17 @@ assert.equal(generalFactory.userData.humanOnFootNativeRole,'general',
  'La fàbrica real d’enemics normalitza el general després dels tres LOD');
 assert.deepEqual(generalFactory.scale.toArray(),[1,1,1]);
 const infantryFactory=globalThis.HUNTER_CHARACTERS.createSoldier(T,{general:false});
-assert.equal(infantryFactory.userData.humanOnFootNativeRole,undefined,
- 'La normalització del general no altera encara els soldats amb bazuca');
+assert.equal(infantryFactory.userData.humanOnFootNativeRole,'soldier',
+ 'Els soldats normals també normalitzen les variants full/mid/far');
+assert.deepEqual(infantryFactory.scale.toArray(),[1,1,1]);
+const eliteFactory=globalThis.HUNTER_CHARACTERS.createSoldier(T,{elite:true});
+assert.equal(eliteFactory.userData.humanOnFootNativeRole,'soldier',
+ 'L’elit es normalitza després de rebre armadura i metralladora');
+assert.equal(eliteFactory.userData.eliteSoldier,true);
+assert.deepEqual(eliteFactory.scale.toArray(),[1,1,1]);
+const driverCrew=globalThis.HUNTER_CHARACTERS.createCommando(T);
+assert.equal(driverCrew.userData.humanOnFootNativeRole,undefined,
+ 'Comandos de vehicles i llanxes continuen amb escala provisional de cabina');
 
 const civilians=[];
 globalThis.HUNTER_PRISONERS=Object.freeze({

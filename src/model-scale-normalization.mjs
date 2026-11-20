@@ -1,10 +1,12 @@
 // Consolidació de l'escala fixa dels models Three.js en coordenades de malla.
 // No altera les animacions, la càmera ni els valors físics de la simulació.
 // Només descompon transformacions estàtiques; conserva els pivots articulats.
-export function bakeFixedModelScales(root,{includeRoot=true}={}){
+export function bakeFixedModelScales(root,{includeRoot=true,geometryCache=null}={}){
  if(!root?.isObject3D)throw Error('Cal un Object3D per normalitzar les escales');
  const report={bakedUniform:0,bakedMeshAxes:0,remainingNonUniform:0};
- const transformed=new WeakMap();
+ // Una memòria compartida opcional conserva la geometria fusionada dels
+ // soldats: no duplicam a cada patrulla els mateixos V18 i LOD.
+ const transformed=geometryCache||new WeakMap();
  const geometryWithScale=(geometry,x,y,z)=>{
   let perScale=transformed.get(geometry);
   if(!perScale){perScale=new Map();transformed.set(geometry,perScale)}

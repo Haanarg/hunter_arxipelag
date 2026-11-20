@@ -282,10 +282,16 @@ window.HUNTER_CHARACTERS=Object.freeze({
   equipBazooka(THREE,model,{box}){
     if(!model?.userData||model.userData.rocketSoldier)return model;
     const u=model.userData,root=u.enemyFullRoot||model;
+    // Els soldats de guàrdia poden equipar el bazuca DESPRÉS de
+    // normalitzar el cos i els LOD. Abans heretava el 0,8 del
+    // model; ara es converteix explícitament a punts de presa natius.
+    // Els comandos de llanxa s'equipen abans i no tenen aquest camp.
+    const size=u.humanOnFootNativeRole==='soldier'
+      ?u.humanOnFootNativeScale:1;
     const bazooka=createSharedBazooka(THREE,box);
     // La mateixa peça del jugador, reposicionada a l'espatlla dreta
     // del comando. La versió de LOD completa conserva el bazuca.
-    bazooka.position.set(.58,3.32,-.52);
+    bazooka.position.set(.58*size,3.32*size,-.52*size);
     root.add(bazooka);
     u.gun.visible=false;u.bazooka=bazooka;u.rocketSoldier=true;
     // Els mateixos punts de presa i solver de braços que el jugador:
@@ -294,20 +300,28 @@ window.HUNTER_CHARACTERS=Object.freeze({
     rightGrip.position.set(.04,-.36,.36);
     leftGrip.position.set(-.35,-.35,.15);
     bazooka.add(rightGrip,leftGrip);
+    if(size!==1){
+      // Inclou tub i preses de les dues mans. Escala d'arrel 1.
+      window.HUNTER_HUMAN_V17.normalizeEnemyAttachment(bazooka,size);
+    }
     u.enemyBazookaIK={
       rightGrip,leftGrip,right:new THREE.Vector3(),left:new THREE.Vector3(),
       v1:new THREE.Vector3(),v2:new THREE.Vector3(),
       v3:new THREE.Vector3(),v4:new THREE.Vector3(),
       q1:new THREE.Quaternion(),q2:new THREE.Quaternion(),q3:new THREE.Quaternion(),
       down:new THREE.Vector3(0,-1,0),forearm:new THREE.Vector3(0,-1,0),
-      forearmLength:.62
+      forearmLength:.62*size
     };
     // Silueta llegible també quan el comando entra en LOD mitjà/llunyà.
     const distantMat=new THREE.MeshLambertMaterial({color:0x58664a});
     for(const lod of [u.enemyMidMesh,u.enemyFarMesh]){
       if(!lod)continue;
       const tube=new THREE.Mesh(new THREE.CylinderGeometry(.19,.23,2.9,6),distantMat);
-      tube.rotation.x=Math.PI/2;tube.position.set(.58,3.32,-.64);
+      tube.rotation.x=Math.PI/2;
+      tube.position.set(.58*size,3.32*size,-.64*size);
+      // Els dos LOD ja s'havien cuinat a la mida definitiva:
+      // l'equipament tardà ha de tenir-ne exactament la mateixa.
+      if(size!==1)tube.geometry.scale(size,size,size);
       lod.add(tube);
     }
     return model;

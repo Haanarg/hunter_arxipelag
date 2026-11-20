@@ -13,6 +13,9 @@ export const GAME_HUMAN_SKIN_VERSION='humans-v18';
 export const LEGACY_GAME_RIG_SCALE=0.6666666666666666;
 const SOURCE_THIGH=.49,SOURCE_SHIN=.49,SOURCE_ARM=.385,SOURCE_FOREARM=.310;
 const cache=new Map();
+// Reutilitzar les geometries LOD i les malles fusionades entre soldats
+// en lloc de clonar la mateixa pell cada vegada que patrullen.
+const sharedOnFootGeometryCache=new WeakMap();
 function sourceFor(T,role){
  if(!cache.has(role)){
   // Preview-only weapons are not created: game weapons keep their real mounts.
@@ -448,7 +451,7 @@ export function createHumanGameRuntimeV17(){
   // ossos V18 mantenen les mateixes coordenades mundials.
   // Aquest helper és compartit pels conductors de terra i de mar:
   // no es modifica el rig del jugador ni l'animació de natació.
-  normalizeEnemyCrew(root,size){
+  normalizeEnemyCrew(root,size,{geometryCache=null}={}){
    if(!root?.isObject3D||!Number.isFinite(size)||size<=0)
     throw Error('Tripulant V18 o talla invàlida');
    const previous=root.userData.humanCrewNativeScale;
@@ -466,7 +469,7 @@ export function createHumanGameRuntimeV17(){
     throw Error('Escala original del comando no uniforme');
    root.userData.humanCrewFactoryScale=sourceScale[0];
    root.scale.setScalar(size);
-   bakeFixedModelScales(root);
+   bakeFixedModelScales(root,{geometryCache});
    if(root.scale.toArray().some(x=>Math.abs(x-1)>1e-10))
     throw Error('Tripulant amb correcció d’escala restant');
    root.userData.humanCrewNativeScale=size;
@@ -491,10 +494,31 @@ export function createHumanGameRuntimeV17(){
       Math.abs(root.scale.y-originalScale)>1e-10||
       Math.abs(root.scale.z-originalScale)>1e-10)
     throw Error('Escala base de soldat no uniforme');
-   runtime.normalizeEnemyCrew(root,originalScale);
+   runtime.normalizeEnemyCrew(root,originalScale,{
+    geometryCache:sharedOnFootGeometryCache
+   });
    root.userData.humanOnFootNativeScale=originalScale;
    root.userData.humanOnFootNativeRole=role;
    root.userData.humanOnFootLodNormalized=true;
+   return root;
+  },
+  // Equipament afegit després del bake del soldat (torres amb bazuca).
+  // L'arrel de la peça també queda a 1, sense modificar grip/IK.
+  // El constructor és responsable d'escalar-ne la POSICIÓ original
+  // perquè la posició d'arrel no és afectada per bakeFixedModelScales.
+  normalizeEnemyAttachment(root,size){
+   if(!root?.isObject3D||!Number.isFinite(size)||size<=0)
+    throw Error('Equipament enemic o dimensió invàlids');
+   if(root.userData.humanEnemyAttachmentScale!==undefined){
+    if(Math.abs(root.userData.humanEnemyAttachmentScale-size)>1e-10)
+     throw Error('Peça enemiga amb talla incompatible');
+    return root;
+   }
+   root.scale.setScalar(size);
+   bakeFixedModelScales(root);
+   if(root.scale.toArray().some(x=>Math.abs(x-1)>1e-10))
+    throw Error('Peça enemiga amb escala residual');
+   root.userData.humanEnemyAttachmentScale=size;
    return root;
   },
   install(T,model,{role='player'}={}){
@@ -629,11 +653,14 @@ export function createHumanGameRuntimeV17(){
     };
     if(typeof base.createSoldier==='function')wrapped.createSoldier=function(T,...args){
      const model=base.createSoldier.call(wrapped,T,...args);
-     // Només el general: els soldats normals poden equipar-se
-     // amb bazuca DESPRÉS de crear el LOD i encara empren els
-     // ancoratges antics. No els normalitzam fins migrar aquesta arma.
-     if(model?.userData?.profile==='general-approved-thick-epaulettes')
-      runtime.normalizeOnFootEnemy(model,{role:'general'});
+     // Els soldats a peu, inclosos elit i antitanc, passen a model
+     // natiu un cop creades les malles full/mid/far. La fàbrica
+     // createCommando directa continua amb l'escala original fins
+     // que els conductors/llanxes n'estableixen la talla de cabina.
+     const role=model?.userData?.profile==='general-approved-thick-epaulettes'
+      ?'general':model?.userData?.profile==='enemy-commando-approved'
+      ?'soldier':null;
+     if(role)runtime.normalizeOnFootEnemy(model,{role});
      return model;
     };
     return Object.freeze(wrapped);
