@@ -15,8 +15,7 @@ export const SECTION_TOOLS=Object.freeze({
  ],
  animations:[
   {id:'gait',title:'Caminar, córrer i postures',editor:'characters'},
-  {id:'breast',title:'Nedar a braça · 4 propostes',editor:'characters'},
-  {id:'crawl',title:'Nedar a crol · 4 propostes',editor:'characters'},
+  {id:'swim',title:'NATACIÓ',editor:'characters'},
   {id:'shoot',title:'Dispar',url:'dispar-proves.html'},
   {id:'finale',title:'Seqüència final',url:'final-proves.html'}
  ],
@@ -90,7 +89,8 @@ if(typeof document!=='undefined'){
  }
  for(const pill of pills)pill.addEventListener('click',()=>activate(pill.dataset.section));
  if(params.has('prova')){
-  const candidate=params.get('prova');
+  const requested=params.get('prova');
+  const candidate=initialSection==='animations'&&['breast','crawl'].includes(requested)?'swim':requested;
   if(SECTION_TOOLS[initialSection]?.some(x=>x.id===candidate))savedTool[initialSection]=candidate;
  }
  frame.addEventListener('load',()=>{
@@ -99,7 +99,8 @@ if(typeof document!=='undefined'){
  });
  addEventListener('popstate',()=>{
   const current=new URLSearchParams(location.search);
-  const target=current.get('seccio')||'characters',item=current.get('prova');
+  const target=current.get('seccio')||'characters',raw=current.get('prova'),
+   item=target==='animations'&&['breast','crawl'].includes(raw)?'swim':raw;
   if(item&&SECTION_TOOLS[target]?.some(x=>x.id===item))savedTool[target]=item;
   activate(target,false);
  });

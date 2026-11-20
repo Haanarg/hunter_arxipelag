@@ -1,8 +1,8 @@
 import {createMi24Proposal,MI24_MODELS} from './mi24-proposals.mjs?rev=mi24-d-optimized-20261115-3';
-import {HUMAN_CATALOG,HUMAN_SWIM_CATALOG} from './human-model-catalog.mjs?rev=swim-ik-20261119-4';
-import {createHumanProposal,setHumanPreviewWeapon,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,createHumanGaitClock,advanceHumanGait} from './human-proposals.mjs?rev=swim-ik-20261119-4';
+import {HUMAN_CATALOG,HUMAN_SWIM_CATALOG} from './human-model-catalog.mjs?rev=natacio-final-b3-c4-20261120';
+import {createHumanProposal,setHumanPreviewWeapon,poseHumanProposal,HUMAN_VERSION,measureHumanAnatomy,createHumanGaitClock,advanceHumanGait} from './human-proposals.mjs?rev=natacio-final-b3-c4-20261120';
 import {prepareGameWeaponPreview} from './human-weapon-preview.mjs';
-import {isHumanSwimmingMode,sampleHumanSwimming,HUMAN_SWIM_PROPOSALS} from './human-swim-proposals.mjs?rev=swim-ik-20261119-4';
+import {isHumanSwimmingMode,sampleHumanSwimming,HUMAN_SWIM_PROPOSALS} from './human-swim-proposals.mjs?rev=natacio-final-b3-c4-20261120';
 import {createTwoWheelLabComparison} from './two-wheel-lab-comparison.mjs?rev=rig-comparison-20261119-1';
 import {createLabPlayerReference} from './vehicle-lab-player-reference.mjs?rev=player-reference-v18-20261119-1';
 import {stepKamovRotors} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
@@ -37,22 +37,36 @@ const humanList=document.querySelector('#humanList'),
 let twoWheelAuditSession=null;
 let humanTime=0,humanMode='rest',humanGait=createHumanGaitClock();
 const isHumanGait=mode=>mode==='walk'||mode==='run';
-const previewHumanPose=(slot,mode)=>isHumanSwimmingMode(mode)?mode+'-'+(slot.swimVariant||1):mode;
+const definitiveSwimMode=mode=>mode.startsWith('swim-crawl')?'swim-crawl-4':'swim-breast-3';
+const previewHumanPose=(slot,mode)=>isHumanSwimmingMode(mode)?slot.swimMode||definitiveSwimMode(mode):mode;
+const previewHumanTime=(slot,mode,time)=>isHumanSwimmingMode(mode)?time+(slot.swimOffset||0):time;
+const swimKind=mode=>mode.startsWith('swim-crawl')?'crawl':'breast';
 const updateSwimWater=mode=>{
- for(const s of slots)s.swimWater.visible=!!s.swimVariant&&isHumanSwimmingMode(mode);
+ for(const s of slots)s.swimWater.visible=!!s.swimMode&&isHumanSwimmingMode(mode);
  document.querySelector('#humanSwimTimeline').hidden=!isHumanSwimmingMode(mode);
 };
 const selectedSwimInfo=(mode,secs)=>{
  if(!isHumanSwimmingMode(mode))return null;
- const kind=mode.split('-')[1],variant=kind==='breast'?3:4;
- const sample=sampleHumanSwimming('swim-'+kind+'-'+variant,secs);
- return {sample,kind,period:HUMAN_SWIM_PROPOSALS[kind][variant-1].period};
+ const kind=swimKind(mode);
+ const sample=sampleHumanSwimming(definitiveSwimMode(mode),secs);
+ return {sample,kind,period:HUMAN_SWIM_PROPOSALS[kind].period};
 };
 function showSwimPhase(mode,secs){
  const info=selectedSwimInfo(mode,secs);if(!info)return;
- const percent=(info.sample.phase*100);
- document.querySelector('#humanSwimPhase').value=String(percent);
- document.querySelector('#humanSwimPhaseName').textContent=percent.toFixed(0)+' % · '+(info.sample.phaseName||'Cicle');
+ if(currentType.swimming==='both'){
+  const rows=slots.filter(s=>s.model&&s.swimMode).map(slot=>{
+   const sample=sampleHumanSwimming(slot.swimMode,previewHumanTime(slot,mode,secs));
+   return {mode:slot.swimMode,sample,label:swimKind(slot.swimMode)==='breast'?'Braça B3':'Crol C4'};
+  });
+  const active=rows.find(row=>row.mode===definitiveSwimMode(mode))||rows[0];
+  if(!active)return;
+  document.querySelector('#humanSwimPhase').value=String(active.sample.phase*100);
+  document.querySelector('#humanSwimPhaseName').textContent=rows.map(row=>
+   row.label+' '+Math.round(row.sample.phase*100)+' % · '+(row.sample.phaseName||'Cicle')).join(' | ');
+ }else{
+  document.querySelector('#humanSwimPhase').value=String(info.sample.phase*100);
+  document.querySelector('#humanSwimPhaseName').textContent=Math.round(info.sample.phase*100)+' % · '+(info.sample.phaseName||'Cicle');
+ }
 }
 import {mountHumanEvidence} from './human-lab-evidence-ui.mjs?rev=human-evidence-7';
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -158,7 +172,7 @@ for(let i=0;i<5;i++){
  const perspective=new THREE.PerspectiveCamera(36,1,.05,1300),ortho=new THREE.OrthographicCamera(-2,2,2,-2,.05,1300);
  const guide=document.createElement('canvas');guide.className='human-guide';guide.hidden=true;outer.append(guide);
  const versionTag=document.createElement('span');versionTag.className='human-version-tag';versionTag.hidden=true;label.append(versionTag);
- const slot={outer,viewport,scene,camera:perspective,perspective,ortho,guide,versionTag,ground,lines,swimWater,person,status,source,bold,sub,upload,downloadBtr,model:null,mixer:null,kind:null,sourceFrame:null,swimVariant:null};
+ const slot={outer,viewport,scene,camera:perspective,perspective,ortho,guide,versionTag,ground,lines,swimWater,person,status,source,bold,sub,upload,downloadBtr,model:null,mixer:null,kind:null,sourceFrame:null,swimVariant:null,swimMode:null,swimOffset:0};
  slots.push(slot);
  upload.addEventListener('change',async()=>{
    const file=upload.files?.[0];if(!file)return;
@@ -253,7 +267,7 @@ function metrics(root){
    ' materials · '+d.x.toFixed(1)+' × '+d.y.toFixed(1)+' × '+d.z.toFixed(1)+' m';
 }
 function dropPrevious(slot){
- slot.swimVariant=null;slot.swimWater.visible=false;
+ slot.swimVariant=null;slot.swimMode=null;slot.swimOffset=0;slot.swimWater.visible=false;
  if(slot.downloadBtr){slot.downloadBtr.hidden=true;slot.downloadBtr.onclick=null;}
  if(slot.sourceFrame){slot.sourceFrame.remove();slot.sourceFrame=null;slot.viewport.classList.remove('has-embed')}
  if(slot.model){
@@ -318,10 +332,10 @@ async function loadExternal(slot,entry,used,token){
    const model=createHumanProposal(THREE,entry.role,entry.style);
    if(entry.role==='player')setHumanPreviewWeapon(THREE,model,document.querySelector('#humanWeapon').value);
    setModel(slot,model,false,[],true);
-   slot.swimVariant=entry.swimVariant||null;
-   const initialMode=currentType.swimming?'swim-'+currentType.swimming:'rest';
-   poseHumanProposal(slot.model,0,previewHumanPose(slot,initialMode));
-   slot.swimWater.visible=!!slot.swimVariant;
+   slot.swimVariant=entry.swimVariant||null;slot.swimMode=entry.swimMode||null;slot.swimOffset=0;
+   const initialMode=currentType.swimming?'swim-breast':'rest';
+   poseHumanProposal(slot.model,previewHumanTime(slot,initialMode,0),previewHumanPose(slot,initialMode));
+   slot.swimWater.visible=!!slot.swimMode;
    slot.bold.textContent=entry.title;slot.sub.textContent='Articulat · escala del joc · '+entry.note;
    slot.status.textContent=metrics(slot.model);slot.source.hidden=true;return;
  }
@@ -426,6 +440,7 @@ async function choose(config){
  const soloStudy=config.validated&&config.options.length===0;
  grid.classList.toggle('btr-study',soloStudy);
  grid.classList.toggle('two-wheel-audit',!!config.twoWheelAudit);
+ grid.classList.toggle('swimming',config.swimming==='both');
  document.querySelector('#fitScale').closest('label').hidden=soloStudy||!!config.human||!!config.twoWheelAudit;
  document.querySelector('#t90Motion').hidden=!t90Study;
  document.querySelector('#humanMotion').hidden=!config.human||!!config.twoWheelAudit;
@@ -436,11 +451,11 @@ async function choose(config){
  humanEvidence.show(config.twoWheelAudit?null:config.human||null,config.options,config.id);
  humanTime=0;humanMode='rest';humanGait=createHumanGaitClock();
  if(config.human){
- const start=config.swimming?'swim-'+config.swimming:'rest';
+ const start=config.swimming?'swim-breast':'rest';
  document.querySelector('#humanPose').value=start;
  document.querySelector('#animate').checked=!!config.swimming;
- document.querySelector('#humanRevision').textContent='HUMANS V18 · '+HUMAN_VERSION+(config.swimming?' · 4 PROPOSTES DE NATACIÓ':'');
- document.querySelector('#humanGaitMix').textContent=config.swimming?'Quatre cicles diferents · comparació en directe':'';
+ document.querySelector('#humanRevision').textContent='HUMANS V18 · '+HUMAN_VERSION+(config.swimming?' · NATACIÓ B3 + C4':'');
+ document.querySelector('#humanGaitMix').textContent=config.swimming?'Braça B3 i crol C4 · dos ritmes originals':'';
  updateSwimWater(start);
  if(config.swimming)showSwimPhase(start,0);
 }
@@ -475,7 +490,7 @@ async function choose(config){
      if(token!==generation)return;
    }
    const visible=slots.slice(1,config.options.length+1);
-   const mode=config.swimming?'swim-'+config.swimming:'rest';
+   const mode=config.swimming?'swim-breast':'rest';
    for(let i=0;i<visible.length;i++){
      if(token!==generation)return;
      const slot=visible[i],entry=config.options[i];
@@ -495,9 +510,10 @@ async function choose(config){
        }
        setModel(slot,model,false,[],true);
        slot.swimVariant=entry.swimVariant||null;
-       slot.swimWater.visible=!!slot.swimVariant;
+       slot.swimMode=entry.swimMode||null;slot.swimOffset=0;
+       slot.swimWater.visible=!!slot.swimMode;
        let animationError=null;
-       try{poseHumanProposal(slot.model,0,previewHumanPose(slot,mode))}
+       try{poseHumanProposal(slot.model,previewHumanTime(slot,mode,0),previewHumanPose(slot,mode))}
        catch(error){animationError=error;console.warn('Postura HUMANS V18 no disponible',entry.title,error)}
        slot.bold.textContent=entry.title;
        slot.sub.textContent='HUMANS V18 · '+entry.note;
@@ -708,7 +724,7 @@ function draw(now){
      twoWheelAuditSession.step(dt,speed);
      if((twoWheelAuditCounter++%14)===0)showTwoWheelAuditReading();
    }
-   if(currentType.human&&!currentType.twoWheelAudit){const elapsed=dt*Number(document.querySelector('#humanSpeed').value);humanTime+=elapsed;const mode=document.querySelector('#humanPose').value;const gait=isHumanGait(mode);if(gait)humanGait=advanceHumanGait(humanGait,elapsed,mode);for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,humanTime,previewHumanPose(slot,mode),gait?humanGait:null);const out=document.querySelector('#humanGaitMix');out.textContent=gait?'Cursa '+Math.round(humanGait.blend*100)+' %':isHumanSwimmingMode(mode)?'Quatre cicles diferents · comparació en directe':'';if(isHumanSwimmingMode(mode))showSwimPhase(mode,humanTime);}
+   if(currentType.human&&!currentType.twoWheelAudit){const elapsed=dt*Number(document.querySelector('#humanSpeed').value);humanTime+=elapsed;const mode=document.querySelector('#humanPose').value;const gait=isHumanGait(mode);if(gait)humanGait=advanceHumanGait(humanGait,elapsed,mode);for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,previewHumanTime(slot,mode,humanTime),previewHumanPose(slot,mode),gait?humanGait:null);const out=document.querySelector('#humanGaitMix');out.textContent=gait?'Cursa '+Math.round(humanGait.blend*100)+' %':isHumanSwimmingMode(mode)?'Braça B3 i crol C4 · ritmes originals':'';if(isHumanSwimmingMode(mode))showSwimPhase(mode,humanTime);}
    if(currentType.id==='tanc'&&slots[0].model)
      stepT90MPreview(slots[0].model,t90MotionInput(dt),dt);
  }
@@ -777,20 +793,19 @@ document.querySelector('#fitScale').addEventListener('change',()=>choose(current
 document.querySelector('#showGrid').addEventListener('change',e=>{for(const s of slots){s.lines.visible=e.target.checked;s.person.visible=e.target.checked&&!currentType.human}});
 document.querySelector('#humanPose').addEventListener('change',e=>{
  const mode=e.target.value;
- if(isHumanSwimmingMode(mode)&&currentType.swimming!==mode.split('-')[1]){
-  const next=HUMAN_SWIM_CATALOG.find(p=>p.swimming===mode.split('-')[1]);
-  if(next){choose(next);return}
+ if(isHumanSwimmingMode(mode)&&!currentType.swimming){
+  choose(HUMAN_SWIM_CATALOG[0]);return;
  }
  updateSwimWater(mode);
  const continuous=isHumanGait(humanMode)&&isHumanGait(mode);
  humanMode=mode;document.querySelector('#animate').checked=mode!=='rest';
  if(continuous)return; // Retain the current phase AND blend when changing gait.
  humanTime=0;humanGait=createHumanGaitClock(mode);
+ for(const slot of slots)slot.swimOffset=0;
  document.querySelector('#humanGaitMix').textContent=isHumanGait(mode)?'Cursa '+Math.round(humanGait.blend*100)+' %':'';
- for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,0,previewHumanPose(slot,mode),isHumanGait(mode)?humanGait:null);
+ for(const slot of slots)if(slot.model)poseHumanProposal(slot.model,previewHumanTime(slot,mode,0),previewHumanPose(slot,mode),isHumanGait(mode)?humanGait:null);
 });
-// Arrossega fins a un fotograma concret sense avançar el rellotge:
- // els quatre candidats comparteixen el percentatge del seu propi cicle.
+// Fotograma relatiu compartit; en reprendre cada estil recupera el seu ritme.
 document.querySelector('#humanSwimPhase').addEventListener('input',e=>{
  const mode=document.querySelector('#humanPose').value;
  const info=selectedSwimInfo(mode,0);if(!info)return;
@@ -800,9 +815,9 @@ document.querySelector('#humanSwimPhase').addEventListener('input',e=>{
  for(const slot of slots){
   if(!slot.model)continue;
   const target=previewHumanPose(slot,mode);
-  const candidate=slot.swimVariant||1;
-  const time=HUMAN_SWIM_PROPOSALS[info.kind][candidate-1].period*phase;
-  poseHumanProposal(slot.model,time,target);
+  const period=HUMAN_SWIM_PROPOSALS[swimKind(target)].period;
+  slot.swimOffset=phase*period-humanTime;
+  poseHumanProposal(slot.model,previewHumanTime(slot,mode,humanTime),target);
  }
  showSwimPhase(mode,humanTime);
 });
@@ -812,7 +827,7 @@ document.querySelector('#humanWeapon').addEventListener('change',e=>{
   if(!slot.model)continue;
   if(setHumanPreviewWeapon(THREE,slot.model,e.target.value)){
    const mode=document.querySelector('#humanPose').value;
-   poseHumanProposal(slot.model,humanTime,previewHumanPose(slot,mode),isHumanGait(mode)?humanGait:null);
+   poseHumanProposal(slot.model,previewHumanTime(slot,mode,humanTime),previewHumanPose(slot,mode),isHumanGait(mode)?humanGait:null);
    slot.status.textContent=metrics(slot.model)+' · '+e.target.selectedOptions[0].textContent;
   }
  }
@@ -923,7 +938,7 @@ for(const config of ALL_CATALOG){
  button.textContent=config.name;
  const small=document.createElement('small');
  small.textContent=config.twoWheelAudit?'3 rigs reals · càmera compartida':
-  config.swimming?'4 propostes d’animació':
+  config.swimming?'Braça B3 · Crol C4':
   (config.validated?'✓ Validat':'● Pendent')+' · '+(config.experimental?'Experimental':kinds[config.kind]);
  button.append(small);button.addEventListener('click',()=>choose(config));
  (config.twoWheelAudit?comparatorList:config.human?humanList:list).append(button);
@@ -934,13 +949,13 @@ window.addEventListener('hunter:proves-section',event=>{
 });
 window.addEventListener('hunter:proves-swim',event=>{
  const requested=event.detail;
- const wanted=requested==='gait'?HUMAN_CATALOG[0]:HUMAN_SWIM_CATALOG.find(p=>p.swimming===requested);
+ const wanted=requested==='gait'?HUMAN_CATALOG[0]:requested==='swim'?HUMAN_SWIM_CATALOG[0]:null;
  if(wanted&&currentType.id!==wanted.id)choose(wanted);
 });
 addEventListener('resize',resizeRenderer);
 resizeRenderer();requestAnimationFrame(draw);
 const params=new URLSearchParams(location.search);
-const directSwim=params.get('seccio')==='animations'&&['breast','crawl'].includes(params.get('prova'))?'human-swim-'+params.get('prova'):null;
+const directSwim=params.get('seccio')==='animations'&&['swim','breast','crawl'].includes(params.get('prova'))?'human-swim':null;
 const requestedType=params.get('model')||params.get('vehicle')||directSwim;
 fetch('./assets/vehicle-candidates/manifest.json',{cache:'no-store'})
  .then(response=>response.ok?response.json():null)

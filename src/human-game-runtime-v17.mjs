@@ -1,7 +1,7 @@
 // V17-compatible rigid-rig adapter for the latest V18 skin (general cassaca). No gameplay animation,
 // seat, IK, collision, physics, weapon anchor or AI state is replaced.
-import {createHumanProposal,HUMAN_VERSION,sampleHumanGait} from './human-proposals.mjs?rev=human-game-swim-20261119-2';
-import {createGameSwimBridge} from './human-game-swim-bridge.mjs?rev=human-game-swim-v18-native-20261120-1';
+import {createHumanProposal,HUMAN_VERSION,sampleHumanGait} from './human-proposals.mjs?rev=natacio-final-b3-c4-20261120';
+import {createGameSwimBridge} from './human-game-swim-bridge.mjs?rev=natacio-final-b3-c4-20261120';
 import {HUMAN_PLAYER_GAME_NATIVE_HEIGHT,HUMAN_WORLD_UNITS_PER_METER} from './human-model-catalog.mjs';
 import {bakeFixedModelScales} from './model-scale-normalization.mjs';
 

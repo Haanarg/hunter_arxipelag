@@ -31,6 +31,8 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 #grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;position:relative}
 #grid.btr-study{grid-template-columns:minmax(0,1fr);max-width:1120px;margin:0 auto}
 #grid.two-wheel-audit{grid-template-columns:repeat(3,minmax(0,1fr));max-width:none}
+#grid.swimming{grid-template-columns:repeat(2,minmax(0,1fr));max-width:1320px;margin:0 auto}
+#grid.swimming .panel{height:clamp(390px,46vw,590px)}
 #grid.two-wheel-audit .panel{height:clamp(430px,43vw,640px)}
 @media(max-width:980px){#grid.two-wheel-audit{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:630px){#grid.two-wheel-audit{grid-template-columns:1fr}}
@@ -86,7 +88,7 @@ main{padding:15px clamp(10px,2vw,30px) 26px}
 footer{padding:0 clamp(10px,2vw,30px) 25px;color:#9fbbb4;font-size:12px;line-height:1.6}
 @media(min-width:1650px){#grid{grid-template-columns:repeat(4,minmax(0,1fr))}#grid.btr-study{grid-template-columns:minmax(0,1fr);max-width:1120px;margin:0 auto}.panel{height:450px}}
 @media(max-width:1050px){#grid.btr-study{grid-template-columns:minmax(0,1fr);max-width:1120px;margin:0 auto}}
-@media(max-width:650px){#grid,#grid.btr-study{grid-template-columns:1fr}.panel{height:420px}.panel .status{min-height:16px}:is(#vehicleList,#humanList) button{min-width:130px;flex-basis:130px}}
+@media(max-width:650px){#grid,#grid.btr-study,#grid.swimming{grid-template-columns:1fr}.panel{height:420px}.panel .status{min-height:16px}:is(#vehicleList,#humanList) button{min-width:130px;flex-basis:130px}}
 
 
 .live-transforms{display:flex;flex-wrap:wrap;gap:10px}.live-transforms fieldset{flex:1;min-width:220px}.live-transforms input{width:75px}#liveEditor fieldset{border:1px solid #677765;border-radius:8px;padding:10px;margin:8px 0}#liveEditor label{display:inline-flex;align-items:center;gap:6px;margin:4px}#liveEditor select{max-width:100%;min-width:0}#livePart{max-width:440px!important}#liveOffset{width:80px}#liveRequest{width:100%;box-sizing:border-box}#liveQueue>div{display:flex;justify-content:space-between;gap:12px;padding:8px;border-bottom:1px solid #677765}#liveQueue span{white-space:pre-wrap;overflow-wrap:anywhere}#liveStatus{color:#f3dc9d}button:disabled{opacity:.4;cursor:default}@media(max-width:600px){#livePart{max-width:240px!important}.live-transforms{display:block}}
@@ -160,13 +162,13 @@ body[data-editor-kind=""] #draw{display:none!important}
  <p>Models i rigs carregats directament de les fàbriques del joc: protagonista a peu, ciclista i motorista. Les tres vistes comparteixen càmera ortogràfica, unitats, rotació i zoom, sense reajustar cada figura. Els punts roses representen selló, manillar i pedals/reposapeus. Pots girar les tres vistes alhora.</p>
 </section>
 <section id="humanMotion" class="t90-motion" hidden aria-label="Animacions dels candidats humans">
- <label>Moviment <select id="humanPose"><option value="idle">Repòs</option><option value="rest" selected>Postura neutra</option><option value="walk">Caminar</option><option value="run">Córrer</option><option value="crouch">Ajupir-se</option><option value="aim">Apuntar</option><option value="work">Treballar</option><option value="wave">Saludar</option><option value="throw">Llançar granada</option><optgroup label="NATACIÓ · QUATRE PROPOSTES"><option value="swim-breast">Nedar a braça · B1–B4</option><option value="swim-crawl">Nedar a crol · C1–C4</option></optgroup></select></label>
+ <label>Moviment <select id="humanPose"><option value="idle">Repòs</option><option value="rest" selected>Postura neutra</option><option value="walk">Caminar</option><option value="run">Córrer</option><option value="crouch">Ajupir-se</option><option value="aim">Apuntar</option><option value="work">Treballar</option><option value="wave">Saludar</option><option value="throw">Llançar granada</option><optgroup label="NATACIÓ · MODELS DEFINITIUS"><option value="swim-breast">Braça · B3</option><option value="swim-crawl">Crol · C4</option></optgroup></select></label>
  <label id="humanWeaponControl" hidden>Arma del protagonista <select id="humanWeapon"><option value="pistol">Pistola silenciada</option><option value="assault">Fusell AEK-971</option><option value="sniper">Franctirador SV-98</option><option value="bazooka">Bazuca</option><option value="knife">Ganivet</option><option value="cutters">Cisalla</option><option value="grenade">Granada</option></select></label>
  <label>Velocitat <input id="humanSpeed" type="range" min="0.25" max="1.5" step="0.05" value="1" aria-label="Velocitat de l’animació"></label>
  <label id="humanSwimTimeline" hidden>Fotograma del cicle <input id="humanSwimPhase" type="range" min="0" max="100" step=".5" value="0" aria-label="Fotograma de natació (0 a 100 %)"><output id="humanSwimPhaseName">0 % · Preparació</output></label>
  <button id="humanRest" type="button">Postura neutra</button>
  <label><input id="humanGuides" type="checkbox"> Guies anatòmiques (0–8)</label> <strong id="humanRevision">HUMANS V18</strong> <output id="humanGaitMix" aria-live="off"></output>
- <p>Guies en postura neutra, vista frontal/lateral/posterior. Punts verds = articulacions i extrems reals; taronja = pivot del cap. El 0 és el crani sense barret, el 8 la sola. Canvia Caminar ↔ Córrer durant l’animació per provar la transició progressiva. Per comparar les quatre propostes de natació, tria «Nedar · braça» o «Nedar · crol» a la llista de personatges: el visor mostra B1–B4 o C1–C4 simultàniament, amb el mateix rig. Les línies d’aigua són només una guia visual. No substitueixen les animacions del joc.</p>
+ <p>Guies en postura neutra, vista frontal/lateral/posterior. Punts verds = articulacions i extrems reals; taronja = pivot del cap. El 0 és el crani sense barret, el 8 la sola. Canvia Caminar ↔ Córrer durant l’animació per provar la transició progressiva. A ANIMACIONS → NATACIÓ es mostren junts els dos únics models aprovats: braça B3 i crol C4. Cada animació manté el seu ritme original; el control de fotograma aplica el mateix percentatge als dos cicles. Les línies d’aigua són una guia visual.</p>
 </section>
 <details id="humanEvidence" class="annotation-tools" hidden><summary>Fitxa de validació humana · exportació de malles reals</summary>
  <section class="btr-part-tool"><div class="btr-part-controls">
@@ -231,14 +233,14 @@ body[data-editor-kind=""] #draw{display:none!important}
  <a id="sectionOpen" target="_blank" rel="noopener noreferrer" href="#" hidden></a>
  <iframe id="sectionFrame" title="Visor de proves" loading="lazy" allow="fullscreen" hidden></iframe>
 </section></main>
-<script type="module" src="./src/proves-hub.mjs?rev=swim-ik-20261119-4"></script>
+<script type="module" src="./src/proves-hub.mjs?rev=natacio-final-b3-c4-20261120"></script>
 <script type="module">
 let workshopStarted=false;
 function loadWorkshop(){
  if(workshopStarted)return;
  workshopStarted=true;
  // Report import failures instead of leaving a blank editor.
- import('./src/vehicles-externs-proves.mjs?rev=vehicle-comparador-20261119-6')
+ import('./src/vehicles-externs-proves.mjs?rev=natacio-final-b3-c4-20261120')
   .catch(error=>{
    workshopStarted=false;
    console.error('Error en arrencar l’editor:',error);
