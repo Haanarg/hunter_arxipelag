@@ -605,9 +605,17 @@ assert.equal(rider.userData.boots.length,2);
   for(const side of ['L','R'])for(const bone of ['hip','knee','ankle','shoulder','elbow','wrist'])
    assert(joints[bone+side].getWorldPosition(new T.Vector3())
       .toArray().every(Number.isFinite),'Pose V18 finita de '+vehicle.t+'/'+bone+side);
-  if(expectedYaw!==null)
-   assert(Math.abs(body.rotation.y-expectedYaw)<.0001,
-    'L\'orientació V18 respecta el rumb anatòmic del '+vehicle.t);
+  if(expectedYaw!==null){
+   // Els 180° són equivalents a -180° en Three.js quan es reconstrueix
+   // l'Euler. Comparar quaternions amb q/-q equivalència valida el
+   // gir anatòmic real sense exigir un representant numèric únic.
+   const yawError=Math.atan2(Math.sin(d.torso.rotation.y-expectedYaw),
+     Math.cos(d.torso.rotation.y-expectedYaw));
+   const quaternionAgreement=Math.abs(body.quaternion.dot(d.torso.quaternion));
+   assert(Math.abs(yawError)<.0001&&quaternionAgreement>1-1e-9,
+    'L\'orientació V18 respecta el rumb anatòmic del '+vehicle.t+
+    ': yawError='+yawError+' quaternionAgreement='+quaternionAgreement);
+  }
   const baseline=seaBodies.get(vehicle.t);
   if(baseline){
    assert(baseline.root===body,'Cap regeneració de malles quan canvia seient: '+vehicle.t);
