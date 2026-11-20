@@ -773,6 +773,75 @@ for(const [type,size]of [['cotxe',.43],['camio',.31],['moto',.52]]){
 }
 console.log('PASS tripulants V18 nadius: GAZ/camió/moto, patrulleres, dos seients, malles i canons');
 
+// El general manté EXACTAMENT la seva mida, postura i LOD després
+// de coure la reducció 0.8 dins geometria i pivots articulats.
+function generalNativeFixture(){
+ const g=runtime.suppress(()=>playerModel.create(T,{headVariant:'compactD'}));
+ const u=g.userData;
+ const gun=new T.Group();gun.name='general-gun';
+ gun.position.set(0,-.6195,-.035);u.aer.add(gun);u.gun=gun;
+ const bore=new T.Object3D();bore.name='general-bore';bore.position.set(0,.12,-.93);gun.add(bore);
+ runtime.install(T,g,{role:'general'});
+ const full=new T.Group();full.name='hunter-enemy-full';
+ for(const child of [...g.children])full.add(child);
+ g.add(full);
+ const mid=new T.Mesh(new T.BoxGeometry(.76,2.58,.53),
+  new T.MeshStandardMaterial({color:0x681d30}));
+ const far=new T.Mesh(new T.BoxGeometry(.61,2.27,.48),
+  new T.MeshStandardMaterial({color:0x812735}));
+ mid.position.y=1.45;far.position.y=1.30;
+ g.add(mid,far);
+ u.enemyFullRoot=full;u.enemyMidMesh=mid;u.enemyFarMesh=far;
+ g.position.set(9,.6,-6);g.rotation.y=.41;g.scale.setScalar(.8);
+ u.ar.rotation.set(.48,0,-.13);u.lr.rotation.x=-.37;u.lkr.rotation.x=-.61;
+ return g;
+}
+const officerLegacy=generalNativeFixture(),officerNative=generalNativeFixture();
+const officerWorld=()=>new T.Box3().setFromObject(officerLegacy,true);
+const expectedOfficerBounds=officerWorld();
+const compareOfficer=()=>{
+ officerLegacy.updateWorldMatrix(true,true);
+ officerNative.updateWorldMatrix(true,true);
+ const a=new T.Box3().setFromObject(officerNative,true),
+       b=new T.Box3().setFromObject(officerLegacy,true);
+ assert(a.min.distanceTo(b.min)<1e-5&&a.max.distanceTo(b.max)<1e-5,
+  'El general natiu conserva la mida del model antic també en moviment');
+ for(const joint of ['head','ar','aer','lr','lkr']){
+  const before=officerLegacy.userData[joint].getWorldPosition(new T.Vector3()),
+    after=officerNative.userData[joint].getWorldPosition(new T.Vector3());
+  assert(before.distanceTo(after)<1e-5,'Articulació del general '+joint+' estable');
+ }
+ const m1=officerLegacy.getObjectByName('general-bore')
+   .getWorldPosition(new T.Vector3());
+ const m2=officerNative.getObjectByName('general-bore')
+   .getWorldPosition(new T.Vector3());
+ assert(m1.distanceTo(m2)<1e-5,
+  'El general conserva la boca de foc original en la mateixa posició');
+ const lodA=officerLegacy.userData.enemyMidMesh,
+       lodB=officerNative.userData.enemyMidMesh;
+ assert(new T.Box3().setFromObject(lodA,true).getSize(new T.Vector3())
+  .distanceTo(new T.Box3().setFromObject(lodB,true).getSize(new T.Vector3()))<1e-5,
+  'Variant LOD mitjana del general amb dimensions idèntiques');
+};
+assert.equal(runtime.normalizeOnFootEnemy(officerNative,{role:'general'}),officerNative);
+assert.deepEqual(officerNative.scale.toArray(),[1,1,1],
+ 'General a peu amb escala d’arrel unitària');
+assert.equal(officerNative.userData.humanOnFootNativeScale,.8);
+assert.equal(officerNative.userData.humanOnFootLodNormalized,true);
+assert.equal(runtime.normalizeOnFootEnemy(officerNative,{role:'general'}),officerNative,
+ 'Una sola normalització per general');
+assert.deepEqual(officerWorld().min.toArray(),expectedOfficerBounds.min.toArray());
+compareOfficer();
+for(const g of [officerLegacy,officerNative]){
+ const u=g.userData;
+ u.ar.rotation.x=-.78;u.aer.rotation.x=.64;u.lr.rotation.x=.32;
+ u.lkr.rotation.x=-1.12;u.head.rotation.y=.42;
+}
+compareOfficer();
+assert.throws(()=>runtime.normalizeOnFootEnemy(officerNative,{role:'soldier'}),
+ /Rol d’enemic a peu canviat/);
+console.log('PASS general V18 natiu: escala, cap, braços, genolls, arma i LOD sense canvis');
+
 // Test interception of classic global factories, both bundled and source.
 runtime.installHooks();
 globalThis.HUNTER_CHARACTERS=Object.freeze({
@@ -783,6 +852,34 @@ const soldier=globalThis.HUNTER_CHARACTERS.createSoldier(T);
 assert.equal(soldier.userData.humanGameV17,'soldier','Vehicle/enemy crew shares V17 soldier');
 globalThis.HUNTER_GENERAL_MODEL=Object.freeze({create(T){return playerModel.create(T)}});
 assert.equal(globalThis.HUNTER_GENERAL_MODEL.create(T).userData.humanGameV17,'general');
+// La migració es fa DESPRÉS de generar el full/mid/far de
+// createSoldier: no és correcte fer-la al createCommando compartit
+// perquè els requisadors i soldats amb bazuca encara tenen altres mounts.
+globalThis.HUNTER_CHARACTERS=Object.freeze({
+ createCommando(T){return playerModel.create(T)},
+ createSoldier(T,{general=false}={}){
+  const o=general?globalThis.HUNTER_GENERAL_MODEL.create(T):this.createCommando(T);
+  if(general){
+   o.scale.setScalar(.8);o.userData.profile='general-approved-thick-epaulettes';
+   o.userData.enemyFullRoot=new T.Group();
+   o.userData.enemyMidMesh=new T.Mesh(new T.BoxGeometry(.4,1,.4),
+    new T.MeshStandardMaterial());
+   o.userData.enemyFarMesh=new T.Mesh(new T.BoxGeometry(.3,.8,.3),
+    new T.MeshStandardMaterial());
+   o.add(o.userData.enemyFullRoot,o.userData.enemyMidMesh,
+    o.userData.enemyFarMesh);
+  }
+  return o;
+ }
+});
+const generalFactory=globalThis.HUNTER_CHARACTERS.createSoldier(T,{general:true});
+assert.equal(generalFactory.userData.humanOnFootNativeRole,'general',
+ 'La fàbrica real d’enemics normalitza el general després dels tres LOD');
+assert.deepEqual(generalFactory.scale.toArray(),[1,1,1]);
+const infantryFactory=globalThis.HUNTER_CHARACTERS.createSoldier(T,{general:false});
+assert.equal(infantryFactory.userData.humanOnFootNativeRole,undefined,
+ 'La normalització del general no altera encara els soldats amb bazuca');
+
 const civilians=[];
 globalThis.HUNTER_PRISONERS=Object.freeze({
  create({THREE}){
