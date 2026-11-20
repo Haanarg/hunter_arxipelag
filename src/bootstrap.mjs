@@ -86,6 +86,10 @@ import * as canonicalWater from './canonical-water.mjs?v=0.6.288';
 window.HUNTER_WORLD_GENERATION=worldGeneration;window.HUNTER_CANONICAL_WATER=canonicalWater;
 import * as walkSurfaces from './walk-surfaces.mjs?v=0.6.288';
 window.HUNTER_WALK_SURFACES=walkSurfaces;
+// Perfil físic pur compartit per les hitboxes en SOLO i el Worker COOP.
+// Registrar-lo abans de carregar el motor classic de combat.
+import * as playerPhysicalProfile from './player-physical-profile.mjs';
+window.HUNTER_PLAYER_PHYSICAL_PROFILE=playerPhysicalProfile;
 import * as worldPhysics from './world-physics.mjs?v=0.6.288';
 import * as worldAdapter from './world-adapter.mjs?v=0.6.288';
 window.HUNTER_WORLD_PHYSICS=worldPhysics;window.HUNTER_WORLD_ADAPTER=worldAdapter;
