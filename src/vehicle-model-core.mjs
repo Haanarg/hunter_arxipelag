@@ -846,10 +846,8 @@ export const vehicleModels=Object.freeze({
       }
       if(t!=='barca_rems'){
         if(distant.attach(g,t)){
-          if(t==='cotxe'&&g.userData.gazModel==='Tigr-M'){
-            const proxy=g.userData.distantVehicleLOD?.proxy;
-            if(proxy){proxy.scale.setScalar(1.25);proxy.position.y*=1.25}
-          }
+          // El GAZ i la resta de LOD ja neixen amb dimensió nativa:
+          // cap scale posterior al proxy que es perdi en canviar variants.
           // El proxy queda ocult en qualitat propera però és una malla
           // real. El recompte de batching ha de seguir sent exacte.
           batchStats.before++;batchStats.after++;
@@ -862,6 +860,24 @@ export const vehicleModels=Object.freeze({
       // VS continua disponible per la física i la càmera, no al renderer.
       g.scale.setScalar(VS[t]);
       const baked=bakeFixedModelScales(g);
+      const lod=g.userData.distantVehicleLOD;
+      if(lod){
+        // Les variants desades a userData NO formen part del graf
+        // Object3D: bakeFixedModelScales només transforma la geometria
+        // del proxy actiu. Sense aquesta consolidació, en passar a LOD
+        // 1/2 es reintroduïen mides més petites i s'invalidava el VS.
+        const converted=new Map([[lod.variants[0],lod.proxy.geometry]]);
+        lod.variants=lod.variants.map(original=>{
+          if(converted.has(original))return converted.get(original);
+          const native=original.clone();
+          native.scale(VS[t],VS[t],VS[t]);
+          resources?.retain(native);
+          converted.set(original,native);
+          return native;
+        });
+        lod.proxy.geometry=lod.variants[0];
+        lod.nativeGeometryVariants=true;
+      }
       if(baked.remainingNonUniform>0)
        g.userData.modelNonUniformScaleCount=baked.remainingNonUniform;
       if(Math.abs(g.scale.x-1)>1e-10)

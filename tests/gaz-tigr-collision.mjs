@@ -5,6 +5,7 @@ import {vehicleSpecs,GAZ_TIGR_COLLISION,isGazTigr,vehicleCollisionTop,vehicleCol
 import {prepareGazTigrRuntime} from '../src/gaz-tigr-runtime.mjs';
 import {vehicleModels} from '../src/vehicle-model-core.mjs';
 import {playerBatching} from '../src/player-batching-core.mjs';
+import {createDistantVehicleFactory,setDistantVehicleLOD} from '../src/vehicle-distant-lod.mjs';
 const gazRoot=prepareGazTigrRuntime(THREE,{vehicleScale:1.3}).create();
 const factory=vehicleModels.createFactory(THREE,{
   box(){throw new Error('El model GAZ ha desaparegut')},
@@ -15,6 +16,44 @@ const runtimeCar=factory('cotxe');
 const gaz={t:'cotxe',o:runtimeCar},generic={t:'cotxe',o:{userData:{}}};
 const relayGaz={t:'cotxe',gazModel:'Tigr-M'};
 assert.equal(runtimeCar.userData.gazModel,'Tigr-M');
+const gazLOD=runtimeCar.userData.distantVehicleLOD;
+assert(gazLOD?.gazNativeDimensions&&gazLOD.nativeGeometryVariants,
+ 'Les tres variants LOD del GAZ són natives, no models reescalats');
+assert.deepEqual(gazLOD.proxy.scale.toArray(),[1,1,1],
+ 'El model llunyà del GAZ no usa escala posterior');
+const raw=new THREE.Group(),rawLOD=createDistantVehicleFactory(THREE).attach(raw,'cotxe');
+const intrinsicRatio=GAZ_TIGR_COLLISION.hitbox[0]/vehicleSpecs.hitboxes.cotxe[0];
+const expectedFactor=vehicleSpecs.scales.cotxe*intrinsicRatio;
+const boundsGeometry=g=>{
+ g.computeBoundingBox();
+ return g.boundingBox.clone();
+};
+for(let i=0;i<3;i++){
+ const actual=boundsGeometry(gazLOD.variants[i]);
+ const baseline=boundsGeometry(rawLOD.variants[i]);
+ const expected=baseline.clone();
+ expected.min.multiplyScalar(expectedFactor);
+ expected.max.multiplyScalar(expectedFactor);
+ assert(actual.min.distanceTo(expected.min)<1e-5&&
+   actual.max.distanceTo(expected.max)<1e-5,
+  'Contorn natiu del GAZ en LOD '+i+' (0/1/2 ocupants)');
+}
+assert.equal(gazLOD.proxy.geometry,gazLOD.variants[0],
+ 'El proxy inicial conserva la geometria normalitzada');
+assert(setDistantVehicleLOD(runtimeCar,true));
+assert.equal(gazLOD.proxy.geometry,gazLOD.variants[0]);
+assert(setDistantVehicleLOD(runtimeCar,false));
+for(let i=1;i<3;i++){
+ runtimeCar.userData.enemyCarCrew={
+  driver:{visible:i>=1},gunner:{visible:i>=2}
+ };
+ assert(setDistantVehicleLOD(runtimeCar,true));
+ assert.equal(gazLOD.proxy.geometry,gazLOD.variants[i],
+  'La variant GAZ amb '+i+' ocupants no canvia l’escala del vehicle');
+ assert.deepEqual(gazLOD.proxy.scale.toArray(),[1,1,1]);
+ assert(setDistantVehicleLOD(runtimeCar,false));
+}
+delete runtimeCar.userData.enemyCarCrew;
 assert.equal(gazRoot.scale.x,1,'GAZ ja dimensionat dins la geometria');
 assert.equal('gazVisualScale' in runtimeCar.userData,false,'Cap pegat visual al GAZ');
 const dims=v=>vehicleCollisionFootprint(v,vehicleSpecs.hitboxes.cotxe,vehicleSpecs.scales.cotxe);

@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import * as T from '../vendor/three-r186.module.mjs';
 import {bakeFixedModelScales} from '../src/model-scale-normalization.mjs';
 import {vehicleModels} from '../src/vehicle-model-core.mjs';
+import {createDistantVehicleFactory} from '../src/vehicle-distant-lod.mjs';
+import {vehicleSpecs} from '../src/vehicle-specs.mjs';
 import {playerBatching} from '../src/player-batching-core.mjs';
 import {createTruckModel} from '../src/truck-model.mjs';
 import {createCivilianCarModel} from '../src/civilian-car-model.mjs';
@@ -79,12 +81,32 @@ const make=vehicleModels.createFactory(T,{
  truck:createTruckModel,civilianCar:createCivilianCarModel
 });
 const types=['bici','moto','cotxe','camio','hover','barca_rems','ferry','windsurf','tanc','tanqueta','heli','heli_combat'];
+const baselineLod=createDistantVehicleFactory(T);
 for(const type of types){
  const model=make(type);
  assert.equal(model.userData.modelScaleNormalized,true,'Model normalitzat: '+type);
  assert.deepEqual(model.scale.toArray(),[1,1,1],'Arrel sense factors residuals: '+type);
  assert(new T.Box3().setFromObject(model).getSize(new T.Vector3()).length()>0,
   'Model real conserva les dimensions: '+type);
+ const lod=model.userData.distantVehicleLOD;
+ if(lod){
+  assert.equal(lod.nativeGeometryVariants,true,'Variants LOD natives: '+type);
+  assert.equal(lod.proxy.geometry,lod.variants[0],
+   'Proxy inicial i variant 0 amb la mateixa geometria normalitzada: '+type);
+  assert.deepEqual(lod.proxy.scale.toArray(),[1,1,1]);
+  const compare=baselineLod.attach(new T.Group(),type);
+  for(let i=0;i<3;i++){
+   lod.variants[i].computeBoundingBox();
+   compare.variants[i].computeBoundingBox();
+   const actual=lod.variants[i].boundingBox,
+         expected=compare.variants[i].boundingBox.clone();
+   expected.min.multiplyScalar(vehicleSpecs.scales[type]);
+   expected.max.multiplyScalar(vehicleSpecs.scales[type]);
+   assert(actual.min.distanceTo(expected.min)<.0001&&
+    actual.max.distanceTo(expected.max)<.0001,
+    'No es perd el VS de món en commutar al LOD '+i+': '+type);
+  }
+ }
 }
 for(const type of ['bici','moto']){
  const model=make(type),anchors=model.userData.twoWheelAnchors;

@@ -1,6 +1,6 @@
 // LOD visual distant de la flota civil i militar. La física i les
 // referències de canons, rodes i ocupants sempre romanen al grup complet.
-import {vehicleSpecs} from './vehicle-specs.mjs?rev=btr82-scale-80-1';
+import {vehicleSpecs,GAZ_TIGR_COLLISION} from './vehicle-specs.mjs?rev=btr82-scale-80-1';
 import {createBtr82DistantGeometry} from './btr82-3b-native.mjs?rev=btr82-scale-80-1';
 export const distantVehicleRanges=Object.freeze({
   ferry:[720,850],heli:[650,780],heli_combat:[650,780],
@@ -17,6 +17,12 @@ const colorByType=Object.freeze({
   hover:0x838d7f,ferry:0x294d70
 });
 const OPEN=new Set(['bici','moto','moto_aquatica','windsurf','hover','llanxa','llanxa_coets']);
+// El GAZ distant no rep cap corrector posterior: la silueta nativa
+// s'obté de la relació de les dues caixes aprovades, idèntica en X i Z.
+const GAZ_NATIVE_LOD_RATIO=GAZ_TIGR_COLLISION.hitbox[0]/vehicleSpecs.hitboxes.cotxe[0];
+if(Math.abs(GAZ_NATIVE_LOD_RATIO-
+  GAZ_TIGR_COLLISION.hitbox[1]/vehicleSpecs.hitboxes.cotxe[1])>1e-9)
+ throw Error('Les proporcions físiques del GAZ són incompatibles');
 export const hasDistantVehicleLOD=type=>type!=='barca_rems'&&!!vehicleSpecs.hitboxes[type];
 export function shouldSimplifyVehicle(type,distanceSquared,currentFar=false,forcedDetail=false){
   if(forcedDetail||!hasDistantVehicleLOD(type))return false;
@@ -33,8 +39,9 @@ export function createDistantVehicleFactory(THREE,resources=null){
   const material=new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true});
   const btrMaterial=new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true,side:THREE.DoubleSide});
   resources?.retain(material);resources?.retain(btrMaterial);
-  function build(type,seats){
-    const key=type+':'+(type==='tanqueta'?0:seats);
+  function build(type,seats,gaz=false){
+    const nativeGaz=gaz&&type==='cotxe';
+    const key=type+':'+(type==='tanqueta'?0:seats)+(nativeGaz?':gaz':'');
     if(geometries.has(key))return geometries.get(key);
     if(type==='tanqueta'){
       const geo=createBtr82DistantGeometry(THREE);resources?.retain(geo);geometries.set(key,geo);return geo;
@@ -177,10 +184,15 @@ export function createDistantVehicleFactory(THREE,resources=null){
       }
     }
     const outPos=[],outNorm=[],outColor=[];
+    // Corregim la mida a la geometria del LOD (també per a 1 o 2
+    // ocupants), no a proxy.scale: en canviar de variant no es perd.
+    const nativeSize=nativeGaz?GAZ_NATIVE_LOD_RATIO:1;
     for(const [x,y,z,ww,hh,dd,col] of parts){
       const c=new THREE.Color(col);
       for(let i=0;i<positions.count;i++){
-        outPos.push(x+positions.getX(i)*ww,y+positions.getY(i)*hh,z+positions.getZ(i)*dd);
+        outPos.push((x+positions.getX(i)*ww)*nativeSize,
+         (y+positions.getY(i)*hh)*nativeSize,
+         (z+positions.getZ(i)*dd)*nativeSize);
         outNorm.push(normals.getX(i),normals.getY(i),normals.getZ(i));
         outColor.push(c.r,c.g,c.b);
       }
@@ -211,16 +223,18 @@ export function createDistantVehicleFactory(THREE,resources=null){
   }
   function attach(model,type){
     if(!hasDistantVehicleLOD(type))return null;
+    const gaz=type==='cotxe'&&model.userData?.gazModel==='Tigr-M';
     const full=new THREE.Group();full.name='hunter-vehicle-full-detail';
     for(const child of [...model.children])full.add(child);
-    const proxy=new THREE.Mesh(build(type,0),type==='tanqueta'?btrMaterial:material);
+    const proxy=new THREE.Mesh(build(type,0,gaz),type==='tanqueta'?btrMaterial:material);
     proxy.name='hunter-vehicle-distant-proxy';
     proxy.visible=false;proxy.castShadow=false;proxy.receiveShadow=false;
     proxy.userData.noCastShadow=true;
     model.add(full,proxy);
     // Arrays are clone-safe for HUNTER_RESOURCES.cloneModel.
     return model.userData.distantVehicleLOD={
-      type,full,proxy,variants:[build(type,0),build(type,1),build(type,2)],level:'full'
+      type,full,proxy,variants:[build(type,0,gaz),build(type,1,gaz),
+       build(type,2,gaz)],level:'full',gazNativeDimensions:gaz
     };
   }
   return {attach};
