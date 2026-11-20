@@ -23,6 +23,8 @@ const STANDING_ZONES=Object.freeze([
  Object.freeze({fraction:.60,radius:.65}),
  Object.freeze({fraction:1,radius:.36,topAligned:true})
 ]);
+// Les cames flexionades ocupen 1 cm més en planta que dretes.
+// Els radis del tors i del cap es mantenen iguals: només baixen.
 const CROUCHED_ZONES=Object.freeze([
  Object.freeze({fraction:.25,radius:.62}),
  Object.freeze({fraction:.60,radius:.65}),
