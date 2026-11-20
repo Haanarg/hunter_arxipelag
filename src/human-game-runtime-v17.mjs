@@ -193,6 +193,8 @@ function installCanonicalPlayer(T,model){
   torsoQ:new T.Quaternion()
  };
  const weaponWorld=new T.Quaternion(),handWorld=new T.Quaternion(),
+  nativeGunForward=new T.Vector3(0,0,-1),
+  nativeGunDirection=new T.Vector3(),
   runAxis=new T.Vector3(1,0,0),runTarget=new T.Quaternion(),
   gunAim=new T.Vector3(),
   // Orientació LOCAL al canell: evita que la pistola es quedi en un eix mundial
@@ -210,6 +212,22 @@ function installCanonicalPlayer(T,model){
   shoulderL:new T.Quaternion(),elbowL:new T.Quaternion(),
   aimedShoulder:new T.Quaternion(),aimedElbow:new T.Quaternion()
  };
+ // Si el tick ja ha publicat la postura V18 i el vector mundial
+ // de mira, les armes visibles s'orienten amb aquest vector numèric.
+ // No consultam llavors el quaternion de la torreta de braços V17.
+ function resolveNativeWeaponWorld(source){
+  const native=u.humanGameNativeBodyPose&&u.humanGameNativeLimbPose,
+        direction=u.visualAimSmoothed;
+  if(native&&direction?.lengthSq?.()>.0001){
+   nativeGunDirection.copy(direction).normalize();
+   weaponWorld.setFromUnitVectors(nativeGunForward,nativeGunDirection);
+   u.humanGameNativeWeaponAimUsed=true;
+   return true;
+  }
+  source.getWorldQuaternion(weaponWorld);
+  u.humanGameNativeWeaponAimUsed=false;
+  return false;
+ }
  const pistolGrips=[];
  for(const side of ['L','R']){
   const hand=j['wrist'+side].children.find(o=>o.userData?.humanHand===side);
@@ -364,9 +382,19 @@ function installCanonicalPlayer(T,model){
     source.traverse(o=>{if(o.isMesh)o.visible=false});
    }
    const proxy=proxies.get(kind);proxy.visible=true;
-   if(kind==='knife'||kind==='grenade'){
-    // Accessori orientat exclusivament en el canell V18.
-    proxy.quaternion.copy(source.quaternion);
+   if(kind==='knife'){
+    // Estocada 3B/4B calculada al tick V18, no al canell ocult.
+    const knife=u.humanGameNativeKnifeRotation;
+    if(knife){
+     if(!['x','y','z'].every(axis=>Number.isFinite(knife[axis])))
+      throw Error('Orientació nativa de ganivet invàlida');
+     proxy.rotation.set(knife.x,knife.y,knife.z);
+    }else proxy.quaternion.copy(source.quaternion); // només primer fotograma
+    proxy.userData.humanActionNativeOriented=true;
+   }else if(kind==='grenade'){
+    // La granada no té rotació local animada: en el V18 la posició
+    // segueix el canell dret, que ja té la seva pròpia IK de llançament.
+    proxy.quaternion.identity();
     proxy.userData.humanActionNativeOriented=true;
    }else if(kind==='cisalla'){
     // El muntatge local de la cisalla és part de la geometria aprovada,
@@ -378,7 +406,7 @@ function installCanonicalPlayer(T,model){
    }else{
     // Fusells, bazuca i pistola: l'orientació balística actual
     // continua governant l'arma real fins a migrar tot el controlador.
-    source.getWorldQuaternion(weaponWorld);
+    resolveNativeWeaponWorld(source);
     (kind==='cisalla'||NATIVE_LONG_GUN_GRIPS[kind]?j.spine:j.wristR)
      .getWorldQuaternion(handWorld);
     gunAimLocal.copy(handWorld).invert().multiply(weaponWorld);
@@ -476,7 +504,7 @@ function installCanonicalPlayer(T,model){
   const pistolBlend=nativePistol?.visible&&u.gun?.visible?
    Math.max(0,Math.min(1,u.pistolBlend||0)):0;
   if(pistolBlend>.0001){
-   u.gun.getWorldQuaternion(weaponWorld);
+   resolveNativeWeaponWorld(u.gun);
    j.shoulderR.getWorldPosition(mountCache.shoulder);
    j.spine.getWorldQuaternion(mountCache.torsoQ);
    mountCache.up.set(0,1,0).applyQuaternion(mountCache.torsoQ).normalize();

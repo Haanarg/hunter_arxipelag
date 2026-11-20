@@ -982,6 +982,15 @@ window.HUNTER_CHARACTERS=Object.freeze({
       // El gir ja porta easing temporal: aplicació exacta per arribar als 90° a l'impacte.
       u.knife.rotation.y=target.bladeY;
       u.knife.rotation.z+=(target.bladeZ-u.knife.rotation.z)*armRate;
+      // La fulla visible ja no pren l'orientació del canell antic:
+      // la mateixa corba 3B/4B escriu l'estat de l'arma V18 directament.
+      const nativeKnife=u.humanGameNativeKnifeRotation??={
+        x:PLAYER_KNIFE_4B.blade.x,y:PLAYER_KNIFE_4B.blade.y,
+        z:PLAYER_KNIFE_4B.blade.z
+      };
+      nativeKnife.x+=(target.bladeX-nativeKnife.x)*armRate;
+      nativeKnife.y=target.bladeY;
+      nativeKnife.z+=(target.bladeZ-nativeKnife.z)*armRate;
       // L'esquerra acompanya la punyalada amb un contrapès moderat.
       tx(u.al,-(.40+.35*run)*walk+.018*breath+target.leftShoulderX,armRate);
       tz(u.al,-.12+target.leftShoulderZ,armRate);
