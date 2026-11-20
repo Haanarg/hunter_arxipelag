@@ -4293,11 +4293,9 @@ else if(!cv&&playerEject&&playerEject.t>=0){
     // hi ha 2.05, escala del grup ni un segon centre de cintura fictici.
     window.HUNTER_PLAYER_EJECTION.rotateModelAroundNativePelvis(pl,turn);
     pl.position.y+=Math.sin(Math.PI*p)*(playerEject.height||.68);
-    const compact=1-Math.pow(p,8);
-    if(u.al)u.al.rotation.x=.58*compact;if(u.ar)u.ar.rotation.x=.58*compact;
-    if(u.ael)u.ael.rotation.x=.5*compact;if(u.aer)u.aer.rotation.x=.5*compact;
-    if(u.ll)u.ll.rotation.x=-.28*compact;if(u.lr)u.lr.rotation.x=-.28*compact;
-    if(u.lkl)u.lkl.rotation.x=-.5*compact;if(u.lkr)u.lkr.rotation.x=-.5*compact;
+    // La postura d'expulsió es reaplica a les ARTICULACIONS V18 just
+    // després de la pose canònica, no als controls invisibles V17.
+    u.nativeFlipProgress=p;
   }else if(playerEject.kind==='bicycle'){
     // Petita pèrdua d'equilibri sense desplaçament ni efecte explosiu.
     const stumble=Math.sin(Math.PI*p);
@@ -4460,6 +4458,12 @@ if(started&&!paused&&(!over||victoryCinematic?.active)&&terrainStream)
    if(typeof pl.userData.humanGamePose==='function'){
     pl.userData.humanGamePose();if(avatarAuditEnabled)avatarAuditPoseCalls++;
    }
+   // Render sobre el mateix V18 aprovat: humanGamePose no pot
+   // sobreescriure el ragdoll ni la cabriola de l'últim subpas.
+   if(playerEject?.kind==='blast'&&playerBlastRagdoll)
+     window.HUNTER_RAGDOLL.apply(playerBlastRagdoll);
+   else if(playerEject?.kind==='flip')
+     window.HUNTER_RAGDOLL.applyNativeFlip(pl,pl.userData.nativeFlipProgress||0);
    // Prova visual separada del controlador antic i de la física:
    // si aquestes articulacions no es mouen en pantalla, el problema és
    // a la jerarquia o al render, no al selector de caminar/B3/C4.

@@ -1572,3 +1572,12 @@
 - [x] **Proves de les dues cabines:** dues places, girs, parabrisa abans del cap i contacte després de trencar-lo, model V18 de pelvis sota transformacions COOP i bandes verticals de vehicles.
 - [ ] **Verificació visual manual:** comprovar encaix real de pilots Ka-60/Mi-24D, parabrises i hitboxes; la caixa física ara és geomètricament coherent però el seient de pilot de l'helicòpter no té encara una pell V18 comparable en l'editor. Verificar també amb dos dispositius COOP, ferri ocupat i sortides de vehicles en marxa.
 - [ ] **Blocs pendents:** col·lisions amb els vehicles durant les transicions de plataforma/rampa, enllaç del rider visible dins helicòpters si s'aprova, cap V18 en ajupiment extrem i finalitzar la retirada dels consumidors del rig ocult 2/3.
+
+
+### v0.6.290 · helicòpters V18 existents, hitboxes de cabina i ragdoll
+- [x] **Comprovació de pilots reals:** els Ka-60 i Mi-24D ja tenen dos pilots V18 creats amb `createHumanProposal`; no es creen duplicats. `vehicle-model-core.mjs` i `vehicle-occupant-damage-core.mjs` llegeixen els mateixos seients purs de `vehicle-crew-anchors.mjs`, inclòs l'ordre dels seients en tàndem al Mi-24D.
+- [x] **Hitboxes de cabina:** els caps dels tripulants d'helicòpters deixen de partir de `.72×VS` i `1.48×VS` genèrics. Passen a compartir el muntatge de la figura V18 real i una cota anatòmica nativa; prova geomètrica de seient, cap, exposició i gir.
+- [x] **Ragdoll/expulsió protagonista:** `ragdoll-lite.js` prioritza nou articulacions V18 autèntiques (espatlles, colzes, malucs, genolls, cap); `game-core.js` aplica els angles després de `humanGamePose` per evitar que els esborri. La cabriola de sortida gira també els braços i les cames V18, sense tocar ossos ocults.
+- [x] **Enemics:** es preserva de moment el controlador antic en soldats que encara no exporten articulacions V18 al motor del joc; ni la física ni el dany adopten malles/ossos.
+- [ ] **Validació amb dos clients:** verificar visualment pilots, dispars a parabrises i cabina, ragdoll i canvis de LOD, i passatge del vehicle al ferri.
+- [ ] **Pròxims blocs:** migració del ragdoll dels soldats i eliminació del controlador antic en les últimes postures; auditar ferry/vehicle amb dos dispositius, retirem `LEGACY_GAME_RIG_SCALE=2/3` només quan tots els consumidors ja hagin desaparegut.

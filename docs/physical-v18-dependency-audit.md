@@ -92,3 +92,11 @@ La segona passada ja usa la dada real `TRUCK_CABIN.enemySeat={x:0.6314,y:1.6728,
 4. **Ferri:** la caminada per coberta i el bloqueig de la cabina continuen implementats en `ferry-deck-core.mjs`, compartit per SOLO i COOP; s'han afegit proves de col·lisió de vianant al mig del pont, a l'interior de la cabina i amb un buc massa lluny en vertical. La comparació entre sortida de vehicle en marxa i transferència a ferri de dos dispositius continua pendent.
 
 **No s'ha retirat el controlador V17 ni s'han canviat els punts de vida, el dany de caiguda, la inèrcia i el suport del ferri.**
+
+
+## 0.6.290 — revisió pilots visibles Ka-60 / Mi-24D i ragdoll
+
+- `src/vehicle-model-core.mjs` ja instanciava els dos pilots d'helicòpter amb la **mateixa geometria V18 aprovada que l'editor**. No es dobla el nombre de tripulants ni es toca el model del fuselatge.
+- `src/vehicle-crew-anchors.mjs` declara el seient real i la talla nativa específica de cada cabina (Ka-60 dues places laterals; Mi-24D dues places en tàndem). La conversió del vehicle `VS` ja es consolida en geometria, i `vehicleSeatWorld`/`vehicleOccupantHeadWorld` utilitzen ara els mateixos ancoratges; els punts de cap es calibren en una prova de malla V18 real.
+- `ragdoll-lite.js` ara prioritza `humanGameCanonicalJoints` V18 del protagonista i té una fase de re-aplicació després de l'animació d'un fotograma. `applyNativeFlip` dóna la postura de braços i cames al rig visible; la pelvis de la cabriola continua regida per `player-ejection-pivot.mjs`.
+- **Pendents:** l'anàlisi final del ragdoll dels soldats (encara hi ha un fallback heretat), provar el COOP real de dos dispositius amb pilots d'heli i rampes i retirar el factor 2/3 després de comprovar els consumidors restants.

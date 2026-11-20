@@ -16,7 +16,8 @@ import {pushWalls,pushTree} from '../src/world-physics.mjs';
 import * as crewPhysics from '../src/vehicle-occupant-damage-core.mjs';
 import {vehicleOccupantHeadWorld,vehicleSeatWorld,marineCrewHeadWorld,
  vehicleSeatProjectileContact,marineCrewProjectileContact} from '../src/vehicle-occupant-damage-core.mjs';
-import {TRUCK_CABIN,COMMANDO_HEAD_PIVOT_HEIGHT,enemyCrewLocalSeat} from '../src/vehicle-crew-anchors.mjs';
+import {TRUCK_CABIN,COMMANDO_HEAD_PIVOT_HEIGHT,enemyCrewLocalSeat,
+ HELICOPTER_CREW_PROFILES} from '../src/vehicle-crew-anchors.mjs';
 
 globalThis.window=globalThis;
 const runtime=createHumanGameRuntimeV17();
@@ -174,6 +175,32 @@ for(const role of ['player','soldier','rocket','elite','general']){
   g.position.copy(originalTranslation);g.rotation.copy(originalOrientation);
   g.updateWorldMatrix(true,true);
   console.log('PASS ejection: native V18 pelvis pivot and COOP transformed-parent invariance');
+  // L'explosió del protagonista no pot animar membres ocults V17.
+  // El ragdoll V18 es torna a aplicar després de humanGamePose() al RAF.
+  const ragdollWindow={window:{}};
+  runInNewContext(readFileSync(new URL('../src/ragdoll-lite.js',import.meta.url),'utf8'),ragdollWindow);
+  const rag=ragdollWindow.window.HUNTER_RAGDOLL;
+  const state=rag.make(g,{blast:true,seed:9.2,impulse:{vy:4}});
+  assert(state.native&&state.joints.length===9,
+   'Ragdoll: exclusivament els nou ossos visibles del V18');
+  assert(state.joints.some(x=>x.node===bones.shoulderR)&&
+   state.joints.some(x=>x.node===bones.hipL),
+   'El ragdoll mou espatlla i maluc de l\'editor, no controls V17');
+  rag.update(state,1/30,{airborne:true});
+  const ragAngle=bones.shoulderR.rotation.x;
+  g.userData.humanGamePose();
+  assert(rag.apply(state),'La cabriola restaura la postura física després de l\'animador V18');
+  assert(Math.abs(bones.shoulderR.rotation.x-ragAngle)<1e-9,
+   'El render no esborra la postura de l\'impacte');
+  rag.reset(state);
+  assert(!state.active);
+  g.userData.humanGamePose();
+  assert(rag.applyNativeFlip(g,.45),'L\'expulsió es fa sobre els ossos V18');
+  assert(Math.abs(bones.shoulderR.rotation.x-.58*(1-.45**8))<1e-9,
+   'La rotació visible del braç segueix el gir de l\'expulsió');
+  g.userData.humanGamePose();
+  console.log('PASS native V18 ragdoll and flip pose do not depend on legacy control bones');
+
   const reference=createHumanProposal(T,'player','a',{visualOnly:true,nativeHeight:HUMAN_PLAYER_GAME_NATIVE_HEIGHT});
   const source=[],actual=[];
   reference.traverse(n=>{if(n.isMesh)source.push(n)});
@@ -879,6 +906,44 @@ assert.equal(rider.userData.boots.length,2);
    material:color=>new T.MeshStandardMaterial({color}),
    shadows:false,batching:playerBatching
   });
+  // Els helicòpters KA-60 / MI-24D ja porten dos pilots V18 propis:
+  // mesuram l'os del cap i la base real en la geometria final (després
+  // del bake) contra les coordenades físiques pures del Worker COOP.
+  for(const type of ['heli','heli_combat']){
+    const craft=makeVehicle(type),crew=craft.userData.cockpitCrew;
+    assert.equal(crew.length,2,'Helicòpter amb dos pilots V18 reals: '+type);
+    assert(craft.scale.toArray().every(v=>v===1),'Heli sense reescala del grup');
+    for(let seat=0;seat<2;seat++){
+      const pilot=crew[seat],joints={};
+      pilot.traverse(o=>{
+        if(o.userData?.humanMotionJoint)joints[o.userData.humanMotionJoint]=o;
+      });
+      assert(joints.pelvis&&joints.head&&joints.wristL&&joints.wristR,
+       'Pilot de '+type+' amb rig V18 articulat i intacte');
+      assert.equal(pilot.userData.humanProposal?.role,'soldier');
+      const physicalSeat=vehicleSeatWorld(
+        {t:type,x:0,y:0,z:0,hd:0},seat,0),
+            physicalHead=vehicleOccupantHeadWorld(
+        {t:type,x:0,y:0,z:0,hd:0},seat,0),
+            visibleSeat=pilot.getWorldPosition(new T.Vector3()),
+            visibleHead=joints.head.getWorldPosition(new T.Vector3()),
+            expectedSeat=new T.Vector3(physicalSeat.x,physicalSeat.y,physicalSeat.z),
+            expectedHead=new T.Vector3(physicalHead.x,physicalHead.y,physicalHead.z);
+      const seatError=visibleSeat.distanceTo(expectedSeat),
+            headError=visibleHead.distanceTo(expectedHead);
+      console.log('HELI_V18_CREW_ANCHORS',JSON.stringify({
+        type,seat,visibleSeat:visibleSeat.toArray(),
+        physicalSeat:expectedSeat.toArray(),
+        visibleHead:visibleHead.toArray(),
+        physicalHead:expectedHead.toArray(),seatError,headError
+      }));
+      assert(seatError<.012,
+       'Ancoratge pilot V18 i hitbox de seient: '+type+'/'+seat+' error '+seatError);
+      assert(headError<.055,
+       'Cap del pilot V18 i hitbox balística: '+type+'/'+seat+' error '+headError);
+    }
+  }
+  console.log('PASS V18 helicopter cockpit pilots and shared SOLO/COOP hitbox anchors');
   const moto=makeVehicle('moto');
   assert.equal(moto.userData.motorcycleVisualScale,1.24,'Moto amb escala real segons distància entre eixos');
   assert(moto.userData.twoWheelAnchors?.seat&&moto.userData.twoWheelAnchors?.gripL

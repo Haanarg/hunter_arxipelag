@@ -5,15 +5,26 @@ window.HUNTER_RAGDOLL=Object.freeze((()=>{
   const LIMITS={arm:[-2.65,2.65],elbow:[-.25,1.85],
     leg:[-1.45,1.5],knee:[-1.9,.28],head:[-.72,.72]};
   const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
+  // Els enemics continuen utilitzant el seu controlador anterior;
+  // el protagonista en canvi manipula directament les articulacions
+  // que es veuen al joc i a l'editor V18.
   const make=(model,{blast=false,seed=0,impulse=null}={})=>{
-    const rig=model?.userData||{},joints=[];
-    const config=[
+    const rig=model?.userData||{},joints=[],
+      native=rig.humanGameCanonicalJoints||null;
+    const config=native?[
+      ['shoulderL','arm',-1],['shoulderR','arm',1],
+      ['elbowL','elbow',-1],['elbowR','elbow',1],
+      ['hipL','leg',-1],['hipR','leg',1],
+      ['kneeL','knee',-1],['kneeR','knee',1],
+      ['head','head',1]
+    ]:[
       ['al','arm',-1],['ar','arm',1],['ael','elbow',-1],['aer','elbow',1],
       ['ll','leg',-1],['lr','leg',1],['lkl','knee',-1],['lkr','knee',1],
       ['head','head',1]
     ];
     for(let i=0;i<config.length;i++){
-      const [key,type,side]=config[i],node=rig[key];
+      const [key,type,side]=config[i],
+        node=native?native[key]:rig[key];
       if(!node?.rotation)continue;
       const s=Math.sin((seed+1)*.71+i*2.399),
             home={x:node.rotation.x,y:node.rotation.y,z:node.rotation.z},
@@ -24,8 +35,10 @@ window.HUNTER_RAGDOLL=Object.freeze((()=>{
         vz:(Math.cos(i*1.97+seed)*1.3+side*.5)*(blast?1.7:.4),
         offset:0,offsetV:0,variant:s});
     }
-    return {model,joints,blast,age:0,groundAge:0,strength:blast?1:.5,
-      active:true,seed};
+    if(native&&joints.length!==config.length)
+      throw Error('Ragdoll V18 incomplet: falten articulacions del protagonista');
+    return {model,joints,native:!!native,blast,age:0,groundAge:0,
+      strength:blast?1:.5,active:true,seed};
   };
   function update(state,dt,{airborne=false,grounded=false,impact=false}={}){
     if(!state?.active)return;
@@ -79,6 +92,30 @@ window.HUNTER_RAGDOLL=Object.freeze((()=>{
         j.node.position.set(j.position.x,j.position.y,j.position.z);
     }
   }
+  // humanGamePose() executa l'animació V18 just abans del render.
+  // Si hi ha un impacte actiu, recomposam els angles del ragdoll V18
+  // DESPRÉS d'aquesta crida, sense passar pels ossos invisibles.
+  function apply(state){
+    if(!state?.native||!state.active)return false;
+    for(const j of state.joints){
+      j.node.rotation.x=j.angleX;
+      j.node.rotation.z=j.angleZ;
+    }
+    return true;
+  }
+  function applyNativeFlip(model,phase){
+    const j=model?.userData?.humanGameCanonicalJoints;
+    if(!j)return false;
+    const p=clamp(Number.isFinite(phase)?phase:0,0,1),
+          compact=1-Math.pow(p,8);
+    for(const [name,angle] of [
+      ['shoulderL',.58],['shoulderR',.58],
+      ['elbowL',.5],['elbowR',.5],
+      ['hipL',-.28],['hipR',-.28],
+      ['kneeL',-.5],['kneeR',-.5]
+    ])j[name].rotation.x=angle*compact;
+    return true;
+  }
   function reset(state){
     if(!state)return;
     for(const j of state.joints){
@@ -87,5 +124,5 @@ window.HUNTER_RAGDOLL=Object.freeze((()=>{
     }
     state.active=false;
   }
-  return {make,update,reset};
+  return {make,update,apply,applyNativeFlip,reset};
 })());

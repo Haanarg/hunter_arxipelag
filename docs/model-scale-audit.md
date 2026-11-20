@@ -219,3 +219,8 @@ Un mateix `player-physical-profile.mjs` governa els tres volums solapats de dany
 ## 0.6.289 — expulsió nativa V18 i helicòpters
 
 La volta del protagonista ja pivota exclusivament sobre `humanGameCanonicalJoints.pelvis`: `player-ejection-pivot.mjs` compensa l'orientació de la malla sense `2.05 * pl.scale.y`, també sota pares COOP transformats. Els caps numèrics dels tripulants de `heli/heli_combat` no reutilitzen les antigues coordenades incomparables de seient i cap. Proves de vidre i trajectòria. Les bandes verticals de contacte amb vehicles són ara una única funció comuna de SOLO i COOP, inclosa la geometria del GAZ aprovat. L'escala residual `LEGACY_GAME_RIG_SCALE=2/3` encara existeix en altres controladors i no es pot retirar sense migrar-los.
+
+
+## 0.6.290 · rigs V18 d'helicòpter i ragdoll del protagonista
+
+Els dos helicòpters ja incloïen V18 pilots visibles dins `vehicle-model-core.mjs`: es mantenen sense substitució. Els seus seients (`HELIPILOT`) són ara dades numèriques úniques compartides per fabricació visual, hitbox física i Worker, sense heretar el seient de cotxe multiplicat per VS. La prova real mesura els caps i la base a la malla aprovada. `ragdoll-lite.js` opera directament sobre `humanGameCanonicalJoints` per al protagonista i es reaplica després de cada pose de render; la cabriola també escriu sobre el V18 en lloc de sobre `u.al/u.ael/u.ll/u.lkl`. Els soldats sense articulacions canòniques al motor conserven un fallback temporal: **no es retira encara el rig ocult 2/3**.

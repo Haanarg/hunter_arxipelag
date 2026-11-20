@@ -8,7 +8,8 @@ import {pedestrianVehicleHeightCompatible} from '../src/vehicle-specs.mjs';
 import {resolveCoopPlayerVehicleContact} from '../src/coop-vehicle-contacts-core.mjs';
 import {vehicleSeatWorld,vehicleOccupantHeadWorld,vehicleSeatProjectileContact} from '../src/vehicle-occupant-damage-core.mjs';
 import {ferrySurfaceY,ferryLocal} from '../src/ferry-deck-core.mjs';
-import {COMMANDO_HEAD_PIVOT_HEIGHT} from '../src/vehicle-crew-anchors.mjs';
+import {HELICOPTER_CREW_PROFILES,helicopterCrewLocalSeat,
+  helicopterCrewLocalHead} from '../src/vehicle-crew-anchors.mjs';
 assert.equal(PLAYER_MAX_HEALTH,25);
 const clamp=(v,l)=>Math.max(-l,Math.min(l,v));
 // Independent copy of the previous runtime equations, across its actual modes.
@@ -193,10 +194,14 @@ for(const type of ['heli','heli_combat'])for(const seat of [0,1]){
    brokenVehicleWindows:[]};
  const hip=vehicleSeatWorld(craft,seat,craft.y),
        head=vehicleOccupantHeadWorld(craft,seat,craft.y);
- assert(Math.abs(head.y-hip.y-COMMANDO_HEAD_PIVOT_HEIGHT*.43)<1e-10,
-   'Cap de pilot real damunt el seient: '+type+'/'+seat);
- assert(Math.abs(head.x-hip.x)<1e-10&&Math.abs(head.z-hip.z)<1e-10,
-   'La cabina girada comparteix eixos per al cap i el seient');
+ assert(head.y>hip.y+.5,
+   'Cap V18 damunt el seient físic: '+type+'/'+seat);
+ const localSeat=helicopterCrewLocalSeat(type,seat),
+       localHead=helicopterCrewLocalHead(type,seat);
+ assert(Math.abs(localSeat.z)<12&&Math.abs(localHead.z)<12,
+   'Ancoratges en la cabina i no en l\'origen antic del buc');
+ assert(Math.abs(head.y-hip.y-(localHead.y-localSeat.y))<1e-9,
+   'Alçada numèrica del cap sense doble escala');
  const shotFrom={x:head.x,y:head.y,z:head.z-5},
        shotTo={x:head.x,y:head.y,z:head.z+5};
  const glass=vehicleSeatProjectileContact(shotFrom,shotTo,craft,

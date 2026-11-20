@@ -1,5 +1,6 @@
 import {createMi24Runtime,MI24_RUNTIME_ID} from './mi24-proposals.mjs?rev=mi24-d-optimized-20261115-3';
 import {createHumanProposal} from './human-proposals.mjs?rev=humans-v18-thin-neck-nape-20261119-1';
+import {HELICOPTER_CREW_PROFILES} from './vehicle-crew-anchors.mjs';
 import {installFerryModel} from './ferry-proposals.mjs?rev=ferry-d-approved-1';
 import {turretSpecs,advanceTurret,stepManualTurret} from './vehicle-turret-core.mjs?rev=btr82-scale-80-1';
 import {installBtr82Model3B} from './btr82-3b-native.mjs?rev=btr82-scale-80-1';
@@ -756,18 +757,21 @@ export const vehicleModels=Object.freeze({
         // Dos pilots del mateix model anatòmic canònic que l'editor,
         // dins els habitacles envidrats. Són figures visuals assegudes;
         // no intervenen en la física ni reben impactes independents.
-        const seats=combat?[[0,1.98,-3.08],[0,1.32,-4.96]]:
-          [[-.49,1.34,-2.65],[.49,1.34,-2.65]];
-        const crewUnits=combat?1:approvedModel.userData.cockpitSeatLocalScale;
-        const crew=seats.map(([x,y,z],i)=>{
-          // El pilot i el punt de seient tenen dimensions NATIVES, sense
-          // heretar l'antic x2 de l'arrel Ka-60 (ara sempre és 1).
+        const profile=HELICOPTER_CREW_PROFILES[t],
+              crewUnits=profile.worldUnits/VS[t];
+        if(!profile||Math.abs(crewUnits-
+          (combat?1:approvedModel.userData.cockpitSeatLocalScale))>1e-9)
+          throw Error('Helicòpter sense conversió de plaça V18 aprovada: '+t);
+        const crew=profile.seats.map(([x,y,z],i)=>{
+          // Els pilots V18 aprovats ja EXISTIEN. Només unificam el
+          // muntatge i les seves hitboxes, amb el mateix mapa de seients.
           const pilot=createHumanProposal(THREE,'soldier','a',{
-            visualOnly:true,nativeHeight:1.30*crewUnits
+            visualOnly:true,nativeHeight:profile.pilotHeight/VS[t]
           });
           pilot.name='Pilot de cabina '+(i+1);
-          pilot.position.set(x*crewUnits,(y-.27)*crewUnits,z*crewUnits);
+          pilot.position.set(x*crewUnits,y*crewUnits,z*crewUnits);
           pilot.rotation.x=-.08;
+          pilot.userData.helicopterSeatIndex=i;
           approvedModel.add(pilot);
           return pilot;
         });
