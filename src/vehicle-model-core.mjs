@@ -6,7 +6,7 @@ import {installBtr82Model3B} from './btr82-3b-native.mjs?rev=btr82-scale-80-1';
 export {createBtr82DistantGeometry} from './btr82-3b-native.mjs?rev=btr82-scale-80-1';
 import {installT90MModel} from './t90m-runtime.mjs?rev=t90m-game-double-1';
 import {vehicleSpecs} from './vehicle-specs.mjs?rev=two-wheel-20261119-footprint-1';
-import {createKa60Runtime,KA60_RUNTIME_ID} from './ka60-runtime.mjs?rev=ka60-approved-1';
+import {createKa60Runtime,KA60_RUNTIME_ID} from './ka60-runtime.mjs?rev=ka60-native-20261120-1';
 import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs?rev=vivid-engine-cover-2';
 import {createStreetfighter25,STREETFIGHTER_25_META} from './streetfighter-25-geometry.mjs';
 import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?rev=mi24-d-approved-1';

@@ -1,5 +1,5 @@
 // Ka-60 A definitiu, geometria nativa aprovada.
-import {createKamovCandidate} from './kamov-reference-candidates.mjs?rev=kamov-20261115-cockpit-body-panels-13';
+import {createKamovCandidate} from './kamov-reference-candidates.mjs?rev=kamov-native-dimensions-20261120-1';
 import {bakeFixedModelScales} from './model-scale-normalization.mjs';
 export const KA60_RUNTIME_ID='ka60-a-cockpit-body-13';
 export const KA60_WORLD_SCALE=2;
