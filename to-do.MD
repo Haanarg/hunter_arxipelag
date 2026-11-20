@@ -1,3 +1,8 @@
+**2026-11-20 · v0.6.262 · GAZ distant natiu i totes les variants LOD:**
+- [x] El GAZ Tigr-M distant obté les dimensions de les caixes aprovades, integrades als vèrtexs: eliminat `proxy.scale.setScalar(1.25)` i `proxy.position.y*=1.25`.
+- [x] Després del bake del model, les 3 variants LOD de cada vehicle conserven el mateix factor de món VS, inclòs el canvi d'ocupació 0/1/2; geometria inicial i `variants[0]` sincronitzades, proves amb els 12 vehicles i GAZ.
+- [ ] Validació CI/Cloudflare de v0.6.262; prova visual de distància/silueta GAZ i transicions LOD de la flota; la normalització de riders i del controlador antic continua pendent.
+
 **2026-11-20 · v0.6.261 · Normalització Ka-60 i pilots:**
 - [x] Variant A amb dimensió aprovada x2 integrada a geometria i rotors del generador, escala d'arrel 1 al laboratori i al joc; conversió de VS consolidada abans de crear seients.
 - [x] Dos pilots V18 i posicions de cabina generats en unitats natives, sense escala heretada del pare; regressions de contorns, rotors, altures, pilot i canvis VS.
