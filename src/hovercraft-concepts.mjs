@@ -234,16 +234,20 @@ export function createHovercraftConcept(THREE,variant=0){
     }
     const duct=mesh(new THREE.CylinderGeometry(r+.13,r+.13,style==='duct'?.61:.32,40,1,true),style==='duct'?paint:trim);
     duct.rotation.x=Math.PI/2;duct.position.set(x,y,z);
+    duct.userData.hoverFanCircular='duct';
     for(const dz of [-.20,.20]){
       const tor=mesh(new THREE.TorusGeometry(r+.09,style==='duct'?.105:.075,10,40),style==='duct'?paint:dark);
       tor.position.set(x,y,z+dz);
+      tor.userData.hoverFanCircular='rim';
     }
     const rotor=new THREE.Group();rotor.position.set(x,y,z);parts.add(rotor);
+    rotor.userData.hoverFanRotor=true;
     for(let i=0;i<6;i++){
       const a=i*Math.PI/3,ca=Math.cos(a),sa=Math.sin(a);
       const pts=[[.18,-.085],[r*.79,-.23],[r*.92,.17],[.17,.15]];
       const coords=pts.map(p=>[p[0]*ca-p[1]*sa,p[0]*sa+p[1]*ca,.015]);
-      quad(coords,silver,rotor);
+      const blade=quad(coords,silver,rotor);
+      blade.userData.hoverFanBlade=true;
     }
     const core=mesh(new THREE.CylinderGeometry(.19,.19,.21,14),dark,rotor);
     core.rotation.x=Math.PI/2;
@@ -253,17 +257,20 @@ export function createHovercraftConcept(THREE,variant=0){
     const guardZ=z-.24;
     for(let i=0;i<8;i++){
       const a=i*Math.PI/4;
-      beam([x,y,guardZ],[x+Math.cos(a)*r,y+Math.sin(a)*r,guardZ],.024,style==='open'?silver:dark,6);
+      const spoke=beam([x,y,guardZ],[x+Math.cos(a)*r,y+Math.sin(a)*r,guardZ],.024,style==='open'?silver:dark,6);
+      spoke.userData.hoverFanCircular='guard';
     }
     if(style==='cage'||style==='open'){
       for(let k=0;k<3;k++){
         const rr=(.40+k*.22)*r;
         const t=mesh(new THREE.TorusGeometry(rr,.018,6,36),silver);
         t.position.set(x,y,guardZ);
+        t.userData.hoverFanCircular='cage-ring';
       }
     }
     const cap=ball(.17,x,y,guardZ-.015,trim);
     cap.scale.z=.48;
+    cap.userData.hoverFanCircular='guard-cap';
   }
   // Totes les variants són monomotor, tal com el model 3.
   buildFan(0,c.style==='command'?2.60:2.48,2.28,c.radius,'open');

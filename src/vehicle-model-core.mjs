@@ -11,7 +11,7 @@ import {createJetSki25,JET_SKI_25_META} from './jet-ski-25-geometry.mjs?rev=vivi
 import {STREETFIGHTER_25_META} from './streetfighter-25-geometry.mjs';
 import {createNativeStreetfighter25,finalizeNativeBicycle} from './two-wheel-native-models.mjs';
 import {createDistantVehicleFactory,setDistantVehicleLOD,shouldSimplifyVehicle} from './vehicle-distant-lod.mjs?rev=lod-native-20261120-1';
-import {createHovercraftConcept,hovercraftConcepts} from './hovercraft-concepts.mjs?v=0.6.81';
+import {createNativeHovercraftD} from './hovercraft-native-model.mjs?rev=round-fan-native-20261120-1';
 import {bakeFixedModelScales} from './model-scale-normalization.mjs';
 // Fàbrica visual de vehicles. No conté física, controls ni regles de conducció.
 export const vehicleModels=Object.freeze({
@@ -730,18 +730,19 @@ export const vehicleModels=Object.freeze({
       if(t==='hover'){
         // Variant D «Comandament» validada a hovercraft-proves.html.
         // Font única per a mode individual i cooperatiu (tots dos usen createFactory).
-        const hover=createHovercraftConcept(THREE,hovercraftConcepts[3]);
-        // El prototip original és més compacte que el collider existent.
-        // Ajustam només el dibuix per mantenir la mida de col·lisió i el pilotatge.
-        hover.scale.set(1.28,1,1.20);
+        // Geometria D amb dimensions definitives del casc ja consolidades.
+        // Rotor, anelles i gàbia circulars (sense ovalar en girar).
+        const hover=createNativeHovercraftD(THREE);
         g.add(hover);
         // Conservam el contracte antic d'animació del ventilador.
         g.userData.fan=hover.userData.rotors[0];
         g.userData.hovercraftModel='D-model-3';
         g.userData.hovercraftSeats=hover.userData.cockpitSeats;
-        g.userData.hovercraftSeatPositions=hover.userData.seatStations.map(p=>new THREE.Vector3(p.x*1.28,p.y,p.z*1.20));
-        g.userData.hovercraftSteeringPosition=new THREE.Vector3(hover.userData.steeringStation.x*1.28,hover.userData.steeringStation.y,hover.userData.steeringStation.z*1.20);
+        g.userData.hovercraftSeatPositions=hover.userData.seatStations.map(p=>p.clone());
+        g.userData.hovercraftSteeringPosition=hover.userData.steeringStation.clone();
         g.userData.hovercraftWindows=hover.userData.windowPanes;
+        g.userData.hovercraftRoundFan=true;
+        g.userData.hovercraftNativeDimensions=true;
       }
       if(t==='heli'||t==='heli_combat'){
         const combat=t==='heli_combat';
