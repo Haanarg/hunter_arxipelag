@@ -118,3 +118,10 @@ La segona passada ja usa la dada real `TRUCK_CABIN.enemySeat={x:0.6314,y:1.6728,
 - **Pendent:** extreure braços/genolls i muntatges de les armes del controlador antic, després suprimir `LEGACY_GAME_RIG_SCALE`; soldats i civils encara utilitzen adaptadors, i cal validació real WebGL/COOP.
 
 La mateixa 0.6.292 també genera directament els vuit canals V18 de locomoció (malucs, genolls, espatlles i colzes) a partir del moviment, fase, velocitat, gir i ajupiment. Després d'inicialitzar la locomoció, el render deixa de llegir els quaternions de `u.ll/u.lr/u.lkl/u.lkr/u.al/u.ar/u.ael/u.aer`. Els controls encara existeixen per muntatges d'armes i l'antic `createCommando`; aquestes darreres dependències no estan migrades. Prova d'invariància amb les vuit articulacions antigues alterades.
+
+
+## 0.6.293 — mira de les armes visibles i fulla V18
+
+- Quan l'animador natiu de cos i extremitats ja està inicialitzat, la pistola, el rifle, el fusell d'assalt i el bazuca visibles deriven el quaternion mundial de `u.visualAimSmoothed` (el vector de mira del tick). No necessiten llegir la rotació de `u.gun/u.assault/u.sniper/u.bazooka` amagats.
+- El ganivet 3B/4B publica l'orientació exacta de la fulla V18 durant la transició. La granada conserva rotació local neutra i es munta al canell canònic. Els antics grups segueixen existint per controls de dispar i compatibilitat; no s'ha retirat el 2/3 encara.
+- Regressió: quan es força un quaternion incorrecte al grup ocult de pistola, el canó visible V18 continua seguint el vector mundial d'apuntat. **Pendent** comprovar de forma real l'animació de recoil i els canons en COOP i WebGL, i retirar el controlador ocult de lògica d'armes.
