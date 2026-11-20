@@ -1,5 +1,8 @@
 // More luminous than V14, but softer than the original game's #3ee43a.
 export const HUMAN_PLAYER_GREEN=0x60c754;
+// Dimensions de base del V18 del joc; mai no s'aplica un factor a l'arrel.
+export const HUMAN_PLAYER_GAME_NATIVE_HEIGHT=3.11232;
+export const HUMAN_WORLD_UNITS_PER_METER=1.6;
 export const HUMAN_PROFILES=Object.freeze({
  player:{name:'Protagonista',uniform:HUMAN_PLAYER_GREEN,trim:0x344c2c,hat:'cap',skin:0xd6a37e,weapon:'pistol'},
  soldier:{name:'Soldat',uniform:0xa83f46,trim:0x582e36,hat:'beret',skin:0xc68f6d,weapon:'rifle'},

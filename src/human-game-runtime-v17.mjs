@@ -2,10 +2,10 @@
 // seat, IK, collision, physics, weapon anchor or AI state is replaced.
 import {createHumanProposal,HUMAN_VERSION,sampleHumanGait} from './human-proposals.mjs?rev=human-game-swim-20261119-2';
 import {createGameSwimBridge} from './human-game-swim-bridge.mjs?rev=human-game-swim-20261119-3';
+import {HUMAN_PLAYER_GAME_NATIVE_HEIGHT,HUMAN_WORLD_UNITS_PER_METER} from './human-model-catalog.mjs';
 
 export const GAME_HUMAN_SKIN_VERSION='humans-v18';
-// Escala exclusivament visual a peu: rig i geometria intactes.
-export const FOOT_PLAYER_VISUAL_FACTOR=1.6; // mida FINAL del personatge natiu respecte de l'editor, ja consolidada
+// El V18 es genera directament amb la mida final nadiua.
 // L'esquelet antic només és un controlador ocult d'armes i física.
 // La seva escala original queda en un únic grup; l'arrel del jugador
 // i el model de l'editor no hereten cap correcció d'escala.
@@ -80,7 +80,7 @@ function belongsTo(node,ancestor){
 
 /** Render the exact editor rig; old bones remain invisible control inputs. */
 function installCanonicalPlayer(T,model){
- const u=model.userData,visual=createHumanProposal(T,'player','a',{visualOnly:true}),j={};
+ const u=model.userData,visual=createHumanProposal(T,'player','a',{visualOnly:true,nativeHeight:HUMAN_PLAYER_GAME_NATIVE_HEIGHT}),j={};
  visual.name='Protagonista · rig exacte de l’editor';
  visual.traverse(o=>{if(o.userData?.humanMotionJoint)j[o.userData.humanMotionJoint]=o});
  for(const id of ['pelvis','spine','neck','head','hipL','hipR','kneeL','kneeR','ankleL','ankleR','shoulderL','shoulderR','elbowL','elbowR','wristL','wristR'])
@@ -100,24 +100,24 @@ function installCanonicalPlayer(T,model){
  };
  const rest=Object.fromEntries(Object.entries(control).map(([id,bone])=>[id,bone.quaternion.clone().invert()]));
  const lowerRest=u.lowerBody.quaternion.clone().invert(),upperRest=u.upperBody.quaternion.clone().invert();
- // Única escala explícita del model visible, sense compensacions dinàmiques.
- visual.scale.setScalar(FOOT_PLAYER_VISUAL_FACTOR);
+ // La geometria i les articulacions ja tenen la mida final.
+ if(visual.scale.x!==1||visual.scale.y!==1||visual.scale.z!==1)throw Error('V18 amb escala externa');
  const swimBridge=createGameSwimBridge(T,visual,j);
  const pelvisY=u.hipHeight,spineY=u.upperBodyPivotHeight,actualSpineY=j.spine.position.y;
  // El desplaçament d'ajupir-se prové del controlador antic.
  // Adaptam el moviment al maluc real de la geometria nativa, mai a 2 m.
- const canonicalPelvisY=j.pelvis.parent.position.y; // dimensions locals de l'editor
+ const canonicalPelvisY=sourceFor(T,'player').joints.get('pelvis').parent.position.y; // referència original d'ajupir-se
  const crouchRatio=Math.min(1,canonicalPelvisY/pelvisY);
  const weapons=[
   // Pivot de la culata dins el puny: centre del mànec (y=-.20)
   // coincideix amb el plec dels dits (y≈-.065) amb escala .40.
-  ['gun',.40,.015,-.040],
-  ['assault',.27,-.11,-.12],
-  ['sniper',.26,-.11,-.12],
-  ['bazooka',.44,-.12,-.10],
-  ['knife',.40,-.09,-.05],
-  ['cisalla',.38,-.09,-.05],
-  ['grenade',.38,-.09,-.05]
+  ['gun',.64,.024,-.064],
+  ['assault',.432,-.176,-.192],
+  ['sniper',.416,-.176,-.192],
+  ['bazooka',.704,-.192,-.16],
+  ['knife',.64,-.144,-.08],
+  ['cisalla',.608,-.144,-.08],
+  ['grenade',.608,-.144,-.08]
  ],proxies=new Map();
  const weaponWorld=new T.Quaternion(),handWorld=new T.Quaternion(),
   cutterGrip=new T.Vector3(),runAxis=new T.Vector3(1,0,0),runTarget=new T.Quaternion(),
@@ -137,7 +137,9 @@ function installCanonicalPlayer(T,model){
    'Palmell esquerre pla sota la pistola';
   const part=(geo,x,y,z,rx=0,rz=0)=>{
    const mesh=new T.Mesh(geo,skin);
-   mesh.position.set(x,y,z);mesh.rotation.set(rx,0,rz);
+   geo.scale(HUMAN_WORLD_UNITS_PER_METER,HUMAN_WORLD_UNITS_PER_METER,HUMAN_WORLD_UNITS_PER_METER);
+   mesh.position.set(x*HUMAN_WORLD_UNITS_PER_METER,y*HUMAN_WORLD_UNITS_PER_METER,z*HUMAN_WORLD_UNITS_PER_METER);
+   mesh.rotation.set(rx,0,rz);
    mesh.userData.humanPistolGripPart=side;hold.add(mesh);return mesh;
   };
   if(side==='R'){
@@ -227,8 +229,8 @@ function installCanonicalPlayer(T,model){
     proxy.userData.humanPistolHeldInFist=true;
    }else if(kind==='cisalla'){
     // La cisalla viu en el tors: mai entre les dues mans.
-    proxy.scale.setScalar(.54);
-    proxy.position.set(0,.15,-.33);
+    proxy.scale.setScalar(.864);
+    proxy.position.set(0,.24,-.528);
     const arms=source.userData.bladeArms;
     if(arms)for(let i=0;i<2;i++)if(proxy.children[i]&&arms[i])
      proxy.children[i].rotation.copy(arms[i].rotation);
@@ -315,7 +317,7 @@ export function createHumanGameRuntimeV17(){
   // La malla del pilot de dues rodes és literalment la del jugador a peu.
   // Cap os s'estira per encaixar mans o peus a manillars i pedals.
   createTwoWheelRider(T){
-   const root=createHumanProposal(T,'player','a',{visualOnly:true}),joints={};
+   const root=createHumanProposal(T,'player','a',{visualOnly:true,nativeHeight:HUMAN_PLAYER_GAME_NATIVE_HEIGHT}),joints={};
    root.traverse(node=>{
     if(node.userData?.humanMotionJoint)joints[node.userData.humanMotionJoint]=node;
    });
@@ -323,32 +325,17 @@ export function createHumanGameRuntimeV17(){
      'kneeL','kneeR','ankleL','ankleR','shoulderL','shoulderR',
      'elbowL','elbowR','wristL','wristR'])
     if(!joints[id])throw Error('Pilot de dues rodes: falta articulació '+id);
-   // Fer explícites les dimensions del jugador a peu a totes les
-   // articulacions i malles. El rider ja no té un scale heretat ocult
-   // que es pugui combinar amb el del vehicle o l'animació.
-   const bareHeight=new T.Box3().setFromObject(root).getSize(new T.Vector3()).y;
-   if(!(bareHeight>0))throw Error('Malla canònica del pilot buida');
-   // L'única escala visual aprovada s'aplica a la geometria nativa.
-   // No es fa servir cap alçada final ni el límit històric de 2 m.
-   const bakedScale=FOOT_PLAYER_VISUAL_FACTOR*root.scale.x;
-   const referenceHeight=bareHeight*FOOT_PLAYER_VISUAL_FACTOR;
-   nativeVisualHeight=referenceHeight;
-   root.traverse(node=>{
-    if(node===root)return;
-    node.position.multiplyScalar(bakedScale);
-    if(node.isMesh&&node.geometry){
-     node.geometry=node.geometry.clone();
-     node.geometry.scale(bakedScale,bakedScale,bakedScale);
-    }
-   });
-   root.scale.set(1,1,1);
+   // La fàbrica ja genera pivots i geometries a la mida aprovada.
+   if(root.scale.x!==1||root.scale.y!==1||root.scale.z!==1)
+    throw Error('El pilot no pot tenir escala d’arrel');
    root.updateWorldMatrix(true,true);
    const standingHeight=new T.Box3().setFromObject(root).getSize(new T.Vector3()).y;
-   if(Math.abs(standingHeight-referenceHeight)>.025)
-    throw Error('El rig i la malla del pilot no coincideixen amb la geometria natural del protagonista');
+   nativeVisualHeight=standingHeight;
+   if(Math.abs(standingHeight-HUMAN_PLAYER_GAME_NATIVE_HEIGHT)>.025)
+    throw Error('Dimensions no nadiues del pilot');
    root.userData.twoWheelStandingHeight=standingHeight;
    root.userData.twoWheelCanonical=true;
-   root.userData.twoWheelBakedScale=bakedScale;
+   root.userData.twoWheelNativeHeight=standingHeight;
    return {root,joints,standingHeight};
   },
   suppress(callback){suppressed++;try{return callback()}finally{suppressed--}},

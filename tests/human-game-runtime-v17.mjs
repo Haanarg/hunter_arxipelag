@@ -6,13 +6,14 @@ import {playerModel} from '../src/player-model-core.mjs';
 import {vehicleModels} from '../src/vehicle-model-core.mjs';
 import {playerBatching} from '../src/player-batching-core.mjs';
 import {createHumanProposal,sampleHumanGait} from '../src/human-proposals.mjs';
-import {createHumanGameRuntimeV17,GAME_HUMAN_SKIN_VERSION,FOOT_PLAYER_VISUAL_FACTOR} from '../src/human-game-runtime-v17.mjs';
+import {createHumanGameRuntimeV17,GAME_HUMAN_SKIN_VERSION} from '../src/human-game-runtime-v17.mjs';
+import {HUMAN_PLAYER_GAME_NATIVE_HEIGHT,HUMAN_WORLD_UNITS_PER_METER} from '../src/human-model-catalog.mjs';
 
 globalThis.window=globalThis;
 const runtime=createHumanGameRuntimeV17();
 globalThis.HUNTER_HUMAN_V17=runtime;
 assert.equal(GAME_HUMAN_SKIN_VERSION,'humans-v18');
-assert.equal(FOOT_PLAYER_VISUAL_FACTOR,8/5,'Jugador a peu +20% respecte del factor anterior (factor 1,6)');
+assert.equal(HUMAN_PLAYER_GAME_NATIVE_HEIGHT,3.11232,'Alçada nadiua aprovada');
 const preview=createHumanProposal(T,'player','a',{visualOnly:true});
 let sourceWeapons=0;preview.traverse(n=>{if(n.userData?.humanWeapon)sourceWeapons++});
 assert.equal(sourceWeapons,0,'La geometria del joc no inclou una còpia de les armes del visor');
@@ -90,7 +91,7 @@ for(const role of ['player','soldier','rocket','elite','general']){
   assert(canonical?.userData.humanProposal?.role==='player','Game uses editor native root as actual render body');
   const bones=g.userData.humanGameCanonicalJoints;
   assert.equal(Object.keys(bones).length,16,'All 16 canonical editor joints have been retained');
-  const reference=createHumanProposal(T,'player','a',{visualOnly:true});
+  const reference=createHumanProposal(T,'player','a',{visualOnly:true,nativeHeight:HUMAN_PLAYER_GAME_NATIVE_HEIGHT});
   const source=[],actual=[];
   reference.traverse(n=>{if(n.isMesh)source.push(n)});
   canonical.traverse(n=>{if(n.isMesh&&n.userData.humanCanonicalOriginalGeometry)actual.push(n)});
@@ -109,7 +110,7 @@ for(const role of ['player','soldier','rocket','elite','general']){
   const expectedBound=new T.Box3().setFromObject(reference,true);
   const actualSize=bound.getSize(new T.Vector3()),expectedSize=expectedBound.getSize(new T.Vector3());
   console.log('CANONICAL_BOUNDS',JSON.stringify({actual:actualSize.toArray(),expected:expectedSize.toArray(),center:bound.getCenter(new T.Vector3()).toArray(),gameScale:g.scale.toArray(),visualScale:canonical.scale.toArray(),editorScale:reference.scale.toArray(),gameWorldScale:canonical.getWorldScale(new T.Vector3()).toArray()}));
-  assert(Math.abs(actualSize.y-expectedSize.y*FOOT_PLAYER_VISUAL_FACTOR)<.002,'Player 1.6 times larger, exact editor geometry');
+  assert(Math.abs(actualSize.y-expectedSize.y)<.002,'Player 1.6 times larger, exact editor geometry');
   // The old gameplay shoulder is only a control. Animation must actually
   // rotate the editor's corresponding shoulder pivot and preserve the torso.
   const oldR=u.ar.rotation.x,restShoulder=bones.shoulderR.quaternion.clone();
@@ -127,10 +128,10 @@ for(const role of ['player','soldier','rocket','elite','general']){
   const scaledView=new T.Box3();
   for(const mesh of actual)scaledView.union(new T.Box3().setFromObject(mesh,true));
   const inGameSize=scaledView.getSize(new T.Vector3());
-  assert(Math.abs(inGameSize.y-expectedSize.y*FOOT_PLAYER_VISUAL_FACTOR)<.002,
+  assert(Math.abs(inGameSize.y-expectedSize.y)<.002,
    'El protagonista conserva la geometria nativa (sense límit de 2 m): '+inGameSize.y);
   const sampleRatio=canonical.getWorldScale(new T.Vector3());
-  assert(Math.abs(sampleRatio.x-reference.scale.x*FOOT_PLAYER_VISUAL_FACTOR)<.002,
+  assert(Math.abs(sampleRatio.x-1)<.002,
    'L’escala visual de món és directa, sense multiplicar-la per l’arrel');
   const gunProxy=canonical.getObjectByName('Arma canònica · gun');
   assert(gunProxy&&gunProxy.parent===bones.wristR,'Visible pistol grip on editor wrist');
@@ -156,7 +157,7 @@ for(const role of ['player','soldier','rocket','elite','general']){
    u.gun.quaternion.setFromAxisAngle(new T.Vector3(1,0,0),.42);
    updateHuman(g);
    const gripOffset=gunProxy.position.clone();
-   assert(Math.abs(gripOffset.y-.015)<.002&&Math.abs(gripOffset.z+.040)<.002,
+   assert(Math.abs(gripOffset.y-.024)<.002&&Math.abs(gripOffset.z+.064)<.002,
     'La culata visible roman dins del puny i segueix el canell, no orbita pel pit');
    const gripCenter=gunProxy.localToWorld(new T.Vector3(0,-.20,.055)),
      fistCenter=fist.localToWorld(new T.Vector3(0,-.065,0));
@@ -330,10 +331,10 @@ assert.equal(rider.userData.boots.length,2);
     &&moto.userData.twoWheelAnchors?.pedalR,'Moto: ancoratges reals del xassís');
   assert(Math.abs(moto.userData.wheels[0].userData.radius-.34738122819654627*1.24*1.2)<.002,
    'Moto: roda física i visual de la mateixa mida');
-  // Una unitat mètrica equival a FOOT_PLAYER_VISUAL_FACTOR unitats
+  // Una unitat mètrica equival a HUMAN_WORLD_UNITS_PER_METER unitats
   // visuals: cap alçada nominal de 2 m s'imposa al jugador.
   // Honda CB650R: distància entre eixos 1,45 m; selló 0,81 m.
-  const meters=units=>units/FOOT_PLAYER_VISUAL_FACTOR;
+  const meters=units=>units/HUMAN_WORLD_UNITS_PER_METER;
   moto.updateWorldMatrix(true,true);
   const axles=moto.userData.wheels.map(w=>w.getWorldPosition(new T.Vector3()));
   const wheelbase=meters(axles[0].distanceTo(axles[1]));

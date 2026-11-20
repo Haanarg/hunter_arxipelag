@@ -1,3 +1,9 @@
+**2026-11-20 · v0.6.254 · Mida nadiua del V18 sense scale=1.6:**
+- [x] Protagonista, comparador i pilot moto/bici generats a 3.11232 u des de la fàbrica; pivots i geometries iguals i scale arrel 1.
+- [x] Armes i punys amb coordenades finals pròpies, sense heretar el multiplicador visual del cos.
+- [ ] Validació del CI (armes, caminada, natació, seients i comptador de triangles).
+- [ ] Encara pendent la migració de control rig 2/3, rider multi-vehicle i altres mides dinàmiques: vegeu docs/model-scale-audit.md.
+
 **2026-11-20 · v0.6.253 · Consolidació d'escales natives (auditoria en curs):**
 - [x] T90-M: ampliació aprovada x1,5 incorporada a geometria i metadades de cadena abans de publicar l'Object3D; escala d'arrel 1, turrets i rodes recalibrades al mateix punt mundial.
 - [x] GAZ Tigr-M: ampliació x1,25 incorporada a la font compartida amb l'editor; eliminat gazVisualScale i compensació de col·lisions, ara dimensions autoritatives a GAZ_TIGR_COLLISION també per COOP.
