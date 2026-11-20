@@ -896,9 +896,31 @@ export function createHumanGameRuntimeV17(){
     meshes.push(node);
    });
    rig.add(canonical);
+   // Mateix procediment que el protagonista V18: consolidam l'escala
+   // de tota la figura de rescat UNA vegada dins geometries i pivots.
+   // El punt de peu, el seient i les caixes de dany conserven l'espai
+   // mundial original; cap scalar temporal a l'Object3D arrel.
+   root.updateMatrixWorld(true,true);
+   const before=new T.Box3().setFromObject(canonical,true).clone();
+   const size=Number.isFinite(u.modelScale)?u.modelScale:1;
+   if(Math.abs(root.scale.x-size)>1e-10||
+      Math.abs(root.scale.y-size)>1e-10||
+      Math.abs(root.scale.z-size)>1e-10)
+    throw Error('Civil V18 amb una escala externa diferent de la física');
+   if(size!==1){
+    bakeFixedModelScales(root);
+    if(root.scale.toArray().some(v=>Math.abs(v-1)>1e-10))
+     throw Error('Escala residual a la figura civil V18');
+    root.updateMatrixWorld(true,true);
+    const after=new T.Box3().setFromObject(canonical,true);
+    if(before.min.distanceTo(after.min)>1e-6||
+       before.max.distanceTo(after.max)>1e-6)
+     throw Error('El bake civil ha mogut la pell V18 aprovada');
+   }
+   root.userData.humanCivilianRootBaked=true;
    root.userData.humanCivilianCanonicalRig=canonical;
    root.userData.humanCivilianCanonicalJoints=joints;
-   root.userData.humanCivilianCanonicalHeight=nativeHeight;
+   root.userData.humanCivilianCanonicalHeight=nativeHeight*size;
    root.userData.humanGameV17=role; // compatibilitat de save/diagnòstics
    root.userData.humanGameV17Counts={removed:removed.length,added:meshes.length};
    root.userData.humanGameV17PreservedRig=true;
