@@ -125,7 +125,7 @@ window.HUNTER_PRISONERS=Object.freeze({
    // aquest únic ancoratge del seient ja usa distàncies físiques.
    // No s'aplica cap scale al model ni a l'animació cada fotograma.
    u.rig.position.y=(seated?-.695:-.06)*
-     (u.o.userData.humanCivilianRootBaked?u.modelScale:1);
+     (u.o.userData.humanCivilianRootBaked&&Number.isFinite(u.modelScale)?u.modelScale:1);
    for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=seated?Math.PI/2:0;
    for(let i=0;i<u.arms.length;i++){
     u.arms[i].rotation.x=seated?-.5:0;
