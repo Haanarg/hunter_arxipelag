@@ -51,8 +51,10 @@ assert.equal(standingZones.length,3);
 assert.equal(crouchedZones.length,3);
 assert.equal(PLAYER_STANDING_HEIGHT,3.11232);
 assert.equal(PLAYER_CROUCHED_HEIGHT,PLAYER_STANDING_HEIGHT-.30);
-assert(standingZones.every((p,i)=>p.radius===crouchedZones[i].radius),
- 'Ajupir-se no canvia la mida del cap o del tors: baixa el centre');
+assert(standingZones.slice(1).every((p,i)=>p.radius===crouchedZones[i+1].radius),
+ 'Ajupir-se conserva els radis del cap i del tors');
+assert(crouchedZones[0].radius>=standingZones[0].radius,
+ 'Les cames flexionades poden ocupar lleugerament més amplada');
 assert(Math.abs(standingZones[2].y+standingZones[2].radius-PLAYER_STANDING_HEIGHT)<1e-10);
 assert(Math.abs(crouchedZones[2].y+crouchedZones[2].radius-PLAYER_CROUCHED_HEIGHT)<1e-10);
 const horizontalShot=y=>[{x:-5,y,z:0},{x:5,y,z:0}];
