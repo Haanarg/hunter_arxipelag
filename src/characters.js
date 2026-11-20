@@ -677,27 +677,19 @@ window.HUNTER_CHARACTERS=Object.freeze({
 
     if(airborne||parachuting){
       u.humanGameNativeAction=null;
+      // L'aire té una única postura V18 pròpia, amb entrada suau.
+      const mode=parachuting?'parachute':'fall';
+      const previous=u.humanGameNativeAirPose;
+      const step=1-Math.exp(-18*dt);
+      u.humanGameNativeAirPose={mode,blend:parachuting?1:
+        Math.min(1,(previous?.mode===mode?previous.blend:0)+step)};
       // L'estat aeri és exclusiu: l'animació normal no pot reactivar
       // la pistola ni cap altra arma durant un descens amb paracaigudes.
       for(const weapon of [u.gun,u.knife,u.bazooka,u.grenade,u.sniper,u.assault,u.cisalla])
         if(weapon)weapon.visible=false;
       if(u.pistolFlash)u.pistolFlash.visible=false;
       u.pistolBlend=0;
-      // El rig té els braços cap a -Y: una rotació X positiva
-      // els aixeca cap al davant (-Z), on passen els tirants.
-      const shoulder=parachuting?2.35:.60;
-      const blend=parachuting?1:limbK;
-      tx(u.ar,shoulder,blend);tx(u.al,shoulder,blend);
-      tz(u.ar,parachuting?.19:-.30,blend);
-      tz(u.al,parachuting?-.19:.30,blend);
-      tx(u.aer,parachuting?.22:.18,blend);
-      tx(u.ael,parachuting?.22:.18,blend);
-      tz(u.aer,parachuting?.06:0,blend);
-      tz(u.ael,parachuting?-.06:0,blend);
-      tx(u.ll,parachuting?.10:.17,blend);
-      tx(u.lr,parachuting?-.10:-.17,blend);
-      tx(u.lkl,parachuting?-.18:-.12,blend);
-      tx(u.lkr,parachuting?-.18:-.12,blend);
+      // Braços i cames visibles animats exclusivament als ossos V18.
       u.upperBody.rotation.x+=(0-u.upperBody.rotation.x)*k;
       u.upperBody.rotation.y+=(0-u.upperBody.rotation.y)*k;
       u.upperBody.rotation.z+=(0-u.upperBody.rotation.z)*k;
@@ -708,6 +700,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
       return;
     }
 
+    if(u.humanGameNativeAirPose){
+      // Diluïm la postura aèria sense saltar sobtadament a la marxa.
+      const state=u.humanGameNativeAirPose;
+      state.blend*=Math.exp(-12*dt);
+      if(state.blend<.004)u.humanGameNativeAirPose=null;
+    }
     if(swimming&&!inVehicle){
       u.humanGameNativeAction=null;
       // Ni B3 ni C4 ni manteniment/lateral toquen els ossos antics.
