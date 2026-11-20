@@ -1,3 +1,12 @@
+**2026-11-20 · v0.6.253 · Consolidació d'escales natives (auditoria en curs):**
+- [x] T90-M: ampliació aprovada x1,5 incorporada a geometria i metadades de cadena abans de publicar l'Object3D; escala d'arrel 1, turrets i rodes recalibrades al mateix punt mundial.
+- [x] GAZ Tigr-M: ampliació x1,25 incorporada a la font compartida amb l'editor; eliminat gazVisualScale i compensació de col·lisions, ara dimensions autoritatives a GAZ_TIGR_COLLISION també per COOP.
+- [x] Camió A4.3: mida base .82 integrada al generador; ancoratges de cabina explícits que consumeixen jugador, soldats i enemics, sense truckVisualFit.
+- [x] Figures visuals del camió i helicòpters: versió anatòmica a 1.30 unitats generada amb geometria unitària, sense scale.multiplyScalar en crear-les.
+- [x] Escàner exhaustiu d'operacions de mida a src i inventari raonat a docs/model-scale-audit.md; prevenció de reintroducció dels pegats ja eliminats.
+- [ ] CI i desplegament 0.6.253. Test de la geometria nativa i paritat source/bundle.
+- [ ] Continuar migració de rig antic 2/3, riders, bicicletes/motos, hovercraft no uniforme, Ka-60 i col·lisions d'helicòpters (vegeu docs/model-scale-audit.md). No suprimir-los sense adaptar física, seients i IK.
+
 **2026-11-20 · v0.6.252 · Reparació de pistola amb mans per sobre del cap:**
 - [x] Detectat desajust d'espai de coordenades després de consolidar el rig físic antic amb escala 2/3: `characters.js` feia `player.localToWorld(0,3.10,-1.13)` i convertia a `upperBody`, augmentant el target d'IK de la pistola més d'una unitat local (en lloc de situar-lo al pit).
 - [x] Els dos punts d'apuntat del canell i de l'arma es transformen ara des de `u.humanGameLegacyRig||player`, mai des de l'arrel sense escala quan existeix el rig antic; no es toquen l'autoaim balístic, les animacions V18, la natació ni l'editor.
