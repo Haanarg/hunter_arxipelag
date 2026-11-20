@@ -49,12 +49,20 @@ Una auditoria posterior ha detectat que `bakeFixedModelScales(g)` només normali
 
 Les regressions contrasten les caixes dels tres LOD amb les geometries originals i el factor físic de cada tipus, també amb 0/1/2 ocupants. La comprovació visual de siluetes i els models humans en seients COOP encara és pendent.
 
+## Ocupants de cabina amb geometria nativa · v0.6.263
+
+A `rider.js`, el protagonista visible als cotxes, al GAZ Tigr-M i a l'hovercraft ja no reescala la seva arrel amb `g.scale.setScalar(.82/.825/.63)`. Les talles definitives aprovades són **variants de geometria i pivots anatòmics**, derivades del model de partida quan apareixen per primer cop i reutilitzades en canviar de vehicle; en tornar a moto o bicicleta es recupera la variant original sense multiplicacions acumulatives. El grup de l'ocupant roman a `scale=(1,1,1)` en qualsevol vehicle.
+
+Els objectius de mans, peus, espatlles i tors es calculen en coordenades mundials/directes de la cabina, sense els anteriors `1/riderScale`. Els segments animats preserven les seves longituds i els moviments de braços, la pistola i el perfil llunyà es converteixen a la mateixa talla. Les proves comparen dimensions de pell, places de conductor i passatger, muntatge de l'hovercraft, estabilitat de geometries entre ticks i retorn a la moto.
+
+Encara existeixen les talles de cabina aprovades `.825/.82/.63` com a **paràmetres de creació de variants**, no factors sobre el model en execució. Això NO modifica els models enemics ni elimina el controlador ocult `2/3`; cal validació WebGL, animacions de trets i COOP real.
+
 ## Referències trobades, NO eliminades encara perquè alteren altres contractes
 
 | Codi | Situació | Migració necessària |
 |---|---|---|
 | `human-game-runtime-v17.mjs`: `LEGACY_GAME_RIG_SCALE=2/3` | Rig antic ocult d'armes/IK i pell V18 visible; s'usen espais locals diferents | Migrar les armes i les mans a un únic rig V18 i recalcular grips, seients, canons i física; abans d'això suprimir el 2/3 pot reintroduir les mans sobre el cap |
-| `rider.js`: `.825`, `.82`, `.63` i `1/riderScale` | Reescala tot el model del passatger segons vehicle durant la partida | Figures natives de cabina/seient i ancoratges físics llegits del model, amb IK i COOP adaptats |
+| `rider.js`: `.825`, `.82`, `.63` i `1/riderScale` | **Consolidat parcialment v0.6.263:** el rider de cotxe/GAZ/hover té arrel a 1, geometries de cabina estables i seients en unitats directes | Encara cal substituir les proporcions numèriques de les variants per dimensions declaratives de cabina i verificar COOP, trets i animacions amb WebGL |
 | `vehicle-model-core.mjs`: `BICYCLE_VISUAL_SCALE=.74`, `MOTORCYCLE_VISUAL_SCALE=1.24` | Mida fixa aplicada abans de `bakeFixedModelScales` | Integrar els dos valors als generadors de bicicleta i streetfighter; actualment els models lliurats ja tenen arrel a 1 |
 | `vehicle-model-core.mjs`: `hover.scale=(1.28,1,1.20)` | Escala no uniforme i cabina amb posicions compensades; no commuta amb rotació del ventilador | Generar nativament un hovercraft amb l'amplada/llargada aprovades, incloent les aspes animades i els ancoratges, sense shear |
 | `ka60-runtime.mjs`: `KA60_WORLD_SCALE/vehicleScale` | **Consolidat v0.6.261:** cap malla, rotor o pilot hereta escala d'arrel; el ×2 aprovat és intrínsec, i `1/vehicleScale` només converteix les unitats del vehicle abans de crear la tripulació | La col·lisió dinàmica de `game-core.js` continua fent servir altures/factors independents; auditar-la contra la geometria nativa |

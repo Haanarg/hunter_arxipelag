@@ -1,3 +1,9 @@
+**2026-11-20 · v0.6.263 · Riders de cabina a escala d'arrel 1:**
+- [x] El GAZ, el cotxe civil i l'hovercraft ja no apliquen g.scale=.825/.82/.63; les variants de pell/rig es generen en geometries definitives i es reutilitzen en canviar de vehicle.
+- [x] Eliminades 35 conversions inverses a punts de seient i d'IK. Mantingudes les llargades proporcionals dels segments, les animacions de pistola i el proxy distant amb unitats de cabina.
+- [x] Proves específiques dels conductors GAZ/civil, pilot i passatger de l'hovercraft, dimensions de geometria, reutilització de variants i restauració de mida en tornar a la moto.
+- [ ] CI i desplegament Cloudflare; comprovar visualment seients, mans, pistola/boques de foc, COOP amb passatger i canvi d'escales entre vehicles; encara resten les talles enemigues i el controlador de joc 2/3.
+
 **2026-11-20 · v0.6.262 · GAZ distant natiu i totes les variants LOD:**
 - [x] El GAZ Tigr-M distant obté les dimensions de les caixes aprovades, integrades als vèrtexs: eliminat `proxy.scale.setScalar(1.25)` i `proxy.position.y*=1.25`.
 - [x] Després del bake del model, les 3 variants LOD de cada vehicle conserven el mateix factor de món VS, inclòs el canvi d'ocupació 0/1/2; geometria inicial i `variants[0]` sincronitzades, proves amb els 12 vehicles i GAZ.
