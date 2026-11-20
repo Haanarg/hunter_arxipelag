@@ -473,6 +473,30 @@ export function createHumanGameRuntimeV17(){
    root.userData.humanCrewRootNormalized=true;
    return root;
   },
+  // Normalitzar enemics a peu *després* d'afegir les variants LOD:
+  // així tant la malla articulada com el proxy de llarga distància
+  // conserven exactament la mida visual que abans donava root.scale=.8.
+  // Compartim el bake, però NO tocam el rig del protagonista ni COOP.
+  normalizeOnFootEnemy(root,{role='general'}={}){
+   if(!root?.userData?.enemyFullRoot||
+      !root.userData.enemyMidMesh||!root.userData.enemyFarMesh)
+    throw Error('Enemic a peu sense els tres nivells LOD');
+   if(root.userData.humanOnFootNativeRole!==undefined){
+    if(root.userData.humanOnFootNativeRole!==role)
+     throw Error('Rol d’enemic a peu canviat després de normalitzar');
+    return root;
+   }
+   const originalScale=root.scale.x;
+   if(!Number.isFinite(originalScale)||originalScale<=0||
+      Math.abs(root.scale.y-originalScale)>1e-10||
+      Math.abs(root.scale.z-originalScale)>1e-10)
+    throw Error('Escala base de soldat no uniforme');
+   runtime.normalizeEnemyCrew(root,originalScale);
+   root.userData.humanOnFootNativeScale=originalScale;
+   root.userData.humanOnFootNativeRole=role;
+   root.userData.humanOnFootLodNormalized=true;
+   return root;
+  },
   install(T,model,{role='player'}={}){
    if(suppressed)return model;
    if(model.userData.humanGameV17===role)return model;
@@ -602,6 +626,15 @@ export function createHumanGameRuntimeV17(){
     wrapped.createCommando=function(T,...args){
      const soldier=runtime.suppress(()=>base.createCommando.call(wrapped,T,...args));
      return runtime.install(T,soldier,{role:'soldier'});
+    };
+    if(typeof base.createSoldier==='function')wrapped.createSoldier=function(T,...args){
+     const model=base.createSoldier.call(wrapped,T,...args);
+     // Només el general: els soldats normals poden equipar-se
+     // amb bazuca DESPRÉS de crear el LOD i encara empren els
+     // ancoratges antics. No els normalitzam fins migrar aquesta arma.
+     if(model?.userData?.profile==='general-approved-thick-epaulettes')
+      runtime.normalizeOnFootEnemy(model,{role:'general'});
+     return model;
     };
     return Object.freeze(wrapped);
    });
