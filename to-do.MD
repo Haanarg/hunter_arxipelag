@@ -2,7 +2,8 @@
 - [x] Cotxes, camions A4.3 i motos: talles enemigues 0,31/0,43/0,52 consolidades a geometria i pivots; figures a escala d'arrel 1. Les armes de torreta continuen sense cap factor extra.
 - [x] Patrulleres i llanxes requisades: dos comandos normalitzats a escala d'arrel 1; mira anatòmica nativa en lloc de llegir `rider.scale.y`; canons i animacions compatibles.
 - [x] Proves funcionals de geometria/anatomia i boques de foc abans/després, postures, tres talles, dos seients marins i tres factories terrestres, normalització idempotent.
-- [ ] Confirmació CI, Cloudflare i comprovació visual de patrulles i requisició COOP. General, soldats a peu, helicòpters, bicicleta/moto/hovercraft i controlador antic 2/3 encara pendents.
+- [x] GitHub Actions 44726667562: prova V18 dels tripulants amb escala inicial militar 0,8, laboratori, regressions SOLO/COOP, compilació, paritat SOURCE/BUNDLE, runtime persistit a GitHub i verificació HTTP de Paradoxa aprovades; v0.6.266 desplegada correctament.
+- [ ] Validació visual real en navegador i sessió COOP de patrulles, seients, requisició i boques de foc. General, soldats a peu, helicòpters, bicicleta/moto/hovercraft i controlador antic 2/3 encara pendents.
 
 **2026-11-20 · v0.6.263 · Riders de cabina a escala d'arrel 1:**
 - [x] El GAZ, el cotxe civil i l'hovercraft ja no apliquen g.scale=.825/.82/.63; les variants de pell/rig es generen en geometries definitives i es reutilitzen en canviar de vehicle.
