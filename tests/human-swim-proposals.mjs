@@ -3,20 +3,28 @@ import * as THREE from '../vendor/three-r186.module.mjs';
 import {HUMAN_SWIM_PROPOSALS,isHumanSwimmingMode,sampleHumanSwimming} from '../src/human-swim-proposals.mjs';
 import {HUMAN_CATALOG,HUMAN_SWIM_CATALOG} from '../src/human-model-catalog.mjs';
 import {createHumanProposal,poseHumanProposal} from '../src/human-proposals.mjs';
+import {SECTION_TOOLS} from '../src/proves-hub.mjs';
 
 assert.equal(HUMAN_CATALOG.length,7,'Els set models humans originals es conserven');
-assert.equal(HUMAN_SWIM_CATALOG.length,2);
-assert(HUMAN_SWIM_CATALOG.every(c=>c.options.length===4&&c.options.every(x=>x.style==='a')));
+assert.equal(HUMAN_SWIM_CATALOG.length,1);
+assert.equal(HUMAN_SWIM_CATALOG[0].id,'human-swim');
+assert.deepEqual(HUMAN_SWIM_CATALOG[0].options.map(o=>o.swimMode),['swim-breast-3','swim-crawl-4']);
+assert(HUMAN_SWIM_CATALOG[0].options.every(x=>x.style==='a'));
+assert.deepEqual(SECTION_TOOLS.animations.filter(t=>t.id==='swim').map(t=>t.title),['NATACIÓ']);
+assert(!SECTION_TOOLS.animations.some(t=>['breast','crawl'].includes(t.id)));
+for(const mode of ['swim-breast-1','swim-breast-2','swim-breast-4',
+ 'swim-crawl-1','swim-crawl-2','swim-crawl-3']){
+ assert(!isHumanSwimmingMode(mode),'Variant descartada: '+mode);
+ assert.equal(sampleHumanSwimming(mode,1),null);
+}
 assert(!isHumanSwimmingMode('run'));
-assert(isHumanSwimmingMode('swim-breast-1'));
+assert(isHumanSwimmingMode('swim-breast-3'));
 assert(isHumanSwimmingMode('swim-crawl-4'));
 assert.equal(sampleHumanSwimming('run',1),null);
 
 const positions=new Set();
-for(const [kind,variants] of Object.entries(HUMAN_SWIM_PROPOSALS)){
- assert.equal(variants.length,4);
- for(const [i,variant] of variants.entries()){
-  const mode='swim-'+kind+'-'+(i+1);
+for(const [kind,variant] of Object.entries(HUMAN_SWIM_PROPOSALS)){
+ const mode=kind==='breast'?'swim-breast-3':'swim-crawl-4';
   // Aquesta prova només necessita un accessori de referència per
   // comprovar que es desa/amaga/restaura durant la natació. Les armes
   // reals requereixen inicialitzar el runtime de joc i no són part
@@ -76,7 +84,6 @@ for(const [kind,variants] of Object.entries(HUMAN_SWIM_PROPOSALS)){
   assert(Math.abs(root.position.y)<1e-8&&Math.abs(root.position.z)<1e-8,'Posició restaurada');
   assert(weapon.visible,'Arma visible després de sortir de natació');
   root.traverse(n=>{if(n.isMesh){n.geometry.dispose();if(Array.isArray(n.material))n.material.forEach(m=>m.dispose());else n.material.dispose()}});
- }
 }
 // Validacions específiques de les dues propostes refinades: els límits
 // s'apliquen a les articulacions reals i a les posicions en món dels canells.
@@ -94,21 +101,20 @@ const inspectB=time=>{poseHumanProposal(rootB,time,'swim-breast-3');rootB.update
   hipL:point(THREE,b,'hipL'),hipR:point(THREE,b,'hipR'),anklePitch:b.ankleR.rotation.x
 }};
 const straight=inspectB(0),catchB=inspectB(.94),loadB=inspectB(1.52),glideB=inspectB(2.2);
-assert.equal(HUMAN_SWIM_PROPOSALS.breast[2].glideSeconds,1);
-// Les postures de maluc, genoll i obertura han de coincidir amb la B1,
-// però en els instants de la puntada de la B3 (cicle de 3,20 s).
-const b1ActiveSeconds=HUMAN_SWIM_PROPOSALS.breast[0].period*
- (1-HUMAN_SWIM_PROPOSALS.breast[0].glide);
-for(const [seconds,b1Phase]of [[0,0],[.65,.32],[1.52,.54],
- [1.66,.69],[1.99,.84],[2.20,1]]){
- const source=sampleHumanSwimming('swim-breast-1',b1Phase*b1ActiveSeconds);
+assert.equal(HUMAN_SWIM_PROPOSALS.breast.glideSeconds,1);
+// La B1 ja no és una variant. La B3 conserva aquests punts de
+// recorregut històric del maluc, el genoll i l'obertura de cames.
+for(const [seconds,expected]of [
+ [0,[.035,-.08,.015]],[.65,[.10,-.20,.05]],
+ [1.52,[.49,-1.44,.23]],[1.66,[.29,-.86,.29]],
+ [1.99,[-.10,-.17,.10]],[2.20,[.035,-.08,.015]]
+]){
  const target=sampleHumanSwimming('swim-breast-3',seconds);
- for(let joint=0;joint<3;joint++){
-  assert(Math.abs(target.leg[joint]-source.leg[joint])<1e-8,
+ for(let joint=0;joint<3;joint++)
+  assert(Math.abs(target.leg[joint]-expected[joint])<1e-8,
    'B3 conserva el recorregut B1 a '+seconds+' s (articulació '+joint+')');
- }
 }
-assert.equal(HUMAN_SWIM_PROPOSALS.breast[2].period,3.20);
+assert.equal(HUMAN_SWIM_PROPOSALS.breast.period,3.20);
 assert(catchB.head.y>straight.head.y+.045,'Braça: el pit eleva el cap per respirar');
 assert(catchB.pelvis.y<straight.pelvis.y-.006,'Braça: els malucs cauen una mica en inspirar');
 assert(catchB.armL.distanceTo(catchB.armR)<.20,'Braça: les mans s’ajunten sota el pit');
@@ -142,7 +148,7 @@ poseHumanProposal(rootB,0,'rest');
 const rootC=createHumanProposal(THREE,'player','a',{visualOnly:true}),c=jointMap(rootC);
 const rollMax=40*Math.PI/180,steps=720,kicks=[];
 for(let i=0;i<=steps;i++){
- const time=HUMAN_SWIM_PROPOSALS.crawl[3].period*i/steps;
+ const time=HUMAN_SWIM_PROPOSALS.crawl.period*i/steps;
  const pose=sampleHumanSwimming('swim-crawl-4',time);
  poseHumanProposal(rootC,time,'swim-crawl-4');
  assert(Math.abs(pose.bodyRoll)<=rollMax+1e-9,'Crol: roll dins de 40 graus');
@@ -162,14 +168,14 @@ let crossings=0;
 for(let i=1;i<kicks.length;i++)if((kicks[i-1]<0&&kicks[i]>=0)||(kicks[i-1]>0&&kicks[i]<=0))crossings++;
 assert.equal(crossings,6,'Crol: tres oscil·lacions per cama = sis batuts alterns');
 for(const phase of [.24,.79]){
- const time=phase*HUMAN_SWIM_PROPOSALS.crawl[3].period;
+ const time=phase*HUMAN_SWIM_PROPOSALS.crawl.period;
  poseHumanProposal(rootC,time,'swim-crawl-4');rootC.updateWorldMatrix(true,true);
  assert(point(THREE,c,'elbowR').y>point(THREE,c,'wristR').y,
   'Crol: colze més alt que la mà en agafada i recuperació');
 }
-const breathe=sampleHumanSwimming('swim-crawl-4',.69*HUMAN_SWIM_PROPOSALS.crawl[3].period);
+const breathe=sampleHumanSwimming('swim-crawl-4',.69*HUMAN_SWIM_PROPOSALS.crawl.period);
 assert(breathe.breathing>.95&&breathe.headTurn<-.3,'Crol: respiració lateral dreta');
-const neutral=sampleHumanSwimming('swim-crawl-4',.92*HUMAN_SWIM_PROPOSALS.crawl[3].period);
+const neutral=sampleHumanSwimming('swim-crawl-4',.92*HUMAN_SWIM_PROPOSALS.crawl.period);
 assert(neutral.breathing===0,'Crol: cara neutral abans de l’entrada');
 poseHumanProposal(rootC,0,'rest');
 assert(Math.abs(rootC.rotation.y)<1e-9&&Math.abs(rootC.rotation.x)<1e-9,'Restauració del rig després de nedar');
@@ -203,7 +209,7 @@ assert(c4Recovery.arms.R[4]<-.15,
 // l'orientació de la mà i l'abducció les resol l'espatlla, no el colze.
 const expectedC4=[[0,20],[.24,100],[.39,90],[.62,10],[.82,100]];
 for(const [phase,expected] of expectedC4){
- const tm=phase*HUMAN_SWIM_PROPOSALS.crawl[3].period;
+ const tm=phase*HUMAN_SWIM_PROPOSALS.crawl.period;
  poseHumanProposal(rootC,tm,'swim-crawl-4');rootC.updateWorldMatrix(true,true);
  assert(Math.abs(-c.elbowR.rotation.x*180/Math.PI-expected)<.1,
   'Crol: flexió del colze en fase '+phase+' = '+expected+' graus');
@@ -221,7 +227,7 @@ for(const tm of b3Stroke){
 const b3Open=inspectB(1.66);
 assert(b3Open.kneeL.distanceTo(b3Open.kneeR)>.5,'Braça: puntada més oberta als dos costats');
 for(let i=0;i<=720;i++){
- const tm=i/720*HUMAN_SWIM_PROPOSALS.crawl[3].period;
+ const tm=i/720*HUMAN_SWIM_PROPOSALS.crawl.period;
  poseHumanProposal(rootC,tm,'swim-crawl-4');rootC.updateWorldMatrix(true,true);
  for(const side of ['L','R']){
   const elbow=c['elbow'+side],wrist=c['wrist'+side];
@@ -236,7 +242,7 @@ for(let i=0;i<=720;i++){
  }
 }
 for(const phase of [.24,.39,.79,.82]){
- const tm=phase*HUMAN_SWIM_PROPOSALS.crawl[3].period;
+ const tm=phase*HUMAN_SWIM_PROPOSALS.crawl.period;
  poseHumanProposal(rootC,tm,'swim-crawl-4');rootC.updateWorldMatrix(true,true);
  assert(point(THREE,c,'elbowR').y>point(THREE,c,'wristR').y,
   'Crol: colze alt a EVF/tirada i a recobrament, fase '+phase);
@@ -244,5 +250,5 @@ for(const phase of [.24,.39,.79,.82]){
 poseHumanProposal(rootC,0,'rest');
 console.log('PASS B3 recorregut B1 amb temporització i peus B3; C4 IK 5 fases, roll 40°, colze frontissa, canell <15° i mans sense creuar el cos');
 
-assert.equal(positions.size,8,'Les vuit propostes tenen paràmetres realment diferents');
-console.log('PASS 8 variants de natació, cicles, extremitats, visibilitat i retorn al rig original');
+assert.equal(positions.size,2,'Només les dues animacions definitives conserven postures pròpies');
+console.log('PASS NATACIÓ: B3 i C4, cicles, extremitats, visibilitat i retorn al rig original');
