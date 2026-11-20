@@ -1247,6 +1247,15 @@ updateHuman(gameAvatar);
 assert.equal(runtime.nativeWeaponMuzzleWorld(T,gameAvatar,'knife'),null,
  'El contracte V18 no inventa una boca per a armes sense canó');
 console.log('PASS pistol silencer + bazooka muzzle on native V18; hidden guards, no legacy translation, COOP');
+// Three.js angleTo() calcula acos(dot) i pot retornar ~3e-8 rad
+// per quaternions IDÈNTICS quan el dot és 0.9999999999999999.
+// La distància de components (amb equivalència q/-q) detecta
+// desviacions reals sense aquest error de condicionament numèric.
+const actionQuaternionGap=(a,b)=>{
+ const d=Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z,a.w-b.w);
+ const opposite=Math.hypot(a.x+b.x,a.y+b.y,a.z+b.z,a.w+b.w);
+ return Math.min(d,opposite);
+};
 // Animacions d'acció nadiues: el tick clàssic transmet OBJECTIUS
 // anatòmics i el V18 guarda la seva interpolació pròpia. No pot llegir
 // els angles dels braços ocults ni recalcular-la en cada render.
@@ -1272,13 +1281,13 @@ actionU.aer.rotation.set(-1.8,.3,.9);
 actionU.al.rotation.set(-.8,1.3,-.4);
 actionU.ael.rotation.set(1.9,-.5,.7);
 updateHuman(actionAvatar);
-assert(knifeArmPose.angleTo(actionJ.shoulderR.quaternion)<1e-8&&
- knifeLeftPose.angleTo(actionJ.elbowL.quaternion)<1e-8,
+assert(actionQuaternionGap(knifeArmPose,actionJ.shoulderR.quaternion)<1e-10&&
+ actionQuaternionGap(knifeLeftPose,actionJ.elbowL.quaternion)<1e-10,
  'Els braços V18 del ganivet no copien les rotacions alterades del V17');
-assert(knifeWorldQ.angleTo(knifeNative.getWorldQuaternion(new T.Quaternion()))<1e-8,
+assert(actionQuaternionGap(knifeWorldQ,knifeNative.getWorldQuaternion(new T.Quaternion()))<1e-10,
  'La fulla V18 manté direcció tot i girar els ossos ocults');
 updateHuman(actionAvatar);
-assert(knifeArmPose.angleTo(actionJ.shoulderR.quaternion)<1e-8,
+assert(actionQuaternionGap(knifeArmPose,actionJ.shoulderR.quaternion)<1e-10,
  'Dos renders consecutius no avancen la interpolació del ganivet');
 
 // La granada té fases de preparació, impuls i contrapès; el canell dret
@@ -1305,12 +1314,12 @@ actionU.aer.rotation.set(1.8,-.8,-1.1);
 actionU.al.rotation.set(2.4,-.8,1);
 actionU.ael.rotation.set(-1.1,.6,1.2);
 updateHuman(actionAvatar);
-assert(grenadeArm.angleTo(actionJ.shoulderR.quaternion)<1e-8&&
- grenadeLeft.angleTo(actionJ.shoulderL.quaternion)<1e-8,
+assert(actionQuaternionGap(grenadeArm,actionJ.shoulderR.quaternion)<1e-10&&
+ actionQuaternionGap(grenadeLeft,actionJ.shoulderL.quaternion)<1e-10,
  'La granada no hereta la postura manipulada del V17');
 assert(grenadeWrist.distanceTo(actionJ.wristR.getWorldPosition(new T.Vector3()))<1e-8,
  'El punt real de llançament depèn del canell V18, no dels braços antics');
-assert(grenadeWeaponQ.angleTo(grenadeNative.getWorldQuaternion(new T.Quaternion()))<1e-8,
+assert(actionQuaternionGap(grenadeWeaponQ,grenadeNative.getWorldQuaternion(new T.Quaternion()))<1e-10,
  'La granada visible conserva l\'orientació pròpia');
 
 // L'activació i la desactivació es fan al tick, mai al renderer.
