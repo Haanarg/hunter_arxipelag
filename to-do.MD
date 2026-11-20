@@ -1,3 +1,11 @@
+**2026-11-20 · Tancament de la primera ronda d'escales natives, v0.6.255:**
+- [x] Auditoria de 221 fitxers src amb 180 expressions de mida en 42 fitxers; no totes són pegats. Inventari d'escales estructurals encara per migrar a docs/model-scale-audit.md.
+- [x] Geometria base: T90M, GAZ, camió, pilots de cabina i V18 visible (3.11232 unitats, scale=1). L'antic control rig de 2/3 encara no s'ha migrat.
+- [x] 55/55 regressions (SOLO, COOP, models, laboratori, rendiment); paritat SOURCE/BUNDLE; GH Actions 44696279680, Cloudflare 0.6.255 i assets estables del commit 731b0879d0354b036f683041e02bb83a4cd5af7d.
+- [x] Detectades i corregides proves històriques obsoletes i el simulador de porta/escaleta del búnquer; coherència de la caixa de munició entre SOLO i COOP 12/3/2.
+- [ ] Migració real pendent: rig de control antic 2/3 amb IK, pilots/ocupants del rider, bici/moto, hovercraft no uniforme, Ka-60, col·lisions d'helicòpters i proxy GAZ. No s'eliminen factors sense mantenir i provar els ancoratges i la física.
+- [ ] Comparació visual en navegador i COOP dels models després d'aquesta primera ronda.
+
 **2026-11-20 · v0.6.256 · Desbloqueig de publicació COOP:**
 - [x] Retirada del runner la prova `mission-viability-validator.cjs` a petició de l'usuari; el fitxer de prova s'elimina, però el validador de missions de diagnòstic es conserva.
 - [x] Es mantenen la resta de proves de regressió, incloses les de COOP i la nova comparació determinista de mons.

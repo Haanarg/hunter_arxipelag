@@ -42,7 +42,7 @@ const report={
  filesWithScale:grouped.size,
  topFiles:[...grouped].sort((a,b)=>b[1]-a[1]).slice(0,14),
  criticalUnresolved:[
-  'src/human-game-runtime-v17.mjs: legacy rig 2/3 + V18 visual 1.6',
+  'src/human-game-runtime-v17.mjs: legacy rig de control 2/3 (V18 visible ja amb geometria nativa i escala arrel 1)',
   'src/rider.js: diferent escala en vehicles i inversions de coordenades',
   'src/vehicle-model-core.mjs: moto, bici, hover no uniforme',
   'src/ka60-runtime.mjs: compensaci\u00f3 amb VS.heli',
