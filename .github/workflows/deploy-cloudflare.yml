@@ -50,6 +50,7 @@ on:
       - 'proves.html'
       - 'src/vehicles-externs-proves.mjs'
       - 'tests/human-game-runtime-v17.mjs'
+      - 'tests/browser-startup-smoke.cjs'
       - 'tests/vehicle-lab-player-reference.mjs'
       - 'src/vehicle-lab-player-reference.mjs'
       - 'tests/vehicle-lab-player-reference.mjs'
@@ -89,6 +90,11 @@ jobs:
           if [ "$missing" -ne 0 ]; then exit 1; fi
       - name: Instal·lar dependències
         run: npm ci --ignore-scripts
+      - name: Diagnosticar arrencada real de partida en Chromium
+        # Temporalment informativa: captura el problema existent sense impedir
+        # desplegaments mentre es repara l'arrencada.
+        continue-on-error: true
+        run: node tests/browser-startup-smoke.cjs
       - name: Comprovar contracte publicable del laboratori
         run: npm run test:deploy
       - name: Validar models humans i editor en temps real
@@ -127,11 +133,6 @@ jobs:
           npm run check:build
       - name: Comparar partida real del harness en source i bundle
         run: node tests/runtime-bundle-parity.cjs
-      - name: Diagnosticar arrencada real de partida en Chromium
-        # Temporalment informativa: captura el problema existent sense impedir
-        # desplegaments mentre es repara l'arrencada.
-        continue-on-error: true
-        run: node tests/browser-startup-smoke.cjs
       - name: Comprovar la compilació del Worker
         run: npm run build:worker
       - name: Sincronitzar runtime compilat amb GitHub abans del desplegament
