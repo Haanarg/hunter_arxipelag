@@ -18,7 +18,8 @@ assert(bounds(model).min.distanceTo(bounds(approved).min)<1e-5);
 assert(bounds(model).max.distanceTo(bounds(approved).max)<1e-5);
 const make=vehicleModels.createFactory(T,{box(){throw Error('No s’ha d’instanciar el model de reserva')},material:c=>new T.MeshStandardMaterial({color:c}),shadows:false,batching:playerBatching});
 const game=make('heli');
-assert.equal(game.scale.x,vehicleSpecs.scales.heli);
+assert.deepEqual(game.scale.toArray(),[1,1,1],
+ 'L’escala física heli és integrada a geometria i pivots abans de publicar el model');
 assert.equal(game.userData.ka60Model,KA60_RUNTIME_ID);
 const full=game.userData.distantVehicleLOD.full;
 game.updateMatrixWorld(true);

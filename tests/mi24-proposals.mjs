@@ -31,7 +31,8 @@ const make=vehicleModels.createFactory(T,{box(){throw Error('No legacy model')},
 const game=make('heli_combat'),second=make('heli_combat'),ka60=make('heli');
 assert.equal(game.userData.mi24Model,MI24_RUNTIME_ID);
 assert(!game.userData.apacheModel&&ka60.userData.ka60Model);
-assert.equal(game.scale.x,vehicleSpecs.scales.heli_combat);
+assert.deepEqual(game.scale.toArray(),[1,1,1],
+ 'El Mi-24 final ja té la mida mundial integrada a la geometria');
 assert.deepEqual(count(game.userData.distantVehicleLOD.full),count(base));
 game.updateMatrixWorld(true);
 assert(Math.abs(game.userData.rotorContactHeight-game.userData.rotor.getWorldPosition(new T.Vector3()).y)<1e-6);

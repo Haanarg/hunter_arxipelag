@@ -34,7 +34,8 @@ assert(soloCombat.includes("directRocketHitDamage(")&&soloCombat.includes("damag
 assert(coopCombat.includes("t!==blast.directHit?.target")&&coopCombat.includes("v===blast.directHit?.target"));
 assert(coopCombat.includes("directRocketHitDamage(p.weapon,result.kind,result.target)"));
 
-assert.equal(arcadeBlastProfile('c4').scale,2.55);
+assert.equal(arcadeBlastProfile('c4').scale,3.45,
+ 'Escala vigent de l’efecte C4; no és l’escala física d’un vehicle');
 assert.equal(arcadeBlastProfile('projectile').scale,1.5);
 const scene=new THREE.Scene(),fx=createArcadeBlastFX(THREE,scene);
 for(let i=0;i<8;i++)assert.equal(fx.emit(i*2,0,0,'grenade',i),true);

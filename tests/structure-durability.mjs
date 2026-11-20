@@ -92,7 +92,8 @@ const source=readFileSync(new URL('../src/combat.js',import.meta.url),'utf8');
 assert(source.includes("canLightDamageWall(target)")&&source.includes("canLightDamageRoof(target)"));
 assert(source.includes("if(!ineffective)dmgW(target,p.dmg,'light')"));
 const game=readFileSync(new URL('../src/game-core.js',import.meta.url),'utf8');
-assert(game.includes("if(shotClass==='light'&&!window.HUNTER_SHARED_COMBAT.canLightDamageWall(w))return;"));
+assert(game.includes("if(shotClass==='light'&&!w.antennaMembers&&!window.HUNTER_SHARED_COMBAT.canLightDamageWall(w))return;"),
+ 'Les antenes metàl·liques mantenen el tractament especial, la resta de parets són immunes a armes lleugeres');
 const server=readFileSync(new URL('../server/coop-mission.mjs',import.meta.url),'utf8');
 assert(server.includes('canLightDamageWall(w)')&&server.includes('canLightDamageRoof(building)'));
 assert(game.includes('y0:fy-1,y1:fy+sh,hp:10,m,door:false'));

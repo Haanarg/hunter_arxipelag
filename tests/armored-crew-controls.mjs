@@ -36,7 +36,7 @@ for(const bad of [{...valid,turretLift:1.1},{...valid,manualTurret:1},{...valid,
  assert(!validatePlayerInput(bad));
 const combat=read('server/coop-combat.mjs'),vehicle=read('server/coop-vehicles.mjs'),
       client=read('src/coop-world-runtime.js'),game=read('src/game-core.js'),
-      lab=read('src/vehicles-externs-proves.mjs'),html=read('vehicles-externs-proves.html');
+      lab=read('src/vehicles-externs-proves.mjs'),html=read('proves.html');
 assert(combat.includes("if(roleLocked)code='ROLE_LOCKED'"));
 assert(combat.includes("turretControllerId(vehicle)!==actorId"));
 assert(combat.includes("vehicles.turretInput(controllerId,tick)"));

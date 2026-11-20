@@ -42,7 +42,8 @@ for(const col of [0xffdf18,0x228fef,0xef35a8]){
  assert.equal(vehicle.userData.jetSkiModel,'recreational-jet-ski-25','Fàbrica visual integrada');
  assert.equal(vehicle.userData.jetSkiColor,col,'Conservam el color de la llavor');
  assert.equal(vehicle.userData.jetSkiTriangles,2578);
- assert.equal(vehicle.scale.x,vehicleModels.scales.moto_aquatica);
+ assert.deepEqual(vehicle.scale.toArray(),[1,1,1],
+ 'El món i el model de la moto aquàtica estan integrats a la geometria');
  const deck=vehicle.getObjectByName('jetski-engine-cover');
  assert(deck,'El color de la coberta ha de ser configurable');
  assert.equal(deck.material.color.getHex(),col,'La coberta no pot tornar al vermell pastel');
