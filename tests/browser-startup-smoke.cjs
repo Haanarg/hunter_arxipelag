@@ -46,7 +46,7 @@ async function main(){
  await new Promise(ok=>server.listen(port,'127.0.0.1',ok));
  const chrome=process.env.CHROME_BIN||['/usr/bin/google-chrome','/usr/bin/chromium','/usr/bin/chromium-browser'].find(fs.existsSync);
  if(!chrome)throw Error('Chromium absent');
- browser=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader','--disable-gpu-sandbox','--user-data-dir='+tmp,'--remote-debugging-port='+cdpPort,'--no-first-run','http://127.0.0.1:'+port+'/?quality=mobile&runtime=source'],{stdio:'ignore'});
+ browser=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader','--disable-gpu-sandbox','--user-data-dir='+tmp,'--remote-debugging-port='+cdpPort,'--no-first-run',(process.env.HUNTER_SMOKE_URL||'http://127.0.0.1:'+port+'/?quality=desktop&runtime=source')],{stdio:'ignore'});
  ws=new WebSocket(await chromePage());
  await new Promise((ok,fail)=>{ws.addEventListener('open',ok,{once:true});ws.addEventListener('error',fail,{once:true})});
  ws.addEventListener('message',event=>{
@@ -61,7 +61,7 @@ async function main(){
   await sleep(100);
  }
  if(!await evalPage('Boolean(window.HUNTER_MENU_READY)'))throw Error('Portada no inicialitzada');
- await evalPage('document.querySelector("#ini button[data-d]").click(); true');
+ await evalPage('(()=>{const random=document.getElementById("seedRandom");random.checked=false;random.dispatchEvent(new Event("change",{bubbles:true}));document.getElementById("seedInput").value="148";const map=Array.from(document.getElementsByName("mapSize")).find(el=>el.value==="2");if(map)map.checked=true;document.querySelector("#ini button[data-d]").click();return true})()');
  let state=null;
  for(let i=0;i<700;i++){
   state=await evalPage('JSON.stringify({ready:!!window.HUNTER_READY,gen:window.HUNTER_GENERATION_STATE?.status||null,error:window.HUNTER_GENERATION_STATE?.error||null,loading:document.getElementById("startLoading")?.textContent||"",alert:[...document.querySelectorAll("[role=alert]")].map(x=>x.textContent).join(" "),started:document.body.classList.contains("game-started")})');
@@ -69,6 +69,7 @@ async function main(){
   if(d.started||d.gen==='error'||/Error de càrrega|Error en iniciar Húnter/.test(d.loading+' '+d.alert))break;
   await sleep(100);
  }
+ console.log('HUNTER_BROWSER_URL',process.env.HUNTER_SMOKE_URL||'LOCAL');
  console.log('HUNTER_BROWSER_STARTUP',state);
  console.log('HUNTER_BROWSER_EXCEPTIONS',JSON.stringify(exceptions.slice(-20)));
  console.log('HUNTER_BROWSER_CONSOLE_ERRORS',JSON.stringify(consoleErrors.slice(-20)));
