@@ -1,3 +1,11 @@
+**2026-11-20 · v0.6.274 · COOP: traspàs de la sala a la generació del món:**
+- [x] Causa identificada: tancar el WebSocket del lobby marcava `last_seen` 60 segons enrere immediatament, convertia `allReady` en fals i feia descartar `native-start` durant la generació.
+- [x] El canal de sala manté heartbeats mentre el HOST i el GUEST generen el món; només es tanca després d'inicialitzar el transport natiu.
+- [x] El Durable Object no caduca artificialment la presència en tancar un WebSocket, sinó que aplica la caducitat real del darrer heartbeat i la baixa explícita.
+- [x] Regressió D1 en `tests/coop-lobby.mjs` sobre la conservació de `allReady` en el traspàs.
+- [x] En cas de fallada de generació, el menú COOP mostra ara el missatge real i la fase exacta.
+- [ ] Comprovar CI, desplegament Cloudflare i arrencada física en dos dispositius.
+
 **2026-11-20 · v0.6.273 · Hovercraft D amb geometria nativa i ventilador rodó:**
 - [x] Eliminada la transformació d'arrel no uniforme (1,28 / 1 / 1,20). Casc, bigues, interiors, cobertes, vidres i dos seients amb la mida final integrada a malles i coordenades natives.
 - [x] Ventilador circular: ducte, anelles, gàbia i sis pales no s'estiren en X; rotor amb animació i pivots originals, sense el·lipses en girar.

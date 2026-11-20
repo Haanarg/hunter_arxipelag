@@ -279,8 +279,11 @@ export class CoopRoomHub {
   }
   async closeInner(ws,code,reason){
     const a=ws.deserializeAttachment();if(a)this.votes.delete(a.actorId);
-    if(a&&!this.ctx.getWebSockets().some(other=>other!==ws&&other.readyState===1&&other.deserializeAttachment()?.actorId===a.actorId))
-      await this.env.DB.prepare('UPDATE hunter_coop_members SET last_seen=? WHERE owner=? AND room=?').bind(Date.now()-60000,a.actorId,a.roomId).run();
+    // Tancar el socket de la sala és part del traspàs al joc.
+    // NO forçar last_seen al passat: readCoopRoom() gestiona la
+    // presència per caducitat del darrer heartbeat i /leave la baixa real.
+    // Marcar desconnectat aquí desfeia allReady i esborrava native-start
+    // durant la generació asíncrona dels dos clients.
     await this.publish();
     if(this.mission&&!this.mission.meta.members.every(m=>this.games().some(s=>s.deserializeAttachment().actorId===m.id))){this.mission.setStatus('paused');await this.save(this.mission.meta.expiresAt);this.broadcastState();}
   }

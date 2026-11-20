@@ -3,6 +3,8 @@ import {Miniflare} from 'miniflare';
 import {applyMigrations} from './helpers/apply-d1.mjs';
 import worker from '../server/worker.mjs';
 import {GAME_VERSION} from '../src/version.mjs';
+import {readCoopRoom} from '../server/coop-room-state.mjs';
+import {CoopRoomHub} from '../server/coop-hub.mjs';
 const mf=new Miniflare({modules:true,script:'export default {fetch(){return new Response()}}',d1Databases:['DB'],r2Buckets:['SAVES'],compatibilityDate:'2026-08-06'});
 try{
  const DB=await mf.getD1Database('DB'),SAVES=await mf.getR2Bucket('SAVES');await applyMigrations(DB,{coop:true});
@@ -35,6 +37,18 @@ try{
  room=(await host.call('/api/coop/current').then(r=>r.json())).room;
  room=(await host.call('/api/coop/ready',{ready:true,revision:room.revision}).then(r=>r.json())).room;
  room=(await guest.call('/api/coop/ready',{ready:true,revision:room.revision}).then(r=>r.json())).room;assert.equal(room.allReady,true);
+ // Regressió d'arrencada: en tancar el socket de la sala per obrir
+ // el WebSocket del món no es pot revocar la preparació del HOST.
+ const fakeCtx={getWebSockets:()=>[],storage:{get:async()=>null},
+   blockConcurrencyWhile:fn=>Promise.resolve().then(fn)};
+ const hub=new CoopRoomHub(fakeCtx,env);await hub.loading;
+ const before=await readCoopRoom(env,guest.id);assert.equal(before.allReady,true);
+ await hub.closeInner({deserializeAttachment:()=>({actorId:host.id,roomId:room.id})},
+   1000,'Sortida del canal');
+ const after=await readCoopRoom(env,guest.id);
+ assert.equal(after.allReady,true,'el tancament del canal lobby no pot desfer allReady');
+ assert.equal(after.members.find(m=>m.id===host.id)?.ready,true,
+   'la presència del HOST es conserva mentre es genera el món');
  const prep={revision:room.revision,protocol:1,gameVersion:GAME_VERSION};
  let prepared=await host.call('/api/coop/prepare',prep);assert.equal(prepared.status,200);const manifest=(await prepared.json()).manifest;
  const other=(await guest.call('/api/coop/prepare',prep).then(r=>r.json())).manifest;assert.deepEqual(other,manifest);
