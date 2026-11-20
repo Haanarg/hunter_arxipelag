@@ -1,4 +1,4 @@
-**2026-11-20 · v0.6.265 · Migració nativa V18 dels tripulants enemics:**
+**2026-11-20 · v0.6.266 · Migració nativa V18 dels tripulants enemics:**
 - [x] Cotxes, camions A4.3 i motos: talles enemigues 0,31/0,43/0,52 consolidades a geometria i pivots; figures a escala d'arrel 1. Les armes de torreta continuen sense cap factor extra.
 - [x] Patrulleres i llanxes requisades: dos comandos normalitzats a escala d'arrel 1; mira anatòmica nativa en lloc de llegir `rider.scale.y`; canons i animacions compatibles.
 - [x] Proves funcionals de geometria/anatomia i boques de foc abans/després, postures, tres talles, dos seients marins i tres factories terrestres, normalització idempotent.
