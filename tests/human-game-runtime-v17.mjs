@@ -653,6 +653,13 @@ for(const path of ['src/rider.js','src/marine-patrol.js','src/enemy-ai.js','src/
 // reescalar arrels cada cop que giren les armes o canvien de vehicle.
 const nativeSoldier=()=>{
  const root=runtime.suppress(()=>playerModel.create(T,{headVariant:'compactD'}));
+ // El factory del soldat enemic porta fusell, però el playerModel
+ // anatòmic de prova no n'instancia cap automàticament.
+ const weapon=new T.Group();weapon.name='Test · fusell real del tripulant';
+ weapon.add(new T.Mesh(new T.BoxGeometry(.17,.15,.72),
+  new T.MeshStandardMaterial({color:0x263032})));
+ root.userData.aer.add(weapon);
+ root.userData.gun=weapon;
  runtime.install(T,root,{role:'soldier'});
  return root;
 };
