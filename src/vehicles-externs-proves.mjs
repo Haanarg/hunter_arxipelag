@@ -332,10 +332,10 @@ async function loadExternal(slot,entry,used,token){
    const model=createHumanProposal(THREE,entry.role,entry.style);
    if(entry.role==='player')setHumanPreviewWeapon(THREE,model,document.querySelector('#humanWeapon').value);
    setModel(slot,model,false,[],true);
-   slot.swimVariant=entry.swimVariant||null;
-   const initialMode=currentType.swimming?'swim-'+currentType.swimming:'rest';
-   poseHumanProposal(slot.model,0,previewHumanPose(slot,initialMode));
-   slot.swimWater.visible=!!slot.swimVariant;
+   slot.swimVariant=entry.swimVariant||null;slot.swimMode=entry.swimMode||null;slot.swimOffset=0;
+   const initialMode=currentType.swimming?'swim-breast':'rest';
+   poseHumanProposal(slot.model,previewHumanTime(slot,initialMode,0),previewHumanPose(slot,initialMode));
+   slot.swimWater.visible=!!slot.swimMode;
    slot.bold.textContent=entry.title;slot.sub.textContent='Articulat · escala del joc · '+entry.note;
    slot.status.textContent=metrics(slot.model);slot.source.hidden=true;return;
  }
@@ -827,7 +827,7 @@ document.querySelector('#humanWeapon').addEventListener('change',e=>{
   if(!slot.model)continue;
   if(setHumanPreviewWeapon(THREE,slot.model,e.target.value)){
    const mode=document.querySelector('#humanPose').value;
-   poseHumanProposal(slot.model,humanTime,previewHumanPose(slot,mode),isHumanGait(mode)?humanGait:null);
+   poseHumanProposal(slot.model,previewHumanTime(slot,mode,humanTime),previewHumanPose(slot,mode),isHumanGait(mode)?humanGait:null);
    slot.status.textContent=metrics(slot.model)+' · '+e.target.selectedOptions[0].textContent;
   }
  }
