@@ -1,3 +1,9 @@
+**2026-11-20 · v0.6.268 · Marcs de finestra i z-fighting (correcció 2):**
+- [x] `src/buildings.js`: separar 2 cm els quatre travessers/muntants de totes les cares de mur, sense intersecció; separar 2,2 cm el pla posterior del marc de la cara anterior del vidre, mantenint els vidres independents i destructibles.
+- [x] Prova `tests/window-frame-zfighting.mjs` ampliada perquè verifiqui murs, vidres i ambdós eixos (una i dues finestres), no només el contacte entre peces del mateix marc; inclosa a `npm test`.
+- [x] Canvi a `0.6.268` i runtime regenerat a `dist/hunter-runtime.9737e84c6526e051.js` amb manifest sincronitzat, mode source per defecte.
+- [ ] Verificar l'execució de la suite CI i, en WebGL real, mirar els marcs abans/després de trencar vidres, a prop i de lluny, en qualitat baixa/alta i en SOLO/COOP; confirmar desplegament Cloudflare HTTP i cap memòria cau de versió anterior.
+
 **2026-11-20 · v0.6.269 · Normalització del general a peu i els tres LOD:**
 - [x] L'escala 0,8 del general s'integra en la geometria i als pivots anatòmics DESPRÉS de generar els nivells full/mid/far, sense tocar el seu model artístic, arma, física ni ragdoll.
 - [x] Regressions V18: posicions i mida de cos, cap, braços, genolls, boca de foc, postures alternatives i contorns LOD idèntics a la versió anterior. Verificada la crida a la fàbrica de general; no altera el comando.
