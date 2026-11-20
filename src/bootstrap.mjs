@@ -88,6 +88,8 @@ import * as walkSurfaces from './walk-surfaces.mjs?v=0.6.290';
 window.HUNTER_WALK_SURFACES=walkSurfaces;
 // Perfil físic pur compartit per les hitboxes en SOLO i el Worker COOP.
 // Registrar-lo abans de carregar el motor classic de combat.
+// La geometria de cabina dels Ka-60 i Mi-24D i les hitboxes del
+// Worker COOP comparteixen ara seients i articulars V18 mesurats.
 import * as playerPhysicalProfile from './player-physical-profile.mjs';
 window.HUNTER_PLAYER_PHYSICAL_PROFILE=playerPhysicalProfile;
 import * as playerEjectionPivot from './player-ejection-pivot.mjs';
