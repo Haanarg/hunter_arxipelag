@@ -41,10 +41,17 @@ for(const u of game.entities){
  assert.equal(u.o.scale.x,u.modelScale,
   'La talla física continua definida exclusivament pel contracte de la missió');
  assert(g.parent===u.rig,'L\'esquelet V18 segueix el moviment del personatge');
+ // Les caixes d'un presoner ASSEGUT mesuren la silueta compactada.
+ // Per validar la talla original del rig, mesuram la postura dreta.
+ const initialPose=u.pose;
+ u.pose='standing';u.cheering=false;
+ runtime.poseCivilianV18(u);
  const b=new T.Box3().setFromObject(g,true),
        height=b.getSize(new T.Vector3()).y/u.modelScale;
+ u.pose=initialPose;
+ runtime.poseCivilianV18(u);
  assert(height>1.65&&height<1.85,
-  'Alçada anatòmica local corresponent al rol '+u.role+' = '+height);
+  'Alçada anatòmica local dreta del rol '+u.role+' = '+height);
 }
 const context={
  active:true,canInteract:false,
