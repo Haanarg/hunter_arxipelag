@@ -452,6 +452,10 @@ window.HUNTER_CHARACTERS=Object.freeze({
   },
   createPlayer(THREE,{box,palette=window.HUNTER_PALETTE}){
     const P=palette.player,player=window.HUNTER_PLAYER_MODEL.create(THREE,{unitScale:1.2,palette,headVariant:'compactD',articulated:true}),u=player.userData;
+    // Consolida els controls lògics ANTES de fabricar pistola, rifles,
+    // bazuca, granada i cisalla. Les seves malles visibles continuen
+    // utilitzant els punts reals del V18 i mai hereten una escala.
+    window.HUNTER_HUMAN_V17?.normalizeGamePlayerControls?.(player);
     u.ph=0;u.breath=0;u.firePose=0;u.meleePose=0;u.knifeAttackDuration=PLAYER_KNIFE_ATTACK_SECONDS;
     u.pistolAimTime=0;u.pistolShotAge=10;u.pistolBlend=0;
      u.previousFootHeading=null;u.turnFootMotion=0;u.turnFootPhase=0;
