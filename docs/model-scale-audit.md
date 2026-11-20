@@ -15,6 +15,7 @@ No s'elimina cap factor sense preservar les dimensions mundials, les coordenades
 | Camió A4.3 | `truck.scale=0.82`, `truckVisualFit` i multiplicacions dels seients enemics | Geometria i pivots canònics; posicions de cabina declarades a `TRUCK_CABIN`; rodes i ocupants comparteixen la mida real |
 | Pilots i figures decoratives de cabina | `pilot.scale *= 1.30/humanHeight` després de crear el model | Variant d'alçada nativa 1,30 produïda per `createHumanProposal`, amb rig i malles a escala unitària |
 | Protagonista V18, comparador i pilots bicicleta/moto | `visual.scale=1.6` i reescalat manual del pilot | **v0.6.254:** les geometries es creen de base a 3.11232 unitats amb escala d'arrel 1 |
+| Ka-60 variant A i pilots | Candidat ×2 i posterior `KA60_WORLD_SCALE/vehicleScale`, amb els pilots heretant l'escala del pare | **v0.6.261:** mida ×2 del candidat integrada a geometria/pivots natius, runtime amb arrel 1 i conversió de VS integrada abans de crear els dos pilots; seients i alçades de pilots natius en unitats de cabina |
 
 ## Migració incremental del protagonista · v0.6.258
 
@@ -34,6 +35,12 @@ La pistola, els fusells, el bazuca, el ganivet, la granada i les cisalles del pr
 
 Aquesta consolidació NO elimina encara el `legacyRig.scale=2/3` dels controls físics antics, ni normalitza riders o pilots. Les mides finals es mantenen, no s'han redissenyat les armes.
 
+## Geometria nativa Ka-60 i seients · v0.6.261
+
+El Ka-60 A ara té la mida aprovada ×2 **dins les malles, els pivots i els rotors** de `createKamovCandidate` (`scale=1` al candidat). A `createKa60Runtime` la conversió legítima a les unitats `vehicleSpecs.scales.heli` es consolida a la geometria abans de muntar la tripulació, i torna `scale=1`. Els dos pilots V18 es construeixen directament amb alçada/ancoratges de cabina natius, de manera que no hereten una arrel de model reescalada. El volum final de fuselatge, l'alçada del rotor, el tren i les posicions mundials de la tripulació es mantenen.
+
+S'han afegit proves explícites de mides per a quatre valors VS (inclosa la conversió real del joc), de volums, rotors i places dels pilots. **No es modifica encara** el factor de contacte amb terres/teulades calculat a `game-core.js`, ni els conductors generals de `rider.js`.
+
 ## Referències trobades, NO eliminades encara perquè alteren altres contractes
 
 | Codi | Situació | Migració necessària |
@@ -42,7 +49,7 @@ Aquesta consolidació NO elimina encara el `legacyRig.scale=2/3` dels controls f
 | `rider.js`: `.825`, `.82`, `.63` i `1/riderScale` | Reescala tot el model del passatger segons vehicle durant la partida | Figures natives de cabina/seient i ancoratges físics llegits del model, amb IK i COOP adaptats |
 | `vehicle-model-core.mjs`: `BICYCLE_VISUAL_SCALE=.74`, `MOTORCYCLE_VISUAL_SCALE=1.24` | Mida fixa aplicada abans de `bakeFixedModelScales` | Integrar els dos valors als generadors de bicicleta i streetfighter; actualment els models lliurats ja tenen arrel a 1 |
 | `vehicle-model-core.mjs`: `hover.scale=(1.28,1,1.20)` | Escala no uniforme i cabina amb posicions compensades; no commuta amb rotació del ventilador | Generar nativament un hovercraft amb l'amplada/llargada aprovades, incloent les aspes animades i els ancoratges, sense shear |
-| `ka60-runtime.mjs`: `KA60_WORLD_SCALE/vehicleScale` | Relació entre candidat Ka60 i VS del joc | Consolidar el prototip i normalitzar simultàniament seients, rotors i geometria de col·lisió |
+| `ka60-runtime.mjs`: `KA60_WORLD_SCALE/vehicleScale` | **Consolidat v0.6.261:** cap malla, rotor o pilot hereta escala d'arrel; el ×2 aprovat és intrínsec, i `1/vehicleScale` només converteix les unitats del vehicle abans de crear la tripulació | La col·lisió dinàmica de `game-core.js` continua fent servir altures/factors independents; auditar-la contra la geometria nativa |
 | `game-core.js`: `visualScale=1.5/1.1` pels helicòpters | Contacte amb terreny/teulades obtingut per factors històrics, no per malles | Derivar volum de col·lisió de fuselatge i rotor del model aprovat |
 | `characters.js` i `general-model.js`: `fit*0.8` en comandos i general | Factor de generació de personatges antics vinculat als pivots i als enemics | Produir els soldats/generals amb el rig anatòmic V18 final, conservant dany, ragdoll, COOP i presa d'armes |
 | `enemy-ai.js`: models de tripulants `scale=.31/.43/.52` | Figures enemigues dependents del vehicle; la geometria de la tripulació encara canvia després de la creació | Fàbriques natives per tipus de vehicle i IK de passatger sense escalats de l'arrel |
