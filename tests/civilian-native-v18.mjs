@@ -38,8 +38,10 @@ for(const u of game.entities){
   'Model canònic directe a '+u.role);
  assert.deepEqual(g.scale.toArray(),[1,1,1],
   'Escala V18 de presoner sense pegat');
- assert.equal(u.o.scale.x,u.modelScale,
-  'La talla física continua definida exclusivament pel contracte de la missió');
+ assert.deepEqual(u.o.scale.toArray(),[1,1,1],
+  'El civil V18 té arrel física nativa sense factor de taller');
+ assert(u.o.userData.humanCivilianRootBaked,
+  'L\'única consolidació de mida s\'ha aplicat en crear el model');
  assert(g.parent===u.rig,'L\'esquelet V18 segueix el moviment del personatge');
  // Les caixes d'un presoner ASSEGUT mesuren la silueta compactada.
  // Per validar la talla original del rig, mesuram la postura dreta.
@@ -52,8 +54,8 @@ for(const u of game.entities){
  runtime.poseCivilianV18(u);
  assert(Math.abs(g.userData.humanNativeHeight-(u.role==='mechanic'?1.75:1.7175))<1e-9,
   'La talla del civil V18 es construeix des de la mesura canònica');
- assert(height>1.65&&height<1.85,
-  'Alçada anatòmica local dreta del rol '+u.role+' = '+height);
+ assert(Math.abs(height-game.config.standingHeight)<.03,
+  'Alçada V18 física dempeus, sense escala a l\'arrel: '+u.role+' = '+height);
 }
 const context={
  active:true,canInteract:false,
@@ -65,6 +67,8 @@ const farmer=game.entities.find(u=>u.role==='farmer');
 const mechanic=game.entities.find(u=>u.role==='mechanic');
 assert(farmer.cheering&&mechanic.cheering,'Civils saluden el jugador a prop');
 const farmerJ=farmer.o.userData.humanCivilianCanonicalJoints;
+assert(Math.abs(farmer.rig.position.y+.695*farmer.modelScale)<1e-8,
+ 'Seient civil manté la posició mundial després de bake');
 assert(farmerJ.hipL.rotation.x>1,'Un presoner assegut flexiona els malucs V18');
 assert(Math.abs(farmerJ.shoulderL.rotation.z)>1,
  'El presoner saluda amb l\'espatlla canònica V18');
@@ -87,6 +91,8 @@ assert(farmer.o.userData.humanCivilianNativeState.walking===true,
  'La interpolació COOP publica el moviment real al rig V18');
 assert.equal(farmerJ.head.rotation.y,0,
  'El cap canònic torna a neutral amb l\'alliberament');
+assert(Math.abs(farmer.rig.position.y+.06*farmer.modelScale)<1e-8,
+ 'En alliberar-se el civil recupera l\'alçada de peu V18 correcta');
 const oldNative=farmer.o.userData.humanCivilianCanonicalRig;
 game.reset();
 assert.equal(game.entities.length,0,'L\'API de camp resta funcional');
