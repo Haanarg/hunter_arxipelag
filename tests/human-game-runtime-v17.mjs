@@ -81,6 +81,36 @@ assert(liveCharactersSource.includes('u.humanGameNativeBodyPose={')&&
 assert(!liveCharactersSource.includes('(u.humanGameLegacyRig||player).localToWorld(rig.aim)')&&
  !liveCharactersSource.includes('rig.aim.set(0,3.10+up,-1.13+back)'),
  'No es pot apuntar amb el punt fix ni amb les coordenades del rig ocult');
+// Prova de la consolidació real del 2/3 en la geometria de
+// controlador abans de crear les armes; la pell V18 no es toca.
+const unbaked=playerModel.create(T,{unitScale:1.2,articulated:true});
+unbaked.updateWorldMatrix(true,true);
+const oldRig=unbaked.userData.humanGameLegacyRig;
+assert(Math.abs(oldRig.scale.x-2/3)<1e-12,'El fixture de control comença en 2/3');
+const anchors=['ll','lr','lkl','lkr','al','ar','ael','aer','head','upperBody','lowerBody'];
+const baseline=Object.fromEntries(anchors.map(name=>[
+ name,unbaked.userData[name].getWorldPosition(new T.Vector3()).clone()
+]));
+const nativeSource=unbaked.userData.humanGameCanonicalRig;
+const nativeBefore=new T.Box3().setFromObject(nativeSource).clone();
+runtime.normalizeGamePlayerControls(unbaked);
+unbaked.updateWorldMatrix(true,true);
+assert.deepEqual(oldRig.scale.toArray(),[1,1,1],
+ 'La normalització deixa el controlador V17 amb escala d\'arrel 1');
+assert.equal(unbaked.userData.humanGameControlScaleBaked,true);
+for(const name of anchors){
+ const after=unbaked.userData[name].getWorldPosition(new T.Vector3());
+ assert(after.distanceTo(baseline[name])<1e-8,
+  'Coordenada mundial preservada després del bake: '+name);
+}
+const nativeAfter=new T.Box3().setFromObject(nativeSource);
+assert(nativeBefore.min.distanceTo(nativeAfter.min)<1e-8&&
+ nativeBefore.max.distanceTo(nativeAfter.max)<1e-8,
+ 'Mida real del protagonista V18 invariant al bake del controlador ocult');
+runtime.normalizeGamePlayerControls(unbaked);
+assert.deepEqual(oldRig.scale.toArray(),[1,1,1],
+ 'Normalització idempotent, no escala acumulada');
+console.log('PASS native logical controller root: no runtime 2/3; exact V18 actor and world anchors preserved');
 const preview=createHumanProposal(T,'player','a',{visualOnly:true});
 let sourceWeapons=0;preview.traverse(n=>{if(n.userData?.humanWeapon)sourceWeapons++});
 assert.equal(sourceWeapons,0,'La geometria del joc no inclou una còpia de les armes del visor');
