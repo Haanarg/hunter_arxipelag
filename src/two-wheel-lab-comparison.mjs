@@ -78,7 +78,13 @@ function addGuide(T,model,joints,extra=[]){
  return {overlay,update};
 }
 function mockPistol(T,group){
+ // Prova de dimensions sense render de l'arma: ha de conservar
+ // els mateixos marcadors anatòmics de la pistola real de rider V18.
  const slide=new T.Group(),flash=new T.Group();flash.visible=false;
+ const grip=new T.Object3D();grip.name='hunter-pistol-grip-center';
+ grip.position.set(0,-.20,.055);group.add(grip);
+ const muzzle=new T.Object3D();muzzle.name='hunter-pistol-muzzle';
+ muzzle.position.set(0,.183,-1.47);slide.add(muzzle);
  group.add(slide,flash);return {slide,flash};
 }
 export async function createTwoWheelLabComparison(T,{makeVehicle,box,material,
