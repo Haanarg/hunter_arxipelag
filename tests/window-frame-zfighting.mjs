@@ -84,4 +84,44 @@ for(const [sx,sz,height] of [[10,.8,8],[.8,10,8],[18,.8,9],[.8,18,9]]){
  assert.equal(trim.parent,group);
  assert.equal(trim.geometry.getAttribute('position').count,paneCount*4*36);
 }
-console.log('PASS: marcs separats de murs i vidres en ambdós eixos, sense cantonades superposades, abans i després de trencar els vidres');
+
+// Les quatre façanes han de posar el marc a la cara EXTERIOR.
+// Amb la lògica antiga, els dos costats amb normal positiva (+X/+Z)
+// tenien el marc cap a dins, perquè s'aplicava sempre l'offset negatiu.
+for(const [lx,lz,sx,sz,height] of [
+ [0,-9.6,12,.8,8],[0,9.6,12,.8,8],
+ [-9.6,0,.8,12,8],[9.6,0,.8,12,8],
+ [0,-9.6,18,.8,9],[0,9.6,18,.8,9],
+ [-9.6,0,.8,18,9],[9.6,0,.8,18,9]
+]){
+ const alongX=sx>=sz,axis=alongX?2:0,center=alongX?lz:lx;
+ const exterior=Math.sign(center),T=alongX?sz:sx;
+ const group=new THREE.Group();
+ const parts=visual.addWindowedWall(group,{lx,lz,sx,sz,height,material:material(0x999999)});
+ const glass=parts.filter(mesh=>mesh.userData.windowPane!==undefined);
+ const trim=group.children.find(mesh=>mesh.material===trimMat);
+ assert(trim,'sense marc al costat '+center);
+ const pos=trim.geometry.getAttribute('position');
+ let min=Infinity,max=-Infinity;
+ for(let i=0;i<pos.count;i++){
+  const v=pos.getComponent(i,axis)-center;
+  min=Math.min(min,v);max=Math.max(max,v);
+ }
+ const outwardFace=exterior>0?max:-min;
+ const inwardFace=exterior>0?min:-max;
+ assert(outwardFace>.34&&outwardFace<T/2,'marc fora del gruix al costat '+center);
+ assert(inwardFace>.15,'marc a la cara interior de la façana '+center);
+ for(const pane of glass){
+  const glassDepth=pane.geometry.parameters[alongX?'depth':'width'];
+  const glassFront=exterior*(pane.position.getComponent(axis)-center)+glassDepth/2;
+  const frameBack=exterior>0?min:-max;
+  assert(frameBack-glassFront>.019,'vidre i marc coincideixen al costat '+center);
+  assert(exterior*(pane.position.getComponent(axis)-center)>0,
+   'vidre instal·lat a la cara interior en façana '+center);
+ }
+ // Simula el trencament; el marc ha de seguir on era.
+ for(const pane of glass)pane.visible=false;
+ assert(trim.visible,'marc absent després de trencar el vidre');
+}
+
+console.log('PASS: marcs a la cara exterior de totes les façanes, separats de murs i vidres; intactes després de trencar els vidres');
