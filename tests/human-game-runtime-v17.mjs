@@ -68,7 +68,10 @@ for(const role of ['player','soldier','rocket','elite','general']){
  const soleContacts=[...u.soleContacts];assert.equal(soleContacts.length,4);
  const gun=new T.Group();gun.name='Exact existing game weapon';
  const part=new T.Mesh(new T.BoxGeometry(.06,.16,.30),new T.MeshStandardMaterial({color:0x202927}));
- gun.add(part);u.aer.add(gun);u.gun=gun;
+ gun.add(part);
+ const gunGrip=new T.Object3D();gunGrip.name='hunter-pistol-grip-center';
+ gunGrip.position.set(0,-.20,.055);gun.add(gunGrip);
+ u.aer.add(gun);u.gun=gun;
  const same=runtime.install(T,g,{role});
  assert.equal(same,g);assert.equal(g.userData.humanGameV17,role);
  assert(g.userData.humanGameV17Counts.added>20,'Geometria real V17 '+role);
@@ -137,6 +140,10 @@ for(const role of ['player','soldier','rocket','elite','general']){
   assert(gunProxy&&gunProxy.parent===bones.wristR,'Visible pistol grip on editor wrist');
   assert.equal(gunProxy.userData.humanPistolHeldInFist,true,
    'La pistola no pot desplaçar-se fora del puny dret');
+  assert.deepEqual(gunProxy.scale.toArray(),[1,1,1],
+   'Pistola V18 amb la mida definitiva integrada a la geometria');
+  assert(gunProxy.userData.humanNativeWeaponScale,
+   'Pistola amb dimensions natives i sense corrector d’escala posterior');
   const rightHand=bones.wristR.children.find(o=>o.userData.humanHand==='R');
   const leftHand=bones.wristL.children.find(o=>o.userData.humanHand==='L');
   const fist=rightHand.children.find(o=>o.name==='Puny dret sobre la culata');
@@ -159,7 +166,9 @@ for(const role of ['player','soldier','rocket','elite','general']){
    const gripOffset=gunProxy.position.clone();
    assert(Math.abs(gripOffset.y-.024)<.002&&Math.abs(gripOffset.z+.064)<.002,
     'La culata visible roman dins del puny i segueix el canell, no orbita pel pit');
-   const gripCenter=gunProxy.localToWorld(new T.Vector3(0,-.20,.055)),
+   const gripAnchor=gunProxy.getObjectByName('hunter-pistol-grip-center');
+   assert(gripAnchor,'La pistola real declara el seu punt de subjecció');
+   const gripCenter=gripAnchor.getWorldPosition(new T.Vector3()),
      fistCenter=fist.localToWorld(new T.Vector3(0,-.065,0));
    assert(gripCenter.distanceTo(fistCenter)<.15,
     'El mànec ha de travessar físicament el puny dret, no quedar sobre la mà');
@@ -238,6 +247,21 @@ for(const role of ['player','soldier','rocket','elite','general']){
     assert(bones['shoulder'+side].quaternion.toArray().every(Number.isFinite),
      'IK de les dues mans V18 finita '+side+' '+kind);
    weapon.visible=false;
+  }
+  // La resta d'armes visibles també han de tenir transform d'arrel unitari,
+  // incloses les cisalles, que abans canviaven d'escala en cada fotograma.
+  for(const kind of ['knife','grenade','cisalla']){
+   const model=new T.Group();model.visible=true;
+   model.add(new T.Mesh(new T.BoxGeometry(.12,.35,.60),
+    new T.MeshStandardMaterial({color:0x737a66})));
+   u.upperBody.add(model);u[kind]=model;
+   updateHuman(g);
+   const proxy=canonical.getObjectByName('Arma canònica · '+kind);
+   assert(proxy&&proxy.userData.humanNativeWeaponScale,
+    'Arma visible creada amb mida nativa: '+kind);
+   assert.deepEqual(proxy.scale.toArray(),[1,1,1],
+    'Sense factors d’escala residuals: '+kind);
+   model.visible=false;
   }
   u.gun.visible=true;
   u.ar.rotation.x=oldR;u.aer.rotation.x=0;

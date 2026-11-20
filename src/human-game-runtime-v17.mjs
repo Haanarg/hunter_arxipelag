@@ -150,7 +150,7 @@ function installCanonicalPlayer(T,model){
   ['sniper',.416,-.176,-.192],
   ['bazooka',.704,-.192,-.16],
   ['knife',.64,-.144,-.08],
-  ['cisalla',.608,-.144,-.08],
+  ['cisalla',.864,-.144,-.08],
   ['grenade',.608,-.144,-.08]
  ],proxies=new Map();
  const supportCache={
@@ -251,15 +251,13 @@ function installCanonicalPlayer(T,model){
     proxy.name='Arma canònica · '+kind;
     proxy.position.set(0,y,z);
     proxy.scale.setScalar(scale);
-    // Sense multiplicadors d'escala al punt de muntatge dels fusells:
-    // les dimensions i els ancoratges de la còpia queden a la geometria
-    // nativa. El bake conserva el volum visible i la posició del canó.
-    if(NATIVE_LONG_GUN_GRIPS[kind]){
-     const report=bakeFixedModelScales(proxy);
-     if(report.remainingNonUniform||proxy.scale.x!==1)
-      throw Error('Arma V18 amb escala residual: '+kind);
-     proxy.userData.humanNativeWeaponScale=true;
-    }
+    // Totes les armes del protagonista es fabriquen en coordenades finals:
+    // bake únic per còpia, amb geometria i punts de subjecció solidaris.
+    // No es pot tornar a escalar cap arma durant la pose() del joc.
+    const report=bakeFixedModelScales(proxy);
+    if(report.remainingNonUniform||proxy.scale.toArray().some(v=>Math.abs(v-1)>1e-10))
+     throw Error('Arma V18 amb escala residual: '+kind);
+    proxy.userData.humanNativeWeaponScale=true;
     (kind==='cisalla'||NATIVE_LONG_GUN_GRIPS[kind]?j.spine:j.wristR)
      .add(proxy);
     proxies.set(kind,proxy);
@@ -318,7 +316,8 @@ function installCanonicalPlayer(T,model){
     proxy.userData.humanLongGunNativeMounted=true;
    }else if(kind==='cisalla'){
     // La cisalla viu en el tors: mai entre les dues mans.
-    proxy.scale.setScalar(.864);
+    // La mida 0.864 de les cisalles ja s'ha integrat una sola vegada
+    // a la geometria; aquest pivot només determina posició i gir.
     proxy.position.set(0,.24,-.528);
     const arms=source.userData.bladeArms;
     if(arms)for(let i=0;i<2;i++)if(proxy.children[i]&&arms[i])

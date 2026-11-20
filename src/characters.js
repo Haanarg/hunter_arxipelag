@@ -107,6 +107,12 @@ function createPlayerPistol(T,gun){
   cone.position.z=-.18;flash.add(cone);
   flash.add(new T.Mesh(new T.SphereGeometry(.11,8,6),new T.MeshBasicMaterial({color:0xfff4bb,depthWrite:false})));
   flash.position.set(0,.183,-.838);flash.visible=false;gun.add(flash);
+  // Punt anatòmic de referència: acompanya la culata després de coure
+  // l'escala de la pistola a la geometria final del V18.
+  const gripCenter=new T.Object3D();
+  gripCenter.name='hunter-pistol-grip-center';
+  gripCenter.position.set(0,-.20,.055);
+  gun.add(gripCenter);
   return {slide,flash};
 }
 // Postura 4B escollida: exactament la del comparador Three.js.
