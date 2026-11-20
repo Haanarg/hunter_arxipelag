@@ -858,36 +858,94 @@ export function createHumanGameRuntimeV17(){
   installCivilian(T,u){
    const root=u?.o,rig=u?.rig;
    if(!root||!rig||!u.head||u.legs?.length!==2||u.arms?.length!==2)return false;
-   if(root.userData.humanGameV17===u.role)return true;
-   const role=u.role==='mechanic'?'mechanic':'farmer';
-   const old=removeOldMeshes(root,node=>node===u.head);
-   // Existing head is the actual animation pivot in the prisoner system.
-   // Replace only its old sphere geometry so turning/cheering still rotates
-   // the new V17 skull and hat. The shared original geometry is untouched.
-   const marker=new T.BufferGeometry();u.head.geometry=marker;
-   const pelvis=newAnchor(T,rig,'malucs civils',.82);
-   const spine=newAnchor(T,rig,'tors civil',1.01);
-   const neck=newAnchor(T,rig,'coll civil',1.41);
-   const legMap={L:u.legs[0],R:u.legs[1]},armMap={L:u.arms[0],R:u.arms[1]};
-   const flat=(parent,source,s)=>({parent,source,scales:[s,s,s]});
-   const targets={
-    pelvis:flat(pelvis,'pelvis',.86),
-    spine:flat(spine,'spine',.85),
-    neck:flat(neck,'neck',.80),
-    head:flat(u.head,'head',.78)
-   };
-   for(const side of ['L','R']){
-    targets['hip'+side]=flat(legMap[side],'hip'+side,.78);
-    targets['knee'+side]=flat(legMap[side],'hip'+side,.78);
-    targets['ankle'+side]=flat(legMap[side],'hip'+side,.78);
-    targets['shoulder'+side]=flat(armMap[side],'shoulder'+side,.70);
-    targets['elbow'+side]=flat(armMap[side],'shoulder'+side,.70);
-    targets['wrist'+side]=flat(armMap[side],'shoulder'+side,.70);
+   if(root.userData.humanCivilianCanonicalRig)return true;
+   const role=u.role==='mechanic'?'mechanic':'farmer',
+         nativeHeight=role==='mechanic'?1.75:1.7175;
+   // El model definitiu de l'editor genera els ossos i les malles
+   // directament. No copiam polígons a malucs/colzes V17 ni aplicam
+   // .70/.78/.85 als ancoratges del presoner.
+   const canonical=createHumanProposal(T,role,'a',{
+     visualOnly:true,nativeHeight
+   }),joints={};
+   canonical.name='Presoner · rig anatòmic V18 '+role;
+   canonical.traverse(node=>{
+    if(node.userData?.humanMotionJoint)
+     joints[node.userData.humanMotionJoint]=node;
+   });
+   for(const name of ['pelvis','spine','neck','head',
+                      'hipL','hipR','kneeL','kneeR','ankleL','ankleR',
+                      'shoulderL','shoulderR','elbowL','elbowR','wristL','wristR'])
+    if(!joints[name])throw Error('Civil V18 sense articulació '+name);
+   if(canonical.scale.toArray().some(x=>Math.abs(x-1)>1e-12))
+    throw Error('Civil V18 amb escala correctora a l\'arrel');
+   // Només resten els nodes lògics que governen captures, salutacions
+   // i tasques. S'eliminen les malles antigues, inclòs el cap de prova,
+   // però es preserva el seu pivot com a contracte del controlador.
+   const removed=removeOldMeshes(root,node=>node===u.head);
+   const headMarker=u.head;
+   if(headMarker.isMesh){
+    headMarker.geometry=new T.BufferGeometry();
+    headMarker.visible=false;
    }
-   const added=copySkin(T,sourceFor(T,role),joint=>targets[joint]);
-   root.userData.humanGameV17=role;
-   root.userData.humanGameV17Counts={removed:old.length,added:added.length};
+   const meshes=[];
+   canonical.traverse(node=>{
+    if(!node.isMesh)return;
+    node.userData.humanGameV17Mesh=true; // compatibilitat diagnòstics
+    node.userData.humanGameV17Source=node.name;
+    node.userData.humanCivilianNativeGeometry=true;
+    meshes.push(node);
+   });
+   rig.add(canonical);
+   root.userData.humanCivilianCanonicalRig=canonical;
+   root.userData.humanCivilianCanonicalJoints=joints;
+   root.userData.humanCivilianCanonicalHeight=nativeHeight;
+   root.userData.humanGameV17=role; // compatibilitat de save/diagnòstics
+   root.userData.humanGameV17Counts={removed:removed.length,added:meshes.length};
    root.userData.humanGameV17PreservedRig=true;
+   this.poseCivilianV18(u);
+   return true;
+  },
+  poseCivilianV18(u){
+   // Fonts exclusives: estat determinista del personatge (SOLO/COOP)
+   // i fase de marxa, mai angles de u.legs/u.arms/u.head.
+   const root=u?.o,j=root?.userData?.humanCivilianCanonicalJoints;
+   if(!j)return false;
+   const seated=u.pose==='seated',
+     captive=u.state==='captive',
+     walking=!captive&&!!u.civilianV18Walking,
+     cheering=captive&&!!u.cheering,
+     working=!captive&&!!u.civilianV18Repairing,
+     phase=Number.isFinite(u.phase)?u.phase:0,
+     cheerPhase=Number.isFinite(u.cheerPhase)?u.cheerPhase:0,
+     stride=walking?Math.sin(phase)*.58:0,
+     wave=cheering?Math.sin(cheerPhase)*.26:0;
+   const a=(name,x,z=0)=>{
+    if(!Number.isFinite(x)||!Number.isFinite(z))
+     throw Error('Civil V18: angle no finit '+name);
+    j[name].rotation.set(x,0,z);
+   };
+   for(const [index,side]of [[0,'L'],[1,'R']]){
+    const sign=index===0?1:-1;
+    a('hip'+side,seated?1.13:sign*stride);
+    a('knee'+side,seated?-1.46:walking?
+     -.08-Math.max(0,sign*Math.sin(phase))*.42:-.035);
+    a('ankle'+side,seated?.33:0);
+    const shoulderX=seated?-.5:
+     captive?0:working?(index===0?1.1+Math.sin(phase*14)*.18:.7):
+     u.role==='mechanic'&&u.state==='ready'&&!u.following?
+      (index===0?.45+Math.sin(phase)*.1:.22):
+     (index===0?-1:1)*stride*.65;
+    const shoulderZ=cheering?(index===0?-1:1)*(2.05+wave*.5):
+     captive?(index===0?1:-1)*.22:0;
+    a('shoulder'+side,shoulderX,shoulderZ);
+    a('elbow'+side,cheering?.20:seated?.32:.13);
+    a('wrist'+side,0);
+   }
+   a('head',0,0);
+   j.head.rotation.y=cheering?Math.sin(cheerPhase*.35)*.17:0;
+   root.userData.humanCivilianNativeState={
+    seated,captive,walking,cheering,working
+   };
    return true;
   },
   installHooks(){
