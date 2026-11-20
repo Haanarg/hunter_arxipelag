@@ -9,6 +9,7 @@ const suites={
     "player-simulation.mjs",
     "smoke-basic.cjs",
     "progressive-build-progress.mjs",
+    "mission-viability-validator.cjs",
     "heliport-tower-clearance.mjs",
     "hq-btr-patrol-clearance.mjs",
     "hangar-roof-destruction.mjs",
