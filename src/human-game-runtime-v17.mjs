@@ -456,8 +456,15 @@ export function createHumanGameRuntimeV17(){
     if(Math.abs(previous-size)>1e-10)throw Error('Tripulant ja normalitzat amb una talla diferent');
     return root;
    }
-   if(root.scale.toArray().some(x=>Math.abs(x-1)>1e-10))
-    throw Error('El tripulant ha de néixer amb escala d’arrel 1');
+   // Els comandos actuals ja surten de la fàbrica amb un fit
+   // uniforme (normalment 0.8), que l'antic codi de cabina
+   // SOBRESCRIVIA amb .31/.43/.52. No multiplicar dues talles.
+   const sourceScale=root.scale.toArray();
+   if(sourceScale.some(x=>!Number.isFinite(x)||x<=0)||
+     Math.abs(sourceScale[0]-sourceScale[1])>1e-10||
+     Math.abs(sourceScale[1]-sourceScale[2])>1e-10)
+    throw Error('Escala original del comando no uniforme');
+   root.userData.humanCrewFactoryScale=sourceScale[0];
    root.scale.setScalar(size);
    bakeFixedModelScales(root);
    if(root.scale.toArray().some(x=>Math.abs(x-1)>1e-10))
