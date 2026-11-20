@@ -29,7 +29,9 @@ const forbidden=[
  ['src/truck-model.mjs',/g\.scale\.setScalar\(\.82\)/],
  ['src/vehicle-model-core.mjs',/truck\.scale\.setScalar\(fit\)|(?:pilot|driver)\.scale\.multiplyScalar\(1\.30\//],
  ['src/enemy-ai.js',/truckVisualFit|truckFit/],
- ['src/vehicle-specs.mjs',/vehicleCollisionScale|gazVisualScale/]
+ ['src/vehicle-specs.mjs',/vehicleCollisionScale|gazVisualScale/],
+ ['src/human-game-runtime-v17.mjs',/FOOT_PLAYER_VISUAL_FACTOR|visual\.scale\.setScalar\(/],
+ ['src/vehicle-lab-player-reference.mjs',/player\.scale\.(?:multiplyScalar|setScalar)\(/]
 ];
 for(const [name,pattern]of forbidden){
  const data=fs.readFileSync(path.join(root,name),'utf8');
