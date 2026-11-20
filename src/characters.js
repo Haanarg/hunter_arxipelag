@@ -623,12 +623,13 @@ window.HUNTER_CHARACTERS=Object.freeze({
         if(!joints[id])throw Error('Protagonista V18: falta '+id);
         return [id,{x:joints[id].rotation.x,z:joints[id].rotation.z}];
        }));
-    // La creació a peu i la del jugador remot comparteixen la pose,
-    // i mai no entren pel fallback de l'animador V17 del primer frame.
-    u.humanGamePose();
-    // Fusionam peces rígides germanes sense tocar les articulacions,
-    // els pivots de les armes ni les malles referenciades per l'animació.
+    // Fusionam primer les malles originals, abans de muntar les
+    // còpies visibles de les armes al canell i al tors V18.
+    // Així no augmenta el cost de la fase de batching del protagonista.
     u.batchStats=window.HUNTER_PLAYER_BATCH.optimize(THREE,player);
+    // La creació a peu i la del jugador remot comparteixen la pose,
+    // i mai no entren pel fallback del primer fotograma.
+    u.humanGamePose();
     return player;
   },
   // Posicionament visual independent de la física: el cap respira
