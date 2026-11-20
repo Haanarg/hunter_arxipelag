@@ -205,7 +205,8 @@ window.HUNTER_UI=Object.freeze({
           '<label><input id="disablePalmsPause" type="checkbox"> Sense palmeres</label>'+
           '<label><input id="disableWaterPause" type="checkbox"> Sense aigua</label>'+
           '<label><input id="disableShadowsPause" type="checkbox"> Sense ombres</label>'+
-          '</div><label class="pause-stats-toggle"><input id="showPerfStatsOptions" type="checkbox"> Mostrar estadístiques de rendiment durant la partida</label>'+
+          '</div><label class="pause-stats-toggle"><input id="showFPSOptions" type="checkbox"> Mostrar FPS en pantalla</label>'+
+          '<label class="pause-stats-toggle"><input id="showPerfStatsOptions" type="checkbox"> Mostrar estadístiques de rendiment durant la partida</label>'+
           '<label class="pause-stats-toggle"><input id="showStealthDebug" type="checkbox"> Cons de visió</label>'+
           '<label><input id="showStealthNoise" type="checkbox"> Radis de soroll</label>'+
           '<details class="pause-diagnostics"><summary>Diagnòstic de rendiment</summary>'+
@@ -235,6 +236,9 @@ window.HUNTER_UI=Object.freeze({
             '\nEnemics LOD: '+JSON.stringify(s.enemyLodStats||{})+
             '\nObjectes ocults per distància: '+JSON.stringify(s.visibilityStats||{});
         };
+        const fpsToggle=document.getElementById('showFPSOptions');
+        fpsToggle.checked=!!getState().fpsCounterVisible;
+        fpsToggle.onchange=()=>actions.setFPSCounterVisible(fpsToggle.checked);
         const statsToggle=document.getElementById('showPerfStatsOptions');
         statsToggle.checked=!!getState().performanceStatsVisible;
         statsToggle.onchange=()=>actions.setPerformanceStatsVisible(statsToggle.checked);
@@ -260,7 +264,8 @@ window.HUNTER_UI=Object.freeze({
             quality:details.quality||null,viewport:details.viewport||null,
             options:{palmsDisabled:!!s.palmsDisabled,waterDisabled:!!s.waterDisabled,
               shadowsDisabled:!!s.shadowsDisabled,
-              performanceStatsVisible:!!s.performanceStatsVisible},
+              performanceStatsVisible:!!s.performanceStatsVisible,
+              fpsCounterVisible:!!s.fpsCounterVisible},
             performance:{
               fps:perf.fps,frameMs:perf.frameMs,renderCpuMs:perf.renderCpuMs,
               updateCpuMs:perf.updateCpuMs,postRenderCpuMs:perf.postRenderCpuMs,

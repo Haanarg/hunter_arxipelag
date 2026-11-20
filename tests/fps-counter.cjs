@@ -1,0 +1,23 @@
+'use strict';
+const assert=require('node:assert/strict');
+(async()=>{
+  const game=await require('./harness.cjs')();
+  assert.equal(game.run('fpsCounterVisible'),false,'FPS desactivats per defecte');
+  game.run('setFPSCounterVisible(true)');
+  assert.equal(game.el('body').classList.contains('fps-counter-visible'),true);
+  assert.equal(game.el('showFPSMenu').checked,true);
+  assert.equal(game.run("localStorage.getItem('hunter-show-fps')"),'1');
+  game.start('67');
+  for(let i=0;i<70;i++)game.frame(16.67);
+  const label=game.el('fpsCounter').textContent;
+  assert(/^FPS [1-9][0-9]*$/.test(label),'Mostra real de FPS: '+label);
+  game.run("ui.show('performance')");
+  assert.equal(game.el('showFPSOptions').checked,true,'La pausa reflecteix la preferència');
+  game.el('showFPSOptions').checked=false;
+  game.el('showFPSOptions').onchange();
+  assert.equal(game.run('fpsCounterVisible'),false);
+  assert.equal(game.el('body').classList.contains('fps-counter-visible'),false);
+  assert.equal(game.run("localStorage.getItem('hunter-show-fps')"),'0');
+  assert.equal(game.el('showFPSMenu').checked,false);
+  console.log('PASS FPS: comptador real, pausa, persistència i ocultació');
+})().catch(error=>{console.error(error);process.exitCode=1});

@@ -117,6 +117,22 @@ const adaptivePerformance=window.HUNTER_PERFORMANCE.create({
   minPixelRatio:visualQuality.minPixelRatio,
   element:document.getElementById('perfStats'),compact:qualityName!=='desktop'
 });
+// Indicador lleuger separat del diagnòstic complet: només llegeix els FPS
+// que el mostrejador existent ja calcula, sense activar instrumentació extra.
+const fpsCounter=document.getElementById('fpsCounter');
+let fpsCounterVisible=!!window.HUNTER_SHOW_FPS,fpsCounterLastUpdate=-Infinity;
+function setFPSCounterVisible(enabled){
+  fpsCounterVisible=!!enabled;
+  window.HUNTER_SHOW_FPS=fpsCounterVisible;
+  document.body.classList.toggle('fps-counter-visible',fpsCounterVisible);
+  const checkbox=document.getElementById('showFPSMenu');
+  if(checkbox)checkbox.checked=fpsCounterVisible;
+  if(fpsCounter)fpsCounter.textContent='FPS —';
+  fpsCounterLastUpdate=-Infinity;
+  try{localStorage.setItem('hunter-show-fps',fpsCounterVisible?'1':'0')}catch{}
+}
+window.HUNTER_SET_SHOW_FPS=setFPSCounterVisible;
+setFPSCounterVisible(fpsCounterVisible);
 // El panell es mostra només quan l'usuari activa l'interruptor de pausa.
 let performanceStatsVisible=false;
 const perfHotspots={broadphaseMs:0,aiMs:0,visibilityMs:0,stealthMs:0,
@@ -3026,7 +3042,7 @@ const ui=window.HUNTER_UI.create({
   getState:({nearVehicle=cv?null:nearV()}={})=>({
     coop:nativeCoopSession?.state?{health:nativeCoopSession.state.players.find(p=>p.id!==nativeCoopSession.self)?.hp,status:nativeCoopSession.state.status,host:nativeCoopSession.room?.host===nativeCoopSession.self}:null,autosave:operationAutosave?.state(),started:!!started,hp,ammo,kills,vehicle:cv,vehicleTypes:VT,inside:ib,swimming,crouching:playerCrouched,disguised:disg,bazookaEquipped,grenadeEquipped,cisallaEquipped,sniperEquipped,sniperAmmo,bazookaAmmo,scopeActive,
     inventory:inv,itemTypes:IT,player:P,nearVehicle,optionalAction:!cv&&nearestPlayerDoor()?{kind:'door',label:playerDoorLabel(nearestPlayerDoor()),icon:window.HUNTER_ACTION_ICONS.door}:getOptionalAction(),messageTime:msgT,message:msg,
-    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,hqIntel:window.HUNTER_GAME_INTEL.hqIntelStatus({mapScale:MAP_SCALE,stage:hqIntelStage,confirmed:hqMapKnown,sites:hqIntelSites,sectors:hqIntelSectors,discarded:hqIntelDiscarded}),palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,muted,cheats:nativeCoopSession?.state?.cheats||{...cheats},stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
+    waypoint,worldSize:S,seed,mapScale:MAP_SCALE,hqIntel:window.HUNTER_GAME_INTEL.hqIntelStatus({mapScale:MAP_SCALE,stage:hqIntelStage,confirmed:hqMapKnown,sites:hqIntelSites,sectors:hqIntelSectors,discarded:hqIntelDiscarded}),palmsDisabled,waterDisabled,shadowsDisabled,performanceStatsVisible,fpsCounterVisible,muted,cheats:nativeCoopSession?.state?.cheats||{...cheats},stealthDebug:window.HUNTER_STEALTH.enabled(),stealthLayers:window.HUNTER_STEALTH.layers(),shadowStats,performance:adaptivePerformance.stats,visibilityStats,enemyLodStats
   }),
   actions:{
     resume:()=>{if(!started){ui.hide();return}if(!operationBusy)resume()},
@@ -3049,6 +3065,7 @@ const ui=window.HUNTER_UI.create({
     setWaterDisabled,
     setShadowsDisabled,
     setPerformanceStatsVisible,
+    setFPSCounterVisible,
     getPerformanceDiagnostic:()=>({
       version:window.HUNTER_VERSION||null,quality:qualityName,
       viewport:{width:window.innerWidth,height:window.innerHeight,
@@ -4592,6 +4609,13 @@ frameDiagnostics.recordFrame({
   simulated,roadFrameStats,shadowRedrawn,now,
   simulationActive:!!started&&!paused&&!over,performanceStatsVisible
 });
+// El mostrejador principal ja ha actualitzat stats.fps; només actualitzam
+// aquesta etiqueta a 350 ms i no activam el diagnòstic de render.
+if(fpsCounterVisible&&gameplayActive&&fpsCounter&&now-fpsCounterLastUpdate>=350){
+  const fps=adaptivePerformance.stats.fps;
+  fpsCounter.textContent='FPS '+(Number.isFinite(fps)&&fps>0?Math.round(fps):'—');
+  fpsCounterLastUpdate=now;
+}
 requestAnimationFrame(loop)})(last);
 
 

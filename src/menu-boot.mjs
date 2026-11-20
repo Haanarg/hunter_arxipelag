@@ -1,7 +1,7 @@
 import './menu-main-integration.mjs?menu=direct-html-v1';
-import {selectRuntimeMode} from './runtime-mode.mjs?v=0.6.266';
-import {GAME_VERSION} from './version.mjs?v=0.6.266';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.266&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1';
+import {selectRuntimeMode} from './runtime-mode.mjs?v=0.6.267';
+import {GAME_VERSION} from './version.mjs?v=0.6.267';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.267&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1';
 
 // La portada reutilitza els controls reals i un renderitzat Three.js independent.
 // El canvas del fons s'allibera abans d'arrencar el motor de la partida.
@@ -11,6 +11,20 @@ const loadingLabel = document.getElementById('startLoading');
 const qualitySelect = document.getElementById('graphicsQuality');
 const seedRandom = document.getElementById('seedRandom');
 const seedInput = document.getElementById('seedInput');
+// Preferència persistent disponible abans de carregar el motor 3D.
+let savedShowFPS=false;
+try{savedShowFPS=localStorage.getItem('hunter-show-fps')==='1'}catch{}
+window.HUNTER_SHOW_FPS=savedShowFPS;
+const showFPSMenu=document.getElementById('showFPSMenu');
+if(showFPSMenu){
+  showFPSMenu.checked=savedShowFPS;
+  showFPSMenu.addEventListener('change',()=>{
+    const enabled=showFPSMenu.checked;
+    window.HUNTER_SHOW_FPS=enabled;
+    try{localStorage.setItem('hunter-show-fps',enabled?'1':'0')}catch{}
+    window.HUNTER_SET_SHOW_FPS?.(enabled);
+  });
+}
 const performanceOpen=document.getElementById('performanceMenuOpen'),
       performanceBack=document.getElementById('performanceMenuBack'),
       performanceScreen=document.getElementById('performanceScreen'),
@@ -110,7 +124,7 @@ function loadGame(){
       background.hidden=true;
     }
     window.dispatchEvent(new Event('hunter:menu-background-stop'));
-    bootPromise=import('./bootstrap.mjs?v=0.6.266&humansV17=3&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1&bunkerParapet=1&civilNose=1&ka60=1').then(()=>{
+    bootPromise=import('./bootstrap.mjs?v=0.6.267&humansV17=3&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1&bunkerParapet=1&civilNose=1&ka60=1').then(()=>{
     if(!window.HUNTER_READY)throw new Error('El motor 3D no ha acabat de carregar');
   }).catch(error=>{bootPromise=null;throw error});
   }

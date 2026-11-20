@@ -1,3 +1,10 @@
+**2026-11-20 · v0.6.267 · Opció per mostrar FPS en pantalla:**
+- [x] Interruptor «Mostrar FPS en pantalla» a Opcions de la portada i de la pausa, separat del diagnòstic complet.
+- [x] Indicador compactat sota el minimapa, actualitzat a partir del FPS del mostrejador existent cada ~350 ms, sense activar mètriques costoses.
+- [x] Preferència persistent per localStorage, sincronitzada entre els dos menús i els canvis de qualitat gràfica.
+- [x] Prova de regressió funcional de partida i canvi de preferència incorporada a la suite bàsica.
+- [ ] Confirmar CI, compilació i desplegament Cloudflare; verificar visualment a navegador i en mòbil.
+
 **2026-11-20 · v0.6.266 · Migració nativa V18 dels tripulants enemics:**
 - [x] Cotxes, camions A4.3 i motos: talles enemigues 0,31/0,43/0,52 consolidades a geometria i pivots; figures a escala d'arrel 1. Les armes de torreta continuen sense cap factor extra.
 - [x] Patrulleres i llanxes requisades: dos comandos normalitzats a escala d'arrel 1; mira anatòmica nativa en lloc de llegir `rider.scale.y`; canons i animacions compatibles.
