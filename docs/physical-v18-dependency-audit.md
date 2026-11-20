@@ -67,3 +67,18 @@ La segona passada ja usa la dada real `TRUCK_CABIN.enemySeat={x:0.6314,y:1.6728,
 - **Sense canvi de dany, PV ni munició**. Hi ha canvi real en les zones on les bales poden tocar un ocupant, que ara concorden amb la figura aprovada.
 - **Pendent** comprovació WebGL de vidres, parets i obstacles a altures intermèdies; comprovació COOP real amb dos dispositius. Revisar l'aparença del soldat enemic dins la cabina i el buc respecte del vidre visual.
 - **Encara pendents** les hitboxes de cabina dels helicòpters, els volums de col·lisió per ajupiment i pis superior, el suport d'aigua a `surface-2.1`, el pivot visual d'expulsió `waistLocal=2.05`, el volum de col·lisions vehicle-persona i els consumidors visuals restants del controlador ocult `LEGACY_GAME_RIG_SCALE=2/3`.
+
+
+## 0.6.288 · volum de dany del jugador, ajupiment i natació
+
+**Mòdul únic** `src/player-physical-profile.mjs`: perfil físic sense Three.js que defineix `PLAYER_STANDING_HEIGHT=3.11232`, `PLAYER_CROUCHED_HEIGHT=3.11232-0.30` (marge conservador consistent amb la baixada observada de .2–.35 m del V18) i `PLAYER_SWIM_DRAFT=0.675 × alçada nativa` (2.100816, gairebé el nivell anterior 2.1). No hi ha factor del rig antic ni ajust d'escala en cada fotograma. La simulació continua tenint el punt `P` com a suport, no com a pelvis ni com a cap.
+
+**Detecció de trets SOLO/COOP:** el mateix `playerProjectileContactT` compara un segment amb tres esferes anatòmiques solapades (cames/pelvis, tors i cap) a la postura dreta i ajupida. El volum d'ajupiment és més baix; el cap dret ja no rep trets quan el personatge s'ha ajupit. Els nedadors tenen un parell de volums propers a la superfície (tors i cap) en comptes d'una esfera vertical de persona dreta. `src/combat.js` i `server/coop-combat.mjs` fan servir exactament la mateixa rutina pura; els PV i el càlcul de dany no canvien.
+
+**Col·lisions de món:** `pushWalls`, `pushPalm` i `pushTree` accepten el perfil de postura sense modificar el radi horitzontal; totes les mostres verticals es dimensionen respecte l'alçada física dreta, ajupida o nedant. `game-core.js` llegeix `playerCrouched/swimming` en la col·lisió i la porta pròxima; `world-adapter.mjs` rep el mateix estat validat de `player-simulation.mjs`, sense confiar en dades de col·lisió del client.
+
+**Suport i transició a l'aigua:** `waterSupport` comparteix la nova cota definida pel percentatge de l'alçada del model aprovat en els dos modes. Es manté pràcticament idèntica a l'antic -2.1 per no alterar l'entrada o la flotabilitat de la braça B3, el crol C4 o les llavors de món. Quan un jugador COOP neda o cau, es neteja l'ajupiment antic; checkpoints de COOP conserven la postura només quan és compatible. La flotabilitat física és invariant durant l'animació gràfica de natació.
+
+**Proves implementades** dins `tests/player-simulation.mjs`: impactes a cap, tors i cames en ambdues postures, fallada de cap alt sota ajupiment, hitboxes de nedador al nivell d'aigua, llinda/roca/palmera per damunt del cap ajupit, exposició de la postura física al resolver autoritatiu de COOP, reset d'ajupiment quan hi ha natació, suport d'aigua profunda/poc profunda/interiors/búnquer. Validació visual amb dos clients pendent.
+
+**Pendent després d'aquest bloc**: mesurar l'embolcall tridimensional V18 al crouch més pronunciat durant animació, revisar les hitboxes dels helicòpters, portes al canviar de postura sota sostre, pivots visuals d'expulsió, interacció amb ferri i col·lisions de vehicles, i eliminar els últims consumidors de `LEGACY_GAME_RIG_SCALE=2/3` després de provar les accions.

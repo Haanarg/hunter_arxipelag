@@ -91,8 +91,10 @@ export function createStaticWorldAdapter(source){
   }
   function resolveBody(previous,candidate){
     const p={x:number(candidate.x),z:number(candidate.z),hd:number(candidate.hd),y:number(previous.y)};
-    pushWalls(p,wallsAt(p.x,p.z));const x=Math.floor(p.x/16),z=Math.floor(p.z/16);
-    for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)for(const t of grids.trees.get(key(x+a,z+b))||[]){if(alive(t))pushTree(p,t,false);}
+    const pose={crouched:!!previous.crouched&&!previous.swimming,
+      swimming:!!previous.swimming};
+    pushWalls(p,wallsAt(p.x,p.z),.6,pose);const x=Math.floor(p.x/16),z=Math.floor(p.z/16);
+    for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)for(const t of grids.trees.get(key(x+a,z+b))||[]){if(alive(t))pushTree(p,t,false,.5,pose);}
     return p;
   }
   function groundAt(x,z,previous=-Infinity,visible=null){return walkingHeightAt({physical:heightAt(x,z),visible,

@@ -1,8 +1,9 @@
 // Geometria física compartida SOLO/COOP, determinista i sense Three.js.
-import {HUMAN_PLAYER_GAME_NATIVE_HEIGHT} from './human-model-catalog.mjs';
-// Alçada de referència única: la geometria V18 aprovada ja la incorpora.
-// Mai no consultam Box3 ni l'esquelet ocult durant una col·lisió.
-export const PLAYER_COLLISION_HEIGHT=HUMAN_PLAYER_GAME_NATIVE_HEIGHT;
+import {PLAYER_STANDING_HEIGHT,playerBodyHeight} from './player-physical-profile.mjs';
+export {playerBodyHeight};
+// Altura de peu V18 conservada com a export antic; cada col·lisió pot
+// calcular també la postura ajupida i nedant sense llegir malles.
+export const PLAYER_COLLISION_HEIGHT=PLAYER_STANDING_HEIGHT;
 const PALM_COLLISION_SLICES=Object.freeze([.10,.26,.44,.63,.82,.985]);
 const clamp01=v=>Math.max(0,Math.min(1,v)),smooth01=t=>t*t*(3-2*t);
 export function hashAt(x,y,seed){const h=Math.sin(x*127.1+y*311.7+seed*.001)*43758.5453;return h-Math.floor(h);}
@@ -39,16 +40,17 @@ export function levelHeight(h,x,z,candidates){
   }
   return h;
 }
-export function pushPalm(point,t,r0=.5){
-  const height=6.2*t.s,reach=t.r+r0+1.65*t.s;
-  if(point.y>t.y+height+.6||point.y+PLAYER_COLLISION_HEIGHT<t.y)return;
+export function pushPalm(point,t,r0=.5,pose={}){
+  const bodyHeight=playerBodyHeight(pose),
+    height=6.2*t.s,reach=t.r+r0+1.65*t.s;
+  if(point.y>t.y+height+.6||point.y+bodyHeight<t.y)return;
   if(Math.abs(point.x-t.x)>reach||Math.abs(point.z-t.z)>reach)return;
   const yawCos=Math.cos(t.yaw),yawSin=Math.sin(t.yaw);
   let overlap=0,nx=0,nz=0;
   // Sis talls de la silueta física V18, incloent cap i espatlles,
   // sempre DINS l'alçada anatòmica (abans arribaven fins a 3.8/4.2).
   for(const fraction of PALM_COLLISION_SLICES){
-    const offset=fraction*PLAYER_COLLISION_HEIGHT;
+    const offset=fraction*bodyHeight;
     const y=point.y+offset;
     if(y<t.y||y>t.y+height)continue;
     const q=(y-t.y)/height;
@@ -66,12 +68,12 @@ export function pushPalm(point,t,r0=.5){
   if(overlap>0){point.x+=nx*overlap;point.z+=nz*overlap}
 }
 
-export function pushWalls(point,walls,r=.6){for(const w of walls){if(w.playerBlock===false||w.y0>point.y+PLAYER_COLLISION_HEIGHT||w.y1<point.y+.15)continue;if(w.towerLegOwner&&(point.y+1.5<w.y0||point.y>w.y1))continue;if(!w.open&&point.x>w.x0-r&&point.x<w.x1+r&&point.z>w.z0-r&&point.z<w.z1+r){const a=[point.x-(w.x0-r),w.x1+r-point.x,point.z-(w.z0-r),w.z1+r-point.z],i=a.indexOf(Math.min(...a));
+export function pushWalls(point,walls,r=.6,pose={}){const height=playerBodyHeight(pose);for(const w of walls){if(w.playerBlock===false||w.y0>point.y+height||w.y1<point.y+.15)continue;if(w.towerLegOwner&&(point.y+1.5<w.y0||point.y>w.y1))continue;if(!w.open&&point.x>w.x0-r&&point.x<w.x1+r&&point.z>w.z0-r&&point.z<w.z1+r){const a=[point.x-(w.x0-r),w.x1+r-point.x,point.z-(w.z0-r),w.z1+r-point.z],i=a.indexOf(Math.min(...a));
 if(i==0)point.x=w.x0-r;else if(i==1)point.x=w.x1+r;else if(i==2)point.z=w.z0-r;else point.z=w.z1+r}}}
 
-export function pushTree(point,t,palmsDisabled=false,r0=.5){
-      if(t.p){if(!palmsDisabled)pushPalm(point,t,r0);return}
-      if(t.rock&&(point.y>t.topY+.6||point.y+PLAYER_COLLISION_HEIGHT<t.bottomY))return;
+export function pushTree(point,t,palmsDisabled=false,r0=.5,pose={}){
+      if(t.p){if(!palmsDisabled)pushPalm(point,t,r0,pose);return}
+      if(t.rock&&(point.y>t.topY+.6||point.y+playerBodyHeight(pose)<t.bottomY))return;
       const dx=point.x-t.x,dz=point.z-t.z,d=Math.hypot(dx,dz),m=t.r+r0;
       if(d<m&&d>.001){point.x=t.x+dx/d*m;point.z=t.z+dz/d*m}
 }

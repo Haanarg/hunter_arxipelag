@@ -18,6 +18,7 @@ import {createWorldRandom} from '../src/world-generation-core.mjs';
 import {launchProjectile,projectileStep,SMALL_ARMS_PROJECTILE_SPEED} from '../src/projectile-core.mjs';
 import {createAimSelector,weaponTargetPriority,considerArmoredBazooka,SMALL_ARMS_AIM_CONE,SMALL_ARMS_AIM_VERTICAL,SMALL_ARMS_RANGE} from '../src/aiming-core.mjs';
 import {damageHealth} from '../src/player-simulation.mjs';
+import {playerProjectileContactT} from '../src/player-physical-profile.mjs';
 import {runoverDamage,runoverSweepHit,VEHICLE_DESTRUCTION,beginBurst,stepBurst,relayCombatBalance as combatBalance,explosionDamage,directRocketHitDamage,towerExplosionAim,segmentAabbT,segmentSphereT,inView,ballisticStep,friendlyVehicleBlocksLine} from '../src/combat-rules.mjs';
 // Índex immutable per posició: les portes poden obrir-se i destruir-se,
 // però els seus volums no canvien de cel·la. Els índexs de les parets continuen
@@ -711,7 +712,9 @@ export function createRelayCombat({meta,record={},inventory,players,visiblePlaye
         if(seatHit)flight.consider(seatHit.t,seatHit.kind,{vehicle:v,...seatHit});
         else flight.consider(vehicles.contact(flight.from,flight.to,v),'vehicle',v);
       }
-      if(p.enemy){for(const actor of players())if(actor.hp>0&&!vehicles.mounted(actor.id))flight.consider(segmentSphereT(flight.from.x,flight.from.y,flight.from.z,flight.to.x,flight.to.y,flight.to.z,actor.x,actor.y+1.5,actor.z,1.2),'player',actor);}
+      if(p.enemy){for(const actor of players())if(actor.hp>0&&!vehicles.mounted(actor.id))
+        flight.consider(playerProjectileContactT(flight.from,flight.to,actor,
+          segmentSphereT),'player',actor);}
       else for(const t of targets)if(t.hp>0&&!t.enemyVehicleId){
         // La silueta visible de dos comandos és un blanc propi; el buc
         // no pot absorbir la bala que travessa el parabrisa o el rider.

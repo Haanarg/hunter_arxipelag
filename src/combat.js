@@ -1739,7 +1739,10 @@ function updPj(dt){
       else consider(window.HUNTER_SHARED_COMBAT.vehicleHullSegmentT(
         from,to,v,vy,rr),'vehicle',v);
     }
-    if(p.own==='e'&&!cv)consider(segmentSphereT(x0,y0,z0,x1,y1,z1,P.x,P.y+(playerCrouched?1.25:1.5),P.z,playerCrouched?1.05:1.2),'player',P);
+    if(p.own==='e'&&!cv)consider(
+      window.HUNTER_PLAYER_PHYSICAL_PROFILE.playerProjectileContactT(from,to,
+        P,segmentSphereT,{crouched:playerCrouched,swimming}),
+      'player',P);
 
     // Terreny i arbres continuen mostrejats a una densitat equivalent a l'antic substep.
     const sampleN=Math.max(1,Math.ceil(Math.hypot(sx,sy,sz)/1.15));

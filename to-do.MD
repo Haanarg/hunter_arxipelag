@@ -1551,3 +1551,14 @@
 - [x] **Regressions noves:** posició de cap real i hitbox, impacte sobre el cap, canvi de rumb, ordre dels impactes a vidre, cap sobre col·lisions fantasma i roca elevada.
 - [ ] **Comprovació WebGL/COOP:** provar en una partida de dos dispositius els caps dels soldats a l'interior de vidres, balística, roques elevades, palmeres altes, portes i impactes de vehicles.
 - [ ] **Proper bloc físic:** helicòpters, ajupiment sota obstacles, natació `surface-2.1`, expulsions `waistLocal=2.05`, volum de contactes amb vehicles, confirmació amb malles aprovades abans de suprimir el rig 2/3.
+
+
+### v0.6.288 · hitboxes del jugador, ajupiment i natació
+- [x] **Perfil físic V18 únic:** `player-physical-profile.mjs` defineix alçada nativa, volum ajupit i calat de natació; sense lectura de malles ni escala V17 al Worker.
+- [x] **Trets:** mateixa funció de contacte de bala en SOLO i COOP; tres volums solapats cap/tors/cames per postura dreta/ajupida, dues zones per a nedadors prop de la superfície.
+- [x] **Col·lisions per postura:** palmeres, roques, parets, llindes i selecció de porta reben l'alçada dreta/ajupida/nedant; `world-adapter` consumeix els mateixos estats verificats que `game-core`.
+- [x] **Natació:** suport físic derivat de 0.675 × alçada V18 tant en SOLO com COOP; reset de crouch en aigua i en caiguda; el dibuix B3/C4 manté `swimVisualLift` sense canviar el punt físic.
+- [x] **Regressions:** cap de peu que es perd en ajupir-se, impactes a crani/peus, nedador, sostre curt i transició de profunditat, missatges COOP amb postures.
+- [ ] **Verificació visual en dos clients:** impactes contra jugadors ajupits, dany a nedadors, entrada/sortida d'aigua, pas sota llindes i recuperació de postura.
+- [ ] **Proper bloc físic:** helicòpters, expulsions/caigudes, contacte jugador-ferri/vehicles i mesura del punt visual de crani al crouch màxim.
+- [ ] **Desacoblament final V17:** últims estats de postures/armes encara llegits del rig de compatibilitat 2/3.

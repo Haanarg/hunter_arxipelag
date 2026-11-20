@@ -58,7 +58,8 @@ function verticalPlayer(previous,input,context,{world,vertical,limit,time}){
   }
   const before=sample(previous.x,previous.z,previous.y),swimming=waterSupport(before).swimming,
     moved=moveOnFoot({...previous,hd},{...control,run:control.run&&control.forward>.1&&!context.crouched&&context.canRun!==false},dt,{limit,swimming,crouched:!!context.crouched}),
-    candidate=world.resolveBody(previous,moved),s=sample(candidate.x,candidate.z,previous.y),support=waterSupport(s);
+    candidate=world.resolveBody({...previous,crouched:!!context.crouched&&!swimming,swimming},moved),
+    s=sample(candidate.x,candidate.z,previous.y),support=waterSupport(s);
   if(s.drop||previous.y-support.y>.75){
     return {...candidate,y:previous.y,hp:previous.hp,swimming:false,fall:{kind:'shaft',y:previous.y,vy:0,vx:0,vz:0,t:0,leanF:0,leanS:0,startHeight:Math.max(0,previous.y-support.y),parachute:false}};
   }
@@ -81,7 +82,9 @@ export function createPlayerSimulation({epoch,actors,limit,world={},vertical=nul
     const fall=vertical?copyFall(actor.fall):null;
     if(fall&&fall.y!==actor.y)throw new RangeError('Inconsistent falling height');
     const swimming=vertical&&!fall?waterSupport(locomotionSample(world,vertical,actor.x,actor.z,actor.y,tick/COOP_TICK_RATE)).swimming:false,ack=checkpoint?actor.acknowledged:0;
-    players.set(actor.id,{id:actor.id,x:actor.x,z:actor.z,hd:actor.hd,hp:actor.hp,y:actor.y??0,...(vertical?{fall,swimming}:{}),received:ack,acknowledged:ack,lastInputTick:-Infinity,input:{forward:0,turn:0,strafe:0,run:false}});
+    players.set(actor.id,{id:actor.id,x:actor.x,z:actor.z,hd:actor.hd,hp:actor.hp,y:actor.y??0,...(vertical?{fall,swimming}:{}),
+      ...(typeof actor.crouched==='boolean'?{crouched:actor.crouched&&!swimming&&!fall}:{}),
+      received:ack,acknowledged:ack,lastInputTick:-Infinity,input:{forward:0,turn:0,strafe:0,run:false}});
   }
   function accept(actorId,message){
     const p=players.get(actorId);
@@ -93,7 +96,11 @@ export function createPlayerSimulation({epoch,actors,limit,world={},vertical=nul
     const next=[];
     for(const p of players.values()){
       const input=tick-p.lastInputTick<Math.ceil(COOP_TICK_RATE*.25)?p.input:{forward:0,turn:0,strafe:0,run:false},
-        previous={id:p.id,x:p.x,z:p.z,y:p.y,hd:p.hd,hp:p.hp,...(vertical?{fall:copyFall(p.fall)}:{})},context={...(world.context?.({...previous,fall:vertical?copyFall(p.fall):undefined})||{}),...(input.crouch!==undefined?{crouched:!!input.crouch&&!previous.swimming&&!previous.fall}:{})},hd=p.hd+(p.hp>0?input.turn:0)/COOP_TICK_RATE*2.2;
+        previous={id:p.id,x:p.x,z:p.z,y:p.y,hd:p.hd,hp:p.hp,
+          crouched:!!p.crouched,swimming:!!p.swimming,
+          ...(vertical?{fall:copyFall(p.fall)}:{})},
+        context={crouched:!!p.crouched&&!p.swimming&&!p.fall,
+          ...(world.context?.({...previous,fall:vertical?copyFall(p.fall):undefined})||{}),...(input.crouch!==undefined?{crouched:!!input.crouch&&!previous.swimming&&!previous.fall}:{})},hd=p.hd+(p.hp>0?input.turn:0)/COOP_TICK_RATE*2.2;
       let candidate=movement?.({...previous},input)??(vertical?verticalPlayer(previous,input,context,{world,vertical,limit,time:(tick+1)/COOP_TICK_RATE}):p.hp>0?moveOnFoot({...p,hd},{...input,run:input.run&&input.forward>.1&&!context.crouched&&context.canRun!==false},1/COOP_TICK_RATE,{...context,limit}):{x:p.x,z:p.z,hd:p.hd});
       if(!vertical&&world.resolve)candidate=world.resolve(previous,candidate);
       if(!candidate||candidate.y!==undefined&&!finite(candidate.y)||![candidate.x,candidate.z,candidate.hd].every(finite)||Math.abs(candidate.x)>limit||Math.abs(candidate.z)>limit)throw new RangeError('Invalid world resolution');
@@ -101,7 +108,9 @@ export function createPlayerSimulation({epoch,actors,limit,world={},vertical=nul
       next.push({p,candidate});
     }
     // A failed world adapter cannot partially commit one actor's movement.
-    for(const {p,candidate} of next){p.x=candidate.x;p.z=candidate.z;p.hd=candidate.hd;p.y=candidate.y??p.y;if(vertical){p.fall=candidate.fall;p.swimming=candidate.swimming;p.hp=candidate.hp;}p.acknowledged=p.received;}
+    for(const {p,candidate} of next){p.x=candidate.x;p.z=candidate.z;p.hd=candidate.hd;p.y=candidate.y??p.y;if(vertical){p.fall=candidate.fall;p.swimming=candidate.swimming;p.hp=candidate.hp;
+          if(p.swimming||p.fall)p.crouched=false;}
+        p.acknowledged=p.received;}
     tick++;return snapshot();
   }
   return Object.freeze({accept,step,snapshot,

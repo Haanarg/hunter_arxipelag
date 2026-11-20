@@ -1,3 +1,4 @@
+import {PLAYER_SWIM_DRAFT} from './player-physical-profile.mjs';
 // Pure locomotion rules. Heights and landing candidates must come from the
 // trusted world; these functions never accept a client's claimed landing.
 const finite=Number.isFinite,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -22,8 +23,8 @@ export function fallLandingDamage(fall,{water=false,maxHealth}={}){
 }
 export function waterSupport({floor,surface,interior=false,basement=false,flight=false,vehicle=false,falling=false}){
   if(![floor,surface].every(finite))throw new RangeError('Invalid water support');
-  return {swimming:!flight&&!vehicle&&!interior&&!basement&&!falling&&floor<surface-2.1,
-    y:basement?floor+.06:interior?floor:Math.max(floor+.06,surface-2.1)};
+  return {swimming:!flight&&!vehicle&&!interior&&!basement&&!falling&&floor<surface-PLAYER_SWIM_DRAFT,
+    y:basement?floor+.06:interior?floor:Math.max(floor+.06,surface-PLAYER_SWIM_DRAFT)};
 }
 export function sweptRoofLanding(from,to,{buildingCandidates,solidRoofAt}){
   if(![from.x,from.z,from.y,to.x,to.z,to.y].every(finite))throw new RangeError('Invalid roof sweep');

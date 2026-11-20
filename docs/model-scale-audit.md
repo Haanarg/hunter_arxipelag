@@ -209,3 +209,8 @@ La pistola del rider de moto/bici i dels conductors/passatgers ja es munta a par
 ## 0.6.287 · hitboxes numèriques V18 i alçada física
 
 Les posicions dels soldats visibles i les hitboxes de cap/seient ara surten del mòdul pur `vehicle-crew-anchors.mjs` en cotxes, civil, camió i patrulleres. El camió A4.3 comparteix `TRUCK_CABIN` amb la geometria aprovada. Els tests comparen realment cada punt de cap `Object3D` normalitzat amb la hitbox numèrica física i validen els tirs i el vidre sense introduir raycast de models al servidor. La palmera, la paret, la roca elevada i les portes es calculen segons l'alçada nativa única `3.11232`; no hi ha més seccions de palmera sobre el crani (3.8/4.2). Notes quantitatives i dependències pendents a `docs/physical-v18-dependency-audit.md`. **No s'ha retirat el rig ocult 2/3**.
+
+
+## 0.6.288 · perfil físic canònic del jugador V18
+
+Un mateix `player-physical-profile.mjs` governa els tres volums solapats de dany a peu i ajupit, els dos punts del nedador i la cota de flotació, utilitzat per `combat.js`, `server/coop-combat.mjs`, `world-physics.mjs` i `player-vertical.mjs`. Ajupiment: altura física en baixada conservadora de .30 m respecte l'alçada nativa real 3.11232. Natació: suport `surface - PLAYER_SWIM_DRAFT` amb `PLAYER_SWIM_DRAFT=alçada × .675`, conservant gairebé exactament la immersió visual original. Aquests contractes són dades deterministes i no interroguen cap os V17 en el servidor. L'escala oculta `2/3` continua existent només per compatibilitat d'algunes postures.
