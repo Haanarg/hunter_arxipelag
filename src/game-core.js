@@ -3392,8 +3392,8 @@ if((!a||v.alt-g<16)&&!deckCarrier){const footprint=vehicleBox(v,nx,nz,v.hd);for(
   }))continue;
   // Les parets del pis superior no bloquegen vehicles a nivell de terra.
   if(land&&(w.y1<g-.8||w.y0>g+
-    (v.t==='tanc'||v.t==='camio'?5.6:4.2)*(VS[v.t]||1)*
-      window.HUNTER_VEHICLE_COLLISION.vehicleCollisionScale(v)))continue;
+    window.HUNTER_VEHICLE_COLLISION.vehicleCollisionTop(v,
+      v.t==='tanc'||v.t==='camio'?5.6:4.2,VS[v.t]||1)))continue;
   // El pou enderrocat deixa una pila baixa de pedres. El tanc passa
   // sobre les runes; per als altres vehicles continua havent-hi obstacle.
   if(w.civicRubble&&v.t==='tanc')continue;

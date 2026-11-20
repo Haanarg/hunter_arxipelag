@@ -9,7 +9,10 @@ function verify(root,name){
  const points=mesh=>{
   const arr=mesh.geometry.attributes.position,vertices=[];
   for(let i=0;i<arr.count;i++)vertices.push([arr.getX(i),arr.getY(i),arr.getZ(i)]);
-  return vertices;
+  // La geometria del GAZ de laboratori i del joc ara incorpora la
+  // mida aprovada x1.25: normalitzam només les coordenades de prova
+  // per continuar auditant els mateixos retalls i llindars.
+  return vertices.map(v=>v.map(c=>c/1.25));
  };
  const fronts=find('Porta lateral davantera'),rears=find('Porta lateral posterior');
  assert.equal(fronts.length,2,name+': manca una porta davantera');

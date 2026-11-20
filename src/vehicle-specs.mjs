@@ -15,20 +15,24 @@ export const vehicleSpecs=Object.freeze({
 // El mode cooperatiu i els mapes de proves comparteixen les places reals.
 export const vehicleSeatCount=type=>vehicleSpecs.seatCounts[type]??2;
 
-// Només el GAZ Tigr-M requereix l'escala física addicional de la
-// carrosseria ampliada. Els altres cotxes i l'utilitari no canvien.
-export function vehicleCollisionScale(v){
-  if(v?.t!=='cotxe')return 1;
-  const meta=v.o?.userData?.gazModel==='Tigr-M'?v.o.userData:
-    v.gazModel==='Tigr-M'?v:null;
-  if(!meta)return 1;
-  const scale=meta.gazVisualScale;
-  return Number.isFinite(scale)&&scale>0?scale:1;
-}
+// Dimensions APROVADES de la geometria del GAZ, ja integrades a
+// vehicle-reference-candidates.mjs. No s'amplien les hitboxes a posteriori.
+export const GAZ_TIGR_COLLISION=Object.freeze({
+ hitbox:Object.freeze([5.125,8.0625]),
+ radius:4.75,wallHeight:5.25,playerVerticalBand:2.75
+});
+export const isGazTigr=v=>v?.t==='cotxe'&&
+ (v.o?.userData?.gazModel==='Tigr-M'||v.gazModel==='Tigr-M');
 export function vehicleCollisionFootprint(v,hitbox,scale){
-  const factor=vehicleCollisionScale(v);
-  return {w:hitbox[0]*scale*factor,d:hitbox[1]*scale*factor};
+ const [w,d]=isGazTigr(v)?GAZ_TIGR_COLLISION.hitbox:hitbox;
+ return {w:w*scale,d:d*scale};
 }
 export function vehicleCollisionRadius(v,radius,scale){
-  return radius*scale*vehicleCollisionScale(v);
+ return (isGazTigr(v)?GAZ_TIGR_COLLISION.radius:radius)*scale;
+}
+export function vehicleCollisionTop(v,nominalHeight,scale){
+ return (isGazTigr(v)?GAZ_TIGR_COLLISION.wallHeight:nominalHeight)*scale;
+}
+export function vehicleCollisionPlayerBand(v,scale){
+ return (isGazTigr(v)?GAZ_TIGR_COLLISION.playerVerticalBand:2.2)*scale;
 }

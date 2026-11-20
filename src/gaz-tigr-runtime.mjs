@@ -1,5 +1,5 @@
 // Model definitiu GAZ Tigr-M: reutilitza la geometria nativa aprovada al laboratori.
-// Manté el tipus 'cotxe' i els seients; la caixa física del GAZ segueix ara l'escala visual ×1,25.
+// Manté el tipus 'cotxe' i els seients; la mida aprovada és nativa al candidat.
 import {createReferenceVehicle} from './vehicle-reference-candidates.mjs';
 
 export function prepareGazTigrRuntime(THREE,{vehicleScale=1.3}={}){
@@ -17,7 +17,8 @@ export function prepareGazTigrRuntime(THREE,{vehicleScale=1.3}={}){
     create(){
       const car=original.clone(true);
       car.name='GAZ_Tigr_M';
-      car.scale.setScalar(1.25); // Model complet un 25% més gran.
+      // La carrosseria original ja incorpora les dimensions aprovades.
+      if(car.scale.x!==1)throw Error('GAZ amb correcció d’escala pendent');
       const wheels=[],steeringPivots=[];
       const body=car.getObjectByName('Carrosseria GAZ Tigr-M');
       if(!body)throw new Error('Falta la carrosseria del GAZ');
@@ -34,13 +35,12 @@ export function prepareGazTigrRuntime(THREE,{vehicleScale=1.3}={}){
           steering.add(wheel);
           steeringPivots.push(steering);
         }
-        wheel.userData.radius=.55*vehicleScale*1.25;
+        wheel.userData.radius=.6875*vehicleScale;
         wheels.push(wheel);
       }
       car.userData.wheels=wheels;
       car.userData.steeringPivots=steeringPivots;
       car.userData.gazModel='Tigr-M';
-      car.userData.gazVisualScale=1.25;
       return car;
     }
   };

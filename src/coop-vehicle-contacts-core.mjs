@@ -1,6 +1,6 @@
 import {palmCrushRadius,rockVerticalBand} from './vehicle-environment-core.mjs';
 import {fenceVehicleContact,obbOverlap,relativeVehicleImpactSpeed,impactDamage} from './combat-rules.mjs';
-import {vehicleSpecs,vehicleCollisionScale,vehicleCollisionFootprint,vehicleCollisionRadius} from './vehicle-specs.mjs';
+import {vehicleSpecs,vehicleCollisionTop,vehicleCollisionPlayerBand,vehicleCollisionFootprint,vehicleCollisionRadius} from './vehicle-specs.mjs';
 import {vehicleDynamics} from './vehicle-dynamics-core.mjs';
 import {ferryPedestrianAt,ferryForVehicle,ferryCabinBox,ferrySurfaceY,ferryLocal,ferryCabinPush} from './ferry-deck-core.mjs';
 export function contactBox(v,proving=true){
@@ -8,7 +8,9 @@ export function contactBox(v,proving=true){
  const fp=proving?vehicleCollisionFootprint(v,size,scale):{w:1.8,d:3.2};
  return {x:v.x,z:v.z,hd:v.hd,w:fp.w,d:fp.d};
 }
-function top(v,proving){return v.y+(proving?(vehicleDynamics.types[v.t].m==='a'?7:['tanc','camio'].includes(v.t)?5.6:4.2)*(vehicleSpecs.scales[v.t]||1)*vehicleCollisionScale(v):3);}
+function top(v,proving){return v.y+(proving?vehicleCollisionTop(v,
+ vehicleDynamics.types[v.t].m==='a'?7:['tanc','camio'].includes(v.t)?5.6:4.2,
+ vehicleSpecs.scales[v.t]||1):3);}
 // Sweep translation and rotation, so fast vehicles cannot jump a thin wall.
 export function firstVehicleContact(v,from,others,geometry,proving=true,world=null){
  const box=contactBox(v,proving),angle=Math.atan2(Math.sin(v.hd-from.hd),Math.cos(v.hd-from.hd)),travel=Math.hypot(v.x-from.x,v.z-from.z)+Math.abs(angle)*Math.hypot(box.w,box.d)/2;
@@ -54,7 +56,7 @@ export function resolveCoopPlayerVehicleContact(previous,candidate,vehicles,acto
      ({x,z}=ferryCabinPush(v,x,z,radius));continue;
    }
   const scale=vehicleSpecs.scales[v.t]||1,box=vehicleSpecs.hitboxes[v.t];
-  if(!box||Math.abs((previous.y??0)-v.y)>Math.max(2.8,scale*2.2*vehicleCollisionScale(v)))continue;
+  if(!box||Math.abs((previous.y??0)-v.y)>Math.max(2.8,vehicleCollisionPlayerBand(v,scale)))continue;
   const size=vehicleCollisionFootprint(v,box,scale),hw=size.w/2,hd=size.d/2;
   if(Math.abs(x-v.x)>hw+hd+radius||Math.abs(z-v.z)>hw+hd+radius)continue;
   const c=Math.cos(v.hd),sn=Math.sin(v.hd),dx=x-v.x,dz=z-v.z;
