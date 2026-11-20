@@ -1485,3 +1485,9 @@
 - [x] v0.6.278 — Posició de natació: pont B3/C4/idle sense factor històric 2/3; centre i oscil·lació definits en unitats V18; regressions de blend, COOP parent i escala unitària.
 - [ ] **Implementació:** substituir `LEGACY_GAME_RIG_SCALE=2/3` del grup ocult de controls i unificar armes/IK i balística amb ancoratges V18, conservant els contractes de física i vehicles fins que hi hagi paritat.
 - [ ] **Validació visual:** observar braça, crol, manteniment i sortida de l'aigua en SOLO i COOP (host i guest), incloent parentatge, ombres, nivell d'aigua i transicions; les proves Node no validen GPU.
+
+
+### v0.6.279 · migració balística V18
+- [x] **Implementació**: boca visible V18 compartida per al fusell d'assalt i el franctirador (en lloc del canó de control ocult de la SV-98), amb fallback de compatibilitat quan manca l'arma canònica.
+- [ ] **Validació visual**: comprovar projectils, mira x8, ràfegues, objectius elevats i pares COOP en WebGL real; les regressions Node només comproven transformacions.
+- [ ] **Implementació pendent**: pistola, bazuca i altres efectes/trets que encara utilitzen orígens físics aproximats o controlador V17, i després eliminar aquest controlador amb paritat de física, seients i animacions.

@@ -1401,8 +1401,8 @@ function autoAimArmoredShot(x,y,z,fx,fz,range,shotClass='heavy',projectileSpeed=
   const profile=window.HUNTER_SHARED_AIMING.ARMORED_AIM[shotClass==='heavy'?'heavy':'light'];
   return autoAimWeaponShot(x,y,z,fx,0,fz,range,profile.cone,shotClass,focus,projectileSpeed,profile.vertical);
 }
-// Rifle: sortida REAL des de l'extrem del canó. En mode mira el model
-// invisible s'orienta com l'òptica; P.hd i el moviment no canvien.
+// Rifle: sortida REAL des de l'extrem del canó del V18 dibuixat.
+// El controlador antic només conserva l'orientació i els estats de tir.
 function sniperMuzzleWorld(heading,pitch=0){
   const rifle=pl.userData.sniper,muzzle=pl.userData.sniperMuzzle;
   if(!rifle||!muzzle)throw new Error('Falta el pivot del canó del franctirador');
@@ -1411,7 +1411,8 @@ function sniperMuzzleWorld(heading,pitch=0){
   pl.position.set(P.x,P.y,P.z);
   pl.rotation.y=P.hd;
   pl.updateMatrixWorld(true);
-  return muzzle.getWorldPosition(new THREE.Vector3());
+  return window.HUNTER_HUMAN_V17?.nativeRifleMuzzleWorld?.(THREE,pl,'sniper')
+    ||muzzle.getWorldPosition(new THREE.Vector3());
 }
 // Primer obstacle sota el centre del reticle (mateixes col·lisions que les
 // bales). Apuntar a un talús no ha de generar una bala desviada cap al terra.
@@ -1503,12 +1504,10 @@ function assaultMuzzleWorld(){
   if(!u.assault||!muzzle)throw new Error('Falta el pivot del canó del fusell d\'assalt');
   pl.position.x=P.x;pl.position.z=P.z;pl.rotation.y=P.hd;
   pl.updateMatrixWorld(true);
-  // Les bales surten de la boca VISIBLE del fusell, no del model
-  // antic ocult que continua controlant l'animació i la física.
-  const proxy=u.humanGameCanonicalRig?.getObjectByName('Arma canònica · assault');
-  const visualMuzzle=proxy?.getObjectByName('hunter-assault-muzzle');
-  if(proxy?.visible&&visualMuzzle)return visualMuzzle.getWorldPosition(new THREE.Vector3());
-  return muzzle.getWorldPosition(new THREE.Vector3());
+  // Compartim exactament el mateix contracte d'origen V18 amb la
+  // SV-98; només el punt d'ancoratge canvia segons el model aprovat.
+  return window.HUNTER_HUMAN_V17?.nativeRifleMuzzleWorld?.(THREE,pl,'assault')
+    ||muzzle.getWorldPosition(new THREE.Vector3());
 }
 // Ràfega de tres bales, separades 75 ms. Cap temporitzador real:
 // els tres trets avancen amb el temps de simulació, sense saltar-se pauses.

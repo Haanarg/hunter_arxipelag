@@ -1157,4 +1157,49 @@ gameAvatar.userData.visualAimSmoothed.set(0,0,0);
 controls.animatePlayerControls(gameAvatar,controlOptions);
 assert(gameAvatar.userData.pistolRig.nativeGoal.distanceTo(initialAim)>.3,
  'La meta V18 de la pistola segueix el rumb mundial i no el nord antic');
+// Amb els fusells reals del jugador, la balística de les dues armes
+// apunta al pivot de la malla V18: no al fusell ocult del controlador.
+const muzzleUser=gameAvatar.userData;
+muzzleUser.gun.visible=false;
+for(const kind of ['assault','sniper']){
+ const source=muzzleUser[kind],muzzle=muzzleUser[kind+'Muzzle'];
+ source.visible=true;
+ gameAvatar.position.set(4,1.5,-6);gameAvatar.rotation.y=.48;
+ updateHuman(gameAvatar);
+ const proxy=muzzleUser.humanGameCanonicalRig.getObjectByName('Arma canònica · '+kind);
+ const anchor=proxy.getObjectByName('hunter-'+kind+'-muzzle');
+ assert(proxy.visible&&anchor&&muzzle,
+  'El model V18 dibuixat té una boca pròpia per '+kind);
+ const origin=runtime.nativeRifleMuzzleWorld(T,gameAvatar,kind);
+ assert(origin?.distanceTo(anchor.getWorldPosition(new T.Vector3()))<1e-8,
+  'Les bales de '+kind+' surten del canó V18, no d\'una coordenada aproximada');
+ const initial=origin.clone();
+ // Moure el fusell ocult sense canviar la direcció no pot desplaçar la
+ // geometria nativa: el seu muntatge deriva de l'espatlla V18.
+ source.position.add(new T.Vector3(2,.8,-1));
+ updateHuman(gameAvatar);
+ const after=runtime.nativeRifleMuzzleWorld(T,gameAvatar,kind);
+ assert(after.distanceTo(initial)<1e-6,
+  'La boca V18 '+kind+' és independent de la translació del control ocult');
+ source.position.add(new T.Vector3(-2,-.8,1));
+ // La posició de COOP es pot reparentar sense desalinear el canó.
+ const parent=new T.Group();
+ parent.position.set(-11,2,3);parent.rotation.y=.65;parent.scale.setScalar(1.3);
+ parent.add(gameAvatar);
+ updateHuman(gameAvatar);
+ const coop=runtime.nativeRifleMuzzleWorld(T,gameAvatar,kind);
+ assert(coop.distanceTo(anchor.getWorldPosition(new T.Vector3()))<1e-8,
+  'Canó V18 '+kind+' conserva l\'origen en espai mundial COOP');
+ parent.remove(gameAvatar);
+ source.visible=false;
+ updateHuman(gameAvatar);
+ assert.equal(runtime.nativeRifleMuzzleWorld(T,gameAvatar,kind),null,
+  'El contracte natiu només exposa l\'arma '+kind+' equipada');
+}
+muzzleUser.gun.visible=true;
+gameAvatar.position.set(0,0,0);gameAvatar.rotation.y=0;
+updateHuman(gameAvatar);
+assert.equal(runtime.nativeRifleMuzzleWorld(T,gameAvatar,'bazooka'),null,
+ 'El contracte rebutja armes sense boca V18 migrada');
+console.log('PASS native V18 rifle muzzles assault/SV-98 and COOP transforms');
 console.log('PASS native crouch translation + V18 pistol fallback without legacy coordinates');
