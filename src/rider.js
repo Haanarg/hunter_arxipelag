@@ -71,25 +71,32 @@ window.HUNTER_RIDER=Object.freeze({
     // sobre l'arrel en temps de joc. El V18 de moto/bici queda exclòs.
     // Les geometries del rider són pròpies: no compartim bufers amb
     // els altres personatges ni reconstruïm malles per fotograma.
-    const nativeParts=[...riderDetailNodes,riderFar],ownedGeometry=new WeakSet();
+    const nativeParts=[...riderDetailNodes,riderFar];
+    const restPositions=new Map(),baseMeshes=new Map(),nativeVariants=new Map();
+    for(const root of nativeParts)root.traverse(node=>{
+      if(node!==root)restPositions.set(node,node.position.clone());
+      if(node.isMesh&&node.geometry)baseMeshes.set(node,node.geometry);
+    });
+    // Una única cocció per talla: en canviar de vehicle només assignam
+    // geometries immutables ja preparades i pivots absoluts de repòs.
+    // Cap multiplicació acumulativa, cap resize() de buffer a cada tick.
+    nativeVariants.set(1,baseMeshes);
     let nativeSize=1;
     const setNativeRiderSize=size=>{
       if(!(Number.isFinite(size)&&size>0))throw Error('Talla nativa de rider invàlida');
-      const ratio=size/nativeSize;
-      if(Math.abs(ratio-1)<1e-10)return;
-      for(const root of nativeParts)root.traverse(node=>{
-        // Els roots del rider es mouen amb els seients a update().
-        // Els pivots i les peces INTERNES sí tenen les seves
-        // coordenades inicials consolidades a escala nativa.
-        if(node!==root)node.position.multiplyScalar(ratio);
-        if(node.isMesh&&node.geometry){
-          if(!ownedGeometry.has(node)){
-            node.geometry=node.geometry.clone();
-            ownedGeometry.add(node);
-          }
-          node.geometry.scale(ratio,ratio,ratio);
+      if(size===nativeSize)return;
+      if(!nativeVariants.has(size)){
+        const generated=new Map();
+        for(const [node,original]of baseMeshes){
+          const geo=original.clone();
+          geo.scale(size,size,size);
+          generated.set(node,geo);
         }
-      });
+        nativeVariants.set(size,generated);
+      }
+      for(const [node,geometry]of nativeVariants.get(size))node.geometry=geometry;
+      for(const [node,position]of restPositions)
+        node.position.copy(position).multiplyScalar(size);
       nativeSize=size;
       g.userData.riderNativeSize=size;
       g.userData.riderNativeGeometry=true;
