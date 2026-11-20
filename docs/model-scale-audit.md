@@ -81,13 +81,21 @@ El bazuca de les torres pot equipar-se després d'aquesta normalització: la sev
 
 Les proves realitzen una comparació geomètrica del soldat antic i el nou, inclòs el bazuca equipat tard, el seu canó, les preses i els tres LOD; validen el cache de geometries i les fàbriques de soldat, elit i general. **No es canvia** la física, la IA, els PV, la requisició ni el controlador ocult V18 ×2/3. Queden per revisar visualment els canvis de LOD i les animacions de disparar.
 
+## Dimensions natives de bicicleta i streetfighter · v0.6.272
+
+La moto ja no rep `bike.scale.setScalar(1.24)` dins `vehicle-model-core.mjs`: la nova fàbrica `createNativeStreetfighter25` parteix de l'actiu original CC0, afegeix els punts anatòmics de selló, punys i reposapeus al seu rig, i **consolida la talla aprovada en malles, pivots i geometria** abans de tornar el model (escala d'arrel 1). El radi físic de rodament també incorpora la mida del model una sola vegada; la fàbrica de vehicles només afegeix la conversió mundial `vehicleSpecs.scales.moto`.
+
+La bicicleta de carretera ara tanca la construcció del quadre, la direcció i el pedalier amb `finalizeNativeBicycle`: la talla `0.74` queda consolidada sobre rodes, barres, selló, punys i les dues bieles, abans de lliurar el model a la fàbrica. No queda cap grup amb escala 0.74; els radis i el valor declarat del punt superior del selló es converteixen a coordenades locals natives. Les propietats `bicycleVisualScale` i `motorcycleVisualScale` són metadades històriques per a compatibilitat i **no transformacions actives**.
+
+Les proves enfronten la moto nativa amb la peça original escalada en tres angles de gir i rodament, comprovant els cinc punts de pilotatge i els eixos de roda. Una segona prova construeix una bicicleta amb forquilla i pedalier animables, compara el sistema anterior amb el model normalitzat durant diferents fases i comprova que els contorns i els cinc punts anatòmics coincideixen. Es mantenen intactes les mides i col·lisions existents en el món, i el pilot V18 i els controls no canvien.
+
 ## Referències trobades, NO eliminades encara perquè alteren altres contractes
 
 | Codi | Situació | Migració necessària |
 |---|---|---|
 | `human-game-runtime-v17.mjs`: `LEGACY_GAME_RIG_SCALE=2/3` | Rig antic ocult d'armes/IK i pell V18 visible; s'usen espais locals diferents | Migrar les armes i les mans a un únic rig V18 i recalcular grips, seients, canons i física; abans d'això suprimir el 2/3 pot reintroduir les mans sobre el cap |
 | `rider.js`: `.825`, `.82`, `.63` i `1/riderScale` | **Consolidat parcialment v0.6.263:** el rider de cotxe/GAZ/hover té arrel a 1, geometries de cabina estables i seients en unitats directes | Encara cal substituir les proporcions numèriques de les variants per dimensions declaratives de cabina i verificar COOP, trets i animacions amb WebGL |
-| `vehicle-model-core.mjs`: `BICYCLE_VISUAL_SCALE=.74`, `MOTORCYCLE_VISUAL_SCALE=1.24` | Mida fixa aplicada abans de `bakeFixedModelScales` | Integrar els dos valors als generadors de bicicleta i streetfighter; actualment els models lliurats ja tenen arrel a 1 |
+| `vehicle-model-core.mjs`: bicicleta `.74`, moto `1.24` | **Consolidat v0.6.272:** la fàbrica nativa integra la mida a malles, forquilla, rodes i ancoratges abans de lliurar cada model; cap transform tardà de dimensió visual | `vehicleSpecs.scales` és només conversió legítima d'unitats de món; verificar visualment postures i contactes en WebGL/COOP |
 | `vehicle-model-core.mjs`: `hover.scale=(1.28,1,1.20)` | Escala no uniforme i cabina amb posicions compensades; no commuta amb rotació del ventilador | Generar nativament un hovercraft amb l'amplada/llargada aprovades, incloent les aspes animades i els ancoratges, sense shear |
 | `ka60-runtime.mjs`: `KA60_WORLD_SCALE/vehicleScale` | **Consolidat v0.6.261:** cap malla, rotor o pilot hereta escala d'arrel; el ×2 aprovat és intrínsec, i `1/vehicleScale` només converteix les unitats del vehicle abans de crear la tripulació | La col·lisió dinàmica de `game-core.js` continua fent servir altures/factors independents; auditar-la contra la geometria nativa |
 | `game-core.js`: `visualScale=1.5/1.1` pels helicòpters | Contacte amb terreny/teulades obtingut per factors històrics, no per malles | Derivar volum de col·lisió de fuselatge i rotor del model aprovat |
