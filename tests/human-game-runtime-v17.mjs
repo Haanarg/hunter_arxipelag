@@ -946,8 +946,14 @@ assert.equal(globalThis.HUNTER_GENERAL_MODEL.create(T).userData.humanGameV17,'ge
 // perquè els requisadors i soldats amb bazuca encara tenen altres mounts.
 globalThis.HUNTER_CHARACTERS=Object.freeze({
  createCommando(T){return playerModel.create(T)},
- createSoldier(T,{general=false}={}){
+ createSoldier(T,{general=false,elite=false}={}){
   const o=general?globalThis.HUNTER_GENERAL_MODEL.create(T):this.createCommando(T);
+  if(elite&&!general){
+   o.userData.eliteSoldier=true;
+   const plate=new T.Mesh(new T.BoxGeometry(1.16,.62,.44),
+    new T.MeshStandardMaterial({color:0x303f37}));
+   plate.position.set(0,2.63,-.37);o.add(plate);
+  }
   o.scale.setScalar(.8);
   o.userData.profile=general?'general-approved-thick-epaulettes':
    'enemy-commando-approved';
@@ -969,6 +975,11 @@ const infantryFactory=globalThis.HUNTER_CHARACTERS.createSoldier(T,{general:fals
 assert.equal(infantryFactory.userData.humanOnFootNativeRole,'soldier',
  'Els soldats normals també normalitzen les variants full/mid/far');
 assert.deepEqual(infantryFactory.scale.toArray(),[1,1,1]);
+const eliteFactory=globalThis.HUNTER_CHARACTERS.createSoldier(T,{elite:true});
+assert.equal(eliteFactory.userData.humanOnFootNativeRole,'soldier',
+ 'L’elit es normalitza després de rebre armadura i metralladora');
+assert.equal(eliteFactory.userData.eliteSoldier,true);
+assert.deepEqual(eliteFactory.scale.toArray(),[1,1,1]);
 const driverCrew=globalThis.HUNTER_CHARACTERS.createCommando(T);
 assert.equal(driverCrew.userData.humanOnFootNativeRole,undefined,
  'Comandos de vehicles i llanxes continuen amb escala provisional de cabina');
