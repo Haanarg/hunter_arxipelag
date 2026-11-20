@@ -13,7 +13,6 @@ function attachEnemyBoatCrew(boat,{initiallyHidden=false,type='llanxa'}={}){
     // A les patrulleres tots dos comandos porten fusell. Les llanxes
     // requisades conserven el seu armament especial independent.
     const rocket=type!=='patrulla_marina'&&(seat===1||type==='llanxa_coets'),rig=rider.userData;
-    rider.scale.setScalar(.43);
     rider.position.set(seat===0?-.58:.58,.89,seat===0?.88:1.14);
     rig.ll.rotation.x=-1.10;rig.lr.rotation.x=-1.10;
     rig.ar.rotation.x=1.12;rig.al.rotation.x=1.14;
@@ -24,9 +23,17 @@ function attachEnemyBoatCrew(boat,{initiallyHidden=false,type='llanxa'}={}){
     // La boca real és filla de l'arma real i gira amb el comando.
     muzzle.position.set(0,0,rocket?-1.66:-.96);
     weapon.add(muzzle);
+    // Marc anatòmic de referència de la mira. Substitueix la fórmula
+    // històrica 2.7 * rider.scale.y, sense canviar l'altura mundial.
+    // Aquest punt i la boca de foc es normalitzen amb la pell V18.
+    const aimEye=new THREE.Object3D();
+    aimEye.name='hunter-native-boat-crew-aim-eye';
+    aimEye.position.set(0,2.7,0);
+    rider.add(aimEye);
+    window.HUNTER_HUMAN_V17.normalizeEnemyCrew(rider,.43);
     rider.visible=!initiallyHidden;
     (boat.userData.distantVehicleLOD?.full||boat).add(rider);
-    crew.push({rider,weapon,muzzle,rocket,seat,basePitch:weapon.rotation.x});
+    crew.push({rider,weapon,muzzle,aimEye,rocket,seat,basePitch:weapon.rotation.x});
   }
   boat.userData.enemyCarCrew={
     driver:crew[0].rider,gunner:crew[1].rider,boatWeapons:crew,
@@ -96,7 +103,9 @@ function aimEnemyBoatCrew(boat,seat,target,dt=.1){
     delta=marineAngle(wanted-w.rider.rotation.y),
     limit=Math.max(.02,dt)*2.5;
   w.rider.rotation.y+=Math.max(-limit,Math.min(limit,delta));
-  const height=w.rider.position.y+2.7*w.rider.scale.y,
+  // Referència nativa de cabina; les coordenades són les mateixes
+  // que abans del bake, però l'arrel del comando sempre queda a 1.
+  const height=boat.worldToLocal(w.aimEye.getWorldPosition(new THREE.Vector3())).y,
     desired=Math.max(-.55,Math.min(.65,Math.atan2(position.y-height,Math.hypot(dx,dz)))),
     pitchDiff=desired-(w.weapon.rotation.x-w.basePitch);
   w.weapon.rotation.x+=Math.max(-1.5*dt,Math.min(1.5*dt,pitchDiff));
