@@ -1,7 +1,7 @@
 import './menu-main-integration.mjs?menu=direct-html-v1';
-import {selectRuntimeMode} from './runtime-mode.mjs?v=0.6.279';
-import {GAME_VERSION} from './version.mjs?v=0.6.279';
-import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.279&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1';
+import {selectRuntimeMode} from './runtime-mode.mjs?v=0.6.280';
+import {GAME_VERSION} from './version.mjs?v=0.6.280';
+import {RUNTIME_BUNDLE_PATH} from './runtime-bundle.mjs?v=0.6.280&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1';
 
 // La portada reutilitza els controls reals i un renderitzat Three.js independent.
 // El canvas del fons s'allibera abans d'arrencar el motor de la partida.
@@ -124,8 +124,8 @@ function loadGame(){
       background.hidden=true;
     }
     window.dispatchEvent(new Event('hunter:menu-background-stop'));
-    bootPromise=import('./bootstrap.mjs?v=0.6.279&humansV17=3&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1&bunkerParapet=1&civilNose=1&ka60=1').then(()=>{
-    if(!window.HUNTER_READY)throw new Error('El motor 3D no ha acabat de carregar');
+    bootPromise=import('./bootstrap.mjs?v=0.6.280&humansV17=3&visual=8&glassfix=2&smooth=13&friendlyCover=1&rifleCone80=1&bazookaShoulder=1&armoredCrew=1&t90m=1&towerBlast=1&bunkerParapet=1&civilNose=1&ka60=1').then(()=>{
+    if(!window.HUNTER_READY)throw window.HUNTER_BOOT_ERROR||new Error('El motor 3D no ha acabat de carregar');
   }).catch(error=>{bootPromise=null;throw error});
   }
   return bootPromise;
@@ -183,7 +183,10 @@ function intercept(button,message){
         console.error('No es pot carregar el motor Hunter',error);
         window.HUNTER_AVATAR_AUDIT?.paint('ERROR CARREGANT MOTOR 3D:\n'+
           (error?.stack||error?.message||String(error)));
-        showLoading('Error de càrrega. Torna a prémer per reintentar-ho.');
+        const cause=String(error?.message||'causa desconeguda').slice(0,180);
+        showLoading('Error de càrrega: '+cause+'. '+
+          (window.HUNTER_READY?'Torna a prémer per reintentar-ho.':
+          'Recarrega la pàgina per reintentar-ho.'));
       }
     }finally{requestPending=false}
   },true);

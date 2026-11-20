@@ -90,11 +90,8 @@ jobs:
           if [ "$missing" -ne 0 ]; then exit 1; fi
       - name: Instal·lar dependències
         run: npm ci --ignore-scripts
-      - name: Diagnosticar l'arrencada publicada a Paradoxa (llavor 148, mapa 2)
-        # Exercita els assets reals, no el bundle local del checkout.
-        continue-on-error: true
-        env:
-          HUNTER_SMOKE_URL: 'https://hunter.paradoxa.cat/?quality=desktop&runtime=source'
+      - name: Validar arrencada SOLO real en Chromium (V18, llavor 148, mapa 2)
+        # Gate obligatori: Node/harness sol no detecta dobles escalats de tripulants.
         run: node tests/browser-startup-smoke.cjs
       - name: Comprovar contracte publicable del laboratori
         run: npm run test:deploy
@@ -230,3 +227,9 @@ jobs:
           done
           echo "::error::Cloudflare ha desplegat, però no s'han verificat tots els assets a Paradoxa."
           exit 1
+      - name: Diagnosticar l'arrencada publicada a Paradoxa (llavor 148, mapa 2)
+        # Exercita els assets reals, no el bundle local del checkout.
+        continue-on-error: true
+        env:
+          HUNTER_SMOKE_URL: 'https://hunter.paradoxa.cat/?quality=desktop&runtime=source'
+        run: node tests/browser-startup-smoke.cjs

@@ -1176,8 +1176,12 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
   if(car.userData.enemyCarCrew)return car.userData.enemyCarCrew;
   if(type==='llanxa'||type==='llanxa_coets')
     return attachEnemyBoatCrew(car,{initiallyHidden,type});
-  const makeSoldier=()=>window.HUNTER_CHARACTERS.createSoldier(THREE,{box:bx,material:M}),
-        driver=makeSoldier(),gunner=type==='moto'?null:makeSoldier(),
+  // Un tripulant es crea com a comando sense LOD de soldat a peu:
+  // createSoldier() ja hi consolida l'escala 0.8, i la normalització
+  // posterior de cabina (.31/.43/.52) provocava una segona talla incompatible.
+  // Mateixa via canònica que fan servir els patrons de llanxes.
+  const makeCrew=()=>window.HUNTER_CHARACTERS.createCommando(THREE),
+        driver=makeCrew(),gunner=type==='moto'?null:makeCrew(),
         truck=type==='camio',civil=type==='cotxe_civil';
   // Aquests són exactament els ocupants procedimentals del Humvee de patrulla.
   // No reparentam el soldat de combat, que continuaria en postura dreta.
