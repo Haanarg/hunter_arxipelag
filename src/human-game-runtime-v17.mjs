@@ -65,17 +65,18 @@ function copySkin(T,template,resolve){
  }
  return added;
 }
-// La mà esquerra del V18 va fins al punt de subjecció REAL de la còpia
-// visual de l'arma. No aplicam cap IK sobre la geometria antiga ni depenem
-// de l'escala 2/3 del controlador de física/COOP.
-const NATIVE_SUPPORT_GRIPS=Object.freeze({
- assault:'hunter-assault-foregrip',
- sniper:'hunter-sniper-foregrip',
- bazooka:'hunter-bazooka-left-support-grip'
+// Les armes llargues pengen del tors V18; els punts reals de subjecció
+// governen LES DUES mans. Mai es resol l'IK des d'una arma que alhora és
+// filla d'un canell (dependència circular del controlador V17).
+const NATIVE_LONG_GUN_GRIPS=Object.freeze({
+ assault:{right:'hunter-assault-trigger-grip',left:'hunter-assault-foregrip'},
+ sniper:{right:'hunter-sniper-trigger-grip',left:'hunter-sniper-foregrip'},
+ bazooka:{right:'hunter-bazooka-right-underbarrel-grip',
+  left:'hunter-bazooka-left-support-grip'}
 });
-function solveNativeLongGunSupport(T,j,grip,cache){
- const shoulder=j.shoulderL,elbow=j.elbowL,wrist=j.wristL;
- if(!shoulder||!elbow||!wrist)throw Error('Rig V18 sense braç esquerre');
+function solveNativeLongGunHand(T,j,grip,side,cache){
+ const shoulder=j['shoulder'+side],elbow=j['elbow'+side],wrist=j['wrist'+side];
+ if(!shoulder||!elbow||!wrist)throw Error('Rig V18 sense braç '+side);
  const target=grip.getWorldPosition(cache.target);
  shoulder.parent.worldToLocal(target);
  target.sub(shoulder.position);
@@ -86,7 +87,7 @@ function solveNativeLongGunSupport(T,j,grip,cache){
  const axis=cache.axis.copy(target).normalize();
  const along=(upper*upper+d*d-lower*lower)/(2*d);
  const radius=Math.sqrt(Math.max(0,upper*upper-along*along));
- const pole=cache.pole.set(-.48,-.72,.30).addScaledVector(axis,
+ const pole=cache.pole.set(side==='R'?.48:-.48,-.72,.30).addScaledVector(axis,
   -cache.pole.dot(axis)).normalize();
  const bend=cache.bend.copy(axis).multiplyScalar(along).addScaledVector(pole,radius);
  shoulder.quaternion.setFromUnitVectors(cache.down,cache.bendDirection.copy(bend).normalize());
@@ -155,8 +156,14 @@ function installCanonicalPlayer(T,model){
  const supportCache={
   target:new T.Vector3(),axis:new T.Vector3(),pole:new T.Vector3(),
   bend:new T.Vector3(),bendDirection:new T.Vector3(),forearm:new T.Vector3(),
-  down:new T.Vector3(0,-1,0),
-  wrist:new T.Vector3(),worldGrip:new T.Vector3(),inverse:new T.Quaternion()
+  down:new T.Vector3(0,-1,0),wrist:new T.Vector3(),
+  worldGrip:new T.Vector3(),inverse:new T.Quaternion()
+ };
+ const mountCache={
+  shoulder:new T.Vector3(),desired:new T.Vector3(),before:new T.Vector3(),
+  localDesired:new T.Vector3(),localBefore:new T.Vector3(),
+  forward:new T.Vector3(),up:new T.Vector3(),inward:new T.Vector3(),
+  torsoQ:new T.Quaternion()
  };
  const weaponWorld=new T.Quaternion(),handWorld=new T.Quaternion(),
   cutterGrip=new T.Vector3(),runAxis=new T.Vector3(1,0,0),runTarget=new T.Quaternion(),
@@ -247,13 +254,15 @@ function installCanonicalPlayer(T,model){
     // Sense multiplicadors d'escala al punt de muntatge dels fusells:
     // les dimensions i els ancoratges de la còpia queden a la geometria
     // nativa. El bake conserva el volum visible i la posició del canó.
-    if(NATIVE_SUPPORT_GRIPS[kind]){
+    if(NATIVE_LONG_GUN_GRIPS[kind]){
      const report=bakeFixedModelScales(proxy);
      if(report.remainingNonUniform||proxy.scale.x!==1)
       throw Error('Arma V18 amb escala residual: '+kind);
      proxy.userData.humanNativeWeaponScale=true;
     }
-    (kind==='cisalla'?j.spine:j.wristR).add(proxy);proxies.set(kind,proxy);
+    (kind==='cisalla'||NATIVE_LONG_GUN_GRIPS[kind]?j.spine:j.wristR)
+     .add(proxy);
+    proxies.set(kind,proxy);
     // Keep the authoritative gameplay weapon's transforms and state, but
     // render its cloned visual in the native hand rather than old anatomy.
     source.traverse(o=>{if(o.isMesh)o.visible=false});
@@ -261,7 +270,8 @@ function installCanonicalPlayer(T,model){
    const proxy=proxies.get(kind);proxy.visible=true;
    // El canó visible segueix el quaternion de l'arma real i no un angle fix.
    source.getWorldQuaternion(weaponWorld);
-   (kind==='cisalla'?j.spine:j.wristR).getWorldQuaternion(handWorld);
+   (kind==='cisalla'||NATIVE_LONG_GUN_GRIPS[kind]?j.spine:j.wristR)
+    .getWorldQuaternion(handWorld);
    gunAimLocal.copy(handWorld).invert().multiply(weaponWorld);
    if(kind==='gun'){
     // Repos local fix al canell i apuntat local de l'arma: cap referència
@@ -275,6 +285,37 @@ function installCanonicalPlayer(T,model){
     // centrada dins del puny, tant en repòs com en apuntar.
     proxy.position.set(0,y,z);
     proxy.userData.humanPistolHeldInFist=true;
+   }else if(NATIVE_LONG_GUN_GRIPS[kind]){
+    // Objectiu anatòmic davant del pit: deriva exclusivament de l'espatlla
+    // i de l'abast del V18, no d'una coordenada 3.10 o d'escales V17.
+    // L'arma apunta al món, però la mà dreta roman sota el cap en elevar
+    // el canó. Les dues mans segueixen els grips reals després.
+    const right=proxy.getObjectByName(NATIVE_LONG_GUN_GRIPS[kind].right);
+    if(!right)throw Error('Presa dreta V18 absent: '+kind);
+    proxy.position.set(0,0,0);
+    j.shoulderR.getWorldPosition(mountCache.shoulder);
+    j.spine.getWorldQuaternion(mountCache.torsoQ);
+    mountCache.up.set(0,1,0).applyQuaternion(mountCache.torsoQ);
+    mountCache.inward.set(-1,0,0).applyQuaternion(mountCache.torsoQ);
+    mountCache.forward.set(0,0,-1).applyQuaternion(weaponWorld)
+     .addScaledVector(mountCache.up,
+      -mountCache.forward.dot(mountCache.up));
+    if(mountCache.forward.lengthSq()<.01)
+     mountCache.forward.set(0,0,-1).applyQuaternion(mountCache.torsoQ);
+    mountCache.forward.normalize();
+    const reach=j.elbowR.parent.position.length()+j.wristR.parent.position.length();
+    mountCache.desired.copy(mountCache.shoulder)
+     .addScaledVector(mountCache.forward,reach*.49)
+     .addScaledVector(mountCache.up,-reach*.25)
+     .addScaledVector(mountCache.inward,reach*.14);
+    proxy.updateWorldMatrix(true,true);
+    right.getWorldPosition(mountCache.before);
+    mountCache.localDesired.copy(mountCache.desired);
+    mountCache.localBefore.copy(mountCache.before);
+    j.spine.worldToLocal(mountCache.localDesired);
+    j.spine.worldToLocal(mountCache.localBefore);
+    proxy.position.copy(mountCache.localDesired.sub(mountCache.localBefore));
+    proxy.userData.humanLongGunNativeMounted=true;
    }else if(kind==='cisalla'){
     // La cisalla viu en el tors: mai entre les dues mans.
     proxy.scale.setScalar(.864);
@@ -303,18 +344,20 @@ function installCanonicalPlayer(T,model){
     grasp('L');grasp('R');
    }else proxy.position.set(0,y,z);
   }
-  // Primer situam l'arma amb la pose/retícula real; després la mà
-  // esquerra del V18 s'hi adapta en el seu propi espai de coordenades.
-  // El braç dret conserva el control antic mentre no se n'hagin migrat
-  // les preses, els canons i les dependències de física.
+  // Els dos braços V18 es resolen amb el mateix referent geomètric:
+  // l'arma és filla del tors i els canells ja no la poden arrossegar.
   u.humanGameNativeLongGunSupport=null;
-  for(const [kind,name]of Object.entries(NATIVE_SUPPORT_GRIPS)){
+  for(const [kind,names]of Object.entries(NATIVE_LONG_GUN_GRIPS)){
    const proxy=proxies.get(kind);
    if(!proxy?.visible||!u[kind]?.visible)continue;
-   const grip=proxy.getObjectByName(name);
-   if(!grip)throw Error('Punt de subjecció V18 absent: '+kind);
-   const result=solveNativeLongGunSupport(T,j,grip,supportCache);
-   if(result)u.humanGameNativeLongGunSupport={weapon:kind,...result};
+   const right=proxy.getObjectByName(names.right),left=proxy.getObjectByName(names.left);
+   if(!right||!left)throw Error('Preses nadiues incompletes: '+kind);
+   const r=solveNativeLongGunHand(T,j,right,'R',supportCache);
+   const l=solveNativeLongGunHand(T,j,left,'L',supportCache);
+   if(r&&l)u.humanGameNativeLongGunSupport={
+    weapon:kind,distance:l.distance,rightDistance:r.distance,
+    inReach:l.inReach&&r.inReach
+   };
    break;
   }
   // Actualitzar la presa DESPRÉS de moure el model visual de l'arma.
