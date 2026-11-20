@@ -1094,7 +1094,8 @@ const gameAvatar=characterWindow.HUNTER_CHARACTERS.createPlayer(T,{
 assert(gameAvatar.userData.humanGameCanonicalJoints,
  'Les articulacions V18 existeixen abans de preparar l’arma');
 const controls=characterWindow.HUNTER_CHARACTERS;
-const controlOptions={forward:0,strafe:0,dt:.001,swimming:false,
+// Fotograma zero real: encara no s'ha fet cap lerp/normalize de la mira.
+const controlOptions={forward:0,strafe:0,dt:0,swimming:false,
  inVehicle:false,ammo:12};
 gameAvatar.userData.pistolAimTime=1;
 gameAvatar.userData.visualAimSmoothed.set(0,0,0);
