@@ -1727,6 +1727,41 @@ for(const u of prisoners.entities){
  assert.equal(u.legs[0].rotation.x,Math.PI/2,'Presoner assegut');
  assert.equal(u.arms[0].rotation.x,-.5,'Postura captiva intacta');
  assert.equal(u.head.rotation.y,.25,'Salutació mecànic intacta');
+ // En comptes de copiar geometria damunt els antics braços,
+ // el civil utilitza directament els 16 pivots del rig anatòmic V18.
+ const root=u.o.userData.humanCivilianCanonicalRig,
+       j=u.o.userData.humanCivilianCanonicalJoints;
+ assert(root&&j?.pelvis&&j?.head&&j?.wristL&&j?.wristR,
+   'Presoner i mecànic duen l\'esquelet V18 articulat de l\'editor');
+ assert.deepEqual(root.scale.toArray(),[1,1,1],
+   'L\'esquelet civil V18 no té correcció d\'escala');
+ assert(skinParts(root).every(mesh=>mesh.userData.humanCivilianNativeGeometry),
+   'Pell civil procedent només de geometries V18 canòniques');
+ u.state='captive';u.pose='seated';u.cheering=true;u.cheerPhase=2.4;
+ assert.equal(runtime.poseCivilianV18(u),true);
+ const seatedHip=j.hipL.rotation.x,cheerArm=j.shoulderL.rotation.z,
+       cheerHead=j.head.rotation.y;
+ assert(seatedHip>1&&Math.abs(cheerArm)>1.5&&Math.abs(cheerHead)>.05,
+   'Seure i saludar animen els ossos V18 reals');
+ // Els controls lògics ocults són independents del dibuix.
+ u.legs[0].rotation.set(-.91,.72,1.18);
+ u.arms[0].rotation.set(1.4,-.62,-1.14);
+ u.head.rotation.set(.45,.84,-.7);
+ runtime.poseCivilianV18(u);
+ assert.equal(j.hipL.rotation.x,seatedHip);
+ assert.equal(j.shoulderL.rotation.z,cheerArm);
+ assert.equal(j.head.rotation.y,cheerHead);
+ u.state='rescued';u.pose='standing';u.cheering=false;
+ u.civilianV18Walking=true;u.phase=Math.PI/2;
+ runtime.poseCivilianV18(u);
+ assert(Math.abs(j.hipL.rotation.x)>.5&&Math.abs(j.hipR.rotation.x)>.5,
+   'Caminada civil V18 amb alternança de malucs i genolls');
+ assert.equal(j.head.rotation.y,0,'El gir del cap només dura mentre saluda');
+ u.civilianV18Walking=false;u.civilianV18Repairing=true;
+ runtime.poseCivilianV18(u);
+ assert(j.shoulderL.rotation.x>1&&j.shoulderR.rotation.x>.6,
+   'El mecànic treballa amb les extremitats canòniques V18');
+ console.log('PASS civilian V18 native: rig, seated, cheering, walking, repairs, independence: '+u.role);
 }
 const bootstrap=readFileSync(new URL('../src/bootstrap.mjs',import.meta.url),'utf8');
 assert(bootstrap.indexOf('installHooks()')<bootstrap.indexOf('const loadClassic='),

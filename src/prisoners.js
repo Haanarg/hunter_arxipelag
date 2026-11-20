@@ -324,6 +324,10 @@ window.HUNTER_PRISONERS=Object.freeze({
   }
   function animate(u,dt){
    if(!u.o||!alive(u))return;
+   // La simulació SOLO i la rèplica COOP publiquen l'ESTAT que
+   // governa la pose V18, no els angles del vell rig de geometria.
+   u.civilianV18Walking=false;
+   u.civilianV18Repairing=false;
    if(u.state==='captive'){
     pose(u,u.captivePose==='seated');
     if(u.cheering){
@@ -339,6 +343,8 @@ window.HUNTER_PRISONERS=Object.freeze({
    }
    const walking=dt>0&&u.path.length>0&&u.blocked===0,
      stride=walking?Math.sin(u.phase)*.58:0;
+   u.civilianV18Walking=walking;
+   u.civilianV18Repairing=repair?.mechanic===u;
    for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=(i?-1:1)*stride;
    for(let i=0;i<u.arms.length;i++){
     u.arms[i].rotation.x=(i?1:-1)*stride*.65;
