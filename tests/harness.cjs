@@ -83,6 +83,7 @@ module.exports=async function createGame(root=path.resolve(__dirname,'..'),optio
   c.HUNTER_CREATE_NATIVE_COOP_GRENADE_VISUAL=(await module('native-coop-grenade-visual.mjs')).createNativeCoopGrenadeVisual;
   c.HUNTER_SHARED_SHARKS=(await module('shark-motion-core.mjs')).SHARED_SHARKS;
   c.HUNTER_ENEMY_REQUISITION=await module('enemy-vehicle-requisition.mjs');
+  c.HUNTER_COOP_WORLD_IDENTITY={canonicalString:(await module('native-coop-world-identity.mjs')).canonicalNativeCoopWorldString};
   c.HUNTER_NATIVE_COOP_TRANSPORT=(await module('native-coop-connection.mjs')).createNativeCoopConnection;
   c.HUNTER_VEHICLE_COLLISION=await module('vehicle-specs.mjs');
   c.HUNTER_FERRY_DECK=await module('ferry-deck-core.mjs');

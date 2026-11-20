@@ -1,6 +1,7 @@
 import {diffCoopState} from '../src/coop-state-delta.mjs';
 import {writeCoopCheckpoint,readCoopCheckpoint} from './coop-checkpoint.mjs';
 import {generateNativeMission,nativeFingerprint} from './coop-native.mjs';
+import {canonicalNativeCoopWorldString} from '../src/native-coop-world-identity.mjs';
 import {combatCommands,personalWeapons,inventoryCaps} from '../src/weapon-catalog.mjs';
 import {readCoopRoom} from './coop-room-state.mjs';
 import {generateRelayMission,restoreRelayMission,MISSION_VERSION} from './coop-mission.mjs';
@@ -265,8 +266,12 @@ export class CoopRoomHub {
     if(this.mission?.meta.mode==='native'&&this.matches(room)&&this.mission.meta.fingerprint===body.fingerprint){this.send(ws,this.setupClient(a.actorId));await this.wake();return;}
     const upload=await this.ctx.storage.get('native-upload');if(!upload||upload.key!==key||upload.received!==upload.total||upload.expiresAt<Date.now()){this.send(ws,{type:'error',message:'Esperant el món de l’amfitrió.'});return;}
     let text='';for(let i=0;i<upload.total;i++)text+=await this.ctx.storage.get('native-prepare:'+i);
-    if(await nativeFingerprint(text)!==body.fingerprint)throw Error('Identitat del món invàlida');
-    const generated=generateNativeMission(room,JSON.parse(text),body.fingerprint),mission=restoreRelayMission(generated.record,generated.geometry),worldText=JSON.stringify(generated.geometry),chunks=[];
+    // L'host publica el món complet; la comparació entre navegadors
+    // ignora només diferències subcentimètriques als arbres i enemics.
+    const payload=JSON.parse(text);
+    if(await nativeFingerprint(canonicalNativeCoopWorldString(payload))!==body.fingerprint)
+      throw Error('Identitat del món invàlida');
+    const generated=generateNativeMission(room,payload,body.fingerprint),mission=restoreRelayMission(generated.record,generated.geometry),worldText=JSON.stringify(generated.geometry),chunks=[];
     for(let i=0;i<worldText.length;i+=45000)chunks.push(worldText.slice(i,i+45000));
     await this.ctx.storage.transaction(async storage=>{for(let i=0;i<chunks.length;i++)await storage.put('native-world:'+i,chunks[i]);await storage.put('world',{nativeChunks:chunks.length});await writeCoopCheckpoint(storage,generated.record);const obsolete=[...Array(upload.total).keys()].map(i=>'native-prepare:'+i).concat('native-upload');for(let i=0;i<obsolete.length;i+=128)await storage.delete(obsolete.slice(i,i+128));});
     this.mission=mission;this.record=generated.record;this.geometry=generated.geometry;this.nativeUpload=null;

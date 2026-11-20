@@ -146,12 +146,18 @@ async function nativeCoopComponentFingerprints(payload){
   'geometry.levels':geometry.levels,
   'geometry.walls':geometry.walls,
   'geometry.trees':geometry.trees,
+  'geometry.trees.count':geometry.trees.length,
+  'geometry.trees.palms':geometry.trees.filter(t=>t.p),
+  'geometry.trees.rocks':geometry.trees.filter(t=>t.rock),
   'geometry.stairs':geometry.stairs,
   'geometry.piers':geometry.piers,
   'geometry.buildings':geometry.buildings,
   'geometry.bunker':geometry.bunker,
   'geometry.terminalRamps':geometry.terminalRamps,
   spawn:payload.spawn,vehicles:payload.vehicles,targets:payload.targets,
+  'targets.count':payload.targets.length,
+  'targets.ids':payload.targets.map(t=>[t.id,t.t]),
+  'targets.positions':payload.targets.map(t=>[t.id,t.x,t.y,t.z,t.heading]),
   supplies:payload.supplies,optional:payload.optional,intel:payload.intel,
   sharks:payload.sharks
  };
@@ -173,7 +179,7 @@ async function startNativeCoop(room){
  session.previousCheats={...cheats};
  try{
   await startGameProgressively({seed:room.seed,scale:room.mapScale,difficulty:room.difficulty,nativeSession:true});
-  const payload=captureNativeCoopWorld();session.prediction=window.HUNTER_CREATE_NATIVE_PREDICTION?.(payload.geometry);const text=JSON.stringify(payload),hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));session.fingerprint=[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join('');session.components=await nativeCoopComponentFingerprints(payload);
+  const payload=captureNativeCoopWorld();session.prediction=window.HUNTER_CREATE_NATIVE_PREDICTION?.(payload.geometry);const text=window.HUNTER_COOP_WORLD_IDENTITY.canonicalString(payload),hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));session.fingerprint=[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join('');session.components=await nativeCoopComponentFingerprints(payload);
   session.walls=Wl.slice();session.buildings=B.slice();session.palms=PL.slice();session.vehicles=new Map(V.map(v=>[v.saveId,v]));session.enemies=new Map(E.map(e=>[e.saveId,e]));session.items=new Map(items.map(it=>[it.saveId,it]));
   session.channel=window.HUNTER_NATIVE_COOP_TRANSPORT({room,getInput:nativeCoopInput,onInput:message=>session.prediction?.sent(message.sequence),
    onStatus(status){session.connectionStatus=status;if(status!=='open'&&session.state)session.state={...session.state,status:'paused'};const labels={connecting:'Connectant…',retrying:'Reconnectant…',replaced:'Sessió oberta en una altra pestanya.',ended:'Sessió finalitzada.',version:'Cal recarregar el joc.'};msg=status==='open'?'Preparant el mateix món amb el company…':labels[status]||'Connexió interrompuda.';msgT=8;},

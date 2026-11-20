@@ -32,6 +32,28 @@ const assert=require('node:assert/strict');
  assert.equal(JSON.stringify(guestPayload),capturedWorld,
    'COOP: les dues generacions completes han de coincidir amb altres comparadors JS');
  guest.run('stopNativeCoop()');
+ // Una diferència de menys d'un centímetre no és una diferència de món.
+ // No es toleren canvis de recompte, de tipus, de vida ni d'emplaçament real.
+ const {canonicalNativeCoopWorldString}=await import('../src/native-coop-world-identity.mjs');
+ const {nativeFingerprint}=await import('../server/coop-native.mjs');
+ assert.equal(await nativeFingerprint(canonicalNativeCoopWorldString(payload.payload)),
+   payload.fingerprint,'el Worker ha de verificar la mateixa identitat canònica');
+ const precise=JSON.parse(capturedWorld),neighbor=JSON.parse(capturedWorld);
+ for(const [section,index] of [['trees',0],['targets',0]]){
+   const left=section==='trees'?precise.geometry.trees[index]:precise.targets[index],
+     right=section==='trees'?neighbor.geometry.trees[index]:neighbor.targets[index],
+     anchor=Math.round(left.x*100)/100;
+   left.x=anchor+.0001;right.x=anchor+.0002;
+ }
+ assert.equal(canonicalNativeCoopWorldString(precise),canonicalNativeCoopWorldString(neighbor),
+   'la identitat no ha de dependre de l\u2019error numèric subcentimètric');
+ neighbor.geometry.trees[0].x+=.1;
+ assert.notEqual(canonicalNativeCoopWorldString(precise),canonicalNativeCoopWorldString(neighbor),
+   'un arbre mogut deu centímetres sí que ha de fallar');
+ neighbor.geometry.trees[0].x=precise.geometry.trees[0].x;
+ neighbor.targets[0].hp++;
+ assert.notEqual(canonicalNativeCoopWorldString(precise),canonicalNativeCoopWorldString(neighbor),
+   'un enemic amb diferent vida sí que ha de fallar');
  assert.equal(g.run('generationPromise'),null);
  const {generateNativeMission}=await import('../server/coop-native.mjs'),{restoreRelayMission}=await import('../server/coop-mission.mjs'),generated=generateNativeMission(room,payload.payload,payload.fingerprint),mission=restoreRelayMission(generated.record,generated.geometry);mission.setStatus('running');
  callbacks.onMission({self:'a',meta:mission.meta,state:mission.snapshot()});g.run('update(1/30,0)');assert.equal(g.run('nativeCoopSession.preparing'),false);assert.equal(g.run('cam.isPerspectiveCamera'),true);

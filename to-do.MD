@@ -1,3 +1,10 @@
+**2026-11-20 · v0.6.257 · COOP: diferències trees/targets entre navegadors:**
+- [x] La identitat SHA-256 COOP utilitza una representació canònica amb precisió centimètrica exclusivament per les posicions/valors numèrics dels arbres/roques i els enemics; el Worker continua rebent les dades originals completes de l'amfitrió.
+- [x] Identitat compartida entre client i servidor; la comparació de tots els altres blocs es manté estricta i no es desactiva el bloqueig de mons realment diferents.
+- [x] Diagnòstic detallat per recompte de vegetació, palmeres, roques, IDs i posicions dels enemics.
+- [x] Prova de regressió sobre petites variacions numèriques, arbres moguts i vida d'enemics diferent.
+- [ ] CI, Cloudflare i prova real en dos navegadors amb llavor de mapa petit/gran. Si persisteix divergència, revisar el nou subcomponent reportat.
+
 **2026-11-20 · Tancament de la primera ronda d'escales natives, v0.6.255:**
 - [x] Auditoria de 221 fitxers src amb 180 expressions de mida en 42 fitxers; no totes són pegats. Inventari d'escales estructurals encara per migrar a docs/model-scale-audit.md.
 - [x] Geometria base: T90M, GAZ, camió, pilots de cabina i V18 visible (3.11232 unitats, scale=1). L'antic control rig de 2/3 encara no s'ha migrat.
