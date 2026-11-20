@@ -328,7 +328,11 @@ assert.equal(rider.userData.boots.length,2);
    HUNTER_PLAYER_MODEL:{create:(Three,options)=>playerModel.create(Three,options)},
    HUNTER_HUMAN_V17:runtime
   },
-  createPlayerPistol:()=>({flash:{visible:false}})
+  createPlayerPistol:(Three,parent)=>{
+   const slide=new Three.Group(),flash=new Three.Group();
+   parent.add(slide,flash);
+   return {slide,flash};
+  }
  };
  runInNewContext(readFileSync(new URL('../src/rider.js',import.meta.url),'utf8'),riderSandbox);
  const driver=riderSandbox.window.HUNTER_RIDER.create(T,{
@@ -362,6 +366,14 @@ assert.equal(rider.userData.boots.length,2);
  driver.update({t:'cotxe',o:gaz,v:0,pedalPhase:0},1/60);
  assert.equal(nativePart.geometry,ownGeometry,
   'Cap clonació ni multiplicació de geometria dins els ticks de conducció');
+ const gazShot=driver.firePistol({t:'cotxe',o:gaz},()=>null);
+ assert(gazShot?.origin&&gazShot?.direction,
+  'Disparador del conductor GAZ conserva l’origen del canó');
+ assert(gazShot.origin.distanceTo(driver.object.userData.pistol.localToWorld(
+   new T.Vector3(0,.183,-1.47).multiplyScalar(.825)))<1e-6,
+  'Origen de la bala al canó real amb la mida nativa del GAZ');
+ assert(Math.abs(gazShot.direction.length()-1)<1e-6);
+ driver.reset();
  const headBounds=new T.Box3().setFromObject(driver.object.userData.head,true);
  assert(headBounds.max.y<2.37*1.3*1.25,'El cap ha de cabre sota el sostre GAZ ampliat');
  driver.update({t:'cotxe_civil',o:new T.Group(),v:0,pedalPhase:0},1/60);
@@ -391,6 +403,11 @@ assert.equal(rider.userData.boots.length,2);
  const passengerSeat=driver.object.userData.torso.getWorldPosition(new T.Vector3());
  assert(passengerSeat.distanceTo(new T.Vector3(.30*1.3,1.58*1.3,
   -1.08*1.3))<1e-5,'Passatger COOP hover a la segona plaça');
+ const hoverShot=driver.firePistol({t:'hover',o:hover},()=>null);
+ assert(hoverShot?.origin?.distanceTo(driver.object.userData.pistol.localToWorld(
+  new T.Vector3(0,.183,-1.47).multiplyScalar(.63)))<1e-6,
+  'La pistola del passatger hover conserva canó i dimensions natives');
+ driver.reset();
   // Els pilots de dues rodes fan servir EXACTAMENT la pell del jugador
   // a peu; cap bone scale ha de variar amb la posició del pedal.
   const anatomicalBody=driver.object.children.find(o=>o.userData.twoWheelCanonical);
