@@ -531,6 +531,12 @@ window.HUNTER_RIDER=Object.freeze({
       const canonicalSeat=(car||v.t==='hover'||
         ['llanxa','llanxa_coets','barca_rems','moto_aquatica','windsurf'].includes(v.t))&&!far?
         getNativeSeat(cabinSize):null;
+      // Per a TOTS els vehicles oberts del joc hi ha una via V18
+      // de seient o de dues rodes. No pot tornar a usar els braços
+      // telescòpics de l'antic rider si no s'ha creat el seient.
+      if(!far&&!twoWheeled&&!canonicalSeat)
+        throw Error('Rider V18: falta el seient natiu del vehicle '+v.t);
+      u.riderNativeOnlyPose=!!(canonicalSeat||twoWheeled);
       u.riderFarActive=far;
       cycleBody.visible=twoWheeled;
       for(const seat of nativeSeatVariants.values())
@@ -561,7 +567,9 @@ window.HUNTER_RIDER=Object.freeze({
         u.riderNativeShotActive=false;
         return;
       }
-      torso.rotation.set(0,0,0);rig.head.rotation.set(0,0,0);boots.forEach(b=>b.rotation.set(0,0,0));
+      // El cap i les botes del controlador ocult no es tornen a
+      // animar. La pose visible pertany al V18 de seient/dos rodes.
+      torso.rotation.set(0,0,0);
 
       if(car){
         // Seient esquerre, darrere del volant (C1A i cotxe utilitari).
@@ -607,10 +615,8 @@ window.HUNTER_RIDER=Object.freeze({
         // També els conductors de cotxe han de mostrar el gest real
         // de treure la pistola en disparar (local i company COOP).
         u.riderSeatVehicleType=v.t;
-        if(canonicalSeat)aimNativeSeatPistol(v,dt);
-        else aimOneHand(v,dt);
-        if(canonicalSeat)
-          poseCanonicalSeat(canonicalSeat,torso.position,torso.rotation.x,
+        aimNativeSeatPistol(v,dt);
+        poseCanonicalSeat(canonicalSeat,torso.position,torso.rotation.x,
             nativeHands,nativeFeet,u.shotBlend);
         return;
       }
@@ -657,10 +663,8 @@ window.HUNTER_RIDER=Object.freeze({
         // Disparar des del seient conserva la mà esquerra al comandament
         // en les animacions del mode individual i del company remot.
         u.riderSeatVehicleType=v.t;
-        if(canonicalSeat)aimNativeSeatPistol(v,dt);
-        else aimOneHand(v,dt);
-        if(canonicalSeat)
-          poseCanonicalSeat(canonicalSeat,torso.position,torso.rotation.x,
+        aimNativeSeatPistol(v,dt);
+        poseCanonicalSeat(canonicalSeat,torso.position,torso.rotation.x,
             nativeHands,nativeFeet,u.shotBlend);
         return;
       }
@@ -692,10 +696,8 @@ window.HUNTER_RIDER=Object.freeze({
           nativeHands.push(hand);nativeFeet.push(foot);
         }
         u.riderSeatVehicleType=v.t;
-        if(canonicalSeat)aimNativeSeatPistol(v,dt);
-        else aimOneHand(v,dt);
-        if(canonicalSeat)
-          poseCanonicalSeat(canonicalSeat,torso.position,torso.rotation.x,
+        aimNativeSeatPistol(v,dt);
+        poseCanonicalSeat(canonicalSeat,torso.position,torso.rotation.x,
             nativeHands,nativeFeet,u.shotBlend,true);
         return;
       }
@@ -727,10 +729,8 @@ window.HUNTER_RIDER=Object.freeze({
           nativeHands.push(hand);nativeFeet.push(foot);
         }
         u.riderSeatVehicleType=v.t;
-        if(canonicalSeat)aimNativeSeatPistol(v,dt);
-        else aimOneHand(v,dt);
-        if(canonicalSeat)
-          poseCanonicalSeat(canonicalSeat,torso.position,torso.rotation.x,
+        aimNativeSeatPistol(v,dt);
+        poseCanonicalSeat(canonicalSeat,torso.position,torso.rotation.x,
             nativeHands,nativeFeet,u.shotBlend,true);
         return;
       }
@@ -780,10 +780,8 @@ window.HUNTER_RIDER=Object.freeze({
         // La mà dreta V18 segueix el dispar; l'esquerra manté la
         // botavara original com a destí en coordenades del vehicle.
         u.riderSeatVehicleType=v.t;
-        if(canonicalSeat)aimNativeSeatPistol(v,dt);
-        else aimOneHand(v,dt);
-        if(canonicalSeat)
-          poseCanonicalSeat(canonicalSeat,torso.position,torso.rotation.x,
+        aimNativeSeatPistol(v,dt);
+        poseCanonicalSeat(canonicalSeat,torso.position,torso.rotation.x,
             nativeHands,feet,u.shotBlend,true);
         return;
       }
@@ -818,10 +816,8 @@ window.HUNTER_RIDER=Object.freeze({
           nativeHands.push(hand);nativeFeet.push(foot);
         }
         u.riderSeatVehicleType=v.t;
-        if(canonicalSeat)aimNativeSeatPistol(v,dt);
-        else aimOneHand(v,dt);
-        if(canonicalSeat)
-          poseCanonicalSeat(canonicalSeat,torso.position,torso.rotation.x,
+        aimNativeSeatPistol(v,dt);
+        poseCanonicalSeat(canonicalSeat,torso.position,torso.rotation.x,
             nativeHands,nativeFeet,u.shotBlend,true);
         return;
       }
