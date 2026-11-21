@@ -267,3 +267,6 @@ La 0.6.297 consolida en una sola operació `modelScale` sobre malles i pivots de
 
 - El controlador antic continua tenint els pivots de peu/mà i la talla pròpia necessària per a alguns ancoratges, però la factory del rider ara passa `controllerOnly:true` al constructor compartit i no executa `copySkin`. La pell efectiva ja és V18 per a tots els vehicles oberts propers, i és un proxy llunyà a altres distàncies. Aquesta optimització elimina una construcció i clonatge de malles redundant sense canviar escales, punts de soldadura, grips, hitboxes ni numeració de COOP.
 - El model `playerModel.create` continua amb el comportament antic per defecte per mantenir la compatibilitat de fixtures; només els controls del rider se salten l'adaptador. No s'ha eliminat l'estructura lògica anterior fins a substituir els seus consumidors.
+
+
+**0.6.301 confirmada en producció:** [Actions #44900802524](https://github.com/Haanarg/hunter_arxipelag/actions/runs/44900802524), 29 passes aprovades, incloent Cloudflare i arrencada publicada. El `controllerOnly` evita exactament la còpia de pell V17 sobre el rider invisible; no altera cap factor de talla ni ancoratge físic. La retirada total de pivots ocults del protagonista i riders continua pendent i no s'ha de simular mitjançant noves correccions d'escala.
