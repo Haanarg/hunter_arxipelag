@@ -1962,6 +1962,11 @@ for(const [weapon,option]of [
  gameAvatar.userData.humanGamePose();
  const support=weapon==='cisalla'?strictAvatarU.humanGameNativeCutterSupport:
   strictAvatarU.humanGameNativeLongGunSupport;
+ console.log('V18 WEAPON SUPPORT DIAGNOSTIC',weapon,JSON.stringify({
+  support,sourceVisible:strictAvatarU[weapon]?.visible,
+  gunVisible:strictAvatarU.gun?.visible,
+  nativeOnly:strictAvatarU.humanGameNativeOnly
+ }));
  assert(support&&
    (weapon==='cisalla'||support.weapon===weapon)&&
    Number.isFinite(support.rightDistance)&&
