@@ -114,10 +114,24 @@ for(const {label,options,role} of roles){
   'Blindatge i metralladora de l\'elit continuen equipats');
  console.log('PASS ENEMY NATIVE V18 '+label+': skeleton, weapon, animation, ragdoll, LOD, scale');
 }
-// Requisició i patrons de llanxes NO han de rebre la migració
-// d'infanteria que canviaria els ancoratges dels seus vehicles.
+// Fàbriques genèriques que abans forçaven copySkin() als ossos
+// V17. En la partida REAL totes dues retornen ara ossos V18
+// originals, tant si tenen LOD com si les crida un altre sistema.
 const crew=globalThis.HUNTER_CHARACTERS.createCommando(T,{palette:gamePalette});
-assert(!crew.userData.humanEnemyNativeRig&&
- crew.userData.humanGameV17==='soldier',
- 'Els conductors conserven la via compatible fins a la migració de seients');
-console.log('PASS ENEMY V18 on foot / backward-compatible vehicle crew');
+const uc=crew.userData;
+assert(uc.humanEnemyNativeRig&&
+ uc.humanEnemyNativeRole==='soldier'&&uc.humanGameV17==='soldier',
+ 'El comando genèric real genera directament els 16 ossos V18');
+assert.equal(Object.keys(uc.humanEnemyNativeJoints).length,16);
+assert(!uc.humanEnemyNativeCrew&&uc.humanOnFootNativeRole===undefined,
+ 'El comando genèric continua sense forçar una talla de cabina');
+const unchanged=uc.humanEnemyNativeJoints.shoulderR.rotation.x;
+uc.ar.rotation.set(1.5,-.6,.44);
+assert.equal(uc.humanEnemyNativeJoints.shoulderR.rotation.x,unchanged,
+ 'El comando genèric no consulta els controls visuals V17');
+const directGeneral=globalThis.HUNTER_GENERAL_MODEL.create(T,{palette:gamePalette});
+assert(directGeneral.userData.humanEnemyNativeRole==='general'&&
+ directGeneral.userData.humanEnemyNativeJoints?.pelvis,
+ 'La fàbrica directa del general no torna a copySkin');
+assert.equal(directGeneral.userData.humanGameV17,'general');
+console.log('PASS universal native enemy factories: commando, elite, general, all LOD paths');
