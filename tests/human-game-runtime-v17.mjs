@@ -2389,8 +2389,8 @@ const isolatedPlayer308=controls.createPlayer(T,{
 }),isoU308=isolatedPlayer308.userData;
 const weaponRoot308=isoU308.humanGameLogicalWeaponRoot;
 assert(weaponRoot308?.parent===isolatedPlayer308&&
- isoU308.humanGameLogicalWeaponSourceCount===5,
- 'Les cinc armes lògiques pengen directament del jugador V18');
+ isoU308.humanGameLogicalWeaponSourceCount===7,
+ 'Les set armes lògiques pengen directament del jugador V18');
 const isolatedSources308=['gun','cisalla','bazooka','assault','sniper'];
 for(const kind of isolatedSources308){
  const source=isoU308[kind];
@@ -2465,3 +2465,83 @@ assert(isoU308.gun.parent===weaponRoot308,
 assert(isoU308.pistolRig.idle.toArray().every(Number.isFinite),
  'El canell V18 defineix l\'ancoratge lògic de pistola');
 console.log('PASS v0.6.308 five logical weapon sources disconnected from V17 torso; COOP, rifle and pistol intact');
+
+
+
+// v0.6.309: les dues darreres fonts d'armes dels braços antics
+// s'han mogut al mateix node natiu. El grup buit pistolIdleMount
+// queda físicament eliminat, però la rotació de repòs es conserva
+// com un valor, sense parent, escala ni actualitzacions per frame.
+const player309=controls.createPlayer(T,{
+ box:characterBox,palette:gamePalette
+}),u309=player309.userData,root309=u309.humanGameLogicalWeaponRoot;
+assert(root309?.parent===player309&&root309.children.length===7,
+ 'El node V18 conté exactament les set fonts d\'arma');
+for(const kind of ['knife','grenade']){
+ const source=u309[kind];
+ assert(source?.parent===root309,
+  'La font del '+kind+' ja no pot ser filla de l\'avantbraç V17');
+ assert(source.scale.toArray().every(Number.isFinite),
+  'La geometria font del '+kind+' conserva escala finita');
+}
+assert(!('pistolIdleMount' in u309),
+ 'El marcador Object3D de repòs de pistola ha desaparegut del protagonista');
+const wantedIdle309=new T.Quaternion().setFromAxisAngle(
+ new T.Vector3(1,0,0),-Math.PI/2);
+assert(actionQuaternionGap(wantedIdle309,u309.humanGameNativePistolIdleRotation)<1e-10,
+ 'L\'orientació inicial del canell no depèn del marcador antic');
+assert(!u309.aer.children.some(n=>n===u309.knife||n===u309.grenade),
+ 'No queda cap arma font al pivot de colze ocult');
+const coop309=new T.Group();
+coop309.position.set(-7,2,9);
+coop309.rotation.y=-.39;
+coop309.scale.setScalar(1.17);
+coop309.add(player309);
+const before309=['knife','grenade'].map(k=>({
+ kind:k,world:u309[k].getWorldPosition(new T.Vector3()).clone(),
+ quat:u309[k].getWorldQuaternion(new T.Quaternion()).clone()
+}));
+u309.aer.rotation.set(.95,-.6,.32);
+u309.ar.rotation.set(-.41,.23,-.61);
+u309.upperBody.rotation.set(.2,.72,-.17);
+for(const sample of before309){
+ const source=u309[sample.kind];
+ assert(source.getWorldPosition(new T.Vector3()).distanceTo(sample.world)<1e-8&&
+ actionQuaternionGap(source.getWorldQuaternion(new T.Quaternion()),sample.quat)<1e-10,
+  'La font '+sample.kind+' no segueix els ossos V17 en COOP');
+}
+u309.aer.rotation.set(0,0,0);
+u309.ar.rotation.set(0,0,0);
+u309.upperBody.rotation.set(0,0,0);
+u309.meleePose=.44;
+controls.animatePlayerControls(player309,{
+ ...controlOptions,dt:.05,knifeEquipped:true
+});
+u309.humanGamePose();
+assert(u309.humanGameNativeAction?.kind==='knife',
+ 'El ganivet genera només la postura V18 de 3B/4B');
+const visibleKnife309=u309.humanGameCanonicalRig.getObjectByName(
+ 'Arma canònica · knife');
+assert(visibleKnife309?.visible&&
+ visibleKnife309.parent===u309.humanGameCanonicalJoints.wristR,
+ 'El ganivet visible segueix el canell V18');
+u309.meleePose=0;u309.grenadeThrow=.51;u309.grenadeThrowPower=.9;
+controls.animatePlayerControls(player309,{
+ ...controlOptions,dt:.05,grenadeEquipped:true,
+ grenadeChargePower:.8
+});
+u309.humanGamePose();
+assert(u309.humanGameNativeAction?.kind==='grenade',
+ 'La granada conserva les fases natives de llançament');
+const visibleGrenade309=u309.humanGameCanonicalRig.getObjectByName(
+ 'Arma canònica · grenade');
+assert(visibleGrenade309?.visible&&
+ visibleGrenade309.parent===u309.humanGameCanonicalJoints.wristR,
+ 'La granada visible segueix el canell V18');
+u309.grenadeThrow=0;
+controls.animatePlayerControls(player309,{...controlOptions,dt:.12});
+u309.humanGamePose();
+assert(u309.pistolRig.idle.toArray().every(Number.isFinite)&&
+ u309.gun.parent===root309,
+ 'La pistola retorna a la posició V18 sense marcador V17');
+console.log('PASS v0.6.309 knife/grenade independent of ghost forearm; native pistol idle scalar and COOP');
