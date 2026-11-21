@@ -1,0 +1,32 @@
+name: Hunter V18 final player weapon anchors 0.6.309 (temporary)
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  native-player-weapon-anchors:
+    if: github.head_ref == 'feature/v18-knife-grenade-native-mount-309'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Validate V18 knife, grenade and pistol anchor removal
+        run: node tests/human-game-runtime-v17.mjs
+      - name: Validate version, syntax, geometry
+        run: |
+          node --check src/characters.js
+          node tools/sync-version.cjs --check
+          node tools/audit-model-scales.cjs
+      - name: Full SOLO COOP and editor regressions
+        run: npm run test:all
+      - name: Build and source-bundle gameplay parity
+        run: |
+          npm run build
+          npm run check:build
+          node tests/runtime-bundle-parity.cjs
