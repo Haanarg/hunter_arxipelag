@@ -5,12 +5,12 @@ window.HUNTER_RAGDOLL=Object.freeze((()=>{
   const LIMITS={arm:[-2.65,2.65],elbow:[-.25,1.85],
     leg:[-1.45,1.5],knee:[-1.9,.28],head:[-.72,.72]};
   const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
-  // Els enemics continuen utilitzant el seu controlador anterior;
-  // el protagonista en canvi manipula directament les articulacions
-  // que es veuen al joc i a l'editor V18.
+  // Els soldats a peu (normal, elit i general) i el protagonista
+  // comparteixen articulacions V18 originals. Els tripulants antics
+  // encara utilitzen el controlador de compatibilitat fins a migrar-los.
   const make=(model,{blast=false,seed=0,impulse=null}={})=>{
     const rig=model?.userData||{},joints=[],
-      native=rig.humanGameCanonicalJoints||null;
+      native=rig.humanGameCanonicalJoints||rig.humanEnemyNativeJoints||null;
     const config=native?[
       ['shoulderL','arm',-1],['shoulderR','arm',1],
       ['elbowL','elbow',-1],['elbowR','elbow',1],
@@ -36,7 +36,7 @@ window.HUNTER_RAGDOLL=Object.freeze((()=>{
         offset:0,offsetV:0,variant:s});
     }
     if(native&&joints.length!==config.length)
-      throw Error('Ragdoll V18 incomplet: falten articulacions del protagonista');
+      throw Error('Ragdoll V18 incomplet: falten articulacions nadiues');
     return {model,joints,native:!!native,blast,age:0,groundAge:0,
       strength:blast?1:.5,active:true,seed};
   };

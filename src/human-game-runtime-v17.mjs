@@ -615,6 +615,127 @@ function installCanonicalPlayer(T,model){
  return model;
 }
 
+// Soldats a peu i general: el joc empra literalment les articulacions
+// del V18 de l'editor. L'esquelet V17 resta sense malles per als
+// contractes físics/balístics que encara s'han de migrar.
+function installNativeOnFootEnemy(T,model,{role='soldier'}={}){
+ const u=model?.userData;
+ if(!u||!['soldier','elite','general'].includes(role))
+  throw Error('Rol d\'infanteria V18 desconegut');
+ if(u.humanEnemyNativeRig){
+  if(u.humanEnemyNativeRole!==role)
+   throw Error('Rol V18 canviat després de crear el soldat');
+  return model;
+ }
+ if(!u.ll||!u.lr||!u.aer||!u.head||!u.boots?.length)
+  throw Error('Controlador d\'armes del soldat absent');
+ const nativeHeight=role==='general'?3.55:3.66;
+ const visual=createHumanProposal(T,role,'a',{
+  visualOnly:true,nativeHeight
+ });
+ const joints={};
+ visual.name='Infanteria · esquelet exacte V18 · '+role;
+ visual.traverse(o=>{
+  if(o.userData?.humanMotionJoint)joints[o.userData.humanMotionJoint]=o;
+ });
+ for(const id of ['pelvis','spine','neck','head','hipL','hipR','kneeL',
+                   'kneeR','ankleL','ankleR','shoulderL','shoulderR',
+                   'elbowL','elbowR','wristL','wristR'])
+  if(!joints[id])throw Error('Soldat V18 incomplet: '+id);
+ if(visual.scale.toArray().some(v=>Math.abs(v-1)>1e-12))
+  throw Error('Soldat V18 amb una escala d\'arrel artificial');
+ const old=removeOldMeshes(model,node=>u.gun&&belongsTo(node,u.gun));
+ const parts=[];
+ visual.traverse(node=>{
+  if(!node.isMesh)return;
+  node.userData.humanGameV17Mesh=true; // diagnòstics de compatibilitat
+  node.userData.humanGameV17Source=node.name;
+  node.userData.humanEnemyNativeGeometry=true;
+  parts.push(node);
+ });
+ model.add(visual);
+ // El fusell real i els seus extres (també el de l'elit) s'uneixen
+ // al canell V18. No es clona ni es desconnecta el canó de dany.
+ if(u.gun){
+  joints.wristR.add(u.gun);
+  u.gun.position.set(0,-.17,-.035);
+  u.gun.rotation.set(-Math.PI/2,0,0);
+  u.gun.userData.humanEnemyNativeWeaponMount=true;
+ }
+ u.humanEnemyNativeRig=visual;
+ u.humanEnemyNativeJoints=joints;
+ u.humanEnemyNativeRole=role;
+ u.humanEnemyNativeHeight=nativeHeight;
+ // Cache IK per actor: cap al·locació per tick en 100 soldats.
+ u.humanEnemyNativeIKCache={
+  target:new T.Vector3(),axis:new T.Vector3(),pole:new T.Vector3(),
+  bend:new T.Vector3(),bendDirection:new T.Vector3(),forearm:new T.Vector3(),
+  down:new T.Vector3(0,-1,0),wrist:new T.Vector3(),
+  worldGrip:new T.Vector3(),inverse:new T.Quaternion()
+ };
+ u.humanEnemyNativePose={phase:0,moving:false,aim:false,death:0};
+ u.humanGameV17=role==='elite'?'soldier':role; // saves i telemetria
+ u.humanGameV17PreservedRig=true;
+ u.humanGameV17Counts={removed:old.length,added:parts.length};
+ model.updateWorldMatrix(true,true);
+ return model;
+}
+function poseNativeOnFootEnemy(model,{phase=0,moving=false,aim=false,
+                                   dt=0,death=0}={}){
+ const u=model?.userData,j=u?.humanEnemyNativeJoints;
+ if(!j)return false;
+ const p=Number.isFinite(phase)?phase:0,
+       t=Math.max(0,Math.min(.20,Number.isFinite(dt)?dt:0)),
+       fall=Math.max(0,Math.min(1,Number.isFinite(death)?death:0)),
+       k=1-Math.exp(-12*t),
+       swing=moving?Math.sin(p)*.45:0,
+       bazookaAim=!!u.rocketSoldier&&!!aim;
+ const mix=(id,x,z=0,immediate=false)=>{
+  if(!Number.isFinite(x)||!Number.isFinite(z))
+   throw Error('Animació enemiga V18 amb angle no finit: '+id);
+  const joint=j[id],alpha=immediate?1:k;
+  joint.rotation.x+=(x-joint.rotation.x)*alpha;
+  joint.rotation.z+=(z-joint.rotation.z)*alpha;
+ };
+ if(fall>0){
+  for(const [i,s] of [[0,'L'],[1,'R']]){
+   mix('knee'+s,-(i?.38:.62)*fall,0,true);
+   mix('elbow'+s,(i?.3:.65)*fall,0,true);
+  }
+ }else{
+  mix('hipL',swing,0,true);mix('hipR',-swing,0,true);
+  for(const [i,s] of [[0,'L'],[1,'R']]){
+   mix('knee'+s,-(.06+Math.max(0,Math.sin(p)*(i?1:-1))*.8*(moving?1:0)));
+   mix('shoulder'+s,
+    bazookaAim?(i?1.2:1.04):aim?(i?.96:1.03):(i?swing:-swing)*.5,
+    bazookaAim?(i?-.16:.23):aim?(i?-.05:.12):(i?.12:-.12));
+   mix('elbow'+s,bazookaAim?(i?.75:.83):aim?(i?.61:.55):
+    .16+Math.max(0,Math.cos(p)*(i?-1:1))*.18*(moving?1:0));
+  }
+ }
+ // La bazuca és una arma REAL compartida amb els projectils,
+ // de manera que les dues mans V18 apunten als seus dos grips.
+ // L'IK llegeix la geometria i no el braç antic apuntat per V17.
+ u.humanEnemyNativeRocketSupport=null;
+ if(u.rocketSoldier&&aim&&fall===0&&u.enemyBazookaIK&&
+    u.enemyLOD==='full'){
+  model.updateWorldMatrix(true,true);
+  const cache=u.humanEnemyNativeIKCache;
+  const right=solveNativeLongGunHand(null,j,u.enemyBazookaIK.rightGrip,'R',cache);
+  const left=solveNativeLongGunHand(null,j,u.enemyBazookaIK.leftGrip,'L',cache);
+  if(right&&left)u.humanEnemyNativeRocketSupport={
+   rightDistance:right.distance,leftDistance:left.distance,
+   rightInReach:right.inReach,leftInReach:left.inReach
+  };
+ }
+ // Els canells i turmells no depenen dels angles del controlador antic.
+ for(const id of ['ankleL','ankleR','wristL','wristR']){
+  if(!Number.isFinite(j[id].rotation.x))j[id].rotation.set(0,0,0);
+ }
+ u.humanEnemyNativePose={phase:p,moving:!!moving,aim:!!aim,death:fall};
+ return true;
+}
+
 export function createHumanGameRuntimeV17(){
  let suppressed=0,nativeVisualHeight=null;
  const runtime={
@@ -651,6 +772,12 @@ export function createHumanGameRuntimeV17(){
    u.humanGameControlScaleBaked=true;
    u.humanGameControlScaleBakeStats=report;
    return model;
+  },
+  installNativeOnFootEnemy(T,model,options){
+   return installNativeOnFootEnemy(T,model,options);
+  },
+  poseNativeOnFootEnemy(model,options){
+   return poseNativeOnFootEnemy(model,options);
   },
   // Figura V18 per a conductor i passatger de cabina. La talla
   // definitiva es cuina en generar geometria i pivots; cap escala sobre
@@ -982,24 +1109,42 @@ export function createHumanGameRuntimeV17(){
      set:value=>{current=wrap(value)}
     });
    };
+   // createCommando també crea tripulants de vehicles. Només la
+   // construcció dins createSoldier és infanteria a peu: aquest context
+   // delimita la retirada del copySkin de V17 sense tocar conductors.
+   let onFootRole=null;
    intercept('HUNTER_CHARACTERS',base=>{
     if(!base||base.__humanGameV17Hook)return base;
     const wrapped={...base,__humanGameV17Hook:true};
     wrapped.createCommando=function(T,...args){
      const soldier=runtime.suppress(()=>base.createCommando.call(wrapped,T,...args));
-     return runtime.install(T,soldier,{role:'soldier'});
+     return onFootRole
+      ?runtime.installNativeOnFootEnemy(T,soldier,{
+       role:onFootRole==='elite'?'elite':'soldier'
+      })
+      :runtime.install(T,soldier,{role:'soldier'});
     };
     if(typeof base.createSoldier==='function')wrapped.createSoldier=function(T,...args){
-     const model=base.createSoldier.call(wrapped,T,...args);
-     // Els soldats a peu, inclosos elit i antitanc, passen a model
-     // natiu un cop creades les malles full/mid/far. La fàbrica
-     // createCommando directa continua amb l'escala original fins
-     // que els conductors/llanxes n'estableixen la talla de cabina.
+     const previous=onFootRole;
+     const options=args[0]||{};
+     onFootRole=options.general?'general':options.elite?'elite':'soldier';
+     let model;
+     try{model=base.createSoldier.call(wrapped,T,...args)}
+     finally{onFootRole=previous}
+     // Les malles V18 ja s'han generat en crear el comando, ABANS
+     // de fusionar full LOD. Courem la talla 0.8 a la geometria
+     // i als pivots de les tres distàncies en una única operació.
      const role=model?.userData?.profile==='general-approved-thick-epaulettes'
       ?'general':model?.userData?.profile==='enemy-commando-approved'
       ?'soldier':null;
      if(role)runtime.normalizeOnFootEnemy(model,{role});
      return model;
+    };
+    if(typeof base.animateSoldier==='function')wrapped.animateSoldier=function(model,options){
+     const result=base.animateSoldier.call(base,model,options);
+     if(model?.userData?.humanEnemyNativeJoints)
+      runtime.poseNativeOnFootEnemy(model,options);
+     return result;
     };
     return Object.freeze(wrapped);
    });
@@ -1008,7 +1153,9 @@ export function createHumanGameRuntimeV17(){
     return Object.freeze({...base,__humanGameV17Hook:true,
      create(T,...args){
       const general=runtime.suppress(()=>base.create.call(base,T,...args));
-      return runtime.install(T,general,{role:'general'});
+      return onFootRole==='general'
+       ?runtime.installNativeOnFootEnemy(T,general,{role:'general'})
+       :runtime.install(T,general,{role:'general'});
      }
     });
    });
