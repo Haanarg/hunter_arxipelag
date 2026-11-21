@@ -1134,7 +1134,9 @@ function animateEnemyInfantry(u,moving,dt){
       u.visualAnimT=(u.visualAnimT||0)+dt;
       if(u.visualAnimT>=.16){a.enemyMidMesh.rotation.z=moving?Math.sin(u.phase)*.035:0;u.visualAnimT=0}
     }
-    else{
+    else if(!a.humanEnemyNativeJoints){
+    // Només rigs antics de prova: els soldats V18 en LOD llunyà
+    // no necessiten animar ossos invisibles a cada frame.
     a.legs[0].rotation.x=swing;a.legs[1].rotation.x=-swing;
     const aim=!!u.canSee;
     a.arms.forEach((arm,i)=>arm.rotation.x+=((aim?(u.rocketSoldier?(i?1.2:1.04):1.45):(i?swing:-swing)*.5)-arm.rotation.x)*(1-Math.exp(-12*dt)))
@@ -1162,13 +1164,23 @@ function updDead(dt){
         window.HUNTER_RAGDOLL.update(u.ragdoll,dt,{
           airborne:pose.height>.09,grounded:pose.height<=.09});
     }else{
-      // Animació específica del general, controlada per la victòria.
-      if(u.o.userData.arms)u.o.userData.arms.forEach((arm,j)=>{
-        arm.rotation.x=(j?pose.armR:pose.armL)*e;
-        arm.rotation.z=(j?-.3:.3)*e;
-      });
-      if(u.o.userData.legs)u.o.userData.legs.forEach((leg,j)=>
-        leg.rotation.x=(j?pose.legR:pose.legL)*e);
+      // La caiguda sense ragdoll també ha de deformar la pell V18,
+      // no només els braços invisibles del controlador antic.
+      const joints=u.o.userData.humanEnemyNativeJoints;
+      if(joints){
+        for(const [i,side]of [[0,'L'],[1,'R']]){
+          joints['shoulder'+side].rotation.x=(i?pose.armR:pose.armL)*e;
+          joints['shoulder'+side].rotation.z=(i?-.3:.3)*e;
+          joints['hip'+side].rotation.x=(i?pose.legR:pose.legL)*e;
+        }
+      }else{
+        if(u.o.userData.arms)u.o.userData.arms.forEach((arm,j)=>{
+          arm.rotation.x=(j?pose.armR:pose.armL)*e;
+          arm.rotation.z=(j?-.3:.3)*e;
+        });
+        if(u.o.userData.legs)u.o.userData.legs.forEach((leg,j)=>
+          leg.rotation.x=(j?pose.legR:pose.legL)*e);
+      }
     }
     if(u.deadT>18){
       if(u.ragdoll){window.HUNTER_RAGDOLL.reset(u.ragdoll);u.ragdoll=null}
