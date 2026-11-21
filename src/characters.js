@@ -313,7 +313,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
   knifePose4B:PLAYER_KNIFE_4B,
   knifeAttack3B:PLAYER_KNIFE_ATTACK_3B,
   knifeAttack3BTargets,
-  createCommando(T,{palette=window.HUNTER_PALETTE,headVariant=null}={}){
+  createCommando(T,{palette=window.HUNTER_PALETTE,headVariant=null,nativeCrewControls=false}={}){
  // Les tripulacions V18 necessiten exactament la mateixa cota de
  // cap que les hitboxes de seient (3.26): triar-la en la FACTORY,
  // no reajustar-la amb una translació sobre el rig ja construït.
@@ -343,12 +343,18 @@ window.HUNTER_CHARACTERS=Object.freeze({
  box(gun,.10,.24,.15,P.dark,0,-.17,-.12);box(gun,.13,.16,.29,0x66513c,0,0,.36);
  u.gun=gun;u.legs=[u.ll,u.lr];u.arms=[u.al,u.ar];u.knees=[u.lkl,u.lkr];u.elbows=[u.ael,u.aer];
  u.profile='enemy-commando-approved';
- // Escala visual 80% del model de referència; no canvia la hitbox ni la IA.
- g.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(g);
- const height=bounds.max.y-bounds.min.y;
- for(const child of g.children)child.position.y-=bounds.min.y;
- const fit=3.66/height;
- g.traverse(o=>{if(o!==g)o.position.multiplyScalar(fit);if(o.isMesh)o.geometry.scale(fit,fit,fit)});
+ // L'adaptador històric reescalava geometries i pivots per
+ // ajustar la silueta a 3.66. Els nous tripulants V18 ja duen
+ // mides nadiues a createHumanProposal: mantenim el controlador
+ // invisible sense aquest fit redundant. Així el pivot del cap
+ // compactD és EXACTAMENT 3.26, com al Worker de hitboxes COOP.
+ if(!nativeCrewControls){
+  g.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(g);
+  const height=bounds.max.y-bounds.min.y;
+  for(const child of g.children)child.position.y-=bounds.min.y;
+  const fit=3.66/height;
+  g.traverse(o=>{if(o!==g)o.position.multiplyScalar(fit);if(o.isMesh)o.geometry.scale(fit,fit,fit)});
+ }
  g.scale.setScalar(.8);
  return g;
   },
