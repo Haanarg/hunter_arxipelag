@@ -1087,24 +1087,42 @@ export function createHumanGameRuntimeV17(){
      set:value=>{current=wrap(value)}
     });
    };
+   // createCommando també crea tripulants de vehicles. Només la
+   // construcció dins createSoldier és infanteria a peu: aquest context
+   // delimita la retirada del copySkin de V17 sense tocar conductors.
+   let onFootRole=null;
    intercept('HUNTER_CHARACTERS',base=>{
     if(!base||base.__humanGameV17Hook)return base;
     const wrapped={...base,__humanGameV17Hook:true};
     wrapped.createCommando=function(T,...args){
      const soldier=runtime.suppress(()=>base.createCommando.call(wrapped,T,...args));
-     return runtime.install(T,soldier,{role:'soldier'});
+     return onFootRole
+      ?runtime.installNativeOnFootEnemy(T,soldier,{
+       role:onFootRole==='elite'?'elite':'soldier'
+      })
+      :runtime.install(T,soldier,{role:'soldier'});
     };
     if(typeof base.createSoldier==='function')wrapped.createSoldier=function(T,...args){
-     const model=base.createSoldier.call(wrapped,T,...args);
-     // Els soldats a peu, inclosos elit i antitanc, passen a model
-     // natiu un cop creades les malles full/mid/far. La fàbrica
-     // createCommando directa continua amb l'escala original fins
-     // que els conductors/llanxes n'estableixen la talla de cabina.
+     const previous=onFootRole;
+     const options=args[0]||{};
+     onFootRole=options.general?'general':options.elite?'elite':'soldier';
+     let model;
+     try{model=base.createSoldier.call(wrapped,T,...args)}
+     finally{onFootRole=previous}
+     // Les malles V18 ja s'han generat en crear el comando, ABANS
+     // de fusionar full LOD. Courem la talla 0.8 a la geometria
+     // i als pivots de les tres distàncies en una única operació.
      const role=model?.userData?.profile==='general-approved-thick-epaulettes'
       ?'general':model?.userData?.profile==='enemy-commando-approved'
       ?'soldier':null;
      if(role)runtime.normalizeOnFootEnemy(model,{role});
      return model;
+    };
+    if(typeof base.animateSoldier==='function')wrapped.animateSoldier=function(model,options){
+     const result=base.animateSoldier.call(base,model,options);
+     if(model?.userData?.humanEnemyNativeJoints)
+      runtime.poseNativeOnFootEnemy(model,options);
+     return result;
     };
     return Object.freeze(wrapped);
    });
@@ -1113,7 +1131,9 @@ export function createHumanGameRuntimeV17(){
     return Object.freeze({...base,__humanGameV17Hook:true,
      create(T,...args){
       const general=runtime.suppress(()=>base.create.call(base,T,...args));
-      return runtime.install(T,general,{role:'general'});
+      return onFootRole==='general'
+       ?runtime.installNativeOnFootEnemy(T,general,{role:'general'})
+       :runtime.install(T,general,{role:'general'});
      }
     });
    });
