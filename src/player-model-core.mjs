@@ -173,8 +173,27 @@ export const playerModel=Object.freeze({
  // proxy de LOD llunyà. Evitam una segona pell copySkin de V17 que
  // s'assignava al controlador ocult i no es renderitzava mai.
  u.humanControllerOnly=!!controllerOnly;
- if(!controllerOnly)
-  globalThis.HUNTER_HUMAN_V17?.install(T,g,{role:'player'});
+ if(controllerOnly){
+  if(articulated)throw Error('El protagonista articulat no pot ser només un controlador');
+  // El rider ha passat íntegrament a figures V18 de seient, moto,
+  // bicicleta o LOD. Les peces de la vella figura només consumien
+  // buffers, memòria de materials i temps de construcció: els seus
+  // pivots Object3D es conserven per a la cinemàtica/armes.
+  const obsolete=[];
+  g.traverse(node=>{if(node.isMesh)obsolete.push(node)});
+  const geometries=new Set(),materials=new Set();
+  for(const mesh of obsolete){
+   if(mesh.geometry)geometries.add(mesh.geometry);
+   for(const mat of [mesh.material].flat())if(mat)materials.add(mat);
+   mesh.removeFromParent();
+  }
+  for(const geometry of geometries)geometry.dispose();
+  for(const material of materials)material.dispose();
+  u.humanControllerOnlyMeshStats={
+   removed:obsolete.length,remaining:0,
+   geometriesReleased:geometries.size,materialsReleased:materials.size
+  };
+ }else globalThis.HUNTER_HUMAN_V17?.install(T,g,{role:'player'});
  return g;
  }
 });
