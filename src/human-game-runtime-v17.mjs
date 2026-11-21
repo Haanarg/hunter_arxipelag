@@ -1191,7 +1191,8 @@ export function createHumanGameRuntimeV17(){
      // La variant compactD declara aquesta cota directament al
      // constructor d'origen; la pell V18 es crea després sense
      // traslladar ni escalar el cap com a pegat de render.
-     const options={...(args[0]||{}),headVariant:'compactD'};
+     const options={...(args[0]||{}),
+       headVariant:'compactD',nativeCrewControls:true};
      const crew=runtime.suppress(()=>base.createCommando.call(wrapped,T,options));
      if(crew.userData.headVariant!=='compactD')
       throw Error('Tripulant V18 creat sense cota nativa de cap 3.26');
