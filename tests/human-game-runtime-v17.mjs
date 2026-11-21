@@ -711,13 +711,18 @@ assert(riderControls.userData.head.parent===riderControls &&
  };
  const nativeRiderSource=readFileSync(new URL('../src/rider.js',import.meta.url),'utf8');
  const seatsStart=nativeRiderSource.indexOf('      if(car){',nativeRiderSource.indexOf('const canonicalSeat='));
- const seatsEnd=nativeRiderSource.indexOf('      const seat=1.45*sc;torso.position',seatsStart);
+ const seatsEnd=nativeRiderSource.indexOf(
+  "      throw Error('Rider V18: postura desconeguda de '",seatsStart);
  assert(seatsStart>0&&seatsEnd>seatsStart,
   'Es pot auditar el motor natiu de les sis postures de seient');
  const realSeatCode=nativeRiderSource.slice(seatsStart,seatsEnd);
  assert(!realSeatCode.includes('limbBetween(')&&
   !realSeatCode.includes('shoulderAt('),
   'Els sis seients V18 no fan IK redundant als antics braços V17');
+ assert(!nativeRiderSource.includes('limbBetween(')&&
+  !nativeRiderSource.includes('aimOneHand(')&&
+  !nativeRiderSource.includes('shoulderAt('),
+  'Ni el LOD distant ni cap altre rider poden cridar l\'IK V17 extensible');
  assert(driver.object.userData.riderV18ControlsOnly,
   'El rider real consumeix exclusivament pivots de control lògics');
  let copiedRiderSkin=0;
@@ -1048,6 +1053,28 @@ assert(riderControls.userData.head.parent===riderControls &&
   !driver.object.userData.riderSeatCanonicalBody&&
   driver.object.userData.riderFarProxy.visible,
   'LOD llunyà: només figura econòmica, el V18 nàutic s\'oculta');
+ // Encara que un tir s'origini des del LOD llunyà, ha de provenir
+ // de l'empunyadura i el canell real V18, sense braços ocults.
+ const oldAngles=driver.object.userData.limbs.map(n=>n.rotation.x);
+ const farMarineShot=driver.firePistol(marineBoat,()=>[.2,.08,-.97]);
+ assert(farMarineShot?.origin?.toArray().every(Number.isFinite)&&
+   farMarineShot?.direction?.toArray().every(Number.isFinite),
+   'LOD llunyà: trajectòria balística V18 vàlida');
+ assert(farMarineShot.origin.distanceTo(
+   muzzleMarker.getWorldPosition(new T.Vector3()))<1e-8,
+   'LOD llunyà: el tret surt del marcador de la pistola nativa');
+ assert(gripMarker.getWorldPosition(new T.Vector3()).distanceTo(
+   driver.object.userData.riderFarShotWrist
+    .getWorldPosition(new T.Vector3()))<1e-7,
+   'LOD llunyà: la pistola queda ancorada al canell V18');
+ assert.deepEqual(driver.object.userData.limbs.map(n=>n.rotation.x),oldAngles,
+   'LOD llunyà no torna a activar la IK oculta');
+ assert(!driver.object.userData.pistol.visible&&
+   driver.object.userData.riderFarProxy.visible,
+   'LOD llunyà no dibuixa una pistola flotant');
+ driver.update(marineBoat,1/60,0,0);
+ assert(!driver.object.userData.riderFarShotWrist,
+  'En tornar a prop es descarta el canell transitori del LOD');
  driver.reset();
  console.log('PASS V18 native marine riders: jetski, rowboat, windsurf, boats (driver/COOP passenger), fixed lengths, yaw and LOD');
   // Els pilots de dues rodes fan servir EXACTAMENT la pell del jugador
