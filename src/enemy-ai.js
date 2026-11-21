@@ -335,6 +335,11 @@ function enemyCarRifleShot(u,target,targetY){
   crew.mount.rotation.y=Math.atan2(-dx,-dz);
   crew.pitch.rotation.x=Math.max(-.7,Math.min(.75,Math.atan2(dy,Math.hypot(dx,dz))));
   u.o.updateMatrixWorld(true);
+  // Recalcular mans V18 a partir dels grips del mateix fusell que
+  // genera els projectils. La torreta continua essent autoritativa.
+  if(crew.gunner?.userData?.humanEnemyNativeRifleGrips)
+   window.HUNTER_HUMAN_V17.poseNativeEnemyCrew(
+    crew.gunner,{type:'cotxe',seat:1});
   return {origin:crew.muzzle.getWorldPosition(new THREE.Vector3()),
     direction:new THREE.Vector3(0,0,-1).applyQuaternion(
       crew.muzzle.getWorldQuaternion(new THREE.Quaternion())).normalize()};
@@ -1240,13 +1245,27 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
     mount.add(pitch);detailParent.add(mount);
     rifle.position.set(0,-.035,-.14);rifle.rotation.set(0,0,0);rifle.scale.setScalar(.94);
     pitch.add(rifle);
+    // Preses anatòmiques de la geometria REAL: gallet (.0,-.17,-.12)
+    // i guardamans del canó cap endavant/esquerra. No es mou ni el
+    // muntatge de la torre ni l'origen dels projectils.
+    if(gunner.userData.humanEnemyNativeJoints){
+     const rightGrip=new THREE.Object3D(),leftGrip=new THREE.Object3D();
+     rightGrip.name='hunter-v18-turret-rifle-trigger';
+     leftGrip.name='hunter-v18-turret-rifle-foregrip';
+     rightGrip.position.set(0,-.17,-.12);
+     leftGrip.position.set(-.28,-.065,-.52);
+     rifle.add(rightGrip,leftGrip);
+     gunner.userData.humanEnemyNativeRifleGrips={rightGrip,leftGrip};
+    }
     bx(rifle,.075,.075,.42,0x252d2c,0,0,-.97,'metal');
     muzzle=new THREE.Object3D();muzzle.position.set(0,0,-1.18);rifle.add(muzzle);
     // L'arma muntada a la torre ja és externa al tripulant: només
     // consolidam el soldat, no el canó del vehicle.
     window.HUNTER_HUMAN_V17.normalizeEnemyCrew(gunner,scale);
-    window.HUNTER_HUMAN_V17.poseNativeEnemyCrew?.(gunner,{type,seat:1});
     detailParent.add(gunner);
+    // Els dos models (tirador i fusell extern) comparteixen ja el
+    // transform del vehicle. Resol l'IK només després de reparentar.
+    window.HUNTER_HUMAN_V17.poseNativeEnemyCrew?.(gunner,{type,seat:1});
   }
   if(initiallyHidden){driver.visible=false;if(gunner)gunner.visible=false;if(mount)mount.visible=false;}
   return car.userData.enemyCarCrew={driver,gunner,mount,pitch,muzzle,motorcycleMuzzle};
