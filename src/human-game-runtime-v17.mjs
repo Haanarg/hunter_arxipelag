@@ -834,6 +834,22 @@ export function createHumanGameRuntimeV17(){
      rightInReach:right.inReach,leftInReach:left.inReach
     }:null;
    }
+   // Quan el tirador duu un fusell en una torreta, l'arma és
+   // filla del muntatge balístic del vehicle, no del canell.
+   // Les dues mans V18 segueixen les preses reals del seu fusell
+   // després de cada gir de yaw/pitch de la torreta.
+   const rifle=u.humanEnemyNativeRifleGrips;
+   u.humanEnemyNativeRifleSupport=null;
+   if(rifle&&!rocket){
+    model.updateWorldMatrix(true,true);
+    const cache=u.humanEnemyNativeIKCache;
+    const right=solveNativeLongGunHand(null,j,rifle.rightGrip,'R',cache);
+    const left=solveNativeLongGunHand(null,j,rifle.leftGrip,'L',cache);
+    u.humanEnemyNativeRifleSupport=right&&left?{
+     rightDistance:right.distance,leftDistance:left.distance,
+     rightInReach:right.inReach,leftInReach:left.inReach
+    }:null;
+   }
    u.humanEnemyNativeSeatType=vehicleType;
    u.humanEnemyNativeSeatIndex=index;
    u.humanEnemyNativeCrewPose={moto,marine,rocket,gunner};
