@@ -700,6 +700,24 @@ assert(riderControls.userData.head.parent===riderControls &&
    llanxa:1.95,llanxa_coets:1.95,barca_rems:1.2,moto_aquatica:1.2,
    windsurf:1.2},heightAt:()=>0,shadows:false
  });
+ // Cap seat real pot animar els segments invisibles V17: la postura
+ // i la pistola provenen exclusivament de l'IK V18.
+ const assertNativeOnlyRider=type=>{
+  const u=driver.object.userData;
+  assert(u.riderNativeOnlyPose,
+   'Rider '+type+' tria exclusivament V18 o IK nativa de dues rodes');
+  assert(u.limbs.every(node=>Math.abs(node.scale.y-1)<1e-10),
+   'Rider '+type+' no allarga cap segment antic invisible');
+ };
+ const nativeRiderSource=readFileSync(new URL('../src/rider.js',import.meta.url),'utf8');
+ const seatsStart=nativeRiderSource.indexOf('      if(car){',nativeRiderSource.indexOf('const canonicalSeat='));
+ const seatsEnd=nativeRiderSource.indexOf('      const seat=1.45*sc;torso.position',seatsStart);
+ assert(seatsStart>0&&seatsEnd>seatsStart,
+  'Es pot auditar el motor natiu de les sis postures de seient');
+ const realSeatCode=nativeRiderSource.slice(seatsStart,seatsEnd);
+ assert(!realSeatCode.includes('limbBetween(')&&
+  !realSeatCode.includes('shoulderAt('),
+  'Els sis seients V18 no fan IK redundant als antics braços V17');
  assert(driver.object.userData.riderV18ControlsOnly,
   'El rider real consumeix exclusivament pivots de control lògics');
  let copiedRiderSkin=0;
@@ -727,6 +745,7 @@ assert(riderControls.userData.head.parent===riderControls &&
  const initialPartSize=partSize();
  const gaz=new T.Group();gaz.userData.gazModel='Tigr-M';
  driver.update({t:'cotxe',o:gaz,v:0,pedalPhase:0},1/60);
+ assertNativeOnlyRider('GAZ Tigr-M');
  assert.deepEqual(driver.object.scale.toArray(),[1,1,1],
   'El conductor GAZ té arrel 1 i geometria de cabina nativa');
  assert.equal(driver.object.userData.riderNativeSize,.825,
@@ -824,6 +843,7 @@ assert(riderControls.userData.head.parent===riderControls &&
  ];
  hover.userData.hovercraftSteeringPosition=new T.Vector3(-.30,1.88,-1.98);
  driver.update({t:'hover',o:hover,v:0,pedalPhase:0},1/60,0);
+ assertNativeOnlyRider('hovercraft');
  assert.equal(driver.object.scale.x,1,'Hover: arrel nativa sense .63');
  assert.equal(driver.object.userData.riderNativeSize,.63,
   'L’hovercraft incorpora la talla .63 al rig');
@@ -885,6 +905,7 @@ assert(riderControls.userData.head.parent===riderControls &&
  const seaBodies=new Map();
  const checkMarine=(vehicle,seatIndex=null,expectedYaw=null)=>{
   driver.update(vehicle,1/60,seatIndex);
+  assertNativeOnlyRider(vehicle.t);
   const d=driver.object.userData,body=d.riderSeatCanonicalBody,
     joints=d.riderSeatCanonicalJoints;
   assert(d.riderSeatCanonicalActive&&body?.visible&&joints?.pelvis,

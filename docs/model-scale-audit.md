@@ -276,3 +276,9 @@ La 0.6.297 consolida en una sola operació `modelScale` sobre malles i pivots de
 
 - El rider `controllerOnly` ha deixat de reservar BufferGeometry/Materials pel vell maniquí: les primitives antigues s'eliminen físicament en la fàbrica. El proxy de llarga distància continua tenint geometria pròpia i queda en el mapa de talles nadiues, sense tocar les dades d'IK de braços ni hitboxes.
 - El jugador real marca `humanGameNativeOnly`: qualsevol absència de `humanGameNativeBodyPose` o `humanGameNativeLimbPose` es considera un error de configuració V18, en lloc de caure en una substitució visual de rotacions V17. El pivot `u.head` del controlador ocult ja no es mou als estats de cursa, natació o salt.
+
+
+## 0.6.303 — Les IK dels sis seients no escriuen cap segment V17
+
+- En els sis camins de seient (`cotxe/cotxe_civil`, `hover`, `moto_aquatica`, `barca_rems`, `windsurf`, `llanxa/llanxa_coets`) els punts originals de seient, volant, rem i vela s'entreguen directament com a mans i peus d'`poseCanonicalSeat`. L'animació no torna a fer `limbBetween()` sobre els grups lògics de braços/cames; elimina 24 operacions antigues per tick i totes les escriptures sobre botes ocultes. Cap nova compensació d'escala, ni canvi de geometria V18.
+- `riderNativeOnlyPose` verifica la ruta activa i la prova de laboratori exigeix que les escales dinàmiques dels grups telescòpics ocults continuïn a 1. El fallback residual només es reserva a tir des d'un proxy llunyà i antigues funcions de diagnòstic, no a seients reals.
