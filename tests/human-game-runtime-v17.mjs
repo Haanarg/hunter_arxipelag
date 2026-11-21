@@ -1837,10 +1837,45 @@ const gameAvatar=characterWindow.HUNTER_CHARACTERS.createPlayer(T,{
 });
 assert(gameAvatar.userData.humanGameCanonicalJoints,
  'Les articulacions V18 existeixen abans de preparar l’arma');
+assert.equal(gameAvatar.userData.humanGameNativeOnly,true,
+ 'El protagonista actiu NO permet retornar a la pell V17');
+assert(gameAvatar.userData.humanGameNativeBodyPose&&
+ gameAvatar.userData.humanGameNativeLimbPose,
+ 'Cos i extremitats V18 disponibles des del primer fotograma');
+const initialNativeLimb=gameAvatar.userData.humanGameNativeLimbPose;
+delete gameAvatar.userData.humanGameNativeLimbPose;
+assert.throws(()=>gameAvatar.userData.humanGamePose(),
+ /canals natius obligatoris absents/,
+ 'El render real no pot activar silenciosament copySkin dels braços V17');
+gameAvatar.userData.humanGameNativeLimbPose=initialNativeLimb;
+const initialNativeBody=gameAvatar.userData.humanGameNativeBodyPose;
+delete gameAvatar.userData.humanGameNativeBodyPose;
+assert.throws(()=>gameAvatar.userData.humanGamePose(),
+ /canals natius obligatoris absents/,
+ 'El render real exigeix les dades de tronc i ajupiment V18');
+gameAvatar.userData.humanGameNativeBodyPose=initialNativeBody;
+gameAvatar.userData.humanGamePose();
 const controls=characterWindow.HUNTER_CHARACTERS;
 // Fotograma zero real: encara no s'ha fet cap lerp/normalize de la mira.
 const controlOptions={forward:0,strafe:0,dt:0,swimming:false,
  inVehicle:false,ammo:12};
+const deadHead=gameAvatar.userData.head.rotation.clone();
+controls.animatePlayerControls(gameAvatar,{
+ ...controlOptions,dt:1/60,forward:.7,running:true
+});
+assert(gameAvatar.userData.head.rotation.equals(deadHead),
+ 'El cap ocult V17 no es mou durant la cursa del protagonista V18');
+controls.animatePlayerControls(gameAvatar,{
+ ...controlOptions,dt:1/60,swimming:true
+});
+assert(gameAvatar.userData.head.rotation.equals(deadHead),
+ 'El cap ocult V17 no participa en braça/crol del protagonista');
+controls.animatePlayerControls(gameAvatar,{
+ ...controlOptions,dt:1/60,airborne:true
+});
+assert(gameAvatar.userData.head.rotation.equals(deadHead),
+ 'Ni en caiguda es mou el cap V17 invisible');
+controls.animatePlayerControls(gameAvatar,controlOptions);
 gameAvatar.userData.pistolAimTime=1;
 gameAvatar.userData.visualAimSmoothed.set(0,0,0);
 controls.animatePlayerControls(gameAvatar,controlOptions);
