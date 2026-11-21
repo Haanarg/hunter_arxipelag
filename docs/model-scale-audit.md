@@ -282,3 +282,6 @@ La 0.6.297 consolida en una sola operació `modelScale` sobre malles i pivots de
 
 - En els sis camins de seient (`cotxe/cotxe_civil`, `hover`, `moto_aquatica`, `barca_rems`, `windsurf`, `llanxa/llanxa_coets`) els punts originals de seient, volant, rem i vela s'entreguen directament com a mans i peus d'`poseCanonicalSeat`. L'animació no torna a fer `limbBetween()` sobre els grups lògics de braços/cames; elimina 24 operacions antigues per tick i totes les escriptures sobre botes ocultes. Cap nova compensació d'escala, ni canvi de geometria V18.
 - `riderNativeOnlyPose` verifica la ruta activa i la prova de laboratori exigeix que les escales dinàmiques dels grups telescòpics ocults continuïn a 1. El fallback residual només es reserva a tir des d'un proxy llunyà i antigues funcions de diagnòstic, no a seients reals.
+
+
+**Producció v0.6.303 verificada:** [Actions #44922520176](https://github.com/Haanarg/hunter_arxipelag/actions/runs/44922520176), 29/29 passes, Cloudflare i prova de partida publicada. La retirada dels moviments V17 dels sis seients conserva l'escala geomètrica nativa dels pilots i passatgers, i no modifica caps, col·lisions, ni les definicions numèriques SOLO/COOP.
