@@ -65,9 +65,16 @@ function assertNative(rider,size,type,seat){
  assert.equal(u.humanEnemyNativeSeatIndex,seat,
   'Índex de seient V18 preservat');
  const body=[];
- rig.traverse(n=>{if(n.isMesh)body.push(n)});
+ rig.traverse(n=>{
+  if(!n.isMesh)return;
+  // Les armes REALS van unides al canell V18 i no són part
+  // de la malla anatòmica del cos. No exigir als canons que
+  // duguin marcadors de pell humana.
+  for(let p=n;p;p=p.parent)if(p===u.gun)return;
+  body.push(n);
+ });
  assert(body.length>20&&body.every(n=>n.userData.humanEnemyNativeGeometry),
-  'Només malles de la fàbrica V18 nativa: '+type+'/'+seat);
+  'Només malles corporals originals V18, sense pell V17 duplicada: '+type+'/'+seat);
  const head=u.head.getWorldPosition(new T.Vector3()),
   nativeHead=j.head.getWorldPosition(new T.Vector3());
  assert(nativeHead.distanceTo(head)<.30,
