@@ -942,6 +942,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
 
     if(cisalla){
       u.humanGameNativeAction=null;
+      if(!u.humanGameNativeOnly){
+
       // Les dues mans segueixen exactament l'extrem exterior de cada
       // mànec; la funció pose() ja anima les fulles en tallar.
       player.updateMatrixWorld(true);
@@ -952,6 +954,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
       u.upperBody.worldToLocal(gripRig.left);
       aimPlayerPistolArm(u.ar,u.aer,gripRig.right,1,gripRig,gripRate,true);
       aimPlayerPistolArm(u.al,u.ael,gripRig.left,-1,gripRig,gripRate,true);
+      }
     }else if(grenade||throwing){
       // La càrrega i el llançament comparteixen la mateixa pose inicial.
       const chargePose=grenadeChargeArmPose(throwing?u.grenadeThrowPower:grenadeChargePower);
@@ -992,6 +995,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
       },limbK);
     }else if(bazooka){
       u.humanGameNativeAction=null;
+      if(!u.humanGameNativeOnly){
+
       // No fixam els braços en una posició estàtica mentre gira
       // el llançacoets: el gallet i el suport es mouen amb el canó.
       player.updateMatrixWorld(true);
@@ -1002,8 +1007,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
       u.upperBody.worldToLocal(rig.left);
       aimPlayerPistolArm(u.ar,u.aer,rig.right,1,rig,handBlend,true);
       aimPlayerPistolArm(u.al,u.ael,rig.left,-1,rig,handBlend,true);
+      }
     }else if(sniper||assault){
       u.humanGameNativeAction=null;
+      if(!u.humanGameNativeOnly){
+
       // La posició del rifle governa els canells, no al revés.
       // Conservam el mateix solver IK de la pistola a dues mans:
       // l'esquerra sosté la part davantera i la dreta prem el gallet.
@@ -1018,6 +1026,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
       (sniper?u.sniperLeftGrip:u.assaultLeftGrip).localToWorld(rig.left);u.upperBody.worldToLocal(rig.left);
       aimPlayerPistolArm(u.ar,u.aer,rig.right,1,rig,handBlend,true);
       aimPlayerPistolArm(u.al,u.ael,rig.left,-1,rig,handBlend,true);
+      }
     }else if(u.knife.visible){
       // Postura 4B en repòs i moviment. En atacar, trajectòria 3B:
       // preparació lateral, estocada, canell +90° i retorn a guàrdia.
@@ -1135,10 +1144,10 @@ window.HUNTER_CHARACTERS=Object.freeze({
       rig.aim.copy(rig.nativeGoal);
       u.upperBody.worldToLocal(rig.aim);
     };
-    if(blend>.001){
+    // La pistola real ja té IK nativa al canell V18 dins humanGamePose().
+    // Aquest solver de braços extensibles queda limitat a fixtures antics.
+    if(blend>.001&&!u.humanGameNativeOnly){
       player.updateMatrixWorld(true);
-      // Les dues mans orbiten suaument amb el canó; no romanen fixes
-      // al davant quan l'autoaim segueix una diana lateral o elevada.
       positionPistolIKTarget();
       rig.q3.copy(u.visualAimQuaternion);
       rig.right.set(.045,-.15,.06).applyQuaternion(rig.q3).add(rig.aim);
@@ -1147,10 +1156,24 @@ window.HUNTER_CHARACTERS=Object.freeze({
       aimPlayerPistolArm(u.al,u.ael,rig.left,-1,rig,blend);
     }
     // Retorn de l'arma a la mà dreta sense un salt visual en deixar de disparar.
-    rig.idle.copy(u.pistolIdleMount.position).applyQuaternion(u.aer.quaternion)
-      .add(u.aer.position).applyQuaternion(u.ar.quaternion).add(u.ar.position);
-    rig.idleQ.copy(u.ar.quaternion).multiply(u.aer.quaternion).multiply(u.pistolIdleMount.quaternion);
-    player.updateMatrixWorld(true);
+    player.updateWorldMatrix(true,true);
+    if(u.humanGameNativeOnly){
+      // L'arma lògica oculta manté l'API de combat, però la seva
+      // posició de repòs ja prové del CANELL V18 i no d'u.ar/u.aer.
+      const nativeWrist=nativeJoints?.wristR;
+      if(!nativeWrist)throw Error('Pistola V18 sense canell natiu');
+      nativeWrist.getWorldPosition(rig.idle);
+      u.upperBody.worldToLocal(rig.idle);
+      nativeWrist.getWorldQuaternion(rig.idleQ);
+      u.upperBody.getWorldQuaternion(rig.torsoQ).invert();
+      rig.idleQ.premultiply(rig.torsoQ)
+        .multiply(u.pistolIdleMount.quaternion);
+    }else{
+      rig.idle.copy(u.pistolIdleMount.position).applyQuaternion(u.aer.quaternion)
+        .add(u.aer.position).applyQuaternion(u.ar.quaternion).add(u.ar.position);
+      rig.idleQ.copy(u.ar.quaternion).multiply(u.aer.quaternion)
+        .multiply(u.pistolIdleMount.quaternion);
+    }
     positionPistolIKTarget();
     // El quaternion local ja converteix el vector real de l'autoaim
     // al marc del tors. No hi afegim una compensació antiga de cintura,
