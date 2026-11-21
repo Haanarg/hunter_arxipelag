@@ -2285,3 +2285,97 @@ for(const test of animationCases306){
  }
 }
 console.log('PASS v0.6.306 nine locomotion, knife, grenade and swimming states never write V17 limbs');
+
+
+// v0.6.307: els pivots de maluc i tors V17 només són ancoratges
+// transitoris de les armes lògiques; durant la partida REAL resten
+// immòbils mentre les capes d'animació governen el cos V18.
+const torsoAvatar307=controls.createPlayer(T,{box:characterBox,palette:gamePalette});
+const torsoU307=torsoAvatar307.userData,torsoJ307=torsoU307.humanGameCanonicalJoints;
+assert(torsoU307.humanGameNativeOnly&&torsoJ307?.spine&&torsoJ307.pelvis);
+const torsoGhost307={
+ lowerPos:torsoU307.lowerBody.position.clone(),
+ upperPos:torsoU307.upperBody.position.clone(),
+ lowerQ:torsoU307.lowerBody.quaternion.clone(),
+ upperQ:torsoU307.upperBody.quaternion.clone()
+};
+const bodyOptions307={forward:0,strafe:0,dt:.15,swimming:false,
+ inVehicle:false,ammo:12};
+const motionCases307=[
+ {name:'lateral',props:{strafe:.85}},
+ {name:'córrer',props:{forward:1,running:true}},
+ {name:'ajupir',props:{forward:.45,crouching:true}},
+ {name:'apuntar rifle',props:{forward:0,assaultRifleEquipped:true},aim:true},
+ {name:'nedar braça',props:{forward:.8,swimming:true}},
+ {name:'nedar crol',props:{forward:1,swimming:true,running:true}},
+ {name:'caure',props:{airborne:true}},
+ {name:'paracaigudes',props:{parachuting:true}},
+ {name:'quiet',props:{}}
+];
+let demonstratedNativeYaw307=false,demonstratedNativeCrouch307=false,
+ demonstratedNativeSpine307=false;
+for(const scenario of motionCases307){
+ torsoU307.visualAimTargetLocked=!!scenario.aim;
+ torsoU307.visualAimDirection=scenario.aim?
+  new T.Vector3(.82,.08,-.57).normalize():null;
+ controls.animatePlayerControls(torsoAvatar307,{
+  ...bodyOptions307,...scenario.props
+ });
+ const body=torsoU307.humanGameNativeBodyPose;
+ demonstratedNativeYaw307 ||= Math.abs(body.pelvisYaw)>.01;
+ demonstratedNativeCrouch307 ||= body.crouchDrop<-.001;
+ demonstratedNativeSpine307 ||= Math.abs(body.spineYaw)>.01||
+  Math.abs(body.spinePitch)>.01;
+ for(const [key,node,expected]of [
+  ['maluc posició',torsoU307.lowerBody.position,torsoGhost307.lowerPos],
+  ['tors posició',torsoU307.upperBody.position,torsoGhost307.upperPos],
+  ['maluc rotació',torsoU307.lowerBody.quaternion,torsoGhost307.lowerQ],
+  ['tors rotació',torsoU307.upperBody.quaternion,torsoGhost307.upperQ]
+ ])assert(node.equals(expected),
+  'El controlador V17 '+key+' no canvia en '+scenario.name);
+ for(const [key,val]of Object.entries(body))
+  assert(Number.isFinite(val),
+   'La postura V18 manté valor finit '+key+' en '+scenario.name);
+ torsoU307.humanGamePose();
+ assert(torsoJ307.pelvis.quaternion.toArray().every(Number.isFinite)&&
+  torsoJ307.spine.quaternion.toArray().every(Number.isFinite),
+  'La geometria canònica V18 funciona en '+scenario.name);
+}
+assert(demonstratedNativeYaw307&&demonstratedNativeCrouch307&&
+ demonstratedNativeSpine307,
+ 'Lateralitat, ajupiment i tors canònic canvien malgrat pivots V17 fixos');
+// La conversió del vector balístic per a la lògica ja es fa en espai
+// del jugador natiu; canviar artificialment el tors antic no ha
+// d'alterar-la, fins i tot amb un pare COOP girat i escalat.
+const coopBodyParent307=new T.Group();
+coopBodyParent307.rotation.y=.54;
+coopBodyParent307.position.set(8,3,-12);
+coopBodyParent307.scale.setScalar(1.22);
+coopBodyParent307.add(torsoAvatar307);
+torsoU307.visualAimTargetLocked=true;
+torsoU307.visualAimDirection=new T.Vector3(.6,.05,-.8).normalize();
+const aimOptions307={...bodyOptions307,dt:.1,assaultRifleEquipped:true};
+controls.animatePlayerControls(torsoAvatar307,aimOptions307);
+const beforeAim307=torsoU307.visualAimQuaternion.clone();
+torsoU307.upperBody.rotation.set(.44,-.73,.19);
+controls.animatePlayerControls(torsoAvatar307,{...aimOptions307,dt:0});
+const qGap307=Math.min(
+ Math.hypot(
+  torsoU307.visualAimQuaternion.x-beforeAim307.x,
+  torsoU307.visualAimQuaternion.y-beforeAim307.y,
+  torsoU307.visualAimQuaternion.z-beforeAim307.z,
+  torsoU307.visualAimQuaternion.w-beforeAim307.w),
+ Math.hypot(
+  torsoU307.visualAimQuaternion.x+beforeAim307.x,
+  torsoU307.visualAimQuaternion.y+beforeAim307.y,
+  torsoU307.visualAimQuaternion.z+beforeAim307.z,
+  torsoU307.visualAimQuaternion.w+beforeAim307.w)
+);
+assert(qGap307<1e-9,
+ 'El quaternion lògic de mira no depèn del tors V17 ocult ni en COOP: '+qGap307);
+torsoU307.upperBody.quaternion.copy(torsoGhost307.upperQ);
+torsoU307.humanGamePose();
+assert(torsoJ307.spine.getWorldPosition(new T.Vector3()).toArray()
+ .every(Number.isFinite),
+ 'La pell nativa continua operativa sota pare COOP transformat');
+console.log('PASS v0.6.307 native torso and pelvis motion ignore legacy pivots, COOP aim unaffected');
