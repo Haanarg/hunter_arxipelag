@@ -689,7 +689,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
       -Math.PI/4*Math.max(-1,Math.min(1,strafe)):0;
     // La pelvis no gira 180° per nedar; recupera l'eix natural
     // durant la natació i manté els 45° d'strafe quan anam a peu.
-    u.lowerBody.rotation.y+=(strafeAngle-u.lowerBody.rotation.y)*(1-Math.exp(-13*dt));
+    if(!u.humanGameNativeOnly)
+     u.lowerBody.rotation.y+=(strafeAngle-u.lowerBody.rotation.y)*(1-Math.exp(-13*dt));
     u.firePose=Math.max(0,(u.firePose||0)-dt);u.meleePose=Math.max(0,(u.meleePose||0)-dt);u.grenadeThrow=Math.max(0,(u.grenadeThrow||0)-dt);
     u.cisallaCut=Math.max(0,(u.cisallaCut||0)-dt);
     u.pistolAimTime=Math.max(0,(u.pistolAimTime||0)-dt);u.pistolShotAge=Math.min(10,(u.pistolShotAge??10)+dt);
@@ -767,10 +768,13 @@ window.HUNTER_CHARACTERS=Object.freeze({
        Math.min(1,Math.abs(delta)/Math.max(dt,.001)/2.0):0;
      u.turnFootMotion+=(turnGoal-u.turnFootMotion)*(1-Math.exp(-12*dt));
      u.turnFootPhase+=Math.abs(delta)*5.5;
-    // Els malucs i el tronc baixen junts. La flexió de genolls manté
-    // les botes prop del terra i evita reduir l'escala de tot el model.
-    u.lowerBody.position.y+=(u.hipHeight-.72*crouch-u.lowerBody.position.y)*k;
-    u.upperBody.position.y+=(u.upperBodyPivotHeight-.72*crouch-u.upperBody.position.y)*k;
+    // L'ajupiment V18 ja s'ha publicat a nativeBody.crouchDrop.
+    // Els dos pivots de compatibilitat només es deformen en fixtures:
+    // no han de moure els ancoratges lògics de les armes durant el joc.
+    if(!u.humanGameNativeOnly){
+     u.lowerBody.position.y+=(u.hipHeight-.72*crouch-u.lowerBody.position.y)*k;
+     u.upperBody.position.y+=(u.upperBodyPivotHeight-.72*crouch-u.upperBody.position.y)*k;
+    }
     if(!swimming)u.ph+=dt*(8.4+.6*run)*(1-.48*crouch)*move;
     const ph=u.ph,breath=Math.sin(u.breath);
 
@@ -800,12 +804,13 @@ window.HUNTER_CHARACTERS=Object.freeze({
         if(weapon)weapon.visible=false;
       if(u.pistolFlash)u.pistolFlash.visible=false;
       u.pistolBlend=0;
-      // Braços i cames visibles animats exclusivament als ossos V18.
-      u.upperBody.rotation.x+=(0-u.upperBody.rotation.x)*k;
-      u.upperBody.rotation.y+=(0-u.upperBody.rotation.y)*k;
-      u.upperBody.rotation.z+=(0-u.upperBody.rotation.z)*k;
-      // El crani visible V18 no necessita moure l'antic pivot.
+      // Les capes aèries governen únicament el rig canònic V18.
+      // Les rotacions del tors i del cap de compatibilitat no es
+      // neutralitzen ni es recalculen en una partida real.
       if(!u.humanGameNativeOnly){
+       u.upperBody.rotation.x+=(0-u.upperBody.rotation.x)*k;
+       u.upperBody.rotation.y+=(0-u.upperBody.rotation.y)*k;
+       u.upperBody.rotation.z+=(0-u.upperBody.rotation.z)*k;
        u.head.rotation.x+=(0-u.head.rotation.x)*k;
        u.head.rotation.y+=(0-u.head.rotation.y)*k;
        u.head.rotation.z+=(0-u.head.rotation.z)*k;
@@ -835,8 +840,10 @@ window.HUNTER_CHARACTERS=Object.freeze({
        for(const joint of [u.al,u.ar,u.ael,u.aer,u.ll,u.lr,u.lkl,u.lkr])
         if(joint)joint.rotation.set(0,0,0);
       }
-      u.upperBody.rotation.set(0,0,0);
-      if(!u.humanGameNativeOnly)u.head.rotation.set(0,0,0);
+      if(!u.humanGameNativeOnly){
+       u.upperBody.rotation.set(0,0,0);
+       u.head.rotation.set(0,0,0);
+      }
       player.rotation.x+=(0-player.rotation.x)*k;
       player.rotation.z+=(0-player.rotation.z)*k;
       return;
@@ -846,7 +853,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // els genolls es recullen durant la fase aèria de cada gambada.
     // Inclina només el tronc superior al voltant de la cintura: els malucs
     // i les cames no es desplacen cap endavant amb l'arrel del personatge.
-    u.upperBody.rotation.x+=(-.145*run-.18*crouch-u.upperBody.rotation.x)*k;
+    if(!u.humanGameNativeOnly)
+     u.upperBody.rotation.x+=(-.145*run-.18*crouch-u.upperBody.rotation.x)*k;
     // A terra i en sortir de l'aigua, desfem el gir propi del crol.
     // La cintura segueix l'angle REAL de la retícula en comptes de
     // girar sempre 18° cap al mateix costat. Les cames conserven P.hd.
@@ -865,8 +873,10 @@ window.HUNTER_CHARACTERS=Object.freeze({
       const reach=longGun?.65:.38;
       waistAim=Math.max(-reach,Math.min(reach,yaw));
     }
-    u.upperBody.rotation.y+=(waistAim-u.upperBody.rotation.y)*(1-Math.exp(-17*dt));
-    u.upperBody.rotation.z+=(0-u.upperBody.rotation.z)*k;
+    if(!u.humanGameNativeOnly){
+     u.upperBody.rotation.y+=(waistAim-u.upperBody.rotation.y)*(1-Math.exp(-17*dt));
+     u.upperBody.rotation.z+=(0-u.upperBody.rotation.z)*k;
+    }
     // El cap compensa la inclinació del tronc i continua mirant de
     // front, també durant les transicions d'entrada i sortida de cursa.
     // El cap real es mou pels camps de postura nativa, i no
@@ -911,7 +921,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
     if(worldDirection.lengthSq()>.01)
       u.visualAimSmoothed.lerp(worldDirection,1-Math.exp(-13*dt)).normalize();
     player.updateMatrixWorld(true);
-    u.upperBody.getWorldQuaternion(u.visualAimWorldQ);
+    // Els quaternions del controlador lògic d'armes es defineixen
+    // en l'espai del JUGADOR V18, no en el tors V17 ocult. Les
+    // boques i els braços visibles ja utilitzen el vector mundial.
+    (u.humanGameNativeOnly?player:u.upperBody)
+     .getWorldQuaternion(u.visualAimWorldQ);
     u.visualAimLocal.copy(u.visualAimSmoothed).applyQuaternion(u.visualAimWorldQ.invert()).normalize();
     u.visualAimQuaternion.setFromUnitVectors(u.visualAimForward,u.visualAimLocal);
     // L'orientació governa el rifle complet i els grips; els canells
