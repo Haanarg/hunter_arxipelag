@@ -61,8 +61,11 @@ const path=require('node:path');
     const right=joints.wristR.getWorldPosition(new THREE.Vector3());
     const left=joints.wristL.getWorldPosition(new THREE.Vector3());
     if(!u.pistolRig.nativeGoal)throw Error('Autoapuntat sense objectiu V18 natiu');
+    const mount=u.humanGameLogicalWeaponRoot;
+    if(!mount||u.gun.parent!==mount)
+      throw Error('Pistola V18 sense ancoratge independent del tors antic');
     const expected=u.pistolRig.nativeGoal.clone();
-    u.upperBody.worldToLocal(expected);
+    mount.worldToLocal(expected);
     return {
       blend:Number(u.pistolBlend.toFixed(3)),
       nativeAim:true,
