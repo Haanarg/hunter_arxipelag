@@ -4,7 +4,11 @@ window.HUNTER_RIDER=Object.freeze({
     const g=new THREE.Group(),torso=new THREE.Group();g.add(torso);
     // El rider és el mateix protagonista: fa servir el cap D i el coll curt,
     // sense canviar cap seient, escala del vehicle ni pivot de les extremitats.
-    const model=window.HUNTER_PLAYER_MODEL.create(THREE,{headVariant:'compactD'}),rig=model.userData;
+    const model=window.HUNTER_PLAYER_MODEL.create(THREE,{
+      headVariant:'compactD',controllerOnly:true
+    }),rig=model.userData;
+    if(!rig.humanControllerOnly)
+      throw Error('Rider V18: controlador sense pell redundant requerit');
     // El model vell només alimenta les postures dels altres vehicles.
     // Per a moto i bicicleta empram directament el rig de l'editor:
     // exactament la mateixa geometria, 2 m anatòmics i escala a peu.
@@ -86,6 +90,9 @@ window.HUNTER_RIDER=Object.freeze({
     g.userData.twoWheelButtBelowHip=buttBelowHip;
     g.userData.riderFarProxy=riderFar;
     g.userData.riderDetailNodes=riderDetailNodes;
+    g.userData.riderV18ControlsOnly=true;
+    // Els pivots antics alimenten la cinemàtica lògica; la pell
+    // visible del rider és sempre V18 o el proxy distant.
     g.userData.riderSeatCanonicalActive=false;
     g.userData.riderSeatCanonicalBody=null;
     g.userData.riderSeatCanonicalJoints=null;
