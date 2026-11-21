@@ -168,3 +168,11 @@ La mateixa 0.6.292 també genera directament els vuit canals V18 de locomoció (
 
 
 **Producció 0.6.299 confirmada:** GitHub Actions [#44888297242](https://github.com/Haanarg/hunter_arxipelag/actions/runs/44888297242), 29 passos correctes incloent Cloudflare, paritat source/bundle i arrencada real. Els enemics embarcats tenen cos visible V18 directe i els seus seients/caps provenen dels mateixos punts numèrics de SOLO i COOP; resta l'antic controlador lògic invisible, els muntatges de tiradors exteriors i la comprovació visual multijugador en dispositius diferents.
+
+
+## v0.6.300 — Consolidació final del camí visual d'enemics i preses de tiradors
+
+- Totes les crides **reals** de `HUNTER_CHARACTERS.createCommando()` i `HUNTER_GENERAL_MODEL.create()` passen ara per `installNativeOnFootEnemy()` i `createHumanProposal()`, sense invocar `runtime.install()/copySkin()`. Tant les factories genèriques com l'elit, el general, els tripulants i l'artiller comparteixen articulacions V18 originals. L'adaptador històric `install/copySkin` continua existint exclusivament per fixtures de proves i altres contractes transitoris; no s'ha de declarar encara completament retirat.
+- `HUNTER_CHARACTERS.animateSoldier()` mou directament el rig V18 i no interpola abans braços o genolls ocults. `enemy-ai` deixa d'animar els controls invisibles en LOD llunyà, i la caiguda sense ragdoll fa servir malucs/espatlles V18 (a més del ragdoll natiu existent).
+- Els fusells de tiradors de torre segueixen units al muntatge balístic original, amb el seu muzzle al mateix punt. Dues preses geomètriques (gallet i guardamans) permeten resoldre la mà dreta i esquerra per IK a `humanEnemyNativeRifleSupport`, tant a la construcció com després de cada gir yaw/pitch, sense desplaçar projectils, hitboxes ni el vehicle. El resultat de l'abast dels dos braços es registra en cada animació per auditoria.
+- Tests nous/actualitzats: constructors genèrics V18 i general directe, comprovació que no es toquen els controls antics durant l'animació, dues preses de rifle de torreta en rotació, manteniment de caps/seients SOLO+COOP i totes les proves anteriors. Encara falta revisar els **controladors lògics invisibles** del protagonista/riders, eliminar el codi de fixtures V17 quan es puguin reemplaçar i comprovar COOP visual amb dos dispositius.

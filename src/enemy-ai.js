@@ -335,6 +335,11 @@ function enemyCarRifleShot(u,target,targetY){
   crew.mount.rotation.y=Math.atan2(-dx,-dz);
   crew.pitch.rotation.x=Math.max(-.7,Math.min(.75,Math.atan2(dy,Math.hypot(dx,dz))));
   u.o.updateMatrixWorld(true);
+  // Recalcular mans V18 a partir dels grips del mateix fusell que
+  // genera els projectils. La torreta continua essent autoritativa.
+  if(crew.gunner?.userData?.humanEnemyNativeRifleGrips)
+   window.HUNTER_HUMAN_V17.poseNativeEnemyCrew(
+    crew.gunner,{type:'cotxe',seat:1});
   return {origin:crew.muzzle.getWorldPosition(new THREE.Vector3()),
     direction:new THREE.Vector3(0,0,-1).applyQuaternion(
       crew.muzzle.getWorldQuaternion(new THREE.Quaternion())).normalize()};
@@ -1129,7 +1134,9 @@ function animateEnemyInfantry(u,moving,dt){
       u.visualAnimT=(u.visualAnimT||0)+dt;
       if(u.visualAnimT>=.16){a.enemyMidMesh.rotation.z=moving?Math.sin(u.phase)*.035:0;u.visualAnimT=0}
     }
-    else{
+    else if(!a.humanEnemyNativeJoints){
+    // Només rigs antics de prova: els soldats V18 en LOD llunyà
+    // no necessiten animar ossos invisibles a cada frame.
     a.legs[0].rotation.x=swing;a.legs[1].rotation.x=-swing;
     const aim=!!u.canSee;
     a.arms.forEach((arm,i)=>arm.rotation.x+=((aim?(u.rocketSoldier?(i?1.2:1.04):1.45):(i?swing:-swing)*.5)-arm.rotation.x)*(1-Math.exp(-12*dt)))
@@ -1157,13 +1164,23 @@ function updDead(dt){
         window.HUNTER_RAGDOLL.update(u.ragdoll,dt,{
           airborne:pose.height>.09,grounded:pose.height<=.09});
     }else{
-      // Animació específica del general, controlada per la victòria.
-      if(u.o.userData.arms)u.o.userData.arms.forEach((arm,j)=>{
-        arm.rotation.x=(j?pose.armR:pose.armL)*e;
-        arm.rotation.z=(j?-.3:.3)*e;
-      });
-      if(u.o.userData.legs)u.o.userData.legs.forEach((leg,j)=>
-        leg.rotation.x=(j?pose.legR:pose.legL)*e);
+      // La caiguda sense ragdoll també ha de deformar la pell V18,
+      // no només els braços invisibles del controlador antic.
+      const joints=u.o.userData.humanEnemyNativeJoints;
+      if(joints){
+        for(const [i,side]of [[0,'L'],[1,'R']]){
+          joints['shoulder'+side].rotation.x=(i?pose.armR:pose.armL)*e;
+          joints['shoulder'+side].rotation.z=(i?-.3:.3)*e;
+          joints['hip'+side].rotation.x=(i?pose.legR:pose.legL)*e;
+        }
+      }else{
+        if(u.o.userData.arms)u.o.userData.arms.forEach((arm,j)=>{
+          arm.rotation.x=(j?pose.armR:pose.armL)*e;
+          arm.rotation.z=(j?-.3:.3)*e;
+        });
+        if(u.o.userData.legs)u.o.userData.legs.forEach((leg,j)=>
+          leg.rotation.x=(j?pose.legR:pose.legL)*e);
+      }
     }
     if(u.deadT>18){
       if(u.ragdoll){window.HUNTER_RAGDOLL.reset(u.ragdoll);u.ragdoll=null}
@@ -1240,13 +1257,27 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
     mount.add(pitch);detailParent.add(mount);
     rifle.position.set(0,-.035,-.14);rifle.rotation.set(0,0,0);rifle.scale.setScalar(.94);
     pitch.add(rifle);
+    // Preses anatòmiques de la geometria REAL: gallet (.0,-.17,-.12)
+    // i guardamans del canó cap endavant/esquerra. No es mou ni el
+    // muntatge de la torre ni l'origen dels projectils.
+    if(gunner.userData.humanEnemyNativeJoints){
+     const rightGrip=new THREE.Object3D(),leftGrip=new THREE.Object3D();
+     rightGrip.name='hunter-v18-turret-rifle-trigger';
+     leftGrip.name='hunter-v18-turret-rifle-foregrip';
+     rightGrip.position.set(0,-.17,-.12);
+     leftGrip.position.set(-.28,-.065,-.52);
+     rifle.add(rightGrip,leftGrip);
+     gunner.userData.humanEnemyNativeRifleGrips={rightGrip,leftGrip};
+    }
     bx(rifle,.075,.075,.42,0x252d2c,0,0,-.97,'metal');
     muzzle=new THREE.Object3D();muzzle.position.set(0,0,-1.18);rifle.add(muzzle);
     // L'arma muntada a la torre ja és externa al tripulant: només
     // consolidam el soldat, no el canó del vehicle.
     window.HUNTER_HUMAN_V17.normalizeEnemyCrew(gunner,scale);
-    window.HUNTER_HUMAN_V17.poseNativeEnemyCrew?.(gunner,{type,seat:1});
     detailParent.add(gunner);
+    // Els dos models (tirador i fusell extern) comparteixen ja el
+    // transform del vehicle. Resol l'IK només després de reparentar.
+    window.HUNTER_HUMAN_V17.poseNativeEnemyCrew?.(gunner,{type,seat:1});
   }
   if(initiallyHidden){driver.visible=false;if(gunner)gunner.visible=false;if(mount)mount.visible=false;}
   return car.userData.enemyCarCrew={driver,gunner,mount,pitch,muzzle,motorcycleMuzzle};
