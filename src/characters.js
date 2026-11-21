@@ -677,6 +677,16 @@ window.HUNTER_CHARACTERS=Object.freeze({
           prior.localToWorld(rootAnchor);
           mounts.worldToLocal(rootAnchor);
           source.userData.stockAnchor.copy(rootAnchor);
+          // L'offset del receptor és un VECTOR del pare antic:
+          // l'escala heretada hi estava implícita. El transformam
+          // geomètricament al mateix espai natiu que la culata; no
+          // podem conservar el valor anterior sense introduir un salt.
+          const oldOffset=source.userData.stockToReceiver;
+          const origin=prior.localToWorld(new THREE.Vector3());
+          const endpoint=prior.localToWorld(oldOffset.clone());
+          mounts.worldToLocal(origin);
+          mounts.worldToLocal(endpoint);
+          oldOffset.copy(endpoint.sub(origin));
         }
         mounts.attach(source);
       }
