@@ -1,0 +1,29 @@
+name: Hunter V18 legacy controller disconnection v0.6.302
+on:
+  push:
+    branches:
+      - v18-no-legacy-pose-rider-mesh-0-6-302
+permissions:
+  contents: read
+concurrency:
+  group: hunter-v18-controller-disconnection
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - run: node tests/human-game-runtime-v17.mjs
+      - run: node tests/enemy-native-v18.mjs
+      - run: node tests/enemy-crew-native-v18.mjs
+      - run: npm run test:lab
+      - run: npm run test:all
+      - run: npm run test:deploy
+      - run: npm run build && npm run check:build
+      - run: node tests/runtime-bundle-parity.cjs
+      - run: node tests/browser-startup-smoke.cjs
