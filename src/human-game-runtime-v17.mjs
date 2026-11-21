@@ -276,6 +276,11 @@ function installCanonicalPlayer(T,model){
   // El transform de compatibilitat dels controls antics queda separat
   // i mai altera l'escala del model animat.
   const body=u.humanGameNativeBodyPose;
+  // El protagonista REAL sempre publica cos i extremitats V18
+  // abans de dibuixar. No permetem retornar implícitament al rig
+  // antic quan un canal de dades no és present.
+  if(u.humanGameNativeOnly&&(!body||!u.humanGameNativeLimbPose))
+   throw Error('Protagonista V18: canals natius obligatoris absents');
   if(body){
    // Les animacions reals de partida (incloses les rèpliques COOP) ja
    // publiquen la postura V18 en unitats natives, sense lectura del
@@ -303,8 +308,9 @@ function installCanonicalPlayer(T,model){
     j.ankleL.rotation.set(0,0,0);
     j.ankleR.rotation.set(0,0,0);
    }else{
-    // Fallback només abans del primer tick de locomoció i proves
-    // diagnòstiques anteriors a l'entrada al joc.
+    // Només els fixtures històrics poden activar el fallback.
+    if(u.humanGameNativeOnly)
+     throw Error('Protagonista V18: locomoció nativa incompleta');
     for(const [id,bone]of Object.entries(control)){
      if(id==='head')continue;
      j[id].quaternion.copy(rest[id]).multiply(bone.quaternion);
