@@ -646,12 +646,26 @@ for(const role of ['player','soldier']){
  runtime.install(T,standard,{role});
  assertHeadNeckParity(standard,role,role+' normal');
 }
-// Vehicle drivers and passengers must get V17 at the unmodified shared
-// HUNTER_PLAYER_MODEL factory: driver system calls that exact method.
+// Els fixtures històrics poden reconstruir la pell V17 per comparar-la,
+// però el rider real demana exclusivament els pivots lògics i NO crea
+// cap segon recobriment sobre la seva figura V18 aprovada.
 const rider=playerModel.create(T,{headVariant:'compactD'});
 assert.equal(rider.userData.humanGameV17,'player');
 assert.equal(rider.userData.headVariant,'compactD');
 assert.equal(rider.userData.boots.length,2);
+const riderControls=playerModel.create(T,{
+ headVariant:'compactD',controllerOnly:true
+});
+assert.equal(riderControls.userData.humanControllerOnly,true);
+assert.equal(riderControls.userData.humanGameV17,undefined,
+ 'El rider no executa copySkin al construir el controlador');
+runtime.install(T,riderControls,{role:'player'});
+assert.equal(riderControls.userData.humanGameV17,undefined,
+ 'Una crida tardana no ha de reinstal·lar la pell V17 del rider');
+let duplicateRiderMeshes=0;
+riderControls.traverse(n=>{if(n.userData?.humanGameV17Mesh)duplicateRiderMeshes++});
+assert.equal(duplicateRiderMeshes,0,
+ 'Cap malla del controlador de rider prové del copySkin històric');
 
  // La fàbrica real del rider: canvia només la mida dels ocupants del GAZ.
  const riderSandbox={
@@ -678,6 +692,14 @@ assert.equal(rider.userData.boots.length,2);
    llanxa:1.95,llanxa_coets:1.95,barca_rems:1.2,moto_aquatica:1.2,
    windsurf:1.2},heightAt:()=>0,shadows:false
  });
+ assert(driver.object.userData.riderV18ControlsOnly,
+  'El rider real consumeix exclusivament pivots de control lògics');
+ let copiedRiderSkin=0;
+ for(const root of driver.object.userData.riderDetailNodes)root.traverse(node=>{
+  if(node.userData?.humanGameV17Mesh)copiedRiderSkin++;
+ });
+ assert.equal(copiedRiderSkin,0,
+  'Ni els models en seient ni els pilots de dues rodes dupliquen copySkin V17');
  const nativePart=driver.object.userData.riderDetailNodes
    .flatMap(root=>{const found=[];root.traverse(n=>{
      if(n.isMesh&&n.geometry?.getAttribute?.('position'))found.push(n);
