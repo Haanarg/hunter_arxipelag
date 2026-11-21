@@ -313,8 +313,11 @@ window.HUNTER_CHARACTERS=Object.freeze({
   knifePose4B:PLAYER_KNIFE_4B,
   knifeAttack3B:PLAYER_KNIFE_ATTACK_3B,
   knifeAttack3BTargets,
-  createCommando(T,{palette=window.HUNTER_PALETTE}={}){
- const g=window.HUNTER_PLAYER_MODEL.create(T,{palette}),u=g.userData,h=u.head,P=palette.enemy;
+  createCommando(T,{palette=window.HUNTER_PALETTE,headVariant=null}={}){
+ // Les tripulacions V18 necessiten exactament la mateixa cota de
+ // cap que les hitboxes de seient (3.26): triar-la en la FACTORY,
+ // no reajustar-la amb una translació sobre el rig ja construït.
+ const g=window.HUNTER_PLAYER_MODEL.create(T,{palette,headVariant}),u=g.userData,h=u.head,P=palette.enemy;
  for(const [m,,enemy]of u.mats)m.color.setHex(enemy);
  // Same silhouette, limbs, knee direction and boots as the approved protagonist.
  g.traverse(o=>{if(o.isMesh&&o.material.color.getHex()===0xf0c9a0)o.material.color.setHex(P.skin)});
