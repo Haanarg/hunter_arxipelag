@@ -1,0 +1,34 @@
+name: Hunter V18 player weapon IK v0.6.305 (temporary)
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  player-v18:
+    if: github.head_ref == 'feature/v18-player-ik-305'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Native V18 weapon IK and player controls
+        run: node tests/human-game-runtime-v17.mjs
+      - name: Check model dimensions and version
+        run: |
+          node tools/audit-model-scales.cjs
+          node tools/sync-version.cjs --check
+      - name: Validate player and COOP invariants
+        run: |
+          node tests/player-simulation.mjs
+          node tests/player-v18-air-pose.mjs
+          node tests/model-scale-normalization.mjs
+          node tests/native-coop-startup.cjs
+      - name: Compile and check runtime
+        run: |
+          npm run build
+          npm run check:build
