@@ -2359,8 +2359,20 @@ controls.animatePlayerControls(torsoAvatar307,aimOptions307);
 const beforeAim307=torsoU307.visualAimQuaternion.clone();
 torsoU307.upperBody.rotation.set(.44,-.73,.19);
 controls.animatePlayerControls(torsoAvatar307,{...aimOptions307,dt:0});
-assert(torsoU307.visualAimQuaternion.equals(beforeAim307),
- 'El quaternion lògic de mira no depèn del tors V17 ocult ni en COOP');
+const qGap307=Math.min(
+ Math.hypot(
+  torsoU307.visualAimQuaternion.x-beforeAim307.x,
+  torsoU307.visualAimQuaternion.y-beforeAim307.y,
+  torsoU307.visualAimQuaternion.z-beforeAim307.z,
+  torsoU307.visualAimQuaternion.w-beforeAim307.w),
+ Math.hypot(
+  torsoU307.visualAimQuaternion.x+beforeAim307.x,
+  torsoU307.visualAimQuaternion.y+beforeAim307.y,
+  torsoU307.visualAimQuaternion.z+beforeAim307.z,
+  torsoU307.visualAimQuaternion.w+beforeAim307.w)
+);
+assert(qGap307<1e-9,
+ 'El quaternion lògic de mira no depèn del tors V17 ocult ni en COOP: '+qGap307);
 torsoU307.upperBody.quaternion.copy(torsoGhost307.upperQ);
 torsoU307.humanGamePose();
 assert(torsoJ307.spine.getWorldPosition(new T.Vector3()).toArray()
