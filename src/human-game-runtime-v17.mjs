@@ -1187,7 +1187,14 @@ export function createHumanGameRuntimeV17(){
     // Només els enemics embarcats fan servir aquest constructor:
     // sense crear ni copiar prèviament la pell V17 del comando.
     wrapped.createNativeEnemyCrew=function(T,...args){
-     const crew=runtime.suppress(()=>base.createCommando.call(wrapped,T,...args));
+     // La hitbox de cap és 3.26 per la geometria del Worker.
+     // La variant compactD declara aquesta cota directament al
+     // constructor d'origen; la pell V18 es crea després sense
+     // traslladar ni escalar el cap com a pegat de render.
+     const options={...(args[0]||{}),headVariant:'compactD'};
+     const crew=runtime.suppress(()=>base.createCommando.call(wrapped,T,options));
+     if(crew.userData.headVariant!=='compactD')
+      throw Error('Tripulant V18 creat sense cota nativa de cap 3.26');
      return runtime.installNativeEnemyCrew(T,crew);
     };
     if(typeof base.createSoldier==='function')wrapped.createSoldier=function(T,...args){
