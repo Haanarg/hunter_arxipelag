@@ -615,6 +615,105 @@ function installCanonicalPlayer(T,model){
  return model;
 }
 
+// Soldats a peu i general: el joc empra literalment les articulacions
+// del V18 de l'editor. L'esquelet V17 resta sense malles per als
+// contractes físics/balístics que encara s'han de migrar.
+function installNativeOnFootEnemy(T,model,{role='soldier'}={}){
+ const u=model?.userData;
+ if(!u||!['soldier','elite','general'].includes(role))
+  throw Error('Rol d\'infanteria V18 desconegut');
+ if(u.humanEnemyNativeRig){
+  if(u.humanEnemyNativeRole!==role)
+   throw Error('Rol V18 canviat després de crear el soldat');
+  return model;
+ }
+ if(!u.ll||!u.lr||!u.aer||!u.head||!u.boots?.length)
+  throw Error('Controlador d\'armes del soldat absent');
+ const nativeHeight=role==='general'?3.55:3.66;
+ const visual=createHumanProposal(T,role,'a',{
+  visualOnly:true,nativeHeight
+ });
+ const joints={};
+ visual.name='Infanteria · esquelet exacte V18 · '+role;
+ visual.traverse(o=>{
+  if(o.userData?.humanMotionJoint)joints[o.userData.humanMotionJoint]=o;
+ });
+ for(const id of ['pelvis','spine','neck','head','hipL','hipR','kneeL',
+                   'kneeR','ankleL','ankleR','shoulderL','shoulderR',
+                   'elbowL','elbowR','wristL','wristR'])
+  if(!joints[id])throw Error('Soldat V18 incomplet: '+id);
+ if(visual.scale.toArray().some(v=>Math.abs(v-1)>1e-12))
+  throw Error('Soldat V18 amb una escala d\'arrel artificial');
+ const old=removeOldMeshes(model,node=>u.gun&&belongsTo(node,u.gun));
+ const parts=[];
+ visual.traverse(node=>{
+  if(!node.isMesh)return;
+  node.userData.humanGameV17Mesh=true; // diagnòstics de compatibilitat
+  node.userData.humanGameV17Source=node.name;
+  node.userData.humanEnemyNativeGeometry=true;
+  parts.push(node);
+ });
+ model.add(visual);
+ // El fusell real i els seus extres (també el de l'elit) s'uneixen
+ // al canell V18. No es clona ni es desconnecta el canó de dany.
+ if(u.gun){
+  joints.wristR.add(u.gun);
+  u.gun.position.set(0,-.17,-.035);
+  u.gun.rotation.set(-Math.PI/2,0,0);
+  u.gun.userData.humanEnemyNativeWeaponMount=true;
+ }
+ u.humanEnemyNativeRig=visual;
+ u.humanEnemyNativeJoints=joints;
+ u.humanEnemyNativeRole=role;
+ u.humanEnemyNativeHeight=nativeHeight;
+ u.humanEnemyNativePose={phase:0,moving:false,aim:false,death:0};
+ u.humanGameV17=role==='elite'?'soldier':role; // saves i telemetria
+ u.humanGameV17PreservedRig=true;
+ u.humanGameV17Counts={removed:old.length,added:parts.length};
+ model.updateWorldMatrix(true,true);
+ return model;
+}
+function poseNativeOnFootEnemy(model,{phase=0,moving=false,aim=false,
+                                   dt=0,death=0}={}){
+ const u=model?.userData,j=u?.humanEnemyNativeJoints;
+ if(!j)return false;
+ const p=Number.isFinite(phase)?phase:0,
+       t=Math.max(0,Math.min(.20,Number.isFinite(dt)?dt:0)),
+       fall=Math.max(0,Math.min(1,Number.isFinite(death)?death:0)),
+       k=1-Math.exp(-12*t),
+       swing=moving?Math.sin(p)*.45:0,
+       bazookaAim=!!u.rocketSoldier&&!!aim;
+ const mix=(id,x,z=0,immediate=false)=>{
+  if(!Number.isFinite(x)||!Number.isFinite(z))
+   throw Error('Animació enemiga V18 amb angle no finit: '+id);
+  const joint=j[id],alpha=immediate?1:k;
+  joint.rotation.x+=(x-joint.rotation.x)*alpha;
+  joint.rotation.z+=(z-joint.rotation.z)*alpha;
+ };
+ if(fall>0){
+  for(const [i,s] of [[0,'L'],[1,'R']]){
+   mix('knee'+s,-(i?.38:.62)*fall,0,true);
+   mix('elbow'+s,(i?.3:.65)*fall,0,true);
+  }
+ }else{
+  mix('hipL',swing,0,true);mix('hipR',-swing,0,true);
+  for(const [i,s] of [[0,'L'],[1,'R']]){
+   mix('knee'+s,-(.06+Math.max(0,Math.sin(p)*(i?1:-1))*.8*(moving?1:0)));
+   mix('shoulder'+s,
+    bazookaAim?(i?1.2:1.04):aim?(i?.96:1.03):(i?swing:-swing)*.5,
+    bazookaAim?(i?-.16:.23):aim?(i?-.05:.12):(i?.12:-.12));
+   mix('elbow'+s,bazookaAim?(i?.75:.83):aim?(i?.61:.55):
+    .16+Math.max(0,Math.cos(p)*(i?-1:1))*.18*(moving?1:0));
+  }
+ }
+ // Els canells i turmells no depenen dels angles del controlador antic.
+ for(const id of ['ankleL','ankleR','wristL','wristR']){
+  if(!Number.isFinite(j[id].rotation.x))j[id].rotation.set(0,0,0);
+ }
+ u.humanEnemyNativePose={phase:p,moving:!!moving,aim:!!aim,death:fall};
+ return true;
+}
+
 export function createHumanGameRuntimeV17(){
  let suppressed=0,nativeVisualHeight=null;
  const runtime={
@@ -651,6 +750,12 @@ export function createHumanGameRuntimeV17(){
    u.humanGameControlScaleBaked=true;
    u.humanGameControlScaleBakeStats=report;
    return model;
+  },
+  installNativeOnFootEnemy(T,model,options){
+   return installNativeOnFootEnemy(T,model,options);
+  },
+  poseNativeOnFootEnemy(model,options){
+   return poseNativeOnFootEnemy(model,options);
   },
   // Figura V18 per a conductor i passatger de cabina. La talla
   // definitiva es cuina en generar geometria i pivots; cap escala sobre
