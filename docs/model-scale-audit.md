@@ -261,3 +261,9 @@ La 0.6.297 consolida en una sola operació `modelScale` sobre malles i pivots de
 - La prova va detectar un desajust veritable de base: `playerModel.create` genera un cap a `y=3.38` per defecte, mentre `COMMANDO_HEAD_PIVOT_HEIGHT=3.26`. La factory nativa selecciona directament el perfil `compactD` i evita el fit heretat de la figura lògica, de manera que el cap es construeix a `y=3.26` sense pegats de translació. La pell V18 té la seva pròpia geometria i la forma final de seure, conduir o apuntar no llegeix les rotacions velles.
 - La bazuca de patrons i passatgers gira amb el canó real i resol les dues mans al V18 després de cada orientació. El fusell dels tiradors de torreta continua muntat independentment a la torre: és un contracte físic que falta acabar de consolidar amb la presa visual de mans.
 - Tests de branca **44887978854**: 14 passes aprovades; regressions, hitboxes, controls de seient, rifle, antitanc, mar i gir COOP, build i arrencada Chromium. Producció **44888297242**: 29 passos aprovats, Cloudflare + versió real + Chromium publicat a Paradoxa. Falta verificació visual manual amb dos dispositius.
+
+
+## 0.6.301 — Rider V18: cap pell V17 copiada al seu controlador
+
+- El controlador antic continua tenint els pivots de peu/mà i la talla pròpia necessària per a alguns ancoratges, però la factory del rider ara passa `controllerOnly:true` al constructor compartit i no executa `copySkin`. La pell efectiva ja és V18 per a tots els vehicles oberts propers, i és un proxy llunyà a altres distàncies. Aquesta optimització elimina una construcció i clonatge de malles redundant sense canviar escales, punts de soldadura, grips, hitboxes ni numeració de COOP.
+- El model `playerModel.create` continua amb el comportament antic per defecte per mantenir la compatibilitat de fixtures; només els controls del rider se salten l'adaptador. No s'ha eliminat l'estructura lògica anterior fins a substituir els seus consumidors.
