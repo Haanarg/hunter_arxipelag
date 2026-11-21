@@ -666,6 +666,14 @@ let duplicateRiderMeshes=0;
 riderControls.traverse(n=>{if(n.userData?.humanGameV17Mesh)duplicateRiderMeshes++});
 assert.equal(duplicateRiderMeshes,0,
  'Cap malla del controlador de rider prové del copySkin històric');
+assert(riderControls.userData.humanControllerOnlyMeshStats?.removed>15,
+ 'S\'han eliminat els polígons històrics del controlador, no només amagat');
+let controllerMeshes=0;
+riderControls.traverse(n=>{if(n.isMesh)controllerMeshes++});
+assert.equal(controllerMeshes,0,'El controlador del rider és només Object3D');
+assert(riderControls.userData.head.parent===riderControls &&
+ riderControls.userData.boots.length===2,
+ 'La retirada de malles conserva el cap i les botes com a pivots físics');
 
  // La fàbrica real del rider: canvia només la mida dels ocupants del GAZ.
  const riderSandbox={
@@ -700,11 +708,18 @@ assert.equal(duplicateRiderMeshes,0,
  });
  assert.equal(copiedRiderSkin,0,
   'Ni els models en seient ni els pilots de dues rodes dupliquen copySkin V17');
- const nativePart=driver.object.userData.riderDetailNodes
-   .flatMap(root=>{const found=[];root.traverse(n=>{
-     if(n.isMesh&&n.geometry?.getAttribute?.('position'))found.push(n);
-   });return found}).find(Boolean);
- assert(nativePart,'El rider disposa de geometria pròpia per a la talla de cabina');
+ // En el rider ja NO hi ha geometria V17 oculta: l'únic
+ // proxy que canvia amb la talla és el LOD distant. Els models
+ // natius V18 de seient i dues rodes gestionen la talla per factory.
+ let hiddenLegacyMeshCount=0;
+ for(const root of driver.object.userData.riderDetailNodes)root.traverse(n=>{
+  if(n.isMesh&&n!==driver.object.userData.pistol)hiddenLegacyMeshCount++;
+ });
+ assert.equal(hiddenLegacyMeshCount,0,
+  'Ni un cilindre antic als controls: només canònic V18 i arma real');
+ const nativePart=driver.object.userData.riderFarProxy.children
+  .find(n=>n.isMesh&&n.geometry?.getAttribute?.('position'));
+ assert(nativePart,'El proxy distant conserva geometria nativa per talla');
  const partSize=()=>{
   nativePart.geometry.computeBoundingBox();
   return nativePart.geometry.boundingBox.getSize(new T.Vector3());
@@ -789,8 +804,11 @@ assert.equal(duplicateRiderMeshes,0,
   'El tret del rider no depèn de rotacions dels braços ocults V17');
  assert(Math.abs(gazShot.direction.length()-1)<1e-6);
  driver.reset();
- const headBounds=new T.Box3().setFromObject(driver.object.userData.head,true);
- assert(headBounds.max.y<2.37*1.3*1.25,'El cap ha de cabre sota el sostre GAZ ampliat');
+ // El cap físic invisible ja no té malla: cal mesurar el cap REAL
+ // del V18 de cabina quan comprovam l'alçada sota el sostre.
+ const headBounds=new T.Box3().setFromObject(carSeatJoints.head,true);
+ assert(headBounds.max.y<2.37*1.3*1.25,
+  'El crani V18 real ha de cabre sota el sostre GAZ ampliat');
  driver.update({t:'cotxe_civil',o:new T.Group(),v:0,pedalPhase:0},1/60);
  assert.equal(driver.object.scale.x,1,'Cotxe civil: escala d’arrel 1');
  assert.equal(driver.object.userData.riderNativeSize,.82,'Mida final civil nativa');
