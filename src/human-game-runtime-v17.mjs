@@ -983,7 +983,10 @@ export function createHumanGameRuntimeV17(){
    return root;
   },
   install(T,model,{role='player'}={}){
-   if(suppressed)return model;
+   // El rider només duu pivots de control ocults. Cap crida
+   // tardana no ha de copiar una segona pell V17 a aquesta
+   // figura, perquè seients, moto i bici ja tenen rig V18.
+   if(suppressed||model?.userData?.humanControllerOnly)return model;
    if(model.userData.humanGameV17===role)return model;
    if(HUMAN_VERSION!==GAME_HUMAN_SKIN_VERSION)throw Error('La pell humana i el laboratori no coincideixen');
    const u=model.userData,required=['ll','lr','lkl','lkr','al','ar','ael','aer','head','boots'];

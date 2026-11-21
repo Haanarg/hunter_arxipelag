@@ -10,7 +10,8 @@ const HUNTER_COMPACT_HEAD_D=Object.freeze({
 });
 export const playerModel=Object.freeze({
  headStyles:Object.freeze({compactD:HUNTER_COMPACT_HEAD_D}),
- create(T,{unitScale=1,palette=defaultPalette,headVariant=null,articulated=false}={}){
+ create(T,{unitScale=1,palette=defaultPalette,headVariant=null,
+  articulated=false,controllerOnly=false}={}){
  
  const p={chest:1.04,waist:.76,head:.44,arm:.27,leg:.35,pack:.66};
  const g=new T.Group(),u=g.userData;u.boots=[];u.soleContacts=[];
@@ -167,9 +168,13 @@ export const playerModel=Object.freeze({
   u.lowerBody=lowerBody;u.upperBody=upperBody;
   u.upperBodyPivotHeight=upperBody.position.y;
  }
- // Same real V17 skin as the lab, fitted onto this existing animation rig.
- // The vehicle rider factory uses this method too, without any seat or IK changes.
- globalThis.HUNTER_HUMAN_V17?.install(T,g,{role:'player'});
+ // Per al rider, el model antic només aporta els pivots lògics:
+ // el cos visible és V18 en seient, moto/bici i variants COOP, o el
+ // proxy de LOD llunyà. Evitam una segona pell copySkin de V17 que
+ // s'assignava al controlador ocult i no es renderitzava mai.
+ u.humanControllerOnly=!!controllerOnly;
+ if(!controllerOnly)
+  globalThis.HUNTER_HUMAN_V17?.install(T,g,{role:'player'});
  return g;
  }
 });
