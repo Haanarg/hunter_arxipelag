@@ -666,6 +666,13 @@ function installNativeOnFootEnemy(T,model,{role='soldier'}={}){
  u.humanEnemyNativeJoints=joints;
  u.humanEnemyNativeRole=role;
  u.humanEnemyNativeHeight=nativeHeight;
+ // Cache IK per actor: cap al·locació per tick en 100 soldats.
+ u.humanEnemyNativeIKCache={
+  target:new T.Vector3(),axis:new T.Vector3(),pole:new T.Vector3(),
+  bend:new T.Vector3(),bendDirection:new T.Vector3(),forearm:new T.Vector3(),
+  down:new T.Vector3(0,-1,0),wrist:new T.Vector3(),
+  worldGrip:new T.Vector3(),inverse:new T.Quaternion()
+ };
  u.humanEnemyNativePose={phase:0,moving:false,aim:false,death:0};
  u.humanGameV17=role==='elite'?'soldier':role; // saves i telemetria
  u.humanGameV17PreservedRig=true;
@@ -705,6 +712,21 @@ function poseNativeOnFootEnemy(model,{phase=0,moving=false,aim=false,
    mix('elbow'+s,bazookaAim?(i?.75:.83):aim?(i?.61:.55):
     .16+Math.max(0,Math.cos(p)*(i?-1:1))*.18*(moving?1:0));
   }
+ }
+ // La bazuca és una arma REAL compartida amb els projectils,
+ // de manera que les dues mans V18 apunten als seus dos grips.
+ // L'IK llegeix la geometria i no el braç antic apuntat per V17.
+ u.humanEnemyNativeRocketSupport=null;
+ if(u.rocketSoldier&&aim&&fall===0&&u.enemyBazookaIK&&
+    u.enemyLOD==='full'){
+  model.updateWorldMatrix(true,true);
+  const cache=u.humanEnemyNativeIKCache;
+  const right=solveNativeLongGunHand(null,j,u.enemyBazookaIK.rightGrip,'R',cache);
+  const left=solveNativeLongGunHand(null,j,u.enemyBazookaIK.leftGrip,'L',cache);
+  if(right&&left)u.humanEnemyNativeRocketSupport={
+   rightDistance:right.distance,leftDistance:left.distance,
+   rightInReach:right.inReach,leftInReach:left.inReach
+  };
  }
  // Els canells i turmells no depenen dels angles del controlador antic.
  for(const id of ['ankleL','ankleR','wristL','wristR']){
