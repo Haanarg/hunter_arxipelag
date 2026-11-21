@@ -133,14 +133,6 @@ window.HUNTER_RIDER=Object.freeze({
     };
     g.userData.riderNativeSize=1;
     g.visible=false;g.traverse(o=>{if(o.isMesh&&!o.userData.noCastShadow)o.castShadow=shadows});scene.add(g);
-    const down=new THREE.Vector3(0,-1,0),delta=new THREE.Vector3();
-    const limbBetween=(m,a,b)=>{
-      delta.copy(b).sub(a);const length=delta.length();m.position.copy(a);
-      // scale.y ací és només la llargada animada del segment, no
-      // una compensació de mida del model complet.
-      m.scale.y=length/(m.userData.restLength*nativeSize);
-      if(length>1e-6)m.quaternion.setFromUnitVectors(down,delta.multiplyScalar(1/length));
-    };
     const vec=(x,y,z)=>new THREE.Vector3(x,y,z);
     const ikDown=new THREE.Vector3(0,-1,0),ikQuaternion=new THREE.Quaternion();
     const pointJoint=(joint,target)=>{
@@ -362,8 +354,6 @@ window.HUNTER_RIDER=Object.freeze({
       pistolParts.slide.position.z=Math.exp(-u.shotAge*18)*.055;
       pistolParts.flash.visible=false;
     };
-    const shoulderAt=side=>vec(side*.57*nativeSize,1.17*nativeSize,0)
-      .applyQuaternion(torso.quaternion).add(torso.position);
     const forward=new THREE.Vector3(0,0,-1);
     const pistolMuzzleWorld=()=>{
       // La boca real pertany a la corredora del silenciador i acompanya
@@ -396,72 +386,6 @@ window.HUNTER_RIDER=Object.freeze({
       pistolParts.flash.visible=false;
       u.riderNativeShotActive=true;
     };
-    // Animació superposada després de la postura de conducció: la mà
-    // esquerra continua al manillar, rem o botavara; la dreta apunta.
-    const aimOneHand=(v,dt)=>{
-      const u=g.userData;
-      u.shotTime=Math.max(0,u.shotTime-dt);
-      u.shotAge=Math.min(10,u.shotAge+dt);
-      const active=u.shotTime>0;
-      // Transicions suaus: el tret ja no força un gir instantani del tronc.
-      u.shotBlend+=(Number(active)-u.shotBlend)*(1-Math.exp(-(active?8:9)*dt));
-      if(!active&&u.shotBlend<.01){
-        pistol.visible=false;pistolParts.flash.visible=false;return;
-      }
-      pistol.visible=true;
-      const sc=v.t==='llanxa'?1.3:v.t==='llanxa_coets'?1.35:scales[v.t],
-            rowing=v.t==='barca_rems',
-            twist=v.t==='windsurf'?.055:.24;
-      // A la barca l'arma s'ha de veure a escala amb el remador.
-      pistol.scale.setScalar(rowing?.56:.92);
-      if(rowing){
-        // El remador només gira un poc les espatlles (uns 30°),
-        // sense retorçar el tronc ni passar de cop al perfil.
-        torso.rotation.y=Math.PI-.52*u.shotBlend;
-        // El cap mira cap a l'arma; els braços conserven els punts dels rems.
-        const direction=u.pistolAim||forward;
-        const yaw=Math.atan2(-direction.x,-direction.z);
-        rig.head.rotation.y=Math.max(-.65,Math.min(.65,yaw-torso.rotation.y))*.6*u.shotBlend;
-        rig.head.rotation.x=-.08*u.shotBlend;
-      }else torso.rotation.y+=twist*u.shotBlend;
-      const shoulder=shoulderAt(1),
-            forearm=limbs[3],
-            restingHand=new THREE.Vector3(0,-forearm.userData.restLength*forearm.scale.y*nativeSize,0)
-              .applyQuaternion(forearm.quaternion).add(forearm.position),
-            // El braç dret surt del rem amb una extensió curta cap a proa.
-            // Evitam que travessi el pit o arribi a l'altre costat del buc.
-            reach=(rowing?vec(-.08*sc,-.26,-.48*sc):
-              v.t==='windsurf'?vec(.17*sc,-.14,-1.02*sc):
-              vec(.25*sc,-.29,-1.13*sc)).multiplyScalar(nativeSize);
-      const target=shoulder.clone().add(reach),
-            hand=restingHand.lerp(target,u.shotBlend),
-            elbow=shoulder.clone().lerp(hand,.57);
-      elbow.y-=.12*nativeSize;elbow.x+=(rowing?-.05*sc:.12*sc)*nativeSize;
-      limbBetween(limbs[2],shoulder,elbow);limbBetween(limbs[3],elbow,hand);
-      // La mà esquerra solta el rem durant el gir de cintura i
-      // acompanya el tronc, sense estirar el braç a l'altre costat.
-      if(rowing&&u.shotBlend>.001){
-        const leftShoulder=shoulderAt(-1),
-              relax=vec(-.22*sc,-.70,-.24*sc).applyQuaternion(torso.quaternion),
-              leftHand=leftShoulder.clone().add(relax),
-              leftElbow=leftShoulder.clone().lerp(leftHand,.53);
-        leftElbow.y-=.12;
-        const oldHand=vec(0,-limbs[1].userData.restLength*limbs[1].scale.y*nativeSize,0)
-          .applyQuaternion(limbs[1].quaternion).add(limbs[1].position);
-        const oldElbow=limbs[1].position.clone();
-        // La mà esquerra continua pràcticament sobre el rem.
-        oldHand.lerp(leftHand,u.shotBlend*.2);oldElbow.lerp(leftElbow,u.shotBlend*.2);
-        limbBetween(limbs[0],leftShoulder,oldElbow);
-        limbBetween(limbs[1],oldElbow,oldHand);
-      }
-      const recoil=Math.exp(-u.shotAge*18)*(rowing ? .045 : .095)*nativeSize;
-      pistol.position.copy(hand).add(vec(0,0,recoil));
-      // La pistola apunta a proa (-Z) quan el remador s'hi gira.
-      pistol.quaternion.identity();
-      if(u.pistolAim)pistol.quaternion.setFromUnitVectors(forward,u.pistolAim);
-      pistolParts.slide.position.z=recoil*.65;
-      pistolParts.flash.visible=false; // Pistola silenciada.
-    };
     // Retorna el tret des de la boca REAL de la pistola, i orienta
     // l'arma segons l'autoapuntat del sistema existent.
     const firePistol=(v,autoAim)=>{
@@ -470,7 +394,20 @@ window.HUNTER_RIDER=Object.freeze({
       // No forçam shotBlend: l'animació del remador s'interpola en update().
       if(v.t!=='barca_rems')u.shotBlend=Math.max(u.shotBlend,.82);
       u.pistolAim=null;
-      if(v.t==='bici'||v.t==='moto')aimCanonicalPistol(v,0);
+      // El LOD llunyà conserva dues malles econòmiques, però un
+      // tret eventual s'origina igualment al grip i al canell V18.
+      if(u.riderFarActive){
+        const seat=getNativeSeat(u.riderNativeSize),size=u.riderNativeSize;
+        const hip=u.riderFarProxy.position.clone().add(vec(0,.40*size,0));
+        const hands=[vec(-.24,.14,-.46),vec(.24,.14,-.46)]
+          .map(offset=>hip.clone().add(offset.multiplyScalar(size)));
+        const feet=[vec(-.21,-.45,-.18),vec(.21,-.45,-.18)]
+          .map(offset=>hip.clone().add(offset.multiplyScalar(size)));
+        u.riderSeatVehicleType=v.t;
+        aimNativeSeatPistol(v,0);
+        poseCanonicalSeat(seat,hip,0,hands,feet,u.shotBlend);
+        u.riderFarShotWrist=seat.joints.wristR;
+      }else if(v.t==='bici'||v.t==='moto')aimCanonicalPistol(v,0);
       else if(u.riderSeatCanonicalActive&&u.riderSeatCanonicalBody){
         aimNativeSeatPistol(v,0);
         const pose=u.riderSeatCanonicalPose;
@@ -478,7 +415,7 @@ window.HUNTER_RIDER=Object.freeze({
           getNativeSeat(u.riderSeatCanonicalSize),
           u.riderSeatCanonicalHip,pose.lean,pose.hands,pose.feet,
           u.shotBlend,pose.wholeBody);
-      }else aimOneHand(v,0);
+      }else throw Error('Rider V18: falta el suport balístic natiu de '+v.t);
       let origin=pistolMuzzleWorld();
       const initial=forward.clone().applyQuaternion(pistol.getWorldQuaternion(new THREE.Quaternion()));
       const desired=autoAim(origin,initial);
@@ -488,14 +425,22 @@ window.HUNTER_RIDER=Object.freeze({
                 .applyQuaternion(g.getWorldQuaternion(new THREE.Quaternion()).invert());
         u.pistolAim=localDirection;
         pistol.quaternion.setFromUnitVectors(forward,localDirection);
-        if(u.riderSeatCanonicalActive&&u.riderSeatCanonicalJoints?.wristR)
+        if(u.riderFarActive&&u.riderFarShotWrist)
+          mountPistolToNativeWrist(u.riderFarShotWrist);
+        else if(u.riderSeatCanonicalActive&&u.riderSeatCanonicalJoints?.wristR)
           mountPistolToNativeWrist(u.riderSeatCanonicalJoints.wristR);
         else if(v.t==='bici'||v.t==='moto')
           mountPistolToNativeWrist(cycleJoints.wristR);
         origin=pistolMuzzleWorld();
       }
-      return {origin,direction:forward.clone().applyQuaternion(
-        pistol.getWorldQuaternion(new THREE.Quaternion())).normalize()};
+      const direction=forward.clone().applyQuaternion(
+        pistol.getWorldQuaternion(new THREE.Quaternion())).normalize();
+      if(u.riderFarActive){
+        // No deixa pistoles flotants ni efectes pendents en tornar a prop.
+        pistol.visible=false;u.shotTime=0;u.shotBlend=0;
+        u.riderNativeShotActive=false;
+      }
+      return {origin,direction};
     };
     const update=(v,dt,seatIndex=null,viewDistance=0)=>{
       // null = partida individual: conserva exactament la postura existent.
@@ -509,6 +454,7 @@ window.HUNTER_RIDER=Object.freeze({
         g.userData.riderNativePistolWrist=null;
         g.userData.riderNativePistolMounted=false;
         g.userData.riderNativeShotActive=false;
+        g.userData.riderFarShotWrist=null;
         g.userData.riderSeatCanonicalActive=false;
         g.userData.riderSeatCanonicalBody=null;
         g.userData.riderSeatCanonicalJoints=null;
@@ -538,6 +484,7 @@ window.HUNTER_RIDER=Object.freeze({
         throw Error('Rider V18: falta el seient natiu del vehicle '+v.t);
       u.riderNativeOnlyPose=!!(canonicalSeat||twoWheeled);
       u.riderFarActive=far;
+      u.riderFarShotWrist=null;
       cycleBody.visible=twoWheeled;
       for(const seat of nativeSeatVariants.values())
         seat.root.visible=seat===canonicalSeat;
@@ -753,10 +700,9 @@ window.HUNTER_RIDER=Object.freeze({
         return;
       }
 
-      const seat=1.45*sc;torso.position.set(0,seat,.55*sc);torso.rotation.x=.04;
-      for(let i=0;i<2;i++){const side=i?1:-1,hip=vec(side*.28,seat,.55*sc),shoulder=shoulderAt(side),hand=vec(side*.48*sc,seat+.7,-.7*sc),elbow=shoulder.clone().lerp(hand,.52);limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
-        const foot=vec(side*.42*sc,.92*sc,-.35*sc),knee=hip.clone().lerp(foot,.5);knee.y+=.18;limbBetween(limbs[4+i*2],hip,knee);limbBetween(limbs[5+i*2],knee,foot);boots[i].position.copy(foot)}
-      aimOneHand(v,dt);
+      // Totes les postures obertes tenen una ruta V18 obligatòria.
+      // Mai no retornam a braços extensibles ni a ancoratges V17.
+      throw Error('Rider V18: postura desconeguda de '+v.t);
     };
     const reset=()=>{g.visible=false;g.userData.motion=0;g.userData.shotTime=0;
       g.userData.shotBlend=0;g.userData.pistolAim=null;pistol.visible=false;
