@@ -1,0 +1,23 @@
+name: Hunter V18 weapon parity hotfix 0.6.308 (temporary)
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  parity:
+    if: github.head_ref == 'fix/v18-weapon-root-parity-308'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - name: Build source and runtime
+        run: npm run build && npm run check:build
+      - name: Verify source and bundle production harness
+        run: node tests/runtime-bundle-parity.cjs
+      - name: Check native mounts and engine regressions
+        run: node tests/human-game-runtime-v17.mjs
