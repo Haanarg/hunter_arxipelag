@@ -8,7 +8,8 @@ function attachEnemyBoatCrew(boat,{initiallyHidden=false,type='llanxa'}={}){
   if(boat.userData.enemyCarCrew)return boat.userData.enemyCarCrew;
   const crew=[];
   for(let seat=0;seat<2;seat++){
-    const rider=window.HUNTER_CHARACTERS.createCommando(THREE);
+    const rider=window.HUNTER_CHARACTERS.createNativeEnemyCrew?.(THREE)
+      ??window.HUNTER_CHARACTERS.createCommando(THREE);
     // La llanxa llançamíssils requisada dona arma pesada també al pilot.
     // A les patrulleres tots dos comandos porten fusell. Les llanxes
     // requisades conserven el seu armament especial independent.
@@ -34,6 +35,7 @@ function attachEnemyBoatCrew(boat,{initiallyHidden=false,type='llanxa'}={}){
     aimEye.position.set(0,2.7,0);
     rider.add(aimEye);
     window.HUNTER_HUMAN_V17.normalizeEnemyCrew(rider,mount.size);
+    window.HUNTER_HUMAN_V17.poseNativeEnemyCrew?.(rider,{type,seat});
     rider.visible=!initiallyHidden;
     (boat.userData.distantVehicleLOD?.full||boat).add(rider);
     crew.push({rider,weapon,muzzle,aimEye,rocket,seat,basePitch:weapon.rotation.x});
@@ -112,6 +114,12 @@ function aimEnemyBoatCrew(boat,seat,target,dt=.1){
     desired=Math.max(-.55,Math.min(.65,Math.atan2(position.y-height,Math.hypot(dx,dz)))),
     pitchDiff=desired-(w.weapon.rotation.x-w.basePitch);
   w.weapon.rotation.x+=Math.max(-1.5*dt,Math.min(1.5*dt,pitchDiff));
+  // El canó continua essent la font balística, però quan el seu
+  // pitch canvia les dues mans del tripulant es tornen a situar
+  // sobre les preses de l'esquelet V18 aprovat.
+  window.HUNTER_HUMAN_V17.poseNativeEnemyCrew?.(w.rider,{
+    type:w.rider.userData.humanEnemyNativeSeatType,seat
+  });
   return Math.abs(delta)<.23&&Math.abs(pitchDiff)<.23;
 }
 function enemyBoatCrewMuzzle(boat,seat){
