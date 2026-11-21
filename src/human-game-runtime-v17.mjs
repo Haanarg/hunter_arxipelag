@@ -1169,20 +1169,19 @@ export function createHumanGameRuntimeV17(){
      set:value=>{current=wrap(value)}
     });
    };
-   // createCommando també crea tripulants de vehicles. Només la
-   // construcció dins createSoldier és infanteria a peu: aquest context
-   // delimita la retirada del copySkin de V17 sense tocar conductors.
+   // Totes les crides reals de comandos i general generen pell V18
+   // articulada directament. Els tripulants tenen fàbrica pròpia
+   // de cap a 3.26 i seients COOP. L'antic install/copySkin resta
+   // només per a fixtures que comparen les referències històriques.
    let onFootRole=null;
    intercept('HUNTER_CHARACTERS',base=>{
     if(!base||base.__humanGameV17Hook)return base;
     const wrapped={...base,__humanGameV17Hook:true};
     wrapped.createCommando=function(T,...args){
      const soldier=runtime.suppress(()=>base.createCommando.call(wrapped,T,...args));
-     return onFootRole
-      ?runtime.installNativeOnFootEnemy(T,soldier,{
-       role:onFootRole==='elite'?'elite':'soldier'
-      })
-      :runtime.install(T,soldier,{role:'soldier'});
+     return runtime.installNativeOnFootEnemy(T,soldier,{
+      role:onFootRole==='elite'?'elite':'soldier'
+     });
     };
     // Només els enemics embarcats fan servir aquest constructor:
     // sense crear ni copiar prèviament la pell V17 del comando.
@@ -1215,10 +1214,11 @@ export function createHumanGameRuntimeV17(){
      return model;
     };
     if(typeof base.animateSoldier==='function')wrapped.animateSoldier=function(model,options){
-     const result=base.animateSoldier.call(base,model,options);
+     // Únic motor de pose visual: els controls V17 no tornen a
+     // calcular braços i genolls abans del V18 a cada frame.
      if(model?.userData?.humanEnemyNativeJoints)
-      runtime.poseNativeOnFootEnemy(model,options);
-     return result;
+      return runtime.poseNativeOnFootEnemy(model,options);
+     return base.animateSoldier.call(base,model,options);
     };
     return Object.freeze(wrapped);
    });
@@ -1227,9 +1227,8 @@ export function createHumanGameRuntimeV17(){
     return Object.freeze({...base,__humanGameV17Hook:true,
      create(T,...args){
       const general=runtime.suppress(()=>base.create.call(base,T,...args));
-      return onFootRole==='general'
-       ?runtime.installNativeOnFootEnemy(T,general,{role:'general'})
-       :runtime.install(T,general,{role:'general'});
+      // Figura V18 única, també si la fàbrica es crida sense LOD.
+      return runtime.installNativeOnFootEnemy(T,general,{role:'general'});
      }
     });
    });
