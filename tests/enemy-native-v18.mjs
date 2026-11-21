@@ -64,9 +64,15 @@ for(const {label,options,role} of roles){
  model.updateWorldMatrix(true,true);
  assert.equal(j.shoulderL.rotation.x,start,
   'Braç visual immune al controlador antic '+label);
+ const previousControlHip=u.ll.rotation.x,
+       previousControlArm=u.ar.rotation.x;
  globalThis.HUNTER_CHARACTERS.animateSoldier(model,{
   phase:Math.PI/2,moving:true,aim:false,dt:1/30
  });
+ assert.equal(u.ll.rotation.x,previousControlHip,
+  'V18 anima el soldat sense un tick redundant de maluc V17 '+label);
+ assert.equal(u.ar.rotation.x,previousControlArm,
+  'V18 anima el soldat sense un tick redundant de braç V17 '+label);
  assert(j.hipL.rotation.x>.40&&j.hipR.rotation.x<-.40,
   'Cursa sobre malucs originals de l\'editor '+label);
  assert(Number.isFinite(j.elbowR.rotation.x)&&
