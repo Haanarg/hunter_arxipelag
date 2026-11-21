@@ -571,6 +571,9 @@ window.HUNTER_RIDER=Object.freeze({
       // animar. La pose visible pertany al V18 de seient/dos rodes.
       torso.rotation.set(0,0,0);
 
+      // Les sis postures V18 de seient es resolen directament amb
+      // mans/peus geomètrics. No es calcula cap segment ni botina
+      // del controlador V17 en cotxes, llanxes, jetski, rems o vela.
       if(car){
         // Seient esquerre, darrere del volant (C1A i cotxe utilitari).
         // Posicions físiques convertides al sistema del rider escalat.
@@ -604,12 +607,6 @@ window.HUNTER_RIDER=Object.freeze({
                 knee=hip.clone().lerp(foot,.52);
           elbow.y-=.10*sc;
           knee.y+=.08*sc;knee.z+=.11*sc;
-          limbBetween(limbs[i*2],shoulder,elbow);
-          limbBetween(limbs[i*2+1],elbow,hand);
-          limbBetween(limbs[4+i*2],hip,knee);
-          limbBetween(limbs[5+i*2],knee,foot);
-          boots[i].position.copy(foot);
-          boots[i].rotation.x=-.2;
           nativeHands.push(hand);nativeFeet.push(foot);
         }
         // També els conductors de cotxe han de mostrar el gest real
@@ -652,12 +649,6 @@ window.HUNTER_RIDER=Object.freeze({
                 knee=hip.clone().lerp(foot,.52);
           elbow.y-=.07*sc;
           knee.y+=.12*sc;
-          limbBetween(limbs[i*2],shoulder,elbow);
-          limbBetween(limbs[i*2+1],elbow,hand);
-          limbBetween(limbs[4+i*2],hip,knee);
-          limbBetween(limbs[5+i*2],knee,foot);
-          boots[i].position.copy(foot);
-          boots[i].rotation.x=-.13;
           nativeHands.push(hand);nativeFeet.push(foot);
         }
         // Disparar des del seient conserva la mà esquerra al comandament
@@ -686,13 +677,8 @@ window.HUNTER_RIDER=Object.freeze({
             shoulder=shoulderAt(side),hand=vec(side*.38*sc,1.32*sc,-.58*sc),
             elbow=shoulder.clone().lerp(hand,.55);
           elbow.y-=.12;
-          limbBetween(limbs[i*2],shoulder,elbow);
-          limbBetween(limbs[i*2+1],elbow,hand);
           const foot=vec(side*.38*sc,.48*sc,.58*sc),knee=hip.clone().lerp(foot,.5);
           knee.z-=.25;
-          limbBetween(limbs[4+i*2],hip,knee);
-          limbBetween(limbs[5+i*2],knee,foot);
-          boots[i].position.copy(foot);boots[i].rotation.x=.15;
           nativeHands.push(hand);nativeFeet.push(foot);
         }
         u.riderSeatVehicleType=v.t;
@@ -719,13 +705,8 @@ window.HUNTER_RIDER=Object.freeze({
                 hand=g.worldToLocal(oar.localToWorld(oar.userData.grip.clone()));
           const elbow=shoulder.clone().lerp(hand,.5);
           elbow.x+=boatSide*.18;elbow.y-=.13;
-          limbBetween(limbs[i*2],shoulder,elbow);
-          limbBetween(limbs[i*2+1],elbow,hand);
           const foot=vec(boatSide*.34,.2*sc,seatZ+.97*sc),
                 knee=vec(boatSide*.32,seatY-.05,seatZ+.52*sc);
-          limbBetween(limbs[4+i*2],hip,knee);
-          limbBetween(limbs[5+i*2],knee,foot);
-          boots[i].position.copy(foot);boots[i].rotation.set(0,Math.PI,0);
           nativeHands.push(hand);nativeFeet.push(foot);
         }
         u.riderSeatVehicleType=v.t;
@@ -768,13 +749,7 @@ window.HUNTER_RIDER=Object.freeze({
           // impossible knee/elbow pose away from the true grip.
           elbow.y-=.17*sc;
           elbow.z+=i?.08*sc:-.055*sc;
-          limbBetween(limbs[i*2],shoulder,elbow);
-          limbBetween(limbs[i*2+1],elbow,hand);
           knee.y+=.13*sc;knee.x-=.10*sc;
-          limbBetween(limbs[4+i*2],hip,knee);
-          limbBetween(limbs[5+i*2],knee,foot);
-          boots[i].position.copy(foot);
-          boots[i].rotation.set(-.12,1.13,0);
           nativeHands.push(hand);
         }
         // La mà dreta V18 segueix el dispar; l'esquerra manté la
@@ -807,12 +782,8 @@ window.HUNTER_RIDER=Object.freeze({
                   vec(seatX+side*.32*riderSc,seat+.16,seatZ-.42*riderSc):
                   vec(seatX+side*.48*riderSc,seat+.7,-.7*riderSc+offZ),
                 elbow=shoulder.clone().lerp(hand,.52);
-          limbBetween(limbs[i*2],shoulder,elbow);limbBetween(limbs[i*2+1],elbow,hand);
           const foot=vec(seatX+side*.42*riderSc,.92*riderSc+offY,-.35*riderSc+offZ),
                 knee=hip.clone().lerp(foot,.5);knee.y+=.18;
-          limbBetween(limbs[4+i*2],hip,knee);
-          limbBetween(limbs[5+i*2],knee,foot);
-          boots[i].position.copy(foot);
           nativeHands.push(hand);nativeFeet.push(foot);
         }
         u.riderSeatVehicleType=v.t;
