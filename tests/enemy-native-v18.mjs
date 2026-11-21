@@ -106,6 +106,9 @@ for(const {label,options,role} of roles){
   });
   assert(Number.isFinite(j.shoulderR.rotation.x),
    'El braç V18 conserva apuntat antitanc');
+  assert(Number.isFinite(u.humanEnemyNativeRocketSupport?.rightDistance)&&
+   Number.isFinite(u.humanEnemyNativeRocketSupport?.leftDistance),
+   'Les dues mans V18 del soldat antitanc resolen IK dels grips reals');
  }
  if(role==='elite')assert(u.eliteSoldier,
   'Blindatge i metralladora de l\'elit continuen equipats');
