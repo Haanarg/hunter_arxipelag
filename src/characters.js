@@ -636,6 +636,10 @@ window.HUNTER_CHARACTERS=Object.freeze({
     if(!native&&window.HUNTER_HUMAN_V17)
       throw Error('Protagonista V18: articulacions canòniques absents');
     if(native){
+      // A partir del primer fotograma la partida exigeix només
+      // canals numèrics V18. Si falta una dada, el render avisarà
+      // en comptes de tornar silenciosament al rig invisible.
+      u.humanGameNativeOnly=true;
       u.humanGameNativeBodyPose={
         pelvisYaw:0,spinePitch:0,spineYaw:0,spineRoll:0,
         headPitch:0,headYaw:0,headRoll:0,crouchDrop:0
@@ -791,9 +795,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
       u.upperBody.rotation.x+=(0-u.upperBody.rotation.x)*k;
       u.upperBody.rotation.y+=(0-u.upperBody.rotation.y)*k;
       u.upperBody.rotation.z+=(0-u.upperBody.rotation.z)*k;
-      u.head.rotation.x+=(0-u.head.rotation.x)*k;
-      u.head.rotation.y+=(0-u.head.rotation.y)*k;
-      u.head.rotation.z+=(0-u.head.rotation.z)*k;
+      // El crani visible V18 no necessita moure l'antic pivot.
+      if(!u.humanGameNativeOnly){
+       u.head.rotation.x+=(0-u.head.rotation.x)*k;
+       u.head.rotation.y+=(0-u.head.rotation.y)*k;
+       u.head.rotation.z+=(0-u.head.rotation.z)*k;
+      }
       player.rotation.x+=(0-player.rotation.x)*k;
       return;
     }
@@ -817,7 +824,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
       for(const joint of [u.al,u.ar,u.ael,u.aer,u.ll,u.lr,u.lkl,u.lkr])
        neutral(joint);
       u.upperBody.rotation.set(0,0,0);
-      u.head.rotation.set(0,0,0);
+      if(!u.humanGameNativeOnly)u.head.rotation.set(0,0,0);
       player.rotation.x+=(0-player.rotation.x)*k;
       player.rotation.z+=(0-player.rotation.z)*k;
       return;
@@ -850,13 +857,14 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.upperBody.rotation.z+=(0-u.upperBody.rotation.z)*k;
     // El cap compensa la inclinació del tronc i continua mirant de
     // front, també durant les transicions d'entrada i sortida de cursa.
-    tx(u.head,-u.upperBody.rotation.x,k);
-    // El cap acompanya l'apuntat del tors, no el rumb dels peus.
-     u.head.rotation.y+=(0-u.head.rotation.y)*k;
-    // Quan s'espatlla el fusell d'assalt a la dreta, el cap s'hi acosta
-    // amb una inclinació lateral de 10°. Tornada gradual a neutre.
+    // El cap real es mou pels camps de postura nativa, i no
+    // pel pivot antic. El laboratori encara pot comparar el V17.
     const assaultHeadTilt=assaultRifleEquipped&&!inVehicle?-Math.PI/18:0;
-    u.head.rotation.z+=(assaultHeadTilt-u.head.rotation.z)*k;
+    if(!u.humanGameNativeOnly){
+     tx(u.head,-u.upperBody.rotation.x,k);
+     u.head.rotation.y+=(0-u.head.rotation.y)*k;
+     u.head.rotation.z+=(assaultHeadTilt-u.head.rotation.z)*k;
+    }
     // El yaw del tors és absolut respecte a la direcció del jugador;
     // a la pell canònica se li resta el gir lateral de la pelvis.
     blendBody('spinePitch',-.145*run-.18*crouch,11);
