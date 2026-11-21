@@ -1938,6 +1938,57 @@ gameAvatar.userData.visualAimSmoothed.set(0,0,0);
 controls.animatePlayerControls(gameAvatar,controlOptions);
 assert(gameAvatar.userData.pistolRig.nativeGoal.distanceTo(initialAim)>.3,
  'La meta V18 de la pistola segueix el rumb mundial i no el nord antic');
+
+// v0.6.305: quan un jugador REAL equipa armes amb dues preses, no
+// avançam més un segon solver sobre espatlles/colzes invisibles V17.
+const strictAvatarU=gameAvatar.userData;
+strictAvatarU.pistolAimTime=0;strictAvatarU.meleePose=0;
+strictAvatarU.grenadeThrow=0;
+const ghostArms=[strictAvatarU.al,strictAvatarU.ar,
+ strictAvatarU.ael,strictAvatarU.aer];
+const ghostRotations=()=>ghostArms.map(a=>a.quaternion.clone());
+for(const [weapon,option]of [
+ ['cisalla','cisallaEquipped'],['bazooka','bazookaEquipped'],
+ ['assault','assaultRifleEquipped'],['sniper','sniperEquipped']
+]){
+ const before=ghostRotations();
+ controls.animatePlayerControls(gameAvatar,{
+  ...controlOptions,dt:1/60,[option]:true
+ });
+ const after=ghostRotations();
+ for(let i=0;i<before.length;i++)
+  assert(before[i].equals(after[i]),
+   'IK d\'arma '+weapon+' no mou el braç V17 '+i);
+ gameAvatar.userData.humanGamePose();
+ const support=weapon==='cisalla'?strictAvatarU.humanGameNativeCutterSupport:
+  strictAvatarU.humanGameNativeLongGunSupport;
+ assert(support&&
+   (weapon==='cisalla'||support.weapon===weapon)&&
+   Number.isFinite(support.rightDistance)&&
+   Number.isFinite(support.leftDistance),
+   'Els dos grips de '+weapon+' tenen IK V18 real');
+}
+// La pistola conserva els events lògics/reculada, però l'origen de
+// repòs del controlador ocult és el canell V18, no u.ar/u.aer.
+controls.animatePlayerControls(gameAvatar,{
+ ...controlOptions,dt:0
+});
+const nativeIdle=strictAvatarU.pistolRig.idle.clone(),
+ nativeIdleQ=strictAvatarU.pistolRig.idleQ.clone();
+ghostArms[0].rotation.set(.83,-.72,.50);
+ghostArms[1].rotation.set(-1.21,.64,-.83);
+ghostArms[2].rotation.set(.99,.33,.67);
+ghostArms[3].rotation.set(-.85,-.49,1.12);
+controls.animatePlayerControls(gameAvatar,{
+ ...controlOptions,dt:0
+});
+assert(strictAvatarU.pistolRig.idle.distanceTo(nativeIdle)<1e-9,
+ 'El punt de repòs de la pistola V18 ignora espatlles i colzes V17');
+assert(strictAvatarU.pistolRig.idleQ.equals(nativeIdleQ),
+ 'La rotació de repòs de pistola V18 no llegeix l\'IK antiga');
+ghostArms.forEach(a=>a.rotation.set(0,0,0));
+console.log('PASS v0.6.305 V18 gun grips only, no duplicate old IK, pistol idle wrist');
+
 // Amb els fusells reals del jugador, la balística de les dues armes
 // apunta al pivot de la malla V18: no al fusell ocult del controlador.
 const muzzleUser=gameAvatar.userData;
