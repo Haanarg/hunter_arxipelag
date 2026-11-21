@@ -122,9 +122,26 @@ for(const type of ['cotxe','cotxe_civil','camio','moto']){
  }else{
   assert(result.gunner.userData.gun.parent===result.pitch,
    'La torre conserva el muntatge balístic independent del tirador');
-  assert(result.muzzle.getWorldPosition(
-   new T.Vector3()).toArray().every(Number.isFinite),
-   'Boca de foc de torreta validada');
+  const u=result.gunner.userData,grips=u.humanEnemyNativeRifleGrips;
+  assert(grips?.rightGrip&&grips?.leftGrip&&
+   grips.rightGrip.parent===u.gun&&grips.leftGrip.parent===u.gun,
+   'El fusell de la torreta té dues preses reals per les mans V18');
+  const support=u.humanEnemyNativeRifleSupport;
+  assert(Number.isFinite(support?.rightDistance)&&
+   Number.isFinite(support?.leftDistance),
+   'L\'IK del tirador resol ambdós braços a les preses del fusell');
+  const before=result.muzzle.getWorldPosition(new T.Vector3());
+  result.mount.rotation.y=.30;
+  result.pitch.rotation.x=.20;
+  vehicle.updateMatrixWorld(true,true);
+  assert(runtime.poseNativeEnemyCrew(result.gunner,{type,seat:1}),
+   'La rotació del canó torna a fer IK sobre la figura V18');
+  const after=result.muzzle.getWorldPosition(new T.Vector3());
+  assert(before.distanceTo(after)>.005,
+   'El fusell físic i el seu muzzle segueixen girant amb la torreta');
+  assert(Number.isFinite(u.humanEnemyNativeRifleSupport?.rightDistance)&&
+   Number.isFinite(u.humanEnemyNativeRifleSupport?.leftDistance),
+   'La postura V18 actualitza les mans també durant yaw/pitch de torre');
  }
 }
 for(const type of ['patrulla_marina','llanxa','llanxa_coets']){
@@ -175,6 +192,8 @@ for(const type of ['patrulla_marina','llanxa','llanxa_coets']){
   'Cap del patruller gira amb el buc i la hitbox COOP');
 }
 const crew=globalThis.HUNTER_CHARACTERS.createCommando(T);
-assert(!crew.userData.humanEnemyNativeCrew&&crew.userData.humanGameV17==='soldier',
- 'Contracte directe de createCommando no es trenca en proves i exportacions antigues');
+assert(!crew.userData.humanEnemyNativeCrew&&
+ crew.userData.humanEnemyNativeRole==='soldier'&&
+ crew.userData.humanEnemyNativeJoints?.head,
+ 'El comando genèric conserva el contracte d\'arma i ja té cos V18 original');
 console.log('PASS real V18 enemy crews: land/marine seats, 16-joint figures, weapons, rocket IK and authoritative head collision');
