@@ -655,7 +655,34 @@ window.HUNTER_CHARACTERS=Object.freeze({
     u.batchStats=window.HUNTER_PLAYER_BATCH.optimize(THREE,player);
     // A la partida real la pose V18 sempre queda preparada abans
     // del primer fotograma. Els marcadors de laboratori no fan IK.
-    if(native)u.humanGamePose();
+    if(native){
+      u.humanGamePose();
+      // La geometria de les armes ja s'ha clonat sobre les mans/espina
+      // canòniques. La font lògica invisible ja NO ha de penjar del
+      // controlador de tors V17. Preservam matrius mundials en passar
+      // a un espai propi del jugador, sense recalcular escales ni
+      // afegir correctors numèrics en temps d'execució.
+      const mounts=new THREE.Group();
+      mounts.name='V18 · ancoratges lògics independents d\'armes';
+      player.add(mounts);
+      player.updateWorldMatrix(true,true);
+      for(const source of [u.gun,u.cisalla,u.bazooka,u.assault,u.sniper]){
+        const prior=source.parent;
+        if(prior!==u.upperBody)
+          throw Error('Arma V18 amb pare inesperat: '+source.name);
+        // La culata ha de mantenir la mateixa posició mundial abans
+        // i després de desvincular la font del tors V17.
+        if(source.userData.stockAnchor){
+          const rootAnchor=source.userData.stockAnchor.clone();
+          prior.localToWorld(rootAnchor);
+          mounts.worldToLocal(rootAnchor);
+          source.userData.stockAnchor.copy(rootAnchor);
+        }
+        mounts.attach(source);
+      }
+      u.humanGameLogicalWeaponRoot=mounts;
+      u.humanGameLogicalWeaponSourceCount=mounts.children.length;
+    }
     return player;
   },
   // Posicionament visual independent de la física: el cap respira
@@ -1168,7 +1195,8 @@ window.HUNTER_CHARACTERS=Object.freeze({
       // Cap coordenada fixa 3.10/-1.13 ni cap transform del rig ocult.
       if(!nativeAim)throw Error('Pistola: falten espatlla i canell V18');
       rig.aim.copy(rig.nativeGoal);
-      u.upperBody.worldToLocal(rig.aim);
+      (u.humanGameNativeOnly?u.humanGameLogicalWeaponRoot:u.upperBody)
+       .worldToLocal(rig.aim);
     };
     // La pistola real ja té IK nativa al canell V18 dins humanGamePose().
     // Aquest solver de braços extensibles queda limitat a fixtures antics.
@@ -1188,10 +1216,13 @@ window.HUNTER_CHARACTERS=Object.freeze({
       // posició de repòs ja prové del CANELL V18 i no d'u.ar/u.aer.
       const nativeWrist=nativeJoints?.wristR;
       if(!nativeWrist)throw Error('Pistola V18 sense canell natiu');
+      const mount=u.humanGameLogicalWeaponRoot;
+      if(!mount||u.gun.parent!==mount)
+       throw Error('Pistola V18: ancoratge lògic independent absent');
       nativeWrist.getWorldPosition(rig.idle);
-      u.upperBody.worldToLocal(rig.idle);
+      mount.worldToLocal(rig.idle);
       nativeWrist.getWorldQuaternion(rig.idleQ);
-      u.upperBody.getWorldQuaternion(rig.torsoQ).invert();
+      mount.getWorldQuaternion(rig.torsoQ).invert();
       rig.idleQ.premultiply(rig.torsoQ)
         .multiply(u.pistolIdleMount.quaternion);
     }else{
