@@ -2409,8 +2409,15 @@ for(const kind of isolatedSources308){
   // La pose inicial col·loca el receptor amb el desplaçament local
   // sense girar-lo; el bazuca ja té una petita rotació inicial de tub.
   const parentSpace=anchor.clone().add(source.userData.stockToReceiver);
-  assert(source.position.distanceTo(parentSpace)<1e-7,
-   'Punt de culata lògic '+kind+' preservat en coordenades natives');
+  const anchorDelta=source.position.distanceTo(parentSpace);
+  console.log('WEAPON_308_STOCK',kind,JSON.stringify({
+   rootScale:weaponRoot308.getWorldScale(new T.Vector3()).toArray(),
+   sourceScale:source.scale.toArray(),
+   anchor:anchor.toArray(),receiver:source.userData.stockToReceiver.toArray(),
+   pos:source.position.toArray(),expected:parentSpace.toArray(),delta:anchorDelta
+  }));
+  assert(anchorDelta<1e-7,
+   'Punt de culata lògic '+kind+' preservat en coordenades natives: '+anchorDelta);
  }
 }
 const positionsBefore308=Object.fromEntries(isolatedSources308.map(k=>[
