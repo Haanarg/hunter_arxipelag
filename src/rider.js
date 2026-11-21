@@ -593,20 +593,13 @@ window.HUNTER_RIDER=Object.freeze({
         const nativeHands=[],nativeFeet=[];
         for(let i=0;i<2;i++){
           const side=i?1:-1,
-                shoulder=shoulderAt(side),
-                hip=vec((seatX+side*.20*sc),
-                  seatY,seatZ),
                 hand=passenger?
                   vec((seatX+side*.23*sc),
                     (seatY+.16*sc),(seatZ-.32*sc)):
                   vec((steeringX+side*.22*sc),
                     steeringY,steeringZ),
-                elbow=shoulder.clone().lerp(hand,.50),
                 foot=vec((seatX+side*.20*sc),
-                  .87*sc*cabinScale,(civil?-1.31:humvee?-1.10:-.95)*sc*cabinScale),
-                knee=hip.clone().lerp(foot,.52);
-          elbow.y-=.10*sc;
-          knee.y+=.08*sc;knee.z+=.11*sc;
+                  .87*sc*cabinScale,(civil?-1.31:humvee?-1.10:-.95)*sc*cabinScale);
           nativeHands.push(hand);nativeFeet.push(foot);
         }
         // També els conductors de cotxe han de mostrar el gest real
@@ -634,21 +627,14 @@ window.HUNTER_RIDER=Object.freeze({
         const nativeHands=[],nativeFeet=[];
         for(let i=0;i<2;i++){
           const side=i?1:-1,
-                hip=vec((seatX+side*.145*sc),
-                  seatY,seatZ),
-                shoulder=shoulderAt(side),
                 hand=passenger?
                   vec((seatX+side*.18*sc),
                     (seatY+.13*sc),(seatZ-.16*sc)):
                   vec(((helm?.x??-.30)+side*.105)*sc,
                     ((helm?.y??1.88)+.012)*sc,
                     (helm?.z??-1.98)*sc),
-                elbow=shoulder.clone().lerp(hand,.55),
                 foot=vec((seatX+side*.16*sc),
-                  1.42*sc,(seatZ-.36*sc)),
-                knee=hip.clone().lerp(foot,.52);
-          elbow.y-=.07*sc;
-          knee.y+=.12*sc;
+                  1.42*sc,(seatZ-.36*sc));
           nativeHands.push(hand);nativeFeet.push(foot);
         }
         // Disparar des del seient conserva la mà esquerra al comandament
@@ -673,12 +659,9 @@ window.HUNTER_RIDER=Object.freeze({
         torso.position.set(0,seat,.3*sc);torso.rotation.x=lean;
         const nativeHands=[],nativeFeet=[];
         for(let i=0;i<2;i++){
-          const side=i?1:-1,hip=vec(side*.25,seat,.3*sc),
-            shoulder=shoulderAt(side),hand=vec(side*.38*sc,1.32*sc,-.58*sc),
-            elbow=shoulder.clone().lerp(hand,.55);
-          elbow.y-=.12;
-          const foot=vec(side*.38*sc,.48*sc,.58*sc),knee=hip.clone().lerp(foot,.5);
-          knee.z-=.25;
+          const side=i?1:-1,
+            hand=vec(side*.38*sc,1.32*sc,-.58*sc),
+            foot=vec(side*.38*sc,.48*sc,.58*sc);
           nativeHands.push(hand);nativeFeet.push(foot);
         }
         u.riderSeatVehicleType=v.t;
@@ -695,18 +678,12 @@ window.HUNTER_RIDER=Object.freeze({
         v.o.updateWorldMatrix(true,true);g.updateWorldMatrix(true,false);
         const nativeHands=[],nativeFeet=[];
         for(let i=0;i<2;i++){
+          // Remador mirant a popa: la dreta anatòmica agafa
+          // el rem de babord. Els grips són els del model 3D real.
           const side=i?1:-1,boatSide=-side,
-                hip=vec(boatSide*.27,seatY,seatZ),
-                // Quan el remador mira a popa la seva dreta anatòmica
-                // és babord (-X). Cada mà agafa el rem del seu costat:
-                // el braç dret = limbs[2,3] = rem de babord (índex 0).
-                shoulder=shoulderAt(side);
-          const oar=v.o.userData.oars[1-i],
-                hand=g.worldToLocal(oar.localToWorld(oar.userData.grip.clone()));
-          const elbow=shoulder.clone().lerp(hand,.5);
-          elbow.x+=boatSide*.18;elbow.y-=.13;
-          const foot=vec(boatSide*.34,.2*sc,seatZ+.97*sc),
-                knee=vec(boatSide*.32,seatY-.05,seatZ+.52*sc);
+                oar=v.o.userData.oars[1-i],
+                hand=g.worldToLocal(oar.localToWorld(oar.userData.grip.clone())),
+                foot=vec(boatSide*.34,.2*sc,seatZ+.97*sc);
           nativeHands.push(hand);nativeFeet.push(foot);
         }
         u.riderSeatVehicleType=v.t;
@@ -728,10 +705,8 @@ window.HUNTER_RIDER=Object.freeze({
               lean=.17+Math.min(.07,Math.abs(v.v)/230);
         torso.position.set(bodyX,hipY,.29*sc);
         torso.rotation.set(lean,1.13,.08);
-        const hips=[vec(bodyX-.05*sc,hipY,.04*sc),
-                    vec(bodyX+.08*sc,hipY,.46*sc)];
-        // Crucial: anatomically correct shoulder index.
-        // i=0 -> left arm, i=1 -> right arm (firing arm).
+        // Les mans del windsurf provenen dels punts de la botavara.
+        // El V18 conserva l'ordre anatòmic esquerra/dreta.
         v.o.updateWorldMatrix(true,true);
         g.updateWorldMatrix(true,false);
         const hands=grips.map(p=>g.worldToLocal(
@@ -739,19 +714,8 @@ window.HUNTER_RIDER=Object.freeze({
         const feet=[vec(.66*sc,footY,.99*sc),
                     vec(.72*sc,footY,-.63*sc)];
         const nativeHands=[];
-        for(let i=0;i<2;i++){
-          const shoulder=shoulderAt(i?1:-1),hip=hips[i],
-                hand=hands[i]||vec(-.5*sc,2.6*sc,.5*sc),
-                foot=feet[i],
-                elbow=shoulder.clone().lerp(hand,.47),
-                knee=hip.clone().lerp(foot,.51);
-          // Bend the elbows down slightly, without forcing an
-          // impossible knee/elbow pose away from the true grip.
-          elbow.y-=.17*sc;
-          elbow.z+=i?.08*sc:-.055*sc;
-          knee.y+=.13*sc;knee.x-=.10*sc;
-          nativeHands.push(hand);
-        }
+        for(let i=0;i<2;i++)
+          nativeHands.push(hands[i]||vec(-.5*sc,2.6*sc,.5*sc));
         // La mà dreta V18 segueix el dispar; l'esquerra manté la
         // botavara original com a destí en coordenades del vehicle.
         u.riderSeatVehicleType=v.t;
@@ -776,14 +740,10 @@ window.HUNTER_RIDER=Object.freeze({
         const nativeHands=[],nativeFeet=[];
         for(let i=0;i<2;i++){
           const side=i?1:-1,
-                hip=vec(seatX+side*.28,seat,seatZ),
-                shoulder=shoulderAt(side),
                 hand=passenger?
                   vec(seatX+side*.32*riderSc,seat+.16,seatZ-.42*riderSc):
                   vec(seatX+side*.48*riderSc,seat+.7,-.7*riderSc+offZ),
-                elbow=shoulder.clone().lerp(hand,.52);
-          const foot=vec(seatX+side*.42*riderSc,.92*riderSc+offY,-.35*riderSc+offZ),
-                knee=hip.clone().lerp(foot,.5);knee.y+=.18;
+                foot=vec(seatX+side*.42*riderSc,.92*riderSc+offY,-.35*riderSc+offZ);
           nativeHands.push(hand);nativeFeet.push(foot);
         }
         u.riderSeatVehicleType=v.t;
