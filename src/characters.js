@@ -774,8 +774,17 @@ window.HUNTER_CHARACTERS=Object.freeze({
     if(!swimming)u.ph+=dt*(8.4+.6*run)*(1-.48*crouch)*move;
     const ph=u.ph,breath=Math.sin(u.breath);
 
-    const tx=(joint,target,rate=limbK)=>joint.rotation.x+=(target-joint.rotation.x)*rate;
-    const tz=(joint,target,rate=limbK)=>joint.rotation.z+=(target-joint.rotation.z)*rate;
+    // Només fixtures antics actualitzen les articulacions ocultes.
+    // El protagonista real publica valors V18 amb
+    // updateNativePlayerLimbPose()/updateNativeActionArms(), sense
+    // escriure en el control de braços i cames V17.
+    const legacyLimbPose=!u.humanGameNativeOnly;
+    const tx=(joint,target,rate=limbK)=>{
+      if(legacyLimbPose)joint.rotation.x+=(target-joint.rotation.x)*rate;
+    };
+    const tz=(joint,target,rate=limbK)=>{
+      if(legacyLimbPose)joint.rotation.z+=(target-joint.rotation.z)*rate;
+    };
 
     if(airborne||parachuting){
       u.humanGameNativeAction=null;
@@ -820,9 +829,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
         u.sniper,u.assault,u.cisalla])if(weapon)weapon.visible=false;
       if(u.pistolFlash)u.pistolFlash.visible=false;
       u.pistolBlend=0;
-      const neutral=joint=>{if(joint)joint.rotation.set(0,0,0)};
-      for(const joint of [u.al,u.ar,u.ael,u.aer,u.ll,u.lr,u.lkl,u.lkr])
-       neutral(joint);
+      // B3/C4 netegen directament els canals V18 al render. No
+      // neutralitzam ni reanimam el maniquí ocult en una partida real.
+      if(legacyLimbPose){
+       for(const joint of [u.al,u.ar,u.ael,u.aer,u.ll,u.lr,u.lkl,u.lkr])
+        if(joint)joint.rotation.set(0,0,0);
+      }
       u.upperBody.rotation.set(0,0,0);
       if(!u.humanGameNativeOnly)u.head.rotation.set(0,0,0);
       player.rotation.x+=(0-player.rotation.x)*k;
@@ -978,7 +990,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
         elbowX=chargePose.elbowX+(.27-chargePose.elbowX)*q;
         elbowZ=chargePose.elbowZ+(.04-chargePose.elbowZ)*q;
       }
-      tx(u.ar,rightX);u.ar.rotation.y=rightY;tz(u.ar,rightZ);
+      tx(u.ar,rightX);if(legacyLimbPose)u.ar.rotation.y=rightY;tz(u.ar,rightZ);
       tx(u.aer,elbowX);tz(u.aer,elbowZ);
       // Contrapès: l'esquerra avança mentre la dreta prepara el tir.
       const counter=throwing?Math.min(1,Math.max(0,p/.40)):
@@ -1099,7 +1111,7 @@ window.HUNTER_CHARACTERS=Object.freeze({
     // El rig de pistola hi superposa una presa a dues mans només durant el tir.
     // No sobrescriure la rotació de quaternion calculada per l'IK
     // del rifle: tornar y=0 aquí separava les mans de les dues preses.
-    if(!sniper&&!assault&&!bazooka&&!grenade&&!throwing){
+    if(legacyLimbPose&&!sniper&&!assault&&!bazooka&&!grenade&&!throwing){
       u.ar.rotation.y=0;u.al.rotation.y=0;
       u.aer.rotation.y=0;u.ael.rotation.y=0;
     }

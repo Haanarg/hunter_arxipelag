@@ -2234,3 +2234,54 @@ assert.equal(actionU.humanGameNativeCutterSupport,null,
  'Sense cisalla equipada, no queden mans ni suport natiu de cisalla');
 console.log('PASS V18 cutter mount, blade state, two hands IK, legacy independence and COOP');
 console.log('PASS native crouch translation + V18 pistol fallback without legacy coordinates');
+
+
+// v0.6.306: qualsevol canvi d'estat del protagonista real publica
+// exclusivament angles V18. El motor no ha de resetar ni modificar
+// cap espatlla, colze, maluc o genoll V17 invisible durant el tick.
+assert(actionU.humanGameNativeOnly,
+ 'La bateria de migració de locomoció requereix el jugador V18 real');
+const ghostJoints306=['al','ar','ael','aer','ll','lr','lkl','lkr']
+ .map(key=>[key,actionU[key]]);
+for(const [index,[key,joint]]of ghostJoints306.entries())
+ joint.rotation.set(.12+index*.16,-.39+index*.07,.24-index*.055);
+const ghostAngles306=ghostJoints306.map(([key,joint])=>joint.quaternion.clone());
+const animationCases306=[
+ {name:'quiet',options:{forward:0}},
+ {name:'cursa',options:{forward:1,running:true}},
+ {name:'ajupit',options:{forward:.36,strafe:.28,crouching:true}},
+ {name:'ganivet 3B',options:{forward:.7,knifeEquipped:true},action:'knife',melee:.39},
+ {name:'granada carregada',options:{forward:0,grenadeEquipped:true,
+   grenadeChargePower:.8},action:'grenade'},
+ {name:'granada llançada',options:{forward:0,grenadeEquipped:true},
+   action:'grenade',throw:.49},
+ {name:'braça B3',options:{forward:.7,swimming:true},swim:true},
+ {name:'crol C4',options:{forward:.9,swimming:true,running:true},swim:true},
+ {name:'aigua quieta',options:{forward:0,swimming:true},swim:true}
+];
+for(const test of animationCases306){
+ actionU.meleePose=test.melee||0;
+ actionU.grenadeThrow=test.throw||0;
+ actionU.grenadeThrowPower=.85;
+ actionU.grenadeReleased=false;
+ actionU.pistolAimTime=0;
+ controls.animatePlayerControls(actionAvatar,{
+  ...controlOptions,dt:.07,...test.options
+ });
+ for(let i=0;i<ghostJoints306.length;i++)
+  assert(ghostJoints306[i][1].quaternion.equals(ghostAngles306[i]),
+   'No reescriure pivot V17 '+ghostJoints306[i][0]+' en '+test.name);
+ if(test.action)assert.equal(actionU.humanGameNativeAction?.kind,
+  test.action,'Animació '+test.name+' només publica fase V18');
+ if(test.swim)assert(actionU.gameSwimActive,
+  'La natació '+test.name+' activa el motor B3/C4 natiu');
+ actionU.humanGamePose();
+ for(const id of ['hipL','hipR','kneeL','kneeR',
+  'shoulderL','shoulderR','elbowL','elbowR']){
+  const joint=actionJ[id];
+  assert([joint.quaternion.x,joint.quaternion.y,joint.quaternion.z,
+   joint.quaternion.w].every(Number.isFinite),
+   'El V18 conserva angles finits de '+id+' en '+test.name);
+ }
+}
+console.log('PASS v0.6.306 nine locomotion, knife, grenade and swimming states never write V17 limbs');
