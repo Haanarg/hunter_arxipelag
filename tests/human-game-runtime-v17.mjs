@@ -2379,3 +2379,79 @@ assert(torsoJ307.spine.getWorldPosition(new T.Vector3()).toArray()
  .every(Number.isFinite),
  'La pell nativa continua operativa sota pare COOP transformat');
 console.log('PASS v0.6.307 native torso and pelvis motion ignore legacy pivots, COOP aim unaffected');
+
+
+// v0.6.308: les cinc armes que abans eren filles del tors V17
+// han de pertànyer a un node lògic propi, fill directe del jugador,
+// diferent dels pivots antics. Les malles visibles continuen al V18.
+const isolatedPlayer308=controls.createPlayer(T,{
+ box:characterBox,palette:gamePalette
+}),isoU308=isolatedPlayer308.userData;
+const weaponRoot308=isoU308.humanGameLogicalWeaponRoot;
+assert(weaponRoot308?.parent===isolatedPlayer308&&
+ isoU308.humanGameLogicalWeaponSourceCount===5,
+ 'Les cinc armes lògiques pengen directament del jugador V18');
+const isolatedSources308=['gun','cisalla','bazooka','assault','sniper'];
+for(const kind of isolatedSources308){
+ const source=isoU308[kind];
+ assert(source?.parent===weaponRoot308,
+  'La font '+kind+' no pot ser filla del tors V17');
+ assert(!source.getObjectByName('Arma canònica · '+kind),
+  'El model de '+kind+' canònic no és al node lògic');
+ const visual=isoU308.humanGameCanonicalRig.getObjectByName(
+  'Arma canònica · '+kind);
+ assert(visual&&visual.parent!==weaponRoot308,
+  'La geometria visible '+kind+' és independent de la font');
+ const anchor=source.userData.stockAnchor;
+ if(anchor){
+  const parentSpace=anchor.clone().add(
+   source.userData.stockToReceiver.clone().applyQuaternion(source.quaternion));
+  assert(source.position.distanceTo(parentSpace)<1e-7,
+   'Punt de culata lògic '+kind+' preservat en coordenades natives');
+ }
+}
+const positionsBefore308=Object.fromEntries(isolatedSources308.map(k=>[
+ k,isoU308[k].getWorldPosition(new T.Vector3()).clone()
+]));
+// Ni canviar el tors antic ni la pelvis ha de moure els ancoratges
+// lògics, fins i tot sota un pare COOP girat i escalat.
+const coopMount308=new T.Group();
+coopMount308.position.set(4.8,1.6,-5.4);
+coopMount308.rotation.y=.68;coopMount308.scale.setScalar(1.15);
+coopMount308.add(isolatedPlayer308);
+const coopBefore308=Object.fromEntries(isolatedSources308.map(k=>[
+ k,isoU308[k].getWorldPosition(new T.Vector3()).clone()
+]));
+isoU308.upperBody.rotation.set(.37,-.62,.11);
+isoU308.lowerBody.rotation.y=.43;
+isoU308.upperBody.position.y-=.44;
+isoU308.lowerBody.position.y-=.44;
+for(const kind of isolatedSources308){
+ const next=isoU308[kind].getWorldPosition(new T.Vector3());
+ assert(next.distanceTo(coopBefore308[kind])<1e-8,
+  'Ancoratge '+kind+' no hereta el moviment V17 sota pare COOP');
+}
+isoU308.upperBody.rotation.set(0,0,0);
+isoU308.lowerBody.rotation.set(0,0,0);
+isoU308.upperBody.position.y+=.44;
+isoU308.lowerBody.position.y+=.44;
+isoU308.visualAimTargetLocked=true;
+isoU308.visualAimDirection=new T.Vector3(.6,.1,-.8).normalize();
+controls.animatePlayerControls(isolatedPlayer308,{
+ ...controlOptions,dt:.07,assaultRifleEquipped:true
+});
+isoU308.humanGamePose();
+assert(isoU308.humanGameNativeLongGunSupport?.weapon==='assault',
+ 'La IK del rifle continua treballant amb els grips V18');
+assert(runtime.nativeWeaponMuzzleWorld(T,isolatedPlayer308,'assault')
+ ?.toArray().every(Number.isFinite),
+ 'La boca balística del fusell V18 queda operativa');
+controls.animatePlayerControls(isolatedPlayer308,{
+ ...controlOptions,dt:.09
+});
+isoU308.humanGamePose();
+assert(isoU308.gun.parent===weaponRoot308,
+ 'La pistola lògica torna al seu nou node independent');
+assert(isoU308.pistolRig.idle.toArray().every(Number.isFinite),
+ 'El canell V18 defineix l\'ancoratge lògic de pistola');
+console.log('PASS v0.6.308 five logical weapon sources disconnected from V17 torso; COOP, rifle and pistol intact');
