@@ -779,6 +779,66 @@ export function createHumanGameRuntimeV17(){
   poseNativeOnFootEnemy(model,options){
    return poseNativeOnFootEnemy(model,options);
   },
+  // Els soldats de cabina (terra i mar) fan servir la MATEIXA
+  // geometria anatòmica V18 que els soldats a peu. El controlador
+  // antic no conté cap malla, però els punts físics i els events
+  // d'armes es mantenen fins a migrar completament la simulació.
+  installNativeEnemyCrew(T,model){
+   runtime.installNativeOnFootEnemy(T,model,{role:'soldier'});
+   model.userData.humanEnemyNativeCrew=true;
+   return model;
+  },
+  poseNativeEnemyCrew(model,{type=null,seat=null}={}){
+   const u=model?.userData,j=u?.humanEnemyNativeJoints;
+   if(!u?.humanEnemyNativeCrew||!j)return false;
+   const vehicleType=type??u.humanEnemyNativeSeatType??'cotxe',
+         index=seat??u.humanEnemyNativeSeatIndex??0,
+         moto=vehicleType==='moto',
+         marine=['llanxa','llanxa_coets','patrulla_marina'].includes(vehicleType),
+         rocket=!!u.rocketSoldier,
+         gunner=index===1;
+   if(!Number.isInteger(index)||index<0||index>1)
+    throw Error('Seient de tripulant natiu invàlid');
+   // No llegim les rotacions de u.ll/u.lr/u.ar: la pose de seient
+   // es genera directament dels ancoratges anatòmics del V18.
+   const hip=moto?.76:marine?-1.10:1.03,
+         knee=moto?-1.18:marine?-.82:-1.36;
+   for(const side of ['L','R']){
+    const left=side==='L',sign=left?-1:1;
+    j['hip'+side].rotation.set(hip,0,moto?sign*.26:marine?sign*.07:0);
+    j['knee'+side].rotation.set(knee,0,0);
+    j['ankle'+side].rotation.set(moto?.35:marine?.2:0,0,0);
+    j['shoulder'+side].rotation.set(
+     gunner&&!marine?(left?1.10:1.22):
+     moto?(left?1.12:1.18):
+     marine?(left?1.14:1.12):(left?1.12:1.18),0,
+     marine?(left?-.06:.06):0
+    );
+    j['elbow'+side].rotation.set(
+     moto?(left?.24:.52):marine?(left?.14:.18):(left?.26:.35),0,0);
+    j['wrist'+side].rotation.set(0,0,0);
+   }
+   j.spine.rotation.set(0,0,0);
+   j.head.rotation.set(0,0,0);
+   if(rocket&&u.enemyBazookaIK){
+    // Tant els pilots com els passatgers amb bazuca segueixen
+    // les dues preses reals quan el tub gira verticalment.
+    model.updateWorldMatrix(true,true);
+    const cache=u.humanEnemyNativeIKCache;
+    const right=solveNativeLongGunHand(null,j,
+     u.enemyBazookaIK.rightGrip,'R',cache);
+    const left=solveNativeLongGunHand(null,j,
+     u.enemyBazookaIK.leftGrip,'L',cache);
+    u.humanEnemyNativeRocketSupport=right&&left?{
+     rightDistance:right.distance,leftDistance:left.distance,
+     rightInReach:right.inReach,leftInReach:left.inReach
+    }:null;
+   }
+   u.humanEnemyNativeSeatType=vehicleType;
+   u.humanEnemyNativeSeatIndex=index;
+   u.humanEnemyNativeCrewPose={moto,marine,rocket,gunner};
+   return true;
+  },
   // Figura V18 per a conductor i passatger de cabina. La talla
   // definitiva es cuina en generar geometria i pivots; cap escala sobre
   // l'arrel ni transform del rig antic. Una variant immutable per cabina,
@@ -1123,6 +1183,20 @@ export function createHumanGameRuntimeV17(){
        role:onFootRole==='elite'?'elite':'soldier'
       })
       :runtime.install(T,soldier,{role:'soldier'});
+    };
+    // Només els enemics embarcats fan servir aquest constructor:
+    // sense crear ni copiar prèviament la pell V17 del comando.
+    wrapped.createNativeEnemyCrew=function(T,...args){
+     // La hitbox de cap és 3.26 per la geometria del Worker.
+     // La variant compactD declara aquesta cota directament al
+     // constructor d'origen; la pell V18 es crea després sense
+     // traslladar ni escalar el cap com a pegat de render.
+     const options={...(args[0]||{}),
+       headVariant:'compactD',nativeCrewControls:true};
+     const crew=runtime.suppress(()=>base.createCommando.call(wrapped,T,options));
+     if(crew.userData.headVariant!=='compactD')
+      throw Error('Tripulant V18 creat sense cota nativa de cap 3.26');
+     return runtime.installNativeEnemyCrew(T,crew);
     };
     if(typeof base.createSoldier==='function')wrapped.createSoldier=function(T,...args){
      const previous=onFootRole;
