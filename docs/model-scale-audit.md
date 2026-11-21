@@ -270,3 +270,9 @@ La 0.6.297 consolida en una sola operació `modelScale` sobre malles i pivots de
 
 
 **0.6.301 confirmada en producció:** [Actions #44900802524](https://github.com/Haanarg/hunter_arxipelag/actions/runs/44900802524), 29 passes aprovades, incloent Cloudflare i arrencada publicada. El `controllerOnly` evita exactament la còpia de pell V17 sobre el rider invisible; no altera cap factor de talla ni ancoratge físic. La retirada total de pivots ocults del protagonista i riders continua pendent i no s'ha de simular mitjançant noves correccions d'escala.
+
+
+## 0.6.302 — Desconnexió verificable de les malles i del fallback corporal
+
+- El rider `controllerOnly` ha deixat de reservar BufferGeometry/Materials pel vell maniquí: les primitives antigues s'eliminen físicament en la fàbrica. El proxy de llarga distància continua tenint geometria pròpia i queda en el mapa de talles nadiues, sense tocar les dades d'IK de braços ni hitboxes.
+- El jugador real marca `humanGameNativeOnly`: qualsevol absència de `humanGameNativeBodyPose` o `humanGameNativeLimbPose` es considera un error de configuració V18, en lloc de caure en una substitució visual de rotacions V17. El pivot `u.head` del controlador ocult ja no es mou als estats de cursa, natació o salt.
