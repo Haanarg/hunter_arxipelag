@@ -2400,7 +2400,9 @@ for(const kind of isolatedSources308){
   'El model de '+kind+' canònic no és al node lògic');
  const visual=isoU308.humanGameCanonicalRig.getObjectByName(
   'Arma canònica · '+kind);
- assert(visual&&visual.parent!==weaponRoot308,
+ // Les fonts no equipades es clonen sota el rig V18 quan s'activen,
+ // no abans; si ja existeix el proxy, no pot ser fill del node lògic.
+ if(visual)assert(visual.parent!==weaponRoot308,
   'La geometria visible '+kind+' és independent de la font');
  const anchor=source.userData.stockAnchor;
  if(anchor){
