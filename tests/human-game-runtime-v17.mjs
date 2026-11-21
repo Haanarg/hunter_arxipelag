@@ -2406,8 +2406,9 @@ for(const kind of isolatedSources308){
   'La geometria visible '+kind+' és independent de la font');
  const anchor=source.userData.stockAnchor;
  if(anchor){
-  const parentSpace=anchor.clone().add(
-   source.userData.stockToReceiver.clone().applyQuaternion(source.quaternion));
+  // La pose inicial col·loca el receptor amb el desplaçament local
+  // sense girar-lo; el bazuca ja té una petita rotació inicial de tub.
+  const parentSpace=anchor.clone().add(source.userData.stockToReceiver);
   assert(source.position.distanceTo(parentSpace)<1e-7,
    'Punt de culata lògic '+kind+' preservat en coordenades natives');
  }
