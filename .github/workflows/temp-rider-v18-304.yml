@@ -1,0 +1,31 @@
+name: V18 rider controls regression (temporary)
+# Branch-only CI for this migration PR; never deploy from feature branches.
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  rider-v18:
+    if: github.head_ref == 'feature/v18-rider-far-ballistics-304'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Validate V18 rider seats, long-range gun and SOLO/COOP traces
+        run: node tests/human-game-runtime-v17.mjs
+      - name: Validate model scale invariants
+        run: node tools/audit-model-scales.cjs
+      - name: Validate app runtime and old dependencies
+        run: |
+          npm run test:all
+          node tests/runtime-mode.mjs
+      - name: Build both publication variants
+        run: |
+          npm run build
+          npm run check:build
