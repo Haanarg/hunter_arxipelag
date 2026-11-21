@@ -1180,7 +1180,8 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
   // createSoldier() ja hi consolida l'escala 0.8, i la normalització
   // posterior de cabina (.31/.43/.52) provocava una segona talla incompatible.
   // Mateixa via canònica que fan servir els patrons de llanxes.
-  const makeCrew=()=>window.HUNTER_CHARACTERS.createCommando(THREE),
+  const makeCrew=()=>window.HUNTER_CHARACTERS.createNativeEnemyCrew?.(THREE)
+      ??window.HUNTER_CHARACTERS.createCommando(THREE),
         driver=makeCrew(),gunner=type==='moto'?null:makeCrew(),
         truck=type==='camio',civil=type==='cotxe_civil';
   // Aquests són exactament els ocupants procedimentals del Humvee de patrulla.
@@ -1221,6 +1222,7 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
   // El marcador del canó de la moto s'ha de crear ABANS de consolidar
   // l'escala per mantenir l'origen físic del projectil.
   window.HUNTER_HUMAN_V17.normalizeEnemyCrew(driver,scale);
+  window.HUNTER_HUMAN_V17.poseNativeEnemyCrew?.(driver,{type,seat:0});
   // Els ocupants resten al detall complet. El proxy distant en dibuixa
   // una silueta mínima sense alterar el model ni els punts de tir.
   const detailParent=car.userData.distantVehicleLOD?.full||car;
@@ -1243,6 +1245,7 @@ function attachEnemyCarCrew(car,{initiallyHidden=false,type='cotxe'}={}){
     // L'arma muntada a la torre ja és externa al tripulant: només
     // consolidam el soldat, no el canó del vehicle.
     window.HUNTER_HUMAN_V17.normalizeEnemyCrew(gunner,scale);
+    window.HUNTER_HUMAN_V17.poseNativeEnemyCrew?.(gunner,{type,seat:1});
     detailParent.add(gunner);
   }
   if(initiallyHidden){driver.visible=false;if(gunner)gunner.visible=false;if(mount)mount.visible=false;}
