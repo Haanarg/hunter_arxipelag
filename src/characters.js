@@ -408,8 +408,12 @@ window.HUNTER_CHARACTERS=Object.freeze({
       armor(model,.12,.32,.42,0xad4e3d,side*.8,2.83,-.33);
       armor(model,.43,.5,.45,0x293830,side*.3,1.39,-.18);
     }
-    armor(u.head,.68,.18,.20,0x212c2b,0,.09,-.35);
-    armor(u.head,.54,.085,.1,0xcd4336,0,.09,-.47);
+    // El casc i el visor de l'elit ja formen part de la malla
+    // anatòmica V18: no penjar una segona visera al cap ocult V17.
+    if(!u.humanEnemyNativeJoints){
+      armor(u.head,.68,.18,.20,0x212c2b,0,.09,-.35);
+      armor(u.head,.54,.085,.1,0xcd4336,0,.09,-.47);
+    }
     armor(u.gun,.2,.22,1.18,0x26302d,0,.02,-.35);
     armor(u.gun,.28,.32,.3,0x54634e,.16,-.23,-.1);
     const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.065,.08,1.25,8),
