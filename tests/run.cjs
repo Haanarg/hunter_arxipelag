@@ -67,6 +67,7 @@ const suites={
     "human-weapon-editor-init.mjs",
     "human-swim-proposals.mjs",
     "human-game-runtime-v17.mjs",
+    "enemy-native-v18.mjs",
     "civilian-native-v18.mjs",
     "player-v18-air-pose.mjs",
     "human-lab-evidence.mjs"
